@@ -1,0 +1,13 @@
+.paths
+.project
+_build
+*.DS_Store
+*.cmi
+*.cmo
+*.cmx
+*.annot
+*.byte
+*.depend
+*.swp
+.settings
+\#*\#
