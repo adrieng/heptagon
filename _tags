@@ -1,0 +1,4 @@
+<**/*.ml>: debug, dtypes
+<global/misc.ml>: camlp4o, use_preproc
+<preproc.ml>: camlp4of, use_camlp4
+<**/*.{byte,native}>: use_unix, use_str, debug
