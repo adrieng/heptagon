@@ -76,7 +76,7 @@ let equation locals l_eqs e =
   n,
   { v_name = n; v_copy_of = None;
     v_type = exp_type e; v_linearity = NotLinear; v_clock = Cbase } :: locals,
-  { p_lhs = Evarpat(n); p_rhs = e } :: l_eqs
+  { eq_lhs = Evarpat(n); eq_rhs = e } :: l_eqs
 
 (* inserts the definition [x,e] into the set of shared equations *)
 let rec add x e shared =
@@ -92,7 +92,7 @@ let add_locals ni l_eqs s_eqs s_handlers =
       | (x, e) :: s_handlers ->
           if IdentSet.mem x ni then addrec l_eqs (add x e s_eqs) s_handlers
           else
-            addrec ({ p_lhs = Evarpat(x); p_rhs = e } :: l_eqs)
+            addrec ({ eq_lhs = Evarpat(x); eq_rhs = e } :: l_eqs)
               s_eqs s_handlers in
   addrec l_eqs s_eqs s_handlers
 
@@ -338,14 +338,14 @@ let rec translate_eq env ni (locals, l_eqs, s_eqs) eq =
     | Heptagon.Eeq(p, e) when all_locals ni p ->
         (* all vars from [p] are local *)
         locals,
-        { p_lhs = translate_pat p; p_rhs = translate env e } :: l_eqs,
+        { eq_lhs = translate_pat p; eq_rhs = translate env e } :: l_eqs,
         s_eqs
     | Heptagon.Eeq(p, e) (* some are local *) ->
         (* transforms [p = e] into [p' = e; p = p'] *)
         let p', locals, s_eqs = 
 	  rename_pat ni locals s_eqs (p,e.Heptagon.e_ty) in
         locals,
-        { p_lhs = p'; p_rhs = translate env e } :: l_eqs,
+        { eq_lhs = p'; eq_rhs = translate env e } :: l_eqs,
         s_eqs
     | Heptagon.Epresent _ | Heptagon.Eautomaton _ | Heptagon.Ereset _ ->
         assert false

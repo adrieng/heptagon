@@ -228,7 +228,7 @@ let rec typing_pat h = function
 
 let typing_eqs h eq_list =
   List.iter 
-    (fun { p_lhs = pat; p_rhs = e } ->
+    (fun { eq_lhs = pat; eq_rhs = e } ->
        (match e.e_desc with
 	  | Ereset_mem (_, _, x) -> 
 	      let ck = typ_of_name h x in

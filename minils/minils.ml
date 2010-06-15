@@ -9,19 +9,15 @@
 
 (* The internal MiniLustre representation *)
 
-(* $Id$ *)
-
 open Location
 open Dep
 open Misc
 open Names
 open Ident
-open Linearity
-open Interference_graph
-open Global
+open Signature
 open Static
 
-type iterator_name = 
+type iterator_type = 
   | Imap
   | Ifold
   | Imapfold
@@ -34,14 +30,13 @@ type type_dec =
 and tdesc =
   | Type_abs
   | Type_enum of name list
-  | Type_struct of (name * ty) list
+  | Type_struct of structure
 
 and exp =
     { e_desc: desc;        (* its descriptor *)
       mutable e_ck: ck;
       mutable e_ty: ty;
-      mutable e_linearity : linearity;
-      e_loc: location  }
+      e_loc: location }
 
 and desc =
   | Econst of const
@@ -49,16 +44,20 @@ and desc =
   | Econstvar of name
   | Efby of const option * exp
   | Etuple of exp list
-  | Eop of longname * size_exp list * exp list
-  | Eapp of app * size_exp list * exp list
-  | Eevery of app * size_exp list * exp list * ident
+  | Ecall of op_desc * exp list * ident option (** [op_desc] is the function called
+                              [exp list] is the passed arguments
+                              [ident option] is the optional reset condition *)
+
   | Ewhen of exp * longname * ident
   | Emerge of ident * (longname * exp) list
   | Eifthenelse of exp * exp * exp
   | Efield of exp * longname
+  | Efield_update of longname * exp * exp (*field, record, value*)
   | Estruct of (longname * exp) list
-(*Array operators*)
   | Earray of exp list
+  | Earray_op of array_op
+
+and array_op =
   | Erepeat of size_exp * exp
   | Eselect of size_exp list * exp (*indices, array*)
   | Eselect_dyn of exp list * size_exp list * exp * exp (*indices, bounds, array, default*)
@@ -66,12 +65,9 @@ and desc =
   | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound, array*)
   | Econcat of exp * exp
   | Eiterator of iterator_name * longname * size_exp list * size_exp * exp list * ident option
-  | Efield_update of longname * exp * exp (*field, record, value*)
-
-and app =
-    { a_op: longname;
-      a_inlined: inlining_policy
-    }
+   
+and op_desc = longname * size_exp list * op_kind
+and op_kind = | Eop | Enode
 
 and ct =
   | Ck of ck
@@ -86,15 +82,6 @@ and link =
   | Cindex of int
   | Clink of ck
 
-and ty =
-  | Tbase of ty
-  | Tprod of ty list
-
-and ty =
-  | Tint | Tfloat
-  | Tid of longname
-  | Tarray of ty * size_exp
-
 and const =
   | Cint of int
   | Cfloat of float
@@ -106,14 +93,13 @@ and pat =
   | Evarpat of ident
 
 type eq =
-    { p_lhs : pat;
-      p_rhs : exp; }
+    { eq_lhs : pat;
+      eq_rhs : exp;
+      eq_loc : loc }
 
 type var_dec =
     { v_name : ident;
-      v_copy_of : ident option;
       v_type : ty;
-      v_linearity : linearity;
       v_clock : ck }
 
 type contract =
@@ -131,13 +117,10 @@ type node_dec =
       n_contract : contract option;
       n_local  : var_dec list;
       n_equs   : eq list;
-      n_loc    : location; 
-      n_targeting : (int*int) list;
-      n_mem_alloc : (ty * ivar list) list;
-      n_states_graph : (name,name) interf_graph;
-      n_params : name list; 
+      n_loc    : location;
+      n_params : param list; 
       n_params_constraints : size_constr list;
-      n_params_instances : (int list) list; }
+      n_params_instances : (int list) list; }(*TODO commenter ou passer en env*)
 
 type const_dec =
     { c_name : name;
@@ -158,26 +141,6 @@ let make_exp desc ty l ck loc =
 let make_dummy_exp desc ty =
   { e_desc = desc; e_ty = ty; e_linearity = NotLinear; 
     e_ck = Cbase; e_loc = no_location }
-
-(* Helper functions to work with types *)
-let type = function
-    | Tbase(bty) -> bty
-    | Tprod _ -> assert false
-
-(*TODO Cedric *)
-type ivar = | IVar of ident | IField of ident * longname
-
-(** [filter_vars l] returns a list of variables identifiers from
-    a list of ivar.*)
-let rec filter_vars =
-  function
-  | [] -> []
-  | IVar id :: l -> id :: (filter_vars l)
-  | _ :: l -> filter_vars l
-
-(* get the type of an expression ; assuming that this type is a base type *)
-let exp_type e = 
-  type e.e_ty
 
 let rec size_exp_of_exp e =
   match e.e_desc with 
@@ -206,12 +169,6 @@ let rec vd_find n = function
 let rec vd_mem n = function
   | [] -> false
   | vd::l -> vd.v_name = n or (vd_mem n l)
-
-(** Same as vd_mem but for an ivar value. *)
-let ivar_vd_mem var vds =
-  match var with 
-    | IVar id -> vd_mem id vds
-    | _ -> false
 
 (** [is_record_type ty] returns whether ty corresponds to a record type. *)
 let is_record_type ty =
@@ -288,9 +245,9 @@ struct
     | [] -> []
     | y :: l -> if x = y then l else y :: remove x l
 
-  let def acc { p_lhs = pat } = vars_pat acc pat
+  let def acc { eq_lhs = pat } = vars_pat acc pat
 
-  let read is_left { p_lhs = pat; p_rhs = e } =
+  let read is_left { eq_lhs = pat; eq_rhs = e } =
     match pat, e.e_desc with
       |  Evarpat(n), Efby(_, e1) ->
            if is_left
@@ -311,9 +268,9 @@ struct
   let read is_left eq =
     filter_vars (read is_left eq)
 
-  let antidep { p_rhs = e } =
+  let antidep { eq_rhs = e } =
     match e.e_desc with Efby _ -> true | _ -> false
-  let clock { p_rhs = e } =
+  let clock { eq_rhs = e } =
     match e.e_desc with
       | Emerge(_, (_, e) :: _) -> e.e_ck
       | _ -> e.e_ck
@@ -354,7 +311,7 @@ struct
 	| Econcat (e1, e2) ->
 	    linear_use (linear_use acc e1) e2 
 
-  let mem_reset { p_rhs = e } =
+  let mem_reset { eq_rhs = e } =
     match e.e_desc with
       | Ereset_mem (y, _, _) -> [y]
       | _ -> []
@@ -366,7 +323,7 @@ module DataFlowDep = Make
      type equation = eq
      let read eq = Vars.read true eq
      let def = Vars.def
-     let linear_read eq = Vars.linear_use [] eq.p_rhs
+     let linear_read eq = Vars.linear_use [] eq.eq_rhs
      let mem_reset = Vars.mem_reset
      let antidep = Vars.antidep
    end)
@@ -376,7 +333,7 @@ module AllDep = Make
   (struct
      type equation = eq
      let read eq = Vars.read false eq
-     let linear_read eq = Vars.linear_use [] eq.p_rhs
+     let linear_read eq = Vars.linear_use [] eq.eq_rhs
      let mem_reset = Vars.mem_reset
      let def = Vars.def
      let antidep eq = false
@@ -650,7 +607,7 @@ struct
          fprintf ff ")@]@,") ""
       tag_e_list
 
-  let print_eq ff { p_lhs = p; p_rhs = e } =
+  let print_eq ff { eq_lhs = p; eq_rhs = e } =
     fprintf ff "@[<hov 2>";
     print_pat ff p;
     (*     (\* DEBUG *\) *)

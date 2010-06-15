@@ -262,7 +262,7 @@ let rec typing_pat h = function
 
 let typing_eqs h eq_list =
   List.iter 
-    (fun { p_lhs = pat; p_rhs = e } ->
+    (fun { eq_lhs = pat; eq_rhs = e } ->
       let ty_pat = typing_pat h pat in
       expect h e ty_pat) eq_list
 
@@ -270,7 +270,7 @@ let build h eq_list =
   let rec build_pat h = function
     | Evarpat(x) -> Env.add x { t_init = new_var (); t_value = None } h
     | Etuplepat(pat_list) -> List.fold_left build_pat h pat_list in
-  let build_equation h { p_lhs = pat; p_rhs = e } =
+  let build_equation h { eq_lhs = pat; eq_rhs = e } =
     match pat, e.e_desc with
       | Evarpat(x), Efby(Some(Cconstr c), _) -> 
 	  (* we keep the initial value of state variables *)

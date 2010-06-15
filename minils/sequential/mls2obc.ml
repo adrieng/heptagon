@@ -132,7 +132,7 @@ and translate_c_act_list const_env map context pat c_act_list =
 and comp s_list =
   List.fold_right (fun s rest -> Comp(s, rest)) s_list Nothing
 
-let rec translate_eq const_env map { Minils.p_lhs = pat; Minils.p_rhs = e } (m, si, j, s) =
+let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e } (m, si, j, s) =
   let { Minils.e_desc = desc; Minils.e_ty = ty; Minils.e_ck = ck } = e in
   match pat, desc with
     | Minils.Evarpat(n), Minils.Efby(opt_c, e) ->
@@ -175,7 +175,7 @@ let rec translate_eq const_env map { Minils.p_lhs = pat; Minils.p_rhs = e } (m, 
         (m, si, j, s)
     | Minils.Etuplepat(p_list), Minils.Etuple(act_list) ->
         List.fold_right2
-          (fun pat e -> translate_eq const_env map { Minils.p_lhs = pat; Minils.p_rhs = e } )
+          (fun pat e -> translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e } )
           p_list act_list (m, si, j, s)
     | Minils.Evarpat(x), Minils.Eselect_slice(idx1, idx2, e) ->
 	let idx1 = int_of_size_exp const_env idx1 in

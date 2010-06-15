@@ -1,8 +1,6 @@
 (* Printing a location in the source program *)
 (* taken from the source of the Caml Light 0.73 compiler *)
 
-(* $Id$ *)
-
 open Lexing
 open Parsing
 

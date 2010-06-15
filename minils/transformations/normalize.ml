@@ -21,7 +21,7 @@ let equation (d_list, eq_list) ({ e_ty = te; e_linearity = l; e_ck = ck } as e) 
   let n = Ident.fresh "_v" in
   let d_list = { v_name = n; v_copy_of = None;
 		 v_type = type te; v_linearity = l; v_clock = ck } :: d_list
-  and eq_list = { p_lhs = Evarpat(n); p_rhs = e } :: eq_list in
+  and eq_list = { eq_lhs = Evarpat(n); eq_rhs = e } :: eq_list in
   (d_list, eq_list), n
 
 let intro context e =
@@ -232,17 +232,17 @@ let rec translate_eq context pat e =
       | Evarpat(x), Efby _ when not (vd_mem x d_list) ->
           let (d_list, eq_list), n = equation context e in
           d_list,
-          { p_lhs = pat; p_rhs = { e with e_desc = Evar(n) } } :: eq_list
+          { eq_lhs = pat; eq_rhs = { e with e_desc = Evar(n) } } :: eq_list
       | Etuplepat(pat_list), Etuple(e_list) ->
           List.fold_left2 distribute context pat_list e_list
-      | _ -> d_list, { p_lhs = pat; p_rhs = e } :: eq_list in
+      | _ -> d_list, { eq_lhs = pat; eq_rhs = e } :: eq_list in
 
   let context, e = translate Any context e in
   distribute context pat e
 
 let translate_eq_list d_list eq_list =
   List.fold_left
-    (fun context { p_lhs = pat; p_rhs = e } -> translate_eq context pat e)
+    (fun context { eq_lhs = pat; eq_rhs = e } -> translate_eq context pat e)
     (d_list, []) eq_list
 
 let translate_contract ({ c_eq = eq_list; c_local = d_list } as c) =

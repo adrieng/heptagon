@@ -93,7 +93,7 @@ let rec collect_exp nodes env e =
 	  )
 	    
 and collect_eqs nodes env eq = 
-  collect_exp nodes env eq.p_rhs
+  collect_exp nodes env eq.eq_rhs
 
 and node_call nodes n params =
   match params with

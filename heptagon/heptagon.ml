@@ -15,7 +15,7 @@ open Static
 open Signature
 
 
-type iterator_name = 
+type iterator_type = 
   | Imap
   | Ifold
   | Imapfold
@@ -53,7 +53,8 @@ type exp =
   | Eupdate of size_exp list
   | Eselect_slice
   | Econcat
-  | Eiterator of iterator_name * op_desc * exp option
+  | Eiterator of iterator_type * op_desc * exp option (** [op_desc] node to map
+                                                          [exp option] reset *)
   
   and op_desc = longname * size_exp list * op_kind
   and op_kind = | Eop | Enode
