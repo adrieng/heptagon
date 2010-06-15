@@ -8,43 +8,41 @@
 (**************************************************************************)
 (* global symbol tables *)
 
-(* $Id$ *)
 
 open Misc
-open Heptagon
-open Global
+open Signature
 open Names
+open Types
 
 exception Already_defined
 
 exception Cannot_find_file of string
-  
-(** Warning: Whenever this type is modified, 
-    interface_format_version in misc.ml should be incremented. *)
+
+(** Warning: Whenever this type is modified,
+    interface_format_version in signature.ml should be incremented. *)
 type env =
     { mutable name: string;
-      mutable values: sig_desc NamesEnv.t;
-      mutable types: typ_desc NamesEnv.t;
-      mutable constr: base_ty NamesEnv.t;
-      mutable field: field_desc NamesEnv.t;
-      mutable structs : struct_desc NamesEnv.t;
+      mutable values: node NamesEnv.t;
+      mutable types: type_def NamesEnv.t;
+      mutable constr: ty NamesEnv.t;
+      mutable structs : structure NamesEnv.t;
       format_version : string;
     }
-      
+
 type modules =
     { current: env;                (* associated symbol table *)
       mutable opened: env list;    (* opened tables *)
       mutable modules: env NamesEnv.t;  (* tables loaded in memory *)
     }
-      
-let current = 
-  { name = ""; values = NamesEnv.empty; types = NamesEnv.empty; 
-    constr = NamesEnv.empty; field = NamesEnv.empty; structs = NamesEnv.empty;
+
+let current =
+  { name = ""; values = NamesEnv.empty; types = NamesEnv.empty;
+    constr = NamesEnv.empty; structs = NamesEnv.empty;
     format_version = interface_format_version }
-    
-let modules = 
+
+let modules =
   { current = current; opened = []; modules = NamesEnv.empty }
-    
+
 let findfile filename =
   if Sys.file_exists filename then
     filename
@@ -58,7 +56,7 @@ let findfile filename =
         let b = Filename.concat a filename in
           if Sys.file_exists b then b else find rest
     in find !load_path
-    
+
 let load_module modname =
   let name = String.uncapitalize modname in
     try
@@ -85,7 +83,7 @@ let load_module modname =
 	  Printf.eprintf "Cannot find the compiled interface file %s.\n"
 	    filename;
 	  raise Error
-	    
+
 let find_module modname =
   try
     NamesEnv.find modname modules.modules
@@ -94,7 +92,10 @@ let find_module modname =
 	let m = load_module modname in
 	  modules.modules <- NamesEnv.add modname m modules.modules;
 	  m
-	    
+
+
+type 'a info = { qualid : qualident; info : 'a }
+
 let find where qualname =
     let rec findrec ident = function
       | [] -> raise Not_found
@@ -102,44 +103,40 @@ let find where qualname =
 	  try { qualid = { qual = m.name; id = ident };
 		info = where ident m }
 	  with Not_found -> findrec ident l in
-      
+
       match qualname with
-	| Modname({ qual = m; id = ident } as q) -> 
+	| Modname({ qual = m; id = ident } as q) ->
 	    let current = if current.name = m then current else find_module m in
 	    { qualid = q; info = where ident current }
 	| Name(ident) -> findrec ident (current :: modules.opened)
-	    
+
 (* exported functions *)
 let open_module modname =
   let m = find_module modname in
   modules.opened <- m :: modules.opened
-      
-let initialize modname = 
+
+let initialize modname =
   current.name <- modname;
   List.iter open_module !default_used_modules
-  
-let add_value f signature = 
+
+let add_value f signature =
   if NamesEnv.mem f current.values then raise Already_defined;
   current.values <- NamesEnv.add f signature current.values
-let add_type f typ_desc =
+let add_type f type_def =
   if NamesEnv.mem f current.types then raise Already_defined;
-  current.types <- NamesEnv.add f typ_desc current.types
+  current.types <- NamesEnv.add f type_def current.types
 let add_constr f ty_res =
   if NamesEnv.mem f current.constr then raise Already_defined;
   current.constr <- NamesEnv.add f ty_res current.constr
-let add_field f ty_arg ty_res =
-  if NamesEnv.mem f current.field then raise Already_defined;
-  current.field <- NamesEnv.add f { arg = ty_arg; res = ty_res } current.field
 let add_struct f fields =
   if NamesEnv.mem f current.structs then raise Already_defined;
-  current.structs <- NamesEnv.add f { fields = fields } current.structs    
+  current.structs <- NamesEnv.add f fields current.structs
 
 let find_value = find (fun ident m -> NamesEnv.find ident m.values)
 let find_type = find (fun ident m -> NamesEnv.find ident m.types)
 let find_constr = find (fun ident m -> NamesEnv.find ident m.constr)
-let find_field = find (fun ident m -> NamesEnv.find ident m.field)
 let find_struct = find (fun ident m -> NamesEnv.find ident m.structs)
-  
+
 let replace_value f signature =
   current.values <- NamesEnv.remove f current.values;
   current.values <- NamesEnv.add f signature current.values
@@ -150,6 +147,6 @@ let longname n = Modname({ qual = current.name; id = n })
 let currentname longname =
   match longname with
     | Name(n) -> longname
-    | Modname{ qual = q; id = id} -> 
+    | Modname{ qual = q; id = id} ->
 	if current.name = q then Name(id) else longname
 

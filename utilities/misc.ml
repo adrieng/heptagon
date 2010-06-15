@@ -7,11 +7,9 @@
 (*                                                                        *)
 (**************************************************************************)
 (* useful stuff *)
-(* $Id$ *)
 
 (* version of the compiler *)
 let version = "0.4"
-let interface_format_version = "5"
 let date = "DATE"
 
 (* standard module *)
@@ -141,17 +139,6 @@ let unique l =
   let tbl = Hashtbl.create 10 in (* You could replace 10 with List.length l *)
   List.iter (fun i -> Hashtbl.replace tbl i ()) l;
   Hashtbl.fold (fun key data accu -> key :: accu) tbl []
-
-type iterator_name = 
-    Imap
-  | Ifold
-  | Imapfold
-
-let iterator_to_string i = 
-  match i with 
-    | Imap -> "map"
-    | Ifold -> "fold"
-    | Imapfold -> "mapfold"
 
 let rec incomplete_map f l =
   match l with 

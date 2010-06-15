@@ -20,7 +20,7 @@ and cfalse = Name("false")
 let equation (d_list, eq_list) ({ e_ty = te; e_linearity = l; e_ck = ck } as e) =
   let n = Ident.fresh "_v" in
   let d_list = { v_name = n; v_copy_of = None;
-		 v_type = base_type te; v_linearity = l; v_clock = ck } :: d_list
+		 v_type = type te; v_linearity = l; v_clock = ck } :: d_list
   and eq_list = { p_lhs = Evarpat(n); p_rhs = e } :: eq_list in
   (d_list, eq_list), n
 

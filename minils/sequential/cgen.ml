@@ -107,7 +107,7 @@ let node_info classln =
 let output_names_list sig_info = 
   let remove_option ad = match ad.a_name with
     | Some n -> n
-    | None -> Error.message no_location Error.Eno_unnamed_output
+    | None -> Error.message no_location Error.Eno_unnamed_output (*TODO fresh*)
   in
     List.map remove_option sig_info.info.outputs
 
@@ -142,7 +142,7 @@ let rec ctype_of_otype oty =
 
 let ctype_of_heptty ty =
   let ty = Merge.translate_btype ty in
-  let ty = Translate.translate_base_type NamesEnv.empty ty in
+  let ty = Translate.translate_type NamesEnv.empty ty in
     ctype_of_otype ty
 
 let cvarlist_of_ovarlist vl =
@@ -266,7 +266,7 @@ let rec cexpr_of_exp var_env exp =
           | Cint i -> Cconst (Ccint i)
           | Cfloat f -> Cconst (Ccfloat f)
           | Cconstr c -> Cconst (Ctag (shortname c))
-	  | Cconst_array(n,c) -> 
+	  | Carray(n,c) -> 
 	      let cc = cexpr_of_exp var_env (Const c) in
 		Carraylit (repeat_list cc n)
         end
@@ -415,7 +415,7 @@ let generate_function_call var_env obj_env outvl objn args mem =
 (** Create the statement dest = c where c = v^n^m... *)
 let rec create_affect_const var_env dest c =
   match c with
-    | Cconst_array(n,c) -> 
+    | Carray(n,c) -> 
 	let x = gen_symbol () in
 	  [ Cfor(x, 0, n, 
 		create_affect_const var_env (Carray (dest, Clhs (Cvar x))) c) ]

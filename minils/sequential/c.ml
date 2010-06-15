@@ -167,8 +167,8 @@ let rec pp_array_decl cty =
    syntax! *)
 let rec pp_vardecl fmt (s, cty) = match cty with
   | Cty_arr (n, cty') -> 
-      let base_ty, indices = pp_array_decl cty in
-	fprintf fmt "%a %s%s" pp_cty base_ty s indices
+      let ty, indices = pp_array_decl cty in
+	fprintf fmt "%a %s%s" pp_cty ty s indices
   | _ -> fprintf fmt "%a %s" pp_cty cty s
 and pp_paramdecl fmt (s, cty) = match cty with
   | Cty_arr (n, cty') -> fprintf fmt "%a* %s" pp_cty cty' s

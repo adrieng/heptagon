@@ -1,4 +1,14 @@
+(**************************************************************************)
+(*                                                                        *)
+(*  Heptagon                                                              *)
+(*                                                                        *)
+(*  Author : Marc Pouzet                                                  *)
+(*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
+(*                                                                        *)
+(**************************************************************************)
+
 (* naming and local environment *)
+
 
 type ident = {
   num : int;        (* a unique index *)

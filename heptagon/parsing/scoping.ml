@@ -128,7 +128,7 @@ let rec translate_type const_env = function
       Heptagon.Tprod(List.map (translate_type const_env) ty_list)
   | Tid ln -> Heptagon.Tbase (Heptagon.Tid ln)
   | Tarray (ty, e) -> 
-      let ty = Heptagon.base_type (translate_type const_env ty) in
+      let ty = Heptagon.type (translate_type const_env ty) in
 	Heptagon.Tbase (Heptagon.Tarray (ty, translate_size_exp const_env e))
 
 and translate_exp const_env env e = 
@@ -178,7 +178,7 @@ and translate_desc loc const_env env = function
       let e_list = List.map (translate_exp const_env env) e_list in
 	(match e_list with
 	   | [{ Heptagon.e_desc = Heptagon.Econst c }; e1 ] -> 
-	       Heptagon.Econst (Heptagon.Cconst_array (Heptagon.size_exp_of_exp e1, c))
+	       Heptagon.Econst (Heptagon.Carray (Heptagon.size_exp_of_exp e1, c))
 	   | _ -> Heptagon.Eapp (translate_app const_env env app, e_list)
 	)
   | Eapp (app, e_list) ->
@@ -244,7 +244,7 @@ and translate_switch_handler loc const_env env sh =
 
 and translate_var_dec const_env env vd = 
   { Heptagon.v_name = Rename.name vd.v_loc env vd.v_name;
-    Heptagon.v_type = Heptagon.base_type (translate_type const_env vd.v_type);
+    Heptagon.v_type = Heptagon.type (translate_type const_env vd.v_type);
     Heptagon.v_linearity = vd.v_linearity;
     Heptagon.v_last = translate_last env vd.v_last;
     Heptagon.v_loc = vd.v_loc } 
@@ -285,7 +285,7 @@ let translate_typedec const_env ty =
     | Type_enum(tag_list) -> Heptagon.Type_enum(tag_list)
     | Type_struct(field_ty_list) ->
 	let translate_field_type (f,ty) = 
-	  f, Heptagon.base_type (translate_type const_env ty)
+	  f, Heptagon.type (translate_type const_env ty)
 	in
 	  Heptagon.Type_struct (List.map translate_field_type field_ty_list)
   in
@@ -295,7 +295,7 @@ let translate_typedec const_env ty =
 
 let translate_const_dec const_env cd =
   { Heptagon.c_name = cd.c_name;
-    Heptagon.c_type = Heptagon.base_type (translate_type const_env cd.c_type);
+    Heptagon.c_type = Heptagon.type (translate_type const_env cd.c_type);
     Heptagon.c_value = translate_size_exp const_env cd.c_value;
     Heptagon.c_loc = cd.c_loc; }
 
@@ -309,7 +309,7 @@ let translate_program p =
 
 let translate_signature const_env s =
   let translate_field_type (f,(ty,lin)) = 
-    f, Heptagon.base_type (translate_type const_env ty), lin
+    f, Heptagon.type (translate_type const_env ty), lin
   in
     
   let const_env = build_id_list no_location const_env s.sig_params in

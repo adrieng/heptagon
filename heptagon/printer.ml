@@ -19,6 +19,15 @@ open Modules
 open Static
 open Format
 
+
+
+let iterator_to_string i = 
+  match i with 
+    | Imap -> "map"
+    | Ifold -> "fold"
+    | Imapfold -> "mapfold"
+
+
 let rec print_list ff print sep l =
   match l with
     | [] -> ()
@@ -69,18 +78,18 @@ let rec print_pat ff = function
       print_list ff print_pat "," pat_list;
       fprintf ff ")@]"
 
-let rec print_base_type ff = function
+let rec print_type ff = function
   | Tint -> fprintf ff  "int"
   | Tbool -> fprintf ff "bool"
   | Tfloat -> fprintf ff  "float"
   | Tid(id) -> print_longname ff id
   | Tarray(ty, e) ->
-      print_base_type ff ty;
+      print_type ff ty;
       fprintf ff "^";
       print_size_exp ff e;
 
 and print_type ff = function
-  | Tbase(base_ty) -> print_base_type ff base_ty
+  | Tbase(ty) -> print_type ff ty
   | Tprod(ty_list) ->
       fprintf ff "@[(";
       print_list ff print_type " *" ty_list;
@@ -90,7 +99,7 @@ and print_c ff = function
   | Cint i -> fprintf ff "%d" i
   | Cfloat f -> fprintf ff "%f" f
   | Cconstr(tag) -> print_longname ff tag
-  | Cconst_array (n, c) ->
+  | Carray (n, c) ->
       print_c ff c;
       fprintf ff "^";
       print_size_exp ff n
@@ -100,7 +109,7 @@ and print_vd ff { v_name = n; v_type = ty; v_last = last } =
   begin match last with Last _ -> fprintf ff "last " | _ -> () end;
   print_ident ff n;
   fprintf ff ": ";
-  print_base_type ff ty;
+  print_type ff ty;
   begin
     match last with Last(Some(v)) -> fprintf ff "= ";print_c ff v
       | _ -> ()
@@ -378,14 +387,14 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
           (fun ff (field, ty) ->
              print_name ff field;
              fprintf ff ": ";
-             print_base_type ff ty) ";" f_ty_list;
+             print_type ff ty) ";" f_ty_list;
         fprintf ff "}@]@.@]"
 
 let print_const_dec ff c =
   fprintf ff "@[const ";
   print_name ff c.c_name;
   fprintf ff " : ";
-  print_base_type ff c.c_type;
+  print_type ff c.c_type;
   fprintf ff " = ";
   print_size_exp ff c.c_value;
   fprintf ff "@.@]"

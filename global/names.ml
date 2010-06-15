@@ -1,4 +1,6 @@
-(* long identifiers *)
+(** Define qualified names "Module.name" (longname)
+  [shortname] longname -> name
+  [fullname] longname -> Module.name *)
 
 type name = string
 
@@ -23,6 +25,7 @@ end
 
 module S = Set.Make (struct type t = string let compare = compare end)
 
+
 let shortname = function
   | Name s -> s
   | Modname { id = id; } -> id
@@ -38,4 +41,4 @@ let mk_longname s =
     Modname { qual = String.sub s 0 ind; id = id; }
   with Not_found -> Name s
 
-let fprint_t ff id = Format.fprintf ff "%s" (fullname id)
+let print_longname ff id = Format.fprintf ff "%s" (fullname id)

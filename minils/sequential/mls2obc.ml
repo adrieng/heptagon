@@ -54,22 +54,22 @@ let is_op = function
   | _ -> false
 
 let rec translate_type const_env = function
-  | Minils.Tbase(btyp) -> translate_base_type const_env btyp
+  | Minils.Tbase(btyp) -> translate_type const_env btyp
   | Minils.Tprod _     -> assert false
 
-and translate_base_type const_env = function
+and translate_type const_env = function
   | Minils.Tint -> Tint
   | Minils.Tfloat  -> Tfloat
   | Minils.Tid(id) -> Tid(id)
-  | Minils.Tarray(ty, n) -> Tarray (translate_base_type const_env ty,
+  | Minils.Tarray(ty, n) -> Tarray (translate_type const_env ty,
 				    int_of_size_exp const_env n)
 
 let rec translate_const const_env = function
   | Minils.Cint(v) -> Cint(v)
   | Minils.Cfloat(v) -> Cfloat(v)
   | Minils.Cconstr(c) -> Cconstr(c)
-  | Minils.Cconst_array(n,c) -> 
-      Cconst_array(int_of_size_exp const_env n, translate_const const_env c)
+  | Minils.Carray(n,c) -> 
+      Carray(int_of_size_exp const_env n, translate_const const_env c)
 
 let rec translate_pat map = function
   | Minils.Evarpat(x) -> [var_from_name map x]
@@ -259,7 +259,7 @@ let obj_decl l = List.map (fun (x, t, i) -> { obj = x; cls = t; n = i }) l
 
 let translate_var_dec const_env map l =
   let one_var { Minils.v_name = x; Minils.v_type = t } =
-     { v_name = x; v_type = translate_base_type const_env t; v_pass_by_ref = false }
+     { v_name = x; v_type = translate_type const_env t; v_pass_by_ref = false }
   in
     (* remove unused vars *)
   let l = List.filter (fun { Minils.v_name = x } -> 
@@ -395,7 +395,7 @@ let translate_ty_def const_env { Minils.t_name = name; Minils.t_desc = tdesc } =
     | Minils.Type_enum(tag_name_list) -> Type_enum(tag_name_list)
     | Minils.Type_struct(field_ty_list) ->
         Type_struct
-          (List.map (fun (f, ty) -> (f, translate_base_type const_env ty)) field_ty_list)
+          (List.map (fun (f, ty) -> (f, translate_type const_env ty)) field_ty_list)
   in
   { t_name = name; t_desc = tdesc }
 

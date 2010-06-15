@@ -75,7 +75,7 @@ let equation locals l_eqs e =
   let n = Ident.fresh "ck" in
   n,
   { v_name = n; v_copy_of = None;
-    v_type = exp_base_type e; v_linearity = NotLinear; v_clock = Cbase } :: locals,
+    v_type = exp_type e; v_linearity = NotLinear; v_clock = Cbase } :: locals,
   { p_lhs = Evarpat(n); p_rhs = e } :: l_eqs
 
 (* inserts the definition [x,e] into the set of shared equations *)
@@ -190,7 +190,7 @@ let rec const = function
   | Heptagon.Cint i -> Cint i
   | Heptagon.Cfloat f -> Cfloat f
   | Heptagon.Cconstr t -> Cconstr t
-  | Heptagon.Cconst_array(n, c) -> Cconst_array(n, const c)
+  | Heptagon.Carray(n, c) -> Carray(n, const c)
 
 open Format
 
@@ -221,7 +221,7 @@ let application env { Heptagon.a_op = op;  Heptagon.a_inlined = inlined } e_list
   store the bounds (which will be used at code generation time, where the types 
   are harder to find). *)
     | Heptagon.Eselect_dyn, e::defe::idx_list ->
-	let bounds = bounds_list (exp_base_type e)  in
+	let bounds = bounds_list (exp_type e)  in
 	Eselect_dyn (idx_list, bounds,
 		     e, defe)
     | Heptagon.Eupdate idx_list, [e1;e2] ->
@@ -304,14 +304,14 @@ let rec translate_pat = function
   | Heptagon.Etuplepat(l) -> Etuplepat (List.map translate_pat l)
 
 let rec rename_pat ni locals s_eqs = function
-  | Heptagon.Evarpat(n), Heptagon.Tbase(base_ty) ->
+  | Heptagon.Evarpat(n), Heptagon.Tbase(ty) ->
       if IdentSet.mem n ni then
         let n_copy = Ident.fresh (sourcename n) in
-        let base_ty = translate_btype base_ty in
+        let ty = translate_btype ty in
         Evarpat(n_copy),
       { v_name = n_copy; v_copy_of = None;
-	v_type = base_ty; v_linearity = NotLinear; v_clock = Cbase } :: locals,
-      add n (make_exp (Evar n_copy) (Tbase(base_ty)) NotLinear Cbase no_location)
+	v_type = ty; v_linearity = NotLinear; v_clock = Cbase } :: locals,
+      add n (make_exp (Evar n_copy) (Tbase(ty)) NotLinear Cbase no_location)
         s_eqs
       else Evarpat n, locals, s_eqs
   | Heptagon.Etuplepat(l), Heptagon.Tprod(l_ty) ->
@@ -325,7 +325,7 @@ let rec rename_pat ni locals s_eqs = function
   | _ -> assert false
 
 let all_locals ni p =
-  IdentSet.is_empty (IdentSet.inter (Heptagon.Vars.vars_pat IdentSet.empty IdentSet.empty p) ni)
+  IdentSet.is_empty (IdentSet.inter (Heptagon.vars_pat p) ni)
 
 let rec translate_eq env ni (locals, l_eqs, s_eqs) eq =
   match Heptagon.eqdesc eq with

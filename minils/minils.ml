@@ -21,11 +21,10 @@ open Interference_graph
 open Global
 open Static
 
-(** Inlining policies, to be held in app records. *)
-type inlining_policy =
-  | Ino (** Do not inline. *)
-  | Ione (** Just inline on one step. *)
-  | Irec (** Recursively inline all sub-calls. *)
+type iterator_name = 
+  | Imap
+  | Ifold
+  | Imapfold
 
 type type_dec =
     { t_name: name;
@@ -35,7 +34,7 @@ type type_dec =
 and tdesc =
   | Type_abs
   | Type_enum of name list
-  | Type_struct of (name * base_ty) list
+  | Type_struct of (name * ty) list
 
 and exp =
     { e_desc: desc;        (* its descriptor *)
@@ -49,7 +48,6 @@ and desc =
   | Evar of ident
   | Econstvar of name
   | Efby of const option * exp
-  | Ereset_mem of ident * const * ident
   | Etuple of exp list
   | Eop of longname * size_exp list * exp list
   | Eapp of app * size_exp list * exp list
@@ -89,19 +87,19 @@ and link =
   | Clink of ck
 
 and ty =
-  | Tbase of base_ty
+  | Tbase of ty
   | Tprod of ty list
 
-and base_ty =
+and ty =
   | Tint | Tfloat
   | Tid of longname
-  | Tarray of base_ty * size_exp
+  | Tarray of ty * size_exp
 
 and const =
   | Cint of int
   | Cfloat of float
   | Cconstr of longname
-  | Cconst_array of size_exp * const 
+  | Carray of size_exp * const 
 
 and pat =
   | Etuplepat of pat list
@@ -114,7 +112,7 @@ type eq =
 type var_dec =
     { v_name : ident;
       v_copy_of : ident option;
-      v_type : base_ty;
+      v_type : ty;
       v_linearity : linearity;
       v_clock : ck }
 
@@ -135,7 +133,7 @@ type node_dec =
       n_equs   : eq list;
       n_loc    : location; 
       n_targeting : (int*int) list;
-      n_mem_alloc : (base_ty * ivar list) list;
+      n_mem_alloc : (ty * ivar list) list;
       n_states_graph : (name,name) interf_graph;
       n_params : name list; 
       n_params_constraints : size_constr list;
@@ -162,13 +160,24 @@ let make_dummy_exp desc ty =
     e_ck = Cbase; e_loc = no_location }
 
 (* Helper functions to work with types *)
-let base_type = function
+let type = function
     | Tbase(bty) -> bty
     | Tprod _ -> assert false
 
+(*TODO Cedric *)
+type ivar = | IVar of ident | IField of ident * longname
+
+(** [filter_vars l] returns a list of variables identifiers from
+    a list of ivar.*)
+let rec filter_vars =
+  function
+  | [] -> []
+  | IVar id :: l -> id :: (filter_vars l)
+  | _ :: l -> filter_vars l
+
 (* get the type of an expression ; assuming that this type is a base type *)
-let exp_base_type e = 
-  base_type e.e_ty
+let exp_type e = 
+  type e.e_ty
 
 let rec size_exp_of_exp e =
   match e.e_desc with 
@@ -423,17 +432,17 @@ struct
         print_list ff print_pat "," pat_list;
         fprintf ff ")@]"
 
-  let rec print_base_type ff = function
+  let rec print_type ff = function
     | Tint -> fprintf ff  "int"
     | Tfloat -> fprintf ff  "float"
     | Tid(id) -> print_longname ff id
     | Tarray(ty, n) -> 
-	print_base_type ff ty;
+	print_type ff ty;
 	fprintf ff "^";
 	print_size_exp ff n
 
   let rec print_type ff = function
-    | Tbase(base_ty) -> print_base_type ff base_ty
+    | Tbase(ty) -> print_type ff ty
     | Tprod(ty_list) ->
         fprintf ff "@[(";
         print_list ff print_type " *" ty_list;
@@ -459,7 +468,7 @@ struct
     fprintf ff "@[<v>";
     print_ident ff n;
     fprintf ff ":";
-    print_base_type ff ty;
+    print_type ff ty;
     fprintf ff " at ";
     print_ck ff ck;
     fprintf ff "@]"
@@ -468,7 +477,7 @@ struct
     | Cint i -> fprintf ff "%d" i
     | Cfloat f -> fprintf ff "%f" f
     | Cconstr(tag) -> print_longname ff tag
-    | Cconst_array (n, c) ->
+    | Carray (n, c) ->
 	print_c ff c;
 	fprintf ff "^";
 	print_size_exp ff n
@@ -675,7 +684,7 @@ struct
           print_list ff
             (fun ff (field, ty) -> print_name ff field;
                fprintf ff ": ";
-               print_base_type ff ty) ";" f_ty_list;
+               print_type ff ty) ";" f_ty_list;
           fprintf ff "}@]@\n@]"
 
   let print_contract ff {c_local = l;

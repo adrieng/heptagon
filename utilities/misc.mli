@@ -7,11 +7,9 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* $Id$ *)
 
 (* Version and date of compilation *)
 val version : string
-val interface_format_version: string
 val date : string
 
 (* List of modules initially opened *)

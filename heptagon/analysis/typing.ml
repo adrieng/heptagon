@@ -139,8 +139,8 @@ let message loc kind =
 
 let add_value f signature =
   try add_value f signature with Already_defined -> error (Ealready_defined f)
-let add_type f typ_desc =
-  try add_type f typ_desc with Already_defined -> error (Ealready_defined f)
+let add_type f type_def =
+  try add_type f type_def with Already_defined -> error (Ealready_defined f)
 let add_constr f ty_res =
   try add_constr f ty_res with Already_defined -> error (Ealready_defined f)
 let add_field f ty_arg ty_res =
@@ -223,17 +223,17 @@ let prod = function
   | ty_list -> Tprod(ty_list)
 
 let rec typing_const c = 
-  let typed_c, base_ty = match c with
+  let typed_c, ty = match c with
     | Cint _     -> c, Tid(pint)
     | Cfloat _   -> c, Tid(pfloat)
     | Cconstr(c) -> 
-	let { qualid = q; info = base_ty } = find_constr c in
-	Cconstr(Modname(q)), base_ty
-    | Cconst_array(n, c) ->
+	let { qualid = q; info = ty } = find_constr c in
+	Cconstr(Modname(q)), ty
+    | Carray(n, c) ->
 	let c, ty = typing_const c in
-	  Cconst_array(n,c), Tarray(base_type ty, n)
+	  Carray(n,c), Tarray(type ty, n)
   in
-  typed_c, Tbase(base_ty)
+  typed_c, Tbase(ty)
 	
 let typ_of_name h x = 
   try 
@@ -294,12 +294,12 @@ let simplify_type loc const_env ty =
   with
     Instanciation_failed -> message loc (Etype_should_be_static (Tbase ty))
 
-let rec subst_base_type_vars m = function
-  | Tarray(ty, e) -> Tarray(subst_base_type_vars m ty, size_exp_subst m e)
+let rec subst_type_vars m = function
+  | Tarray(ty, e) -> Tarray(subst_type_vars m ty, size_exp_subst m e)
   | t -> t
 
 let rec subst_type_vars m = function
-  | Tbase ty -> Tbase (subst_base_type_vars m ty)
+  | Tbase ty -> Tbase (subst_type_vars m ty)
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
 
 let equal expected_tag_list actual_tag_list =
@@ -492,8 +492,8 @@ and typing_app statefull h op e_list =
 	  ty, op, typed_e1::typed_defe::typed_idx_list
     | Eupdate idx_list, [e1;e2] ->
 	let typed_e1, t1 = typing statefull h e1 in
-	let base_ty = typing_array_subscript statefull h idx_list t1 in
-	let typed_e2 = expect statefull h base_ty e2 in
+	let ty = typing_array_subscript statefull h idx_list t1 in
+	let typed_e2 = expect statefull h ty e2 in
 	  t1, op, [typed_e1; typed_e2]
     | Eselect_slice, [e; idx1; idx2] ->
 	let typed_idx1 = expect statefull h (Tbase(Tint)) idx1 in
@@ -612,10 +612,10 @@ and typing_iterator statefull h it n args_ty_list result_ty_list e_list =
 and typing_array_subscript statefull h idx_list ty  = 
   match ty, idx_list with
     | ty, [] -> ty 
-    | Tbase(Tarray(base_ty, exp)), idx::idx_list -> 
+    | Tbase(Tarray(ty, exp)), idx::idx_list -> 
 	add_size_constr (LEqual (SConst 0, idx));
 	add_size_constr (LEqual (idx, SOp(SMinus, exp, SConst 1)));
-	typing_array_subscript statefull h idx_list (Tbase base_ty) 
+	typing_array_subscript statefull h idx_list (Tbase ty) 
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 
 (* This function checks that the array dimensions matches
@@ -623,10 +623,10 @@ and typing_array_subscript statefull h idx_list ty  =
 and typing_array_subscript_dyn statefull h idx_list ty = 
   match ty, idx_list with
     | ty, [] -> ty, [] 
-    | Tbase(Tarray(base_ty, exp)), idx::idx_list -> 
+    | Tbase(Tarray(ty, exp)), idx::idx_list -> 
 	let typed_idx = expect statefull h (Tbase(Tint)) idx in 
 	let ty, typed_idx_list = 
-	  typing_array_subscript_dyn statefull h idx_list (Tbase base_ty) in
+	  typing_array_subscript_dyn statefull h idx_list (Tbase ty) in
 	  ty, typed_idx::typed_idx_list 
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 

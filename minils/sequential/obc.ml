@@ -23,6 +23,12 @@ type obj_name = name
 type op_name = longname
 type field_name = longname
 
+type iterator_name = 
+  | Imap
+  | Ifold
+  | Imapfold
+
+
 type ty =
     | Tint
     | Tfloat
@@ -42,7 +48,7 @@ type const =
     | Cint of int
     | Cfloat of float
     | Cconstr of longname
-    | Cconst_array of int * const
+    | Carray of int * const
 
 type lhs =
   | Var of var_name
@@ -108,24 +114,11 @@ type program =
 (** [is_scalar_type vd] returns whether the type corresponding
     to this variable declaration is scalar (ie a type that can
     be returned by a C function). *)
-let is_scalar_type vd =
-  let pint = Modname({ qual = "Pervasives"; id = "int" }) in
-  let pfloat = Modname({ qual = "Pervasives"; id = "float" }) in
-  let pbool = Modname({ qual = "Pervasives"; id = "bool" }) in
-    match vd.v_type with
-      | Tint | Tfloat -> true
-      | Tid name_int when name_int = pint -> true
-      | Tid name_float when name_float = pfloat -> true
-      | Tid name_bool when name_bool = pbool -> true
-      | _ -> false 
-
-let actual_type ty =
+let is_scalar_type ty =
   match ty with
-    | Tid(Name("float"))
-    | Tid(Modname { qual = "Pervasives"; id = "float" }) -> Tfloat
-    | Tid(Name("int"))
-    | Tid(Modname { qual = "Pervasives"; id = "int" }) -> Tint
-    | _ -> ty
+  | Tid x ->
+      (x = Initial.pint) or (x = Initial.pfloat) or (x = Initial.pbool)
+  | _ -> false
 
 let rec var_name x =
   match x with
@@ -220,7 +213,7 @@ struct
     | Cint i       -> fprintf ff "%d" i
     | Cfloat f     -> fprintf ff "%f" f
     | Cconstr(tag) -> print_longname ff tag
-    | Cconst_array(n,c) ->
+    | Carray(n,c) ->
 	print_c ff c;
 	fprintf ff "^%d" n
 

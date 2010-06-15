@@ -83,7 +83,7 @@ struct
 	  print_list ff 
 	    (fun ff (field, ty) -> print_name ff field;
               fprintf ff ": ";
-	      print_base_type ff ty) ";" f_ty_list;
+	      print_type ff ty) ";" f_ty_list;
 	  fprintf ff "}@]@.@]"
 
   let signature ff name { inputs = inputs;
