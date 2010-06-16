@@ -15,3 +15,15 @@ type ty =
 let invalid_type = Tprod []
 
 let const_array_of ty n = Tarray (ty, SConst n)
+
+
+
+open Pp_tools
+open Format
+
+let rec print_type ff = function
+  | Tprod ty_list ->
+      fprintf ff "@[<hov2>%a@]" (print_list_r print_type "(" " *" ")") ty_list
+  | Tid id -> print_longname ff id
+  | Tarray (ty, n) ->
+      fprintf ff "@[<hov2>%a^%a@]" print_type ty print_size_exp n

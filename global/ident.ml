@@ -79,3 +79,5 @@ module IdentSet = struct
     Format.fprintf ff "}@]";
 end
 
+
+let print_ident ff id = fprintf ff "%s" (name id)

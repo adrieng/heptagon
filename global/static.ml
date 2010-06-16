@@ -130,32 +130,14 @@ let rec print_size_exp ff =
   | SConst i -> fprintf ff "%d" i
   | SVar id -> fprintf ff "%s" id
   | SOp (op, e1, e2) ->
-      (fprintf ff "@[(";
-       print_size_exp ff e1;
-       fprintf ff " %s " (op_to_string op);
-       print_size_exp ff e2;
-       fprintf ff ")@]")
+      fprintf ff "@[(%a %s %a@]"
+        print_size_exp e1 (op_to_string op) print_size_exp e2
   
-let rec print_list ff print sep l =
-  match l with
-  | [] -> ()
-  | [ x ] -> print ff x
-  | x :: l -> (print ff x; fprintf ff "%s@ " sep; print_list ff print sep l)
-  
-let print_size_constr ff =
-  function
+let print_size_constr ff = function
   | Equal (e1, e2) ->
-      (fprintf ff "@[";
-       print_size_exp ff e1;
-       fprintf ff " = ";
-       print_size_exp ff e2;
-       fprintf ff "@]")
+      fprintf ff "@[%a = %a@]" print_size_exp e1 print_size_exp e2
   | LEqual (e1, e2) ->
-      (fprintf ff "@[";
-       print_size_exp ff e1;
-       fprintf ff " <= ";
-       print_size_exp ff e2;
-       fprintf ff "@]")
+      fprintf ff "@[%a <= %a@]" print_size_exp e1 print_size_exp e2
   | False -> fprintf ff "False"
   
 let psize_constr oc c =
