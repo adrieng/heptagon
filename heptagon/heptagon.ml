@@ -57,7 +57,7 @@ type exp =
   | Eiterator of iterator_type * op_desc * exp option (** [op_desc] node to map
                                                           [exp option] reset *)
   
-  and op_desc = longname * size_exp list * op_kind
+  and op_desc = { op_name : longname; op_params: size_exp list; op_kind: op_kind }
   and op_kind = | Eop | Enode
 
   and const =

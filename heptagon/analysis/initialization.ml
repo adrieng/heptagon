@@ -212,7 +212,6 @@ let rec typing h e =
 	skeleton i e.e_ty
     | Earray(e_list) ->
 	product (List.map (typing h) e_list)
-    | Ereset_mem _ -> assert false
 
 (** Typing an application *)
 and apply h op e_list =

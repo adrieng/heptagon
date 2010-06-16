@@ -16,6 +16,7 @@ open Names
 open Ident
 open Signature
 open Static
+open Types
 
 type iterator_type = 
   | Imap
@@ -33,12 +34,12 @@ and tdesc =
   | Type_struct of structure
 
 and exp =
-    { e_desc: desc;        (* its descriptor *)
+    { e_desc: edesc;        (* its descriptor *)
       mutable e_ck: ck;
       mutable e_ty: ty;
       e_loc: location }
 
-and desc =
+and edesc =
   | Econst of const
   | Evar of ident
   | Econstvar of name
@@ -66,7 +67,7 @@ and array_op =
   | Econcat of exp * exp
   | Eiterator of iterator_name * longname * size_exp list * size_exp * exp list * ident option
    
-and op_desc = longname * size_exp list * op_kind
+and op_desc = { op_name: longname; op_params: size_exp list; op_kind: op_kind }
 and op_kind = | Eop | Enode
 
 and ct =
@@ -95,7 +96,7 @@ and pat =
 type eq =
     { eq_lhs : pat;
       eq_rhs : exp;
-      eq_loc : loc }
+      eq_loc : location }
 
 type var_dec =
     { v_name : ident;
@@ -135,20 +136,19 @@ type program =
       p_consts : const_dec list; }
 
 (*Helper functions to build the AST*)
-let make_exp desc ty l ck loc =
-  { e_desc = desc; e_ty = ty; e_linearity = l; e_ck = ck; e_loc = loc }
 
-let make_dummy_exp desc ty =
-  { e_desc = desc; e_ty = ty; e_linearity = NotLinear; 
-    e_ck = Cbase; e_loc = no_location }
+
+let mk_exp ?(exp_ty = Tprod []) ?(clock = Cbase) ?(loc = no_location) desc =
+  { e_desc = desc; e_ty = exp_ty; e_ck = clock; e_loc = loc }
+
 
 let rec size_exp_of_exp e =
   match e.e_desc with 
   | Econstvar n -> SVar n
   | Econst (Cint i) -> SConst i
-  | Eop(op, _, [e1;e2]) ->
-      let sop = op_from_app_name op in
-	SOp(sop, size_exp_of_exp e1, size_exp_of_exp e2)
+  | Ecall(op, [e1;e2], _) ->
+      let sop = op_from_app_name op.op_name in
+	    SOp(sop, size_exp_of_exp e1, size_exp_of_exp e2)
   | _ -> raise Not_static
 
 (*Returns the list of bounds of an array type*)

@@ -53,7 +53,7 @@ and array_op =
   | Econcat
   | Eiterator of iterator_type * op_desc
 
-and op_desc = longname * exp list * op_kind
+and op_desc = { op_name : longname; op_params: exp list; op_kind: op_kind }
 and op_kind = | Eop | Enode
 
 and const =
@@ -180,11 +180,14 @@ let mk_call desc exps =
 let mk_op_call s params exps =
   mk_call (Name s, params, Eop)  exps
 
+let mk_op_desc ln params kind =
+  { op_name = ln; op_params = params; op_kind = kind } 
+
 let mk_array_op_call op exps =
   Eapp (mk_app (Earray_op op), exps)
 
 let mk_iterator_call it ln params exps =
-  mk_array_op_call (Eiterator (it, (ln, params, Enode))) exps
+  mk_array_op_call (Eiterator (it, mk_op_desc ln params Enode)) exps
 
 let mk_type_dec name desc =
   { t_name = name; t_desc = desc; t_loc = Location.get_current_location () }

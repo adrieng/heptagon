@@ -407,7 +407,7 @@ simple_exp:
 
 node_name:
   | longname call_params
-      { $1, $2, Enode }
+      { mk_op_desc $1 $2 Enode }
 
 exp:
   | simple_exp { $1 }
