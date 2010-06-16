@@ -12,6 +12,6 @@ open Names
 type ty =
   | Tprod of ty list | Tid of longname | Tarray of ty * size_exp
 
-
+let invalid_type = Tprod []
 
 let const_array_of ty n = Tarray (ty, SConst n)

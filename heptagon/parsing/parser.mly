@@ -562,8 +562,9 @@ interface_decl:
   | OPEN Constructor { mk_interface_decl (Iopen $2) }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
-    { mk_interface_decl (Isignature({ sig_name = $4; sig_inputs = $6; sig_outputs = $10;
-        sig_node = $3; sig_params = $4; })) }
+    { mk_interface_decl (Isignature({ sig_name = $4; sig_inputs = $6;
+                                      sig_outputs = $10;
+                                      sig_params = $4; })) }
 ;
 
 params_signature:

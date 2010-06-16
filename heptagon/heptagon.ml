@@ -13,7 +13,7 @@ open Names
 open Ident  
 open Static
 open Signature
-
+open Types
 
 type iterator_type = 
   | Imap
@@ -163,9 +163,10 @@ let mk_type_dec name desc =
 let mk_equation desc =
   { eq_desc = desc; eq_statefull = true; eq_loc = no_location; }
     
-let cfalse = Cconstr pfalse
+(*
+let cfalse = Cconstr Initial.pfalse
   
-let ctrue = Cconstr ptrue
+let ctrue = Cconstr Initial.ptrue
   
 let make_bool desc = emake desc tybool
   
@@ -180,9 +181,9 @@ let bool_param n =
     v_linearity = NotLinear;
   }
   
-let dfalse = make_bool (Econst (Cconstr pfalse))
+let dfalse = make_bool (Econst (Cconstr Initial.pfalse))
   
-let dtrue = make_bool (Econst (Cconstr ptrue))
+let dtrue = make_bool (Econst (Cconstr Initial.ptrue))
   
 let var n ty = emake (Evar n) ty
   
@@ -224,19 +225,18 @@ let eq pat e = eqmake (Eeq (pat, e))
 let reset eq_list e = eqmake (Ereset (eq_list, e))
   
 let switch e l = eqmake (Eswitch (e, l))
-  
-let varpat n = Evarpat n
+  *)
   
 let op_from_app app =
   match app.a_op with
-  | Eop (n, _) -> op_from_app_name n
+  | Ecall ((op, _, Eop), _) -> op_from_app_name op
   | _ -> raise Not_static
   
 let rec size_exp_of_exp e =
   match e.e_desc with
   | Econstvar n -> SVar n
   | Econst (Cint i) -> SConst i
-  | Eapp (app, ([ e1; e2 ])) ->
+  | Eapp (app, [ e1; e2 ]) ->
       let op = op_from_app app
       in SOp (op, size_exp_of_exp e1, size_exp_of_exp e2)
   | _ -> raise Not_static

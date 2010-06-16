@@ -39,3 +39,6 @@ let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
 let mk_arg name ty =
   { a_type = ty; a_name = name }
 
+let mk_param name = 
+  { p_name = name }
+

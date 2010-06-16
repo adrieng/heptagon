@@ -94,10 +94,14 @@ let build_id_list loc env l =
     List.fold_left build_id env l
 
 (* Translate the AST into Heptagon. *)
-let translate_inlining_policy = function
-  | Ino -> Heptagon.Ino
-  | Ione -> Heptagon.Ione
-  | Irec -> Heptagon.Irec
+let translate_iterator_type = function
+  | Imap -> Heptagon.Imap
+  | Ifold -> Heptagon.Ifold
+  | Imapfold -> Heptagon.Imapfold
+
+let translate_op_kind = function
+  | Eop -> Heptagon.Eop
+  | Enode -> Heptagon.Enode
 
 let translate_const = function
   | Cint i -> Heptagon.Cint i
@@ -106,7 +110,7 @@ let translate_const = function
 
 let op_from_app loc app =
   match app.a_op with
-    | Eop (op,_) -> op_from_app_name op
+    | Ecall (op, _, Eop) -> op_from_app_name op
     | _ -> Error.message loc Error.Estatic_exp_expected
 
 let check_const_vars = ref true
@@ -114,27 +118,25 @@ let rec translate_size_exp const_env e =
   match e.e_desc with 
   | Evar n ->
       if !check_const_vars & not (NamesEnv.mem n const_env) then
-	Error.message e.e_loc (Error.Econst_var n)
+	      Error.message e.e_loc (Error.Econst_var n)
       else
-	SVar n
+	      SVar n
   | Econst (Cint i) -> SConst i
   | Eapp(app, [e1;e2]) ->
       let op = op_from_app e.e_loc app in
-	SOp(op, translate_size_exp const_env e1, translate_size_exp const_env e2)
+	      SOp(op, translate_size_exp const_env e1, translate_size_exp const_env e2)
   | _ -> Error.message e.e_loc Error.Estatic_exp_expected
 
 let rec translate_type const_env = function
-  | Tprod ty_list -> 
-      Heptagon.Tprod(List.map (translate_type const_env) ty_list)
-  | Tid ln -> Heptagon.Tbase (Heptagon.Tid ln)
+  | Tprod ty_list -> Types.Tprod(List.map (translate_type const_env) ty_list)
+  | Tid ln -> Types.Tid ln
   | Tarray (ty, e) -> 
-      let ty = Heptagon.type (translate_type const_env ty) in
-	Heptagon.Tbase (Heptagon.Tarray (ty, translate_size_exp const_env e))
+      let ty = translate_type const_env ty in
+	      Types.Tarray (ty, translate_size_exp const_env e)
 
 and translate_exp const_env env e = 
   { Heptagon.e_desc = translate_desc e.e_loc const_env env e.e_desc;
-    Heptagon.e_ty = Heptagon.Tprod [];
-    Heptagon.e_linearity = Linearity.NotLinear;
+    Heptagon.e_ty = Types.invalid_type;
     Heptagon.e_loc = e.e_loc }
 
 and translate_app const_env env app =
@@ -144,50 +146,51 @@ and translate_app const_env env app =
     | Efby -> Heptagon.Efby
     | Earrow -> Heptagon.Earrow
     | Eifthenelse -> Heptagon.Eifthenelse
-    | Erepeat -> Heptagon.Erepeat
-    | Eselect_slice -> Heptagon.Eselect_slice
-    | Econcat -> Heptagon.Econcat
-    | Ecopy -> Heptagon.Ecopy
-    | Eselect_dyn -> Heptagon.Eselect_dyn 
-    | Enode (ln, params) -> Heptagon.Enode (ln, List.map (translate_size_exp const_env) params)
-    | Eevery (ln, params) -> Heptagon.Eevery (ln, List.map (translate_size_exp const_env) params)
-    | Eop (ln, params) -> Heptagon.Eop (ln, List.map (translate_size_exp const_env) params)
-    | Eselect e_list -> Heptagon.Eselect (List.map (translate_size_exp const_env) e_list)
-    | Eupdate e_list -> Heptagon.Eupdate (List.map (translate_size_exp const_env) e_list)
-    | Eiterator (it, ln, params) -> 
-	Heptagon.Eiterator (it, ln, List.map (translate_size_exp const_env) params, None)
+    | Ecall (ln, params, k) -> 
+        let params = List.map (translate_size_exp const_env) params in
+          Heptagon.Ecall ((ln, params, translate_op_kind k), None)
     | Efield_update f -> Heptagon.Efield_update f
-    | Emake f -> Heptagon.Emake f
-    | Eflatten f -> Heptagon.Eflatten f
+    | Earray_op op -> Heptagon.Earray_op (translate_array_op const_env env op)
   in
-    { Heptagon.a_op = op;
-      Heptagon.a_inlined = translate_inlining_policy app.a_inlined }
+    { Heptagon.a_op = op; }
     
+and translate_array_op const_env env = function 
+  | Eselect e_list -> Heptagon.Eselect (List.map (translate_size_exp const_env) e_list)
+  | Eupdate e_list -> Heptagon.Eupdate (List.map (translate_size_exp const_env) e_list)
+  | Erepeat -> Heptagon.Erepeat
+  | Eselect_slice -> Heptagon.Eselect_slice
+  | Econcat -> Heptagon.Econcat
+  | Eselect_dyn -> Heptagon.Eselect_dyn 
+  | Eiterator (it, (ln, params, k)) -> 
+      let params = List.map (translate_size_exp const_env) params in
+	      Heptagon.Eiterator (translate_iterator_type it,
+                            (ln, params, translate_op_kind k), None)
+
 and translate_desc loc const_env env = function
   | Econst c -> Heptagon.Econst (translate_const c)
   | Evar x -> 
       if Rename.mem x env then  
-	Heptagon.Evar (Rename.name loc env x)
+	      Heptagon.Evar (Rename.name loc env x)
       else if NamesEnv.mem x const_env then (* var not defined, maybe a const var*)
-	Heptagon.Econstvar x
+	      Heptagon.Econstvar x
       else
-	Error.message loc (Error.Evar x)  
+	      Error.message loc (Error.Evar x)  
   | Elast x ->  Heptagon.Elast (Rename.name loc env x)
   | Etuple e_list -> Heptagon.Etuple (List.map (translate_exp const_env env) e_list)
-  | Eapp ({ a_op = Erepeat} as app, e_list) ->
+  | Eapp ({ a_op = (Earray_op Erepeat)} as app, e_list) ->
       let e_list = List.map (translate_exp const_env env) e_list in
-	(match e_list with
-	   | [{ Heptagon.e_desc = Heptagon.Econst c }; e1 ] -> 
-	       Heptagon.Econst (Heptagon.Carray (Heptagon.size_exp_of_exp e1, c))
-	   | _ -> Heptagon.Eapp (translate_app const_env env app, e_list)
-	)
+	      (match e_list with
+	         | [{ Heptagon.e_desc = Heptagon.Econst c }; e1 ] -> 
+	             Heptagon.Econst (Heptagon.Carray (Heptagon.size_exp_of_exp e1, c))
+	         | _ -> Heptagon.Eapp (translate_app const_env env app, e_list)
+	      )
   | Eapp (app, e_list) ->
       let e_list = List.map (translate_exp const_env env) e_list in
-	Heptagon.Eapp (translate_app const_env env app, e_list)
+	      Heptagon.Eapp (translate_app const_env env app, e_list)
   | Efield (e, field) -> Heptagon.Efield (translate_exp const_env env e, field)
   | Estruct f_e_list ->
       let f_e_list = List.map (fun (f,e) -> f, translate_exp const_env env e) f_e_list in
-	Heptagon.Estruct f_e_list
+	      Heptagon.Estruct f_e_list
   | Earray e_list -> Heptagon.Earray (List.map (translate_exp const_env env) e_list)
 
 and translate_pat loc env = function
@@ -201,33 +204,35 @@ let rec translate_eq const_env env eq =
 
 and translate_eq_desc loc const_env env = function
     | Eswitch(e, switch_handlers) ->
-	Heptagon.Eswitch (translate_exp const_env env e,
-			 List.map (translate_switch_handler loc const_env env) switch_handlers)
+        let sh = List.map 
+          (translate_switch_handler loc const_env env)
+          switch_handlers in
+	      Heptagon.Eswitch (translate_exp const_env env e, sh)
     | Eeq(p, e) ->
-	Heptagon.Eeq (translate_pat loc env p, translate_exp const_env env e)
+	      Heptagon.Eeq (translate_pat loc env p, translate_exp const_env env e)
     | Epresent (present_handlers, b) ->
-	Heptagon.Epresent (List.map (translate_present_handler const_env env) present_handlers,
-			  translate_block const_env env b)
+	      Heptagon.Epresent (List.map (translate_present_handler const_env env) 
+                             present_handlers,
+			                     fst (translate_block const_env env b))
     | Eautomaton state_handlers ->
-	Heptagon.Eautomaton (List.map (translate_state_handler const_env env) state_handlers)
+	      Heptagon.Eautomaton (List.map (translate_state_handler const_env env)
+                               state_handlers)
     | Ereset (eq_list, e) ->
-	Heptagon.Ereset (List.map (translate_eq const_env env) eq_list,
-			translate_exp const_env env e)
+	      Heptagon.Ereset (List.map (translate_eq const_env env) eq_list,
+			                   translate_exp const_env env e)
 
 and translate_block const_env env b =
   let env = build_vd_list env b.b_local in
-
   { Heptagon.b_local = translate_vd_list const_env env b.b_local;
     Heptagon.b_equs = List.map (translate_eq const_env env) b.b_equs;
     Heptagon.b_defnames = Env.empty ;  
     Heptagon.b_statefull = false; 
-    Heptagon.b_loc = b.b_loc }
+    Heptagon.b_loc = b.b_loc }, env
 
 and translate_state_handler const_env env sh =
-  let b = translate_block const_env env sh.s_block in
-  let env = build_vd_list env sh.s_block.b_local in
+  let b, env = translate_block const_env env sh.s_block in
   { Heptagon.s_state = sh.s_state;
-    Heptagon.s_block = b;
+    Heptagon.s_block = b; 
     Heptagon.s_until = List.map (translate_escape const_env env) sh.s_until;
     Heptagon.s_unless = List.map (translate_escape const_env env) sh.s_unless; }
 
@@ -238,16 +243,15 @@ and translate_escape const_env env esc =
 
 and translate_present_handler const_env env ph =
   { Heptagon.p_cond = translate_exp const_env env ph.p_cond;
-    Heptagon.p_block = translate_block const_env env ph.p_block }
+    Heptagon.p_block = fst (translate_block const_env env ph.p_block) }
 
 and translate_switch_handler loc const_env env sh =
   { Heptagon.w_name = sh.w_name;
-    Heptagon.w_block = translate_block const_env env sh.w_block }
+    Heptagon.w_block = fst (translate_block const_env env sh.w_block) }
 
 and translate_var_dec const_env env vd = 
   { Heptagon.v_name = Rename.name vd.v_loc env vd.v_name;
-    Heptagon.v_type = Heptagon.type (translate_type const_env vd.v_type);
-    Heptagon.v_linearity = vd.v_linearity;
+    Heptagon.v_type = translate_type const_env vd.v_type;
     Heptagon.v_last = translate_last env vd.v_last;
     Heptagon.v_loc = vd.v_loc } 
 
@@ -274,10 +278,10 @@ let translate_node const_env env node =
     Heptagon.n_input = translate_vd_list const_env env node.n_input;
     Heptagon.n_output = translate_vd_list const_env env node.n_output;
     Heptagon.n_local = translate_vd_list const_env env node.n_local;
-    Heptagon.n_contract = Misc.optional (translate_contract const_env env) node.n_contract;
+    Heptagon.n_contract = Misc.optional
+      (translate_contract const_env env) node.n_contract;
     Heptagon.n_equs = List.map (translate_eq const_env env) node.n_equs;
     Heptagon.n_loc = node.n_loc; 
-    Heptagon.n_states_graph = Interference_graph.mk_graph [] "";
     Heptagon.n_params = node.n_params;
     Heptagon.n_params_constraints = []; }
 
@@ -286,10 +290,10 @@ let translate_typedec const_env ty =
     | Type_abs -> Heptagon.Type_abs
     | Type_enum(tag_list) -> Heptagon.Type_enum(tag_list)
     | Type_struct(field_ty_list) ->
-	let translate_field_type (f,ty) = 
-	  f, Heptagon.type (translate_type const_env ty)
-	in
-	  Heptagon.Type_struct (List.map translate_field_type field_ty_list)
+	      let translate_field_type (f,ty) = 
+	        f, translate_type const_env ty
+	      in
+	        Heptagon.Type_struct (List.map translate_field_type field_ty_list)
   in
     { Heptagon.t_name = ty.t_name; 
       Heptagon.t_desc = onetype ty.t_desc;
@@ -297,7 +301,7 @@ let translate_typedec const_env ty =
 
 let translate_const_dec const_env cd =
   { Heptagon.c_name = cd.c_name;
-    Heptagon.c_type = Heptagon.type (translate_type const_env cd.c_type);
+    Heptagon.c_type = translate_type const_env cd.c_type;
     Heptagon.c_value = translate_size_exp const_env cd.c_value;
     Heptagon.c_loc = cd.c_loc; }
 
@@ -309,23 +313,16 @@ let translate_program p =
     Heptagon.p_nodes = List.map (translate_node const_env Rename.empty) p.p_nodes;
     Heptagon.p_consts = List.map (translate_const_dec const_env) p.p_consts; }
 
-let translate_signature const_env s =
-  let translate_field_type (f,(ty,lin)) = 
-    f, Heptagon.type (translate_type const_env ty), lin
-  in
-    
-  let const_env = build_id_list no_location const_env s.sig_params in
+let translate_signature s =
   { Heptagon.sig_name = s.sig_name;
-    Heptagon.sig_inputs = List.map translate_field_type s.sig_inputs;
-    Heptagon.sig_outputs = List.map translate_field_type s.sig_outputs;
-    Heptagon.sig_node = s.sig_node;
-    Heptagon.sig_safe = s.sig_safe;
-    Heptagon.sig_params = s.sig_params; }
+    Heptagon.sig_inputs = s.sig_inputs;
+    Heptagon.sig_outputs = s.sig_outputs;
+    Heptagon.sig_params = List.map Signature.mk_param s.sig_params; }
 
 let translate_interface_desc const_env = function 
   | Iopen n -> Heptagon.Iopen n
   | Itypedef tydec -> Heptagon.Itypedef (translate_typedec const_env tydec)
-  | Isignature s -> Heptagon.Isignature (translate_signature const_env s) 
+  | Isignature s -> Heptagon.Isignature (translate_signature s) 
 
 let translate_interface_decl const_env idecl = 
   { Heptagon.interf_desc = translate_interface_desc const_env idecl.interf_desc; 

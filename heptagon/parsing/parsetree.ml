@@ -116,7 +116,7 @@ type type_dec =
 and type_desc =
   | Type_abs
   | Type_enum of name list
-  | Type_struct of structure
+  | Type_struct of (name * ty) list
 
 type contract =
     { c_assume : exp;
@@ -154,8 +154,6 @@ type signature =
     { sig_name    : name;
       sig_inputs  : arg list;
       sig_outputs : arg list;
-      sig_node    : bool;
-      sig_safe    : bool;
       sig_params  : name list; }
 
 type interface = interface_decl list

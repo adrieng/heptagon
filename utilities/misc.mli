@@ -118,13 +118,6 @@ exception Error
 val gen_symbol : unit -> string
 val reset_symbol : unit -> unit
 
-type iterator_name = 
-    Imap
-  | Ifold
-  | Imapfold
-
-val iterator_to_string : iterator_name -> string
-
 (** [unique l] returns the [l] list without duplicates. O([length l]). *)
 val unique : 'a list -> 'a list
 
