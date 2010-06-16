@@ -1,5 +1,4 @@
 %{
-(* $Id$ *)
 
 open Misc
 open Global
@@ -20,7 +19,7 @@ open Parsetree
 %token <char> CHAR
 %token <string> STRING
 %token <string * string> PRAGMA
-%token TYPE FUN NODE RETURNS VAR VAL UNSAFE IN OPEN SAFE END CONST
+%token TYPE FUN NODE RETURNS VAR VAL IN OPEN END CONST
 %token FBY PRE SWITCH WHEN EVERY
 %token OR STAR NOT
 %token AMPERSAND
@@ -46,7 +45,6 @@ open Parsetree
 %token ENFORCE
 %token WITH
 %token INLINED
-%token AT
 %token POWER
 %token LBRACKET
 %token RBRACKET
@@ -62,8 +60,6 @@ open Parsetree
 %token <string> INFIX3
 %token <string> INFIX4
 %token EOF
-%token COPY
-%token FLATTEN MAKE
 
 %right AROBASE
 %left WITH
@@ -153,7 +149,7 @@ label_ty_list:
 ;
 
 label_ty:
-  IDENT COLON ty_ident { ($1, fst $3) }
+  IDENT COLON ty_ident { ($1, $3) }
 ;
 
 node_decs:
@@ -179,11 +175,6 @@ node_dec:
 node_or_fun:
   | NODE { true }
   | FUN { false }
-;
-
-safe:
-  | /* empty */ { false }
-  | SAFE { true }
 ;
 
 in_params:
@@ -236,7 +227,7 @@ opt_equs:
 ;
 
 opt_assume:
-  | /* empty */ { e_true () }
+  | /* empty */ {  mk_exp (Econst (Cconstr Initial.ptrue)) }
   | ASSUME exp { $2 }
 ;
 
@@ -274,16 +265,9 @@ ident_list:
 ;
 
 ty_ident:
-  | ty_ident_base
-      { $1, NotLinear }
-  | ty_ident_base AT ident
-      { $1, At $3 }
-;
-
-ty_ident_base:
   | IDENT
       { Tid(Name($1)) }
-  | ty_ident_base POWER simple_exp
+  | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
 ;
 
@@ -409,93 +393,86 @@ exps:
 ;
 
 simple_exp:
-  | IDENT                   { emake (Evar $1) }
-  | const                   { emake (Econst $1) }
+  | IDENT                   { mk_exp (Evar $1) }
+  | const                   { mk_exp (Econst $1) }
   | LBRACE field_exp_list RBRACE
-      { emake (Estruct($2)) }
+      { mk_exp (Estruct $2) }
   | LBRACKET array_exp_list RBRACKET
-      { emake (Earray $2) }
+      { mk_exp (Earray $2) }
   | LPAREN tuple_exp RPAREN
-      { emake (Etuple $2) }
+      { mk_exp (Etuple $2) }
   | LPAREN exp RPAREN
       { $2 }
 ;
 
 node_name:
   | longname call_params
-      { Enode($1, $2) }
+      { $1, $2, Enode }
 
 exp:
   | simple_exp { $1 }
   | simple_exp FBY exp  
-      { emake (Eapp(eop (Efby), [$1; $3])) }
+      { mk_exp (Eapp(mk_app Efby, [$1; $3])) }
   | PRE exp 
-      { emake (Eapp(eop (Epre(None)), [$2])) }
+      { mk_exp (Eapp(mk_app (Epre None), [$2])) }
   | node_name LPAREN exps RPAREN %prec prec_apply
-      { emake (Eapp(eop $1, $3)) }
-  | INLINED node_name LPAREN exps RPAREN %prec prec_apply
-      { emake (Eapp(eop_inlined $2, $4)) }
+      { mk_exp (mk_call $1 $3) }
   | NOT exp
-      { emake (Eapp(eop (Eop(Name("not"),[])), [$2])) }
+      { mk_exp (mk_op_call "not" [] [$2]) }
   | exp INFIX4 exp
-      { emake (Eapp(eop (Eop(Name($2),[])), [$1; $3])) }
+      { mk_exp (mk_op_call $2 [] [$1; $3]) }
   | exp INFIX3 exp
-      { emake (Eapp(eop (Eop(Name($2),[])), [$1; $3])) }
+      { mk_exp (mk_op_call $2 [] [$1; $3]) }
   | exp INFIX2 exp
-      { emake (Eapp(eop (Eop(Name($2),[])), [$1; $3])) }
+      { mk_exp (mk_op_call $2 [] [$1; $3]) }
   | exp INFIX1 exp
-      { emake (Eapp(eop (Eop(Name($2),[])), [$1; $3])) }
+      { mk_exp (mk_op_call $2 [] [$1; $3]) }
   | exp INFIX0 exp
-      { emake (Eapp(eop (Eop(Name($2),[])), [$1; $3])) }
+      { mk_exp (mk_op_call $2 [] [$1; $3]) }
   | exp EQUAL exp
-      { emake (Eapp(eop (Eop(Name("="),[])), [$1; $3])) }
+      { mk_exp (mk_op_call "=" [] [$1; $3]) }
   | exp OR exp
-      { emake (Eapp(eop (Eop(Name("or"),[])), [$1; $3])) }
+      { mk_exp (mk_op_call "or" [] [$1; $3]) }
   | exp STAR exp
-      { emake (Eapp(eop (Eop(Name("*"),[])), [$1; $3])) }
+      { mk_exp (mk_op_call "*" [] [$1; $3]) }
   | exp AMPERSAND exp
-      { emake (Eapp(eop (Eop(Name("&"),[])), [$1; $3])) }
+      { mk_exp (mk_op_call "&" [] [$1; $3]) }
   | exp SUBTRACTIVE exp
-      { emake (Eapp(eop (Eop(Name($2),[])), [$1; $3])) }
+      { mk_exp (mk_op_call $2 [] [$1; $3]) }
   | PREFIX exp
-      { emake (Eapp(eop (Eop(Name($1),[])), [$2])) }
+      { mk_exp (mk_op_call $1 [] [$2]) }
   | SUBTRACTIVE exp %prec prec_uminus
-      { emake (Eapp(eop (Eop(Name("~" ^ $1),[])), [$2])) }
+      { mk_exp (mk_op_call ("~"^$1) [] [$2]) }
   | IF exp THEN exp ELSE exp
-      { emake (Eapp(eop Eifthenelse, [$2; $4; $6])) }
+      { mk_exp (Eapp(mk_app Eifthenelse [$2; $4; $6])) }
   | simple_exp ARROW exp
-      { emake (Eapp(eop Earrow, [$1; $3])) }
+      { mk_exp (Eapp(mk_app Earrow, [$1; $3])) }
   | LAST IDENT
-      { emake (Elast($2)) }
-  | exp DOT longname { emake (Efield($1, $3)) }
+      { mk_exp (Elast $2) }
+  | exp DOT longname 
+      { mk_exp (Efield ($1, $3)) }
 /*Array operations*/
   | exp POWER simple_exp 
-      { emake (Eapp(eop (Erepeat), [$1; $3])) }
+      { mk_exp (mk_array_op_call Erepeat [$1; $3]) }
   | exp indexes 
-      { emake (Eapp(eop (Eselect $2), [$1])) }
+      { mk_exp (mk_array_op_call (Eselect $2) [$1]) }
   | exp DOT indexes DEFAULT exp 
-      { emake (Eapp(eop (Eselect_dyn), [$1; $5]@$3)) }
+      { mk_exp (mk_array_op_call Eselect_dyn [$1; $5]@$3) }
   | exp WITH indexes EQUAL exp
-      { emake (Eapp(eop (Eupdate $3), [$1; $5])) }
+      { mk_exp (mk_array_op_call (Eupdate $3) [$1; $5]) }
   | exp LBRACKET exp DOUBLE_DOT exp RBRACKET
-      { emake (Eapp(eop Eselect_slice, [$1; $3; $5])) }
+      { mk_exp (mk_array_op_call Eselect_slice [$1; $3; $5]) }
   | exp AROBASE exp 
-      {  emake (Eapp(eop Econcat, [$1; $3])) }
+      { mk_exp (mk_array_op_call Econcat [$1; $3]) }
 /*Iterators*/
   | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN %prec prec_apply
-      {  emake (Eapp(eop (Eiterator ($1, $2, [])), $4::$7)) }
+      { mk_exp (mk_iterator_call $1 $2 [] ($4::$7)) }
   | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER 
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN %prec prec_apply
-      {  emake (Eapp(eop (Eiterator ($1, $3, $5)), $9::$12)) }
-  | COPY LPAREN exp RPAREN %prec prec_apply
-      {  emake (Eapp(eop Ecopy, [$3])) }
+      { mk_exp (mk_iterator_call $1 $3 $5 ($9::$12)) }
 /*Records operators */
   | exp WITH DOT longname EQUAL exp
-      { emake (Eapp(eop (Efield_update $4), [$1; $6])) }
-  | LPAREN FLATTEN longname RPAREN LPAREN exps RPAREN
-      { emake (Eapp(eop (Eflatten $3), $6)) }
-  | LPAREN MAKE longname RPAREN LPAREN exps RPAREN
-      { emake (Eapp(eop (Emake $3), $6)) }
+      { mk_exp (Eapp (mk_app (Efield_update $4), [$1; $6])) }
 ;
 
 call_params:
@@ -581,12 +558,12 @@ interface_decls:
 ;
 
 interface_decl:
-  | type_dec         { imake (Itypedef($1)) }
-  | OPEN Constructor { imake (Iopen($2)) }
-  | VAL safe node_or_fun ident node_params LPAREN params_signature RPAREN
+  | type_dec         { mk_interface_decl (Itypedef $1) }
+  | OPEN Constructor { mk_interface_decl (Iopen $2) }
+  | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
-    { imake (Isignature({ sig_name = $4; sig_inputs = $7; sig_outputs = $11;
-        sig_node = $3; sig_safe = $2; sig_params = $5; })) }
+    { mk_interface_decl (Isignature({ sig_name = $4; sig_inputs = $6; sig_outputs = $10;
+        sig_node = $3; sig_params = $4; })) }
 ;
 
 params_signature:
@@ -600,8 +577,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident { (Some($1), $3) }
-  | ty_ident { (None, $1) }
+  | IDENT COLON ty_ident { Signature.mk_arg (Some $1) $3) }
+  | ty_ident { Signature.mk_arg None $1 }
 ;
 
 %%

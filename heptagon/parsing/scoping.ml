@@ -224,8 +224,10 @@ and translate_block const_env env b =
     Heptagon.b_loc = b.b_loc }
 
 and translate_state_handler const_env env sh =
+  let b = translate_block const_env env sh.s_block in
+  let env = build_vd_list env sh.s_block.b_local in
   { Heptagon.s_state = sh.s_state;
-    Heptagon.s_block = translate_block const_env env sh.s_block;
+    Heptagon.s_block = b;
     Heptagon.s_until = List.map (translate_escape const_env env) sh.s_until;
     Heptagon.s_unless = List.map (translate_escape const_env env) sh.s_unless; }
 

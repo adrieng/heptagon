@@ -43,9 +43,10 @@ type exp =
   | Earrow
   | Eifthenelse
   | Earray_op of array_op
+  | Efield_update of longname
   | Ecall of op_desc * exp option (** [op_desc] is the function called
                                       [exp option] is the optional reset condition *)
-    
+
   and array_op =
   | Erepeat
   | Eselect of size_exp list
@@ -148,25 +149,20 @@ type interface =
 
   and interface_desc =
   | Iopen of name | Itypedef of type_dec | Isignature of signature
-  
-let edesc e = e.e_desc
-  
-let eqdesc eq = eq.eq_desc
-  
+
 (* Helper functions to create AST. *) (*TODO refactor en mk_*)
 
-let emake desc ty =
-  { e_desc = desc; e_ty = ty; e_linearity = NotLinear; e_loc = no_location; }
+let mk_exp desc ty =
+  { e_desc = desc; e_ty = ty; e_loc = no_location; }
   
-let eop op = { a_op = op; a_inlined = Ino; }
+let mk_op op = { a_op = op; }
   
-let tmake name desc = { t_name = name; t_desc = desc; t_loc = no_location; }
+let mk_type_dec name desc = 
+  { t_name = name; t_desc = desc; t_loc = no_location; }
   
-let eqmake desc =
+let mk_equation desc =
   { eq_desc = desc; eq_statefull = true; eq_loc = no_location; }
-  
-let tybool = Tbase tbool
-  
+    
 let cfalse = Cconstr pfalse
   
 let ctrue = Cconstr ptrue

@@ -7,17 +7,15 @@
 (*                                                                        *)
 (**************************************************************************)
 (* the internal representation *)
-(* $Id$ *)
 
-open Location
 open Names
-open Linearity
-open Misc
+open Location
+open Signature
 
-type inlining_policy =
-  | Ino
-  | Ione
-  | Irec
+type iterator_type = 
+  | Imap
+  | Ifold
+  | Imapfold
 
 type ty =
   | Tprod of ty list
@@ -39,21 +37,24 @@ and desc =
   | Earray of exp list
 
 and app =
-    { a_op : op; (* change of global name after typing *)
-      a_inlined : inlining_policy; (* node to inline or not *)
-    }
+    { a_op : op; }
 
 and op =
   | Epre of const option
-  | Efby | Earrow | Eifthenelse | Enode of longname * exp list
-  | Eevery of longname * exp list | Eop of longname * exp list
+  | Efby | Earrow | Eifthenelse 
+  | Earray_op of array_op
+  | Efield_update of longname
+  | Ecall of op_desc
+
+and array_op =
   | Erepeat | Eselect of exp list | Eselect_dyn
   | Eupdate of exp list
   | Eselect_slice
-  | Econcat | Ecopy
-  | Eiterator of iterator_name * longname * exp list
-  | Efield_update of longname
-  | Eflatten of longname | Emake of longname
+  | Econcat
+  | Eiterator of iterator_type * op_desc
+
+and op_desc = longname * exp list * op_kind
+and op_kind = | Eop | Enode
 
 and const =
   | Cint of int
@@ -102,7 +103,6 @@ and present_handler =
 and var_dec =
     { v_name : name;
       v_type : ty;
-      v_linearity : linearity;
       v_last : last;
       v_loc  : location; }
 
@@ -116,7 +116,7 @@ type type_dec =
 and type_desc =
   | Type_abs
   | Type_enum of name list
-  | Type_struct of (name * ty) list
+  | Type_struct of structure
 
 type contract =
     { c_assume : exp;
@@ -152,8 +152,8 @@ type program =
 
 type signature =
     { sig_name    : name;
-      sig_inputs  : (name option * (ty * linearity)) list;
-      sig_outputs : (name option * (ty * linearity)) list;
+      sig_inputs  : arg list;
+      sig_outputs : arg list;
       sig_node    : bool;
       sig_safe    : bool;
       sig_params  : name list; }
@@ -170,26 +170,42 @@ and interface_desc =
   | Isignature of signature
 
 (* Helper functions to create AST. *)
-let emake desc =
-  { e_desc = desc; e_loc = get_current_location () }
-let e_true () =
-  emake (Econst(Cconstr(Modname{ qual="Pervasives"; id="true"})))
-let eop op = { a_op = op; a_inlined = Ino }
-let eop_inlined op = { a_op = op; a_inlined = Ione }
-let tmake name desc =
-  { t_name = name; t_desc = desc; t_loc = get_current_location () }
-let eqmake desc =
-  { eq_desc = desc; eq_loc = get_current_location () }
-let imake desc =
-  { interf_desc = desc; interf_loc = get_current_location () }
-let vmake name (ty, linearity) last =
-  { v_name = name; v_type = ty; v_linearity = linearity;
-    v_last = last; v_loc = get_current_location () }
+let mk_exp desc =
+  { e_desc = desc; e_loc = Location.get_current_location () }
 
-let bmake locals eqs =
+let mk_app op =
+  { a_op = op; }
+
+let mk_call desc exps =
+  Eapp (mk_app (Ecall desc), exps)
+
+let mk_op_call s params exps =
+  mk_call (Name s, params, Eop)  exps
+
+let mk_array_op_call op exps =
+  Eapp (mk_app (Earray_op op), exps)
+
+let mk_iterator_call it ln params exps =
+  mk_array_op_call (Eiterator (it, (ln, params, Enode))) exps
+
+let mk_type_dec name desc =
+  { t_name = name; t_desc = desc; t_loc = Location.get_current_location () }
+
+let mk_equation desc =
+  { eq_desc = desc; eq_loc = Location.get_current_location () }
+
+let mk_interface_decl desc =
+  { interf_desc = desc; interf_loc = Location.get_current_location () }
+
+let mk_var_dec name ty last =
+  { v_name = name; v_type = ty;
+    v_last = last; v_loc = Location.get_current_location () }
+
+let mk_block locals eqs =
   { b_local = locals; b_equs = eqs; 
-    b_loc = get_current_location () }
+    b_loc = Location.get_current_location () }
 
-let cmake id (ty,_) e =
+let mk_const_dec id ty e =
   { c_name = id; c_type = ty; c_value = e;
-    c_loc = get_current_location (); }
+    c_loc = Location.get_current_location (); }
+

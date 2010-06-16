@@ -62,14 +62,10 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "enforce", ENFORCE;
  "with", WITH;
  "inlined", INLINED;
- "at", AT;
  "with", WITH;
  "map", MAP;
  "fold", FOLD;
  "mapfold", MAPFOLD;
- "copy", COPY;
- "flatten", FLATTEN;
- "make", MAKE;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");
