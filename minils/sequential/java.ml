@@ -323,6 +323,10 @@ let bool_case = function
   | ("false", _) :: _ -> true
   | _                 -> false
 
+let obj_call_to_string = function
+  | Context o
+  | Array_context (o,_) -> o
+
 let rec print_act ff a objs avs ts single =
   match a with
     | Assgn (x, e) ->
@@ -330,6 +334,7 @@ let rec print_act ff a objs avs ts single =
 	      print_asgn ff x e avs ts single;
 	      fprintf ff ";@]"
     | Step_ap (xs, o, es) ->
+	let o = obj_call_to_string o in
 	      (match xs with
 	         | [x] ->
 	             print_lhs ff x avs single;

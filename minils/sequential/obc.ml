@@ -23,15 +23,10 @@ type obj_name = name
 type op_name = longname
 type field_name = longname
 
-type iterator_name = 
-  | Imap
-  | Ifold
-  | Imapfold
-
-
 type ty =
     | Tint
     | Tfloat
+    | Tbool
     | Tid of type_name
     | Tarray of ty * int
 
@@ -56,36 +51,34 @@ type lhs =
   | Field of lhs * field_name
   | Array of lhs * exp
 
-type exp =
+and exp =
   | Lhs of lhs
   | Const of const
   | Op of op_name * exp list
   | Struct of type_name * (field_name * exp) list
-  | Array of exp list
+  | ArrayLit of exp list
+
+type obj_call = 
+  | Context of obj_name
+  | Array_context of obj_name * lhs
 
 type act =
     | Assgn of lhs * exp
-    | Step_ap of lhs list * obj_name * exp list
+    | Step_ap of lhs list * obj_call * exp list
     | Comp of act * act
     | Case of exp * (longname * act) list
     | For of var_name * int * int * act
     | Reinit of obj_name
     | Nothing
-    | Array_select_slice of lhs * exp * int * int
-    | Array_select_dyn of lhs * exp * exp list * int list * exp (* res, var, indices, bounds, def value*)
-    | Array_iterate of lhs list * iterator_name * obj_name * int * exp list
-    | Array_concat of lhs * exp * exp
-    | Field_update of lhs * exp * longname * exp (* var, record, field, value*)
 
 type var_dec =
     { v_name : var_name;
-      v_type : ty;
-      v_pass_by_ref : bool; }
+      v_type : ty; }
 
 type obj_dec =
     { obj : obj_name;
       cls : instance_name; 
-      n : int; }
+      size : int; }
 
 type step_fun =
     { inp    : var_dec list;
@@ -114,17 +107,28 @@ type program =
 (** [is_scalar_type vd] returns whether the type corresponding
     to this variable declaration is scalar (ie a type that can
     be returned by a C function). *)
-let is_scalar_type ty =
+let is_scalar_type vd =
+    match vd.v_type with
+      | Tint | Tfloat -> true
+      | Tid name_int when name_int = pint -> true
+      | Tid name_float when name_float = pfloat -> true
+      | Tid name_bool when name_bool = pbool -> true
+      | _ -> false 
+
+let actual_type ty =
   match ty with
-  | Tid x ->
-      (x = Initial.pint) or (x = Initial.pfloat) or (x = Initial.pbool)
-  | _ -> false
+    | Tid(Name("float"))
+    | Tid(Modname { qual = "Pervasives"; id = "float" }) -> Tfloat
+    | Tid(Name("int"))
+    | Tid(Modname { qual = "Pervasives"; id = "int" }) -> Tint
+    | _ -> ty
 
 let rec var_name x =
   match x with
     | Var x -> x
     | Mem x -> x
     | Field(x,_) -> var_name x
+    | Array(l, _) -> var_name l
 
 (** Returns whether an object of name n belongs to 
     a list of var_dec. *)
@@ -202,7 +206,7 @@ struct
     print_type ff vd.v_type;
     fprintf ff "@]"
 
-  let print_obj ff { cls = cls; obj = obj; n = n } =
+  let print_obj ff { cls = cls; obj = obj; size = n } =
     fprintf ff "@[<v>"; print_name ff obj;
     fprintf ff " : "; print_longname ff cls;
     if n <> 1 then
@@ -222,8 +226,13 @@ struct
     | Var x           -> print_ident ff x
     | Mem x           -> fprintf ff "mem("; print_ident ff x; fprintf ff ")"
     | Field (l, f)    -> print_lhs ff l; fprintf ff ".%s" (shortname f)
+    | Array(x, idx) ->
+	print_lhs ff x;
+	fprintf ff "[";
+        print_exp ff idx;
+        fprintf ff "]" 
 
-  let rec print_exps ff e_list = print_list ff print_exp "," e_list
+  and print_exps ff e_list = print_list ff print_exp "," e_list
 
   and print_exp ff = function
     | Lhs lhs -> print_lhs ff lhs
@@ -236,15 +245,10 @@ struct
             print_exp ff e)
     ";" f_e_list;
   fprintf ff "}@]"
-    | Array e_list ->
+    | ArrayLit e_list ->
 	fprintf ff "@[[";
         print_list ff print_exp ";" e_list;
         fprintf ff "]@]"
-    | Array_select(x, idx) ->
-	print_exp ff x;
-	fprintf ff "[";
-        print_list ff (fun ff -> fprintf ff "%d") "][" idx;
-        fprintf ff "]" 
 
   and print_op ff op e_list =
     print_longname ff op;
@@ -255,6 +259,13 @@ struct
     fprintf ff "@[%s" pref; print_lhs ff x; fprintf ff " = ";
     fprintf ff "@["; print_exp ff e; fprintf ff "@]";
     fprintf ff "@]"
+
+  let print_obj_call ff = function
+    | Context o -> print_name ff o
+    | Array_context (o, i) ->
+	fprintf ff "%a[%a]"
+	  print_name o
+	  print_lhs i
 
   let rec print_act ff a =
     match a with
@@ -270,78 +281,20 @@ struct
     print_exp ff e; fprintf ff ") {@,";
     print_tag_act_list ff tag_act_list;
     fprintf ff "@]@,}@]"
+      | For(x, i1, i2, act) ->
+	  fprintf ff "@[<v>@[<v 2>for %s=%d to %d : {@, %a @]@,}@]"
+	    (name x) i1 i2 
+	    print_act act
       | Step_ap (var_list, o, es) ->
     fprintf ff "@[(";
     print_list ff print_lhs "," var_list;
     fprintf ff "@])";
-    fprintf ff " = "; print_name ff o; fprintf ff ".step(";
+    fprintf ff " = "; print_obj_call ff o; fprintf ff ".step(";
     fprintf ff "@["; print_exps ff es; fprintf ff "@]";
     fprintf ff ")"
       | Reinit o ->
     print_name ff o; fprintf ff ".reset()"
       | Nothing -> fprintf ff "()"
-      | Array_select_slice (var, e, idx1, idx2) -> 
-	  fprintf ff "@[";
-	  print_lhs ff var;
-	  fprintf ff " = ";
-	  print_exp ff e;
-          fprintf ff "[%d..%d]" idx1 idx2;
-	  fprintf ff "@]"
-      | Array_select_dyn (var, x, idx, _, defe) ->
-	  fprintf ff "@[";
-	  print_lhs ff var;
-	  fprintf ff " = ";
-	  fprintf ff "@[";
-	  print_exp ff x;
-	  fprintf ff "[";
-          print_list ff print_exp "][" idx;
-	  fprintf ff "] default ";
-	  print_exp ff defe;
-	  fprintf ff "@]"
-      | Array_update (x, e1, idx, e2) -> 
-	  fprintf ff "@[";
-	  print_lhs ff x;
-	  fprintf ff " = ";
-	  print_exp ff e1;
-          fprintf ff " with [";
-	  print_list ff (fun ff -> fprintf ff "%d") "][" idx;
-	  fprintf ff "] = ";
-	  print_exp ff e2;
-	  fprintf ff "@]"
-      | Array_repeat (x, n, e) ->
-	  fprintf ff "@[";
-	  print_lhs ff x;
-	  fprintf ff " = ";
-	  print_exp ff e;
-	  fprintf ff "^%d" n 
-      | Array_iterate (o_list, it, f, n, e_list) ->
-	  fprintf ff "@[(";
-	  print_list ff print_lhs ", " o_list;
-	  fprintf ff ") = ";
-	  fprintf ff "("; 
-	  fprintf ff "%s" (iterator_to_string it);
-	  fprintf ff " ";
-	  print_name ff f;
-	  fprintf ff " <<%d>>) (@[" n;
-	  print_list ff print_exp "," e_list;
-	  fprintf ff ")@]@]"
-      | Array_concat (x, e1, e2) ->
-	  fprintf ff "@[";
-	  print_lhs ff x;
-	  fprintf ff " = ";
-	  print_exp ff e1;
-	  fprintf ff " @@ ";
-	  print_exp ff e2
-     | Field_update (x, e1, f, e2) -> 
-	  fprintf ff "@[";
-	  print_lhs ff x;
-	  fprintf ff " = ";
-	  print_exp ff e1;
-          fprintf ff " with .";
-	  print_longname ff f;
-	  fprintf ff " = ";
-	  print_exp ff e2;
-	  fprintf ff "@]"
 
   and print_tag_act_list ff tag_act_list =
     print_list ff
