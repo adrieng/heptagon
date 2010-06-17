@@ -16,6 +16,7 @@ open Misc
 open Names
 open Ident
 open Heptagon
+open Types
 open Location
 open Format
 
@@ -90,8 +91,8 @@ let rec initialized i =
 (* build an initialization type from a type *)
 let rec skeleton i ty =
   match ty with
-    | Tbase _ -> leaf i
     | Tprod(ty_list) -> product (List.map (skeleton i) ty_list)
+    | _ -> leaf i
 
 (* sub-typing *)
 let rec less left_ty right_ty =
@@ -188,10 +189,6 @@ let less_exp e actual_ty expected_ty =
     less actual_ty expected_ty
   with | Unify -> Error.message e.e_loc (Error.Eclash(actual_ty, expected_ty))
 
-(** Is-it a safe imported value? *)
-let safe f =
-  let { Global.info = { Global.safe = s } } = Modules.find_value f in s
-
 (** Main typing function *)
 let rec typing h e =
   match e.e_desc with
@@ -234,19 +231,8 @@ and apply h op e_list =
 	let i2 = itype (typing h e2) in
 	let i3 = itype (typing h e3) in
 	max i1 (max i2 i3)
-    | (Enode(f,_) | Eevery(f,_)), e_list ->
-	List.iter (fun e -> initialized_exp h e) e_list; izero
-    | Eop(f,_), e_list when safe f ->
-	(* unsafe primitives must have an initialized argument *)
-	List.fold_left (fun acc e -> itype (typing h e)) izero e_list
-    | Eop(f,_), e_list ->
-	List.iter (fun e -> initialized_exp h e) e_list; izero
-(*Array operators*)
-    | (Erepeat | Econcat | Eupdate _ | Efield_update _
-      | Eselect _ | Eselect_dyn | Eselect_slice
-      | Eiterator _ | Ecopy | Emake _ | Eflatten _), e_list ->
-	List.iter (fun e -> initialized_exp h e) e_list; izero
-    | _ -> assert false
+    | (Ecall _ | Earray_op _| Efield_update _) , e_list ->
+	      List.iter (fun e -> initialized_exp h e) e_list; izero
 
 and expect h e expected_ty =
   let actual_ty = typing h e in

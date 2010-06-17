@@ -16,7 +16,6 @@ open Names
 open Ident
 open Heptagon
 open Location
-open Linearity
 open Graph
 open Causal
 
@@ -56,7 +55,6 @@ let rec cseqlist l =
   | c1 :: l -> cseq c1 (cseqlist l)
 
 let read x = Cread(x)
-let linread x = Clinread(x)
 let lastread x = Clastread(x)
 let cwrite x = Cwrite(x)
 
@@ -66,7 +64,7 @@ let rec pre = function
   | Cand(c1, c2) -> Cand(pre c1, pre c2)
   | Ctuple l -> Ctuple (List.map pre l)
   | Cseq(c1, c2) -> Cseq(pre c1, pre c2)
-  | Cread(x) | Clinread (x) -> Cempty
+  | Cread(x) -> Cempty
   | (Cwrite _ | Clastread _ | Cempty) as c -> c
 
 (* projection and restriction *)
@@ -86,7 +84,7 @@ let clear env c =
         let c2 = clearec c2 in
         cseq c1 c2
     | Ctuple l -> Ctuple (List.map clearec l)
-    | Cwrite(id) | Cread(id) | Clinread(id) | Clastread(id) ->
+    | Cwrite(id) | Cread(id) | Clastread(id) ->
         if IdentSet.mem id env then Cempty else c
     | Cempty -> c in
   clearec c
@@ -99,11 +97,7 @@ let rec typing e =
   match e.e_desc with
     | Econst(c) -> cempty
     | Econstvar(x) -> cempty
-    | Evar(x) -> 
-	(match e.e_linearity with
-	   | At _ -> linread x
-	   | _ -> read x
-	)
+    | Evar(x) -> read x
     | Elast(x) -> lastread x
     | Etuple(e_list) ->
 	candlist (List.map typing e_list)
@@ -114,7 +108,6 @@ let rec typing e =
 	candlist l
     | Earray(e_list) ->
 	candlist (List.map typing e_list)
-    | Ereset_mem _ -> assert false
 
 (** Typing an application *)
 and apply op e_list =
@@ -133,14 +126,24 @@ and apply op e_list =
 	let i2 = typing e2 in
 	let i3 = typing e3 in
 	cseq t1 (cor i2 i3)
-    | (Enode _ | Eevery _ | Eop _ | Eiterator (_, _, _, _)
-      | Econcat | Eselect_slice | Emake _ | Eflatten _
-      | Eselect_dyn | Eselect _ | Erepeat | Ecopy), e_list ->
-	ctuplelist (List.map typing e_list)
-    | Eupdate _, [e1;e2] | Efield_update _, [e1;e2] ->
-	let t1 = typing e1 in
-	let t2 = typing e2 in
-	cseq t2 t1
+    | Ecall _, e_list ->
+	      ctuplelist (List.map typing e_list)
+    | Efield_update _, [e1;e2] ->
+	      let t1 = typing e1 in
+	      let t2 = typing e2 in
+	        cseq t2 t1
+    | Earray_op op, e_list ->
+        apply_array_op op e_list
+
+and apply_array_op op e_list =
+  match op, e_list with 
+    | (Eiterator (_, _, _) | Econcat | Eselect_slice 
+      | Eselect_dyn | Eselect _ | Erepeat), e_list -> 
+        ctuplelist (List.map typing e_list)
+    | Eupdate _, [e1;e2] ->
+	      let t1 = typing e1 in
+	      let t2 = typing e2 in
+	        cseq t2 t1
 	
 let rec typing_pat = function
   | Evarpat(x) -> cwrite(x)

@@ -37,14 +37,12 @@ type sc =
   | Ctuple of sc list
   | Cwrite of ident
   | Cread of ident
-  | Clinread of ident
   | Clastread of ident
   | Cempty
 
 (* normalized constraints *)
 type ac =
     | Awrite of ident
-    | Alinread of ident
     | Aread of ident
     | Alastread of ident
     | Aseq of ac * ac
@@ -85,7 +83,6 @@ let output_ac ff ac =
 	  fprintf ff ")"
       | Awrite(m) -> fprintf ff "%s" (sourcename m)
       | Aread(m) -> fprintf ff "^%s" (sourcename m)
-      | Alinread(m) -> fprintf ff "*%s" (sourcename m)
       | Alastread(m) -> fprintf ff "last %s" (sourcename m)
     end;
     fprintf ff "@]" in
@@ -134,7 +131,6 @@ let rec ctuple l =
   let conv = function
     | Cwrite(n) -> Awrite(n)
     | Cread(n) -> Aread(n)
-    | Clinread(n) -> Alinread(n)
     | Clastread(n) -> Alastread(n)
     | Ctuple(l) -> Atuple (ctuple l)
     | Cand _ -> Format.printf "Unexpected and\n"; assert false
@@ -154,7 +150,6 @@ let rec norm = function
   | Ctuple l -> Aac(Atuple (ctuple l))
   | Cwrite(n) -> Aac(Awrite(n))
   | Cread(n) -> Aac(Aread(n))
-  | Clinread(n) -> Aac(Alinread(n))
   | Clastread(n) -> Aac(Alastread(n))
   | _ -> Aempty
 
@@ -166,8 +161,6 @@ let build ac =
   let rec associate_node g (n_to_graph,lin_map) = function
     | Awrite(n) ->
         nametograph n g n_to_graph, lin_map
-    | Alinread(n) ->
-	n_to_graph, nametograph n g lin_map
     | Atuple l ->
 	List.fold_left (associate_node g) (n_to_graph, lin_map) l
     | _ -> 
@@ -204,7 +197,6 @@ let build ac =
 
     let rec add_dependence g = function
         | Aread(n) -> attach g n; attach_lin g n
-	| Alinread(n) -> let g = Env.find n lin_map in attach g n
 	| Atuple l -> List.iter (add_dependence g) l
 	| _ -> ()
     in
@@ -220,7 +212,6 @@ let build ac =
 	    )
       in 
 	match ac with 
-	  | Alinread n -> Env.find n lin_map
 	  | Awrite n -> Env.find n n_to_graph
 	  | Atuple l ->
 	      begin try
@@ -247,7 +238,6 @@ let build ac =
               top1 @ top2, bot1 @ bot2
 	| Awrite(n) -> let g = Env.find n n_to_graph in [g], [g]
 	| Aread(n) -> let g = make ac in attach g n; attach_lin g n; [g], [g]
-	| Alinread(n) -> let g = Env.find n lin_map in attach g n; [g], [g]
 	| Atuple(l) -> 
 	    let g = node_for_ac ac in
 	      List.iter (add_dependence g) l;
