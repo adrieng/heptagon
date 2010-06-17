@@ -169,10 +169,10 @@ let mk_var_dec ?(last = Var) name ty  =
   { v_name = name; v_type = ty;
     v_last = last; v_loc = Location.get_current_location () }
 
-let mk_block defnames eqs =
+let mk_block ?(statefull = true) defnames eqs =
   { b_local = []; b_equs = eqs; b_defnames = defnames;
-    b_statefull = true; b_loc = no_location }
-  
+    b_statefull = statefull; b_loc = no_location }
+
 let dfalse = mk_exp (Econst (Cconstr Initial.pfalse)) (Tid Initial.pbool)
 let dtrue = mk_exp (Econst (Cconstr Initial.ptrue)) (Tid Initial.pbool)
   
@@ -181,6 +181,11 @@ let mk_ifthenelse e1 e2 e3 =
 
 let mk_simple_equation pat e =
   mk_equation ~statefull:false (Eeq(pat, e))
+
+let mk_switch_equation ?(statefull = true) e l = 
+  mk_equation ~statefull:statefull (Eswitch (e, l))
+
+
 
 (*
 let cfalse = Cconstr Initial.pfalse

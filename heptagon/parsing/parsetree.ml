@@ -150,6 +150,8 @@ type program =
       p_nodes  : node_dec list;
       p_consts : const_dec list; }
 
+type arg = { a_type : ty; a_name : name option }
+
 type signature =
     { sig_name    : name;
       sig_inputs  : arg list;
@@ -209,4 +211,7 @@ let mk_block locals eqs =
 let mk_const_dec id ty e =
   { c_name = id; c_type = ty; c_value = e;
     c_loc = Location.get_current_location (); }
+
+let mk_arg name ty =
+  { a_type = ty; a_name = name }
 

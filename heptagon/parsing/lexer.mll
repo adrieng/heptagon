@@ -21,12 +21,10 @@ let keyword_table = ((Hashtbl.create 149) : (string, token) Hashtbl.t);;
 List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "node", NODE;
  "fun", FUN;
- "safe", SAFE;
  "returns", RETURNS;
  "var", VAR;
  "val", VAL;
  "const", CONST;
- "unsafe", UNSAFE;
  "let", LET;
  "tel", TEL;
  "end", END;

@@ -13,14 +13,7 @@
 open Misc
 open Location
 open Heptagon
-open Global
 open Initial
-
-let block defnames statefull eqs =
-  { b_local = []; b_equs = eqs; b_defnames = defnames;
-    b_statefull = statefull; b_loc = no_location }
-let switch statefull e l =
-  { eq_desc = Eswitch(e, l); eq_statefull = statefull; eq_loc = no_location }
 
 let rec translate_eq v eq =
   match eq.eq_desc with
@@ -54,8 +47,8 @@ and translate_switch_handlers handlers =
 and translate_present_handlers handlers cont =
   let translate_present_handler { p_cond = e; p_block = b } cont =
     let statefull = b.b_statefull or cont.b_statefull in
-    block b.b_defnames statefull
-      [switch statefull e [{ w_name = ptrue; w_block = b };
+    mk_block ~statefull:statefull b.b_defnames 
+      [mk_switch_equation ~statefull:statefull e [{ w_name = ptrue; w_block = b };
                            { w_name = pfalse; w_block = cont }]] in
   let b = List.fold_right translate_present_handler handlers cont in
   List.hd (b.b_equs)

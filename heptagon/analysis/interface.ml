@@ -14,6 +14,8 @@ open Heptagon
 open Signature
 open Modules
 open Typing
+open Pp_tools
+open Types
 
 module Type =
   struct
@@ -49,16 +51,16 @@ struct
       | Tabstract -> fprintf ff "@[type %s@.@]" name
       | Tenum(tag_name_list) ->
 	        fprintf ff "@[<hov 2>type %s = " name;
-	        print_list ff print_name " |" tag_name_list;
+	        print_list_r print_name "" " |" "" ff tag_name_list;
 	        fprintf ff "@.@]"
       | Tstruct(f_ty_list) ->
 	        fprintf ff "@[<hov 2>type %s = " name;
-	        fprintf ff "@[<hov 1>{";
-	        print_list ff 
-	          (fun ff (field, ty) -> print_name ff field;
+	        fprintf ff "@[<hov 1>";
+	        print_list_r  
+	          (fun ff { f_name = field; f_type = ty } -> print_name ff field;
                fprintf ff ": ";
-	             print_type ff ty) ";" f_ty_list;
-	        fprintf ff "}@]@.@]"
+	             print_type ff ty) "{" ";" "}" ff f_ty_list;
+	        fprintf ff "@]@.@]"
 
   let signature ff name { node_inputs = inputs;
 			  node_outputs = outputs;
@@ -73,24 +75,22 @@ struct
 
     let print_node_params ff = function
       | [] -> ()
-      | l -> 
-	        fprintf ff "<<";
-	        print_list ff print_name "," l;
-	        fprintf ff ">>" in
+      | l -> print_list_r print_name "<<" "," ">>" ff l
+	  in
       
       fprintf ff "@[<v 2>val ";
       print_name ff name;
-      print_node_params ff params;
-      fprintf ff "(@[";
-      print_list ff print ";" inputs;
-      fprintf ff "@]) returns (@[";
-      print_list ff print ";" outputs;
-      fprintf ff "@])";
+      print_node_params ff (List.map (fun p -> p.p_name) params);
+      fprintf ff "@[";
+      print_list_r print "(" ";" ")" ff inputs;
+      fprintf ff "@] returns @[";
+      print_list_r print "(" ";" ")" ff outputs;
+      fprintf ff "@]";
       (match constr with
          | [] -> ()
          | constr -> 
 	           fprintf ff "\n with: @[";
-	           print_list ff Static.print_size_constr "," constr;
+	           print_list_r Static.print_size_constr "" "," "" ff constr;
 	           fprintf ff "@]"
       );
       fprintf ff "@.@]"

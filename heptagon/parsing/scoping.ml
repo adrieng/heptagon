@@ -293,7 +293,7 @@ let translate_typedec const_env ty =
     | Type_enum(tag_list) -> Heptagon.Type_enum(tag_list)
     | Type_struct(field_ty_list) ->
 	      let translate_field_type (f,ty) = 
-	        f, translate_type const_env ty
+	        Signature.mk_field f (translate_type const_env ty)
 	      in
 	        Heptagon.Type_struct (List.map translate_field_type field_ty_list)
   in
@@ -315,10 +315,15 @@ let translate_program p =
     Heptagon.p_nodes = List.map (translate_node const_env Rename.empty) p.p_nodes;
     Heptagon.p_consts = List.map (translate_const_dec const_env) p.p_consts; }
 
+let translate_arg const_env a =
+  { Signature.a_name = a.a_name;
+    Signature.a_type = translate_type const_env a.a_type }
+
 let translate_signature s =
+  let const_env = build_id_list no_location NamesEnv.empty s.sig_params in
   { Heptagon.sig_name = s.sig_name;
-    Heptagon.sig_inputs = s.sig_inputs;
-    Heptagon.sig_outputs = s.sig_outputs;
+    Heptagon.sig_inputs = List.map (translate_arg const_env) s.sig_inputs;
+    Heptagon.sig_outputs = List.map (translate_arg const_env) s.sig_outputs;
     Heptagon.sig_params = List.map Signature.mk_param s.sig_params; }
 
 let translate_interface_desc const_env = function 

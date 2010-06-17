@@ -1,10 +1,9 @@
 %{
 
 open Misc
-open Global
+open Signature
 open Location
 open Names
-open Linearity
 open Parsetree
 
 %}
@@ -118,7 +117,7 @@ const_decs:
 
 const_dec:
   | CONST IDENT COLON ty_ident EQUAL exp
-      { cmake $2 $4 $6 }
+      { mk_const_dec $2 $4 $6 }
 ;
 
 type_decs:
@@ -127,9 +126,9 @@ type_decs:
 ;
 
 type_dec:
-  | TYPE IDENT                      { tmake $2 Type_abs }
-  | TYPE IDENT EQUAL enum_ty_desc   { tmake $2 (Type_enum ($4)) }
-  | TYPE IDENT EQUAL struct_ty_desc { tmake $2 (Type_struct ($4)) }
+  | TYPE IDENT                      { mk_type_dec $2 Type_abs }
+  | TYPE IDENT EQUAL enum_ty_desc   { mk_type_dec $2 (Type_enum ($4)) }
+  | TYPE IDENT EQUAL struct_ty_desc { mk_type_dec $2 (Type_struct ($4)) }
 ;
 
 enum_ty_desc:
@@ -193,7 +192,7 @@ nonmt_params:
 
 param:
   | ident_list COLON ty_ident
-      { List.map (fun id -> vmake id $3 Var) $1 }
+      { List.map (fun id -> mk_var_dec id $3 Var) $1 }
 ;
 
 out_params:
@@ -252,11 +251,11 @@ loc_params:
 
 var_last:
   | ident_list COLON ty_ident
-      { List.map (fun id -> vmake id $3 Var) $1 }
+      { List.map (fun id -> mk_var_dec id $3 Var) $1 }
   | LAST IDENT COLON ty_ident EQUAL const
-      { [ vmake $2 $4 (Last(Some($6))) ] }
+      { [ mk_var_dec $2 $4 (Last(Some($6))) ] }
   | LAST IDENT COLON ty_ident
-      { [ vmake $2 $4 (Last(None)) ] }
+      { [ mk_var_dec $2 $4 (Last(None)) ] }
 ;
 
 ident_list:
@@ -292,26 +291,26 @@ opt_bar:
 ;
 
 equ:
-  | pat EQUAL exp { eqmake (Eeq($1, $3)) }
+  | pat EQUAL exp { mk_equation (Eeq($1, $3)) }
   | AUTOMATON automaton_handlers END
-      { eqmake (Eautomaton(List.rev $2)) }
+      { mk_equation (Eautomaton(List.rev $2)) }
   | SWITCH exp opt_bar switch_handlers END
-      { eqmake (Eswitch($2, List.rev $4)) }
+      { mk_equation (Eswitch($2, List.rev $4)) }
   | PRESENT opt_bar present_handlers END
-      { eqmake (Epresent(List.rev $3, bmake [] [])) }
+      { mk_equation (Epresent(List.rev $3, mk_block [] [])) }
   | PRESENT opt_bar present_handlers DEFAULT loc_vars DO equs END
-      { eqmake (Epresent(List.rev $3, bmake $5 $7)) }
+      { mk_equation (Epresent(List.rev $3, mk_block $5 $7)) }
   | IF exp THEN loc_vars DO equs ELSE loc_vars DO equs END
-      { eqmake (Eswitch($2,
-           [{ w_name = Name("true"); w_block = bmake $4 $6};
-      { w_name = Name("false"); w_block = bmake $8 $10 }])) }
+      { mk_equation (Eswitch($2,
+           [{ w_name = Name("true"); w_block = mk_block $4 $6};
+      { w_name = Name("false"); w_block = mk_block $8 $10 }])) }
   | RESET equs EVERY exp
-      { eqmake (Ereset($2, $4)) }
+      { mk_equation (Ereset($2, $4)) }
 ;
 
 automaton_handler:
   | STATE Constructor loc_vars DO equs opt_until_escapes opt_unless_escapes
-      { { s_state = $2; s_block = bmake $3 $5;
+      { { s_state = $2; s_block = mk_block $3 $5;
     s_until = $6; s_unless = $7 } }
 ;
 
@@ -350,7 +349,7 @@ escapes:
 
 switch_handler:
   | constructor loc_vars DO equs
-      { { w_name = $1; w_block = bmake $2 $4 } }
+      { { w_name = $1; w_block = mk_block $2 $4 } }
 ;
 
 switch_handlers:
@@ -362,7 +361,7 @@ switch_handlers:
 
 present_handler:
   | exp loc_vars DO equs
-      { { p_cond = $1; p_block = bmake $2 $4 } }
+      { { p_cond = $1; p_block = mk_block $2 $4 } }
 ;
 
 present_handlers:
@@ -444,7 +443,7 @@ exp:
   | SUBTRACTIVE exp %prec prec_uminus
       { mk_exp (mk_op_call ("~"^$1) [] [$2]) }
   | IF exp THEN exp ELSE exp
-      { mk_exp (Eapp(mk_app Eifthenelse [$2; $4; $6])) }
+      { mk_exp (Eapp(mk_app Eifthenelse, [$2; $4; $6])) }
   | simple_exp ARROW exp
       { mk_exp (Eapp(mk_app Earrow, [$1; $3])) }
   | LAST IDENT
@@ -457,7 +456,7 @@ exp:
   | exp indexes 
       { mk_exp (mk_array_op_call (Eselect $2) [$1]) }
   | exp DOT indexes DEFAULT exp 
-      { mk_exp (mk_array_op_call Eselect_dyn [$1; $5]@$3) }
+      { mk_exp (mk_array_op_call Eselect_dyn ([$1; $5]@$3)) }
   | exp WITH indexes EQUAL exp
       { mk_exp (mk_array_op_call (Eupdate $3) [$1; $5]) }
   | exp LBRACKET exp DOUBLE_DOT exp RBRACKET
@@ -562,7 +561,8 @@ interface_decl:
   | OPEN Constructor { mk_interface_decl (Iopen $2) }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
-    { mk_interface_decl (Isignature({ sig_name = $4; sig_inputs = $6;
+    { mk_interface_decl (Isignature({ sig_name = $3; 
+                                      sig_inputs = $6;
                                       sig_outputs = $10;
                                       sig_params = $4; })) }
 ;
@@ -578,8 +578,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident { Signature.mk_arg (Some $1) $3) }
-  | ty_ident { Signature.mk_arg None $1 }
+  | IDENT COLON ty_ident { mk_arg (Some $1) $3 }
+  | ty_ident { mk_arg None $1 }
 ;
 
 %%
