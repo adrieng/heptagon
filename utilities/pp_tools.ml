@@ -10,18 +10,21 @@
 
 open Format
 
-let rec print_list print ff = function
+(** print the list x1...xn : \@\[[lp][x1][sep][x2]...[sep][xn][rp]\]\@
+    and nothing if the list is empty *)
+let rec print_list print lp sep rp ff = function
   | [] -> ()
   | x::l ->
-    fprintf ff "@[<hv2>%a@]" print x;
-    List.iter (fprintf ff "@ @[<hv2>%a@]" print) l
+    fprintf ff "@[<hov2>%s%a" lp print x;
+    List.iter (fprintf ff "@]%s@,@[<hv2>%a" sep print) l;
+    fprintf ff "%s@]" rp
 
 (** print the list x1...xn : \@\[[lp][x1][sep] [x2]...[sep] [xn][rp]\]\@
     and nothing if the list is empty *)
 let rec print_list_r print lp sep rp ff = function
   | [] -> ()
   | x :: l ->
-      fprintf ff "@[<hv2>%s%a" lp print x;
+      fprintf ff "@[<hov2>%s%a" lp print x;
       List.iter (fprintf ff "%s@]@ @[<hv2>%a" sep print) l;
       fprintf ff "%s@]" rp 
 
@@ -30,7 +33,7 @@ let rec print_list_r print lp sep rp ff = function
 let rec print_list_l print lp sep rp ff = function
   | [] -> ()
   | x :: l ->
-      fprintf ff "@[<hv2>%s%a" lp print x;
+      fprintf ff "@[<hov2>%s%a" lp print x;
       List.iter (fprintf ff "@]@ @[<hv2>%s%a" sep print) l;
       fprintf ff "%s@]" rp 
 (*

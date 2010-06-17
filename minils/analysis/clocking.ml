@@ -14,7 +14,7 @@
 open Misc
 open Ident
 open Minils
-open Global
+open Signature
 open Location
 
 type error = | Etypeclash of ct * ct
@@ -26,12 +26,13 @@ let error kind = raise (TypingError(kind))
 
 let message e kind =
   begin match kind with
-      Etypeclash(actual_ct, expected_ct) ->
-	Printf.eprintf "%aClock Clash: this expression has clock %a, \n\
-                  but is expected to have clock %a.\n" 
-	  Printer.print_exp e
-	  Printer.print_clock actual_ct
-	  Printer.print_clock expected_ct
+      Etypeclash(actual_ct, expected_ct) -> ()
+        (*TODO remettre en route quand Printer fonctionne
+	      Printf.eprintf "%aClock Clash: this expression has clock %a, \n\
+                  but is expected to have clock %a.\n"
+			    Printer.print_exp e
+				  Printer.print_clock actual_ct
+				  Printer.print_clock expected_ct*)
   end;
   raise Error
     
@@ -238,11 +239,12 @@ let typing_eqs h eq_list =
 		try
 		  expect h ty_pat e
 		with Error ->
-		  (* DEBUG *)
+		  (* TODO remettre en route quand Printer fonctionne
+        (* DEBUG *)
 		  Printf.eprintf "Complete expression: %a\n"
 		    Printer.print_exp e;
 		  Printf.eprintf "Clock pattern: %a\n"
-		    Printer.print_clock ty_pat;
+		    Printer.print_clock ty_pat; *)
 		  raise Error
        )
     ) eq_list

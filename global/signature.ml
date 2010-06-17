@@ -42,6 +42,9 @@ let mk_arg name ty =
 
 let mk_param name = 
   { p_name = name }
+  
+
+let print_param ff p = Names.print_name ff p.p_name
 
 let mk_field n ty =
   { f_name = n; f_type = ty }
