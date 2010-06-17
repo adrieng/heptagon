@@ -208,7 +208,10 @@ let rec typing h e =
 	    (fun acc (_, e) -> max acc (itype (typing h e))) izero l in
 	skeleton i e.e_ty
     | Earray(e_list) ->
-	product (List.map (typing h) e_list)
+	      let i =
+	        List.fold_left
+	          (fun acc e -> max acc (itype (typing h e))) izero e_list in
+	        skeleton i e.e_ty
 
 (** Typing an application *)
 and apply h op e_list =

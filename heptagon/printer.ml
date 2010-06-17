@@ -185,19 +185,19 @@ let rec print_eq ff eq =
     | Eautomaton(state_handler_list) ->
         fprintf ff "@[<v>automaton@,";
         fprintf ff "@[<v>";
-        print_list print_state_handler ff state_handler_list;
+        print_list print_state_handler "" "" "" ff state_handler_list;
         fprintf ff "@]@,";
         fprintf ff "end@]"
     | Eswitch(e, switch_handler_list) ->
         fprintf ff "@[<v>switch ";
         print_exp ff e;
         fprintf ff "@,@[<v>";
-        print_list print_switch_handler ff switch_handler_list;
+        print_list print_switch_handler "" "" "" ff switch_handler_list;
         fprintf ff "@]@,";
         fprintf ff "end@]"
     | Epresent(present_handler_list, b) ->
         fprintf ff "@[<v>present@,";
-        print_list print_present_handler ff present_handler_list;
+        print_list print_present_handler "" "" "" ff present_handler_list;
         if b.b_equs <> [] then begin
           fprintf ff "  @[<v 2>default@,";
           print_block ff b;
@@ -226,7 +226,7 @@ and print_state_handler ff
   if until <> [] then
     begin
       fprintf ff "@,@[<v 2>until ";
-      print_list print_escape ff until;
+      print_list print_escape "" "" "" ff until;
       fprintf ff "@]"
     end;
   if unless <> [] then

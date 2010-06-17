@@ -55,7 +55,7 @@ let compile_impl modname filename =
 
         if !verbose
         then begin
-          comment "Check successfull"
+          comment "Checking"
         end;    
         close_all_files ()
 

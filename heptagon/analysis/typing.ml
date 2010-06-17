@@ -207,13 +207,13 @@ let size_exp ty =
 
 let rec unify t1 t2 = 
   match t1, t2 with
+    | b1, b2 when b1 = b2 -> ()
     | Tprod t1_list, Tprod t2_list ->
         (try 
            List.iter2 unify t1_list t2_list 
          with 
              _ -> raise Unify
 	      )
-    | b1, b2 when b1 = b2 -> ()
     | Tarray (ty1, e1), Tarray (ty2, e2) ->
 	      add_size_constr (Equal(e1,e2));
 	      unify ty1 ty2
