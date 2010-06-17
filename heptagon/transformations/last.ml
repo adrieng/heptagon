@@ -8,13 +8,9 @@
 (**************************************************************************)
 (* removing accessed to shared variables (last x)      *)
 
-(* $Id$ *)
-
-open Location
 open Misc
-open Ident
 open Heptagon
-open Global
+open Ident
 
 (* introduce a fresh equation [last_x = pre(x)] for every *)
 (* variable declared with a last *)
@@ -23,15 +19,13 @@ let last (eq_list, env, v) { v_name = n; v_type = t; v_last = last } =
     | Var -> (eq_list, env, v)
     | Last(default) ->
         let lastn = Ident.fresh ("last" ^ (sourcename n)) in
-        (eqmake (Eeq(Evarpat(lastn),
-                     emake
-                       (Eapp (eop (Epre(default)),
-			     [emake (Evar(n)) (Tbase(t))]))
-                       (Tbase(t)))))
-        :: eq_list,
+        let eq = mk_equation (Eeq (Evarpat lastn,
+                                   mk_exp (Eapp (mk_op (Epre default),
+			                                           [mk_exp (Evar n) t])) t)) in
+          eq:: eq_list,
         Env.add n lastn env,
-        (param lastn t) :: v
-
+        (mk_var_dec lastn t) :: v
+          
 let extend_env env v = List.fold_left last ([], env, []) v
 
 let rec translate_eq env eq =
@@ -71,7 +65,6 @@ and translate env e =
             Estruct(List.map (fun (f, e) -> (f, translate env e)) e_f_list) }
     | Earray(e_list) ->
 	{ e with e_desc = Earray(List.map (translate env) e_list) }
-    | Ereset_mem _ -> assert false
 
 let translate_contract env contract =
   match contract with

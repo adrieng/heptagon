@@ -15,41 +15,10 @@
    x = (f every r) e'
 *)
 
-(* $Id$ *)
-
-open Location
 open Misc
 open Ident
 open Heptagon
-open Global
-open Initial
 open Reset
-
-let eq pat e =
-  { eq_desc = Eeq(pat, e); eq_statefull = false; eq_loc = no_location }
-let statefulleq = Heptagon.eq
-
-(* add an equation *)
-let equation v acc_eq_list e =
-  let n = Ident.fresh "r" in
-  n,
-  (bool_param n) :: v,
-  { eq_desc = Eeq(Evarpat(n), e); eq_statefull = true; eq_loc = e.e_loc } ::
-    acc_eq_list
-
-let orthen v acc_eq_list res e =
-  match e.e_desc with
-      Evar(n) -> v, acc_eq_list, Rorthen(res, n)
-    | _ ->
-        let n, v, acc_eq_list = equation v acc_eq_list e in
-        v, acc_eq_list, Rorthen(res, n)
-
-let add_locals m n locals =
-  let rec loop locals i n =
-    if i < n then
-      loop ((bool_param m.(i)) :: locals) (i+1) n
-    else locals in
-  loop locals 0 n
 
 (*
 let defnames m n d =
@@ -60,7 +29,7 @@ let defnames m n d =
 let statefull eq_list = List.exists (fun eq -> eq.eq_statefull) eq_list
 
 let is_var = function
-  | { e_desc = Evar(_) } -> true
+  | { e_desc = Evar _ } -> true
   | _ -> false
 
 let rec translate_eq v acc_eq_list eq =
@@ -102,25 +71,27 @@ and translate v acc_eq_list e =
     | Etuple(e_list) ->
         let v, acc_eq_list,e_list = translate_list v acc_eq_list e_list in
         v,acc_eq_list,
-        { e with e_desc = Etuple(e_list) }
-    | Eapp({ a_op = Eevery(f,params) } as op, re :: e_list)
+        { e with e_desc = Etuple e_list }
+    | Eapp ({ a_op = Ecall(op_desc, Some re) } as op, e_list)
         when not (is_var re) ->
         let v, acc_eq_list,re = translate v acc_eq_list re in
         let n, v, acc_eq_list = equation v acc_eq_list re in
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
-        v,acc_eq_list,
+          v,acc_eq_list,
           { e with e_desc =
-              Eapp({ op with a_op = Eevery(f,params) },
-		  { re with e_desc = Evar(n) } :: e_list) }
-    | Eapp({ a_op = Eiterator(it, f, params, Some re) } as op, e_list) 
-	when not (is_var re) ->
+              Eapp({ op with a_op = Ecall(op_desc, 
+                                          Some { re with e_desc = Evar(n) }) },
+                   e_list) }
+    | Eapp ({ a_op = Earray_op(Eiterator(it, op_desc, Some re)) } as op, e_list)
+	      when not (is_var re) ->
         let v, acc_eq_list,re = translate v acc_eq_list re in
         let n, v, acc_eq_list = equation v acc_eq_list re in
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
-	let re = { re with e_desc = Evar n } in
-        v,acc_eq_list,
+	      let re = { re with e_desc = Evar n } in
+          v,acc_eq_list,
           { e with e_desc =
-              Eapp({ op with a_op = Eiterator(it, f, params, Some re) },e_list) }	
+              Eapp({ op with a_op = Earray_op(Eiterator(it, op_desc, Some re)) },
+                   e_list) }
     | Eapp(f, e_list) ->
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
         v, acc_eq_list,
@@ -142,7 +113,6 @@ and translate v acc_eq_list e =
         let v, acc_eq_list,e_list = translate_list v acc_eq_list e_list in
         v,acc_eq_list,
         { e with e_desc = Earray(e_list) }
-    | Ereset_mem _ -> v,acc_eq_list,e
 
 and translate_list v acc_eq_list e_list =
   let v,acc_eq_list,acc_e =

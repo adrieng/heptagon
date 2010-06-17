@@ -8,25 +8,19 @@
 (**************************************************************************)
 (* complete partial definitions with [x = last(x)] *)
 
-(* $Id$ *)
-
-open Location
-open Ident
 open Misc
 open Heptagon
-open Global
+open Ident
 
 (* adds an equation [x = last(x)] for every partially defined variable *)
 (* in a control structure *)
 let complete_with_last defined_names local_defined_names eq_list =
-  let last n ty =
-    { e_desc = Elast(n); e_ty = ty; e_linearity = Linearity.NotLinear;
-      e_loc = no_location } in
+  let last n ty = mk_exp (Elast n) ty in
   let equation n ty eq_list =
-    { eq_desc = Eeq(Evarpat(n), last n ty); eq_statefull = false;
-      eq_loc = no_location } :: eq_list in
+    (mk_equation (Eeq(Evarpat n, last n ty)))::eq_list
+  in
   let d = Env.diff defined_names local_defined_names in
-  Env.fold equation d eq_list
+    Env.fold equation d eq_list
 
 let rec translate_eq eq =
   match eq.eq_desc with

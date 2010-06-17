@@ -150,19 +150,38 @@ type interface =
   and interface_desc =
   | Iopen of name | Itypedef of type_dec | Isignature of signature
 
-(* Helper functions to create AST. *) (*TODO refactor en mk_*)
-
+(* Helper functions to create AST. *)
 let mk_exp desc ty =
   { e_desc = desc; e_ty = ty; e_loc = no_location; }
   
 let mk_op op = { a_op = op; }
-  
+
+let mk_op_desc ln params kind =
+  { op_name = ln; op_params = params; op_kind = kind }
+
 let mk_type_dec name desc = 
   { t_name = name; t_desc = desc; t_loc = no_location; }
   
-let mk_equation desc =
-  { eq_desc = desc; eq_statefull = true; eq_loc = no_location; }
-    
+let mk_equation ?(statefull = true) desc =
+  { eq_desc = desc; eq_statefull = statefull; eq_loc = no_location; }
+
+let mk_var_dec ?(last = Var) name ty  =
+  { v_name = name; v_type = ty;
+    v_last = last; v_loc = Location.get_current_location () }
+
+let mk_block defnames eqs =
+  { b_local = []; b_equs = eqs; b_defnames = defnames;
+    b_statefull = true; b_loc = no_location }
+  
+let dfalse = mk_exp (Econst (Cconstr Initial.pfalse)) (Tid Initial.pbool)
+let dtrue = mk_exp (Econst (Cconstr Initial.ptrue)) (Tid Initial.pbool)
+  
+let mk_ifthenelse e1 e2 e3 =
+  { e3 with e_desc = Eapp(mk_op Eifthenelse, [e1; e2; e3]) }
+
+let mk_simple_equation pat e =
+  mk_equation ~statefull:false (Eeq(pat, e))
+
 (*
 let cfalse = Cconstr Initial.pfalse
   

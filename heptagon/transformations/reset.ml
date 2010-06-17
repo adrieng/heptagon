@@ -10,12 +10,10 @@
 
 (* $Id$ *)
 
-open Location
 open Misc
 open Ident
 open Heptagon
-open Global
-open Initial
+open Types
 
 (* We introduce an initialization variable for each block  *)
 (* Using an asynchronous reset would allow to produce      *)
@@ -43,14 +41,16 @@ open Initial
    e1 -> e2 is translated into if (true fby false) then e1 else e2 
 *)
 
+let mk_bool_var n = 
+  mk_exp (Evar n) (Tid Initial.pbool)
+let mk_bool_param n = 
+  mk_var_dec n (Tid Initial.pbool)
+
+let or_op_call = mk_op ( Ecall(mk_op_desc Initial.por [] Eop, None) )
+
 let pre_true e =
-  { e with e_desc = Eapp(eop (Epre(Some(Cconstr(ptrue)))), [e]) }
+  { e with e_desc = Eapp(mk_op (Epre (Some (Cconstr Initial.ptrue))), [e]) }
 let init e = pre_true { dfalse with e_loc = e.e_loc }
-let ifthenelse e1 e2 e3 =
-  { e3 with e_desc = Eapp(eop Eifthenelse, [e1; e2; e3]) }
-let eq pat e =
-  { eq_desc = Eeq(pat, e); eq_statefull = false; eq_loc = no_location }
-let statefulleq = Heptagon.eq
 
 (* the boolean condition for a structural reset *)
 type reset =
@@ -68,31 +68,30 @@ let rec or_op res e =
   match res with
     | Rfalse -> e
     | Rorthen(res, n) ->
-        or_op res { e with e_desc = Eapp(eop (Eop(por,[])), [bool_var n; e]) }
+        or_op res { e with e_desc = Eapp(or_op_call, [mk_bool_var n; e]) }
 
 let default e =
   match e.e_desc with
-    | Econst c -> Some(c)
+    | Econst c -> Some c
     | _ -> None
 
 let exp_of_res res =
   match res with
     | Rfalse -> dfalse
-    | Rorthen(res, n) -> or_op res (bool_var n)
+    | Rorthen(res, n) -> or_op res (mk_bool_var n)
 
 let ifres res e2 e3 =
   match res with
-    | Rfalse -> ifthenelse (init e3) e2 e3
+    | Rfalse -> mk_ifthenelse (init e3) e2 e3
     | _ -> (* a reset occurs *)
-	ifthenelse (exp_of_res res) e2 e3
+	      mk_ifthenelse (exp_of_res res) e2 e3
 
 (* add an equation *)
 let equation v acc_eq_list e =
   let n = Ident.fresh "r" in
   n,
-  (bool_param n) :: v,
-  { eq_desc = Eeq(Evarpat(n), e); eq_statefull = true; eq_loc = e.e_loc } ::
-    acc_eq_list
+  (mk_bool_param n) :: v,
+  (mk_equation (Eeq(Evarpat n, e))) ::acc_eq_list
 
 let orthen v acc_eq_list res e =
   match e.e_desc with
@@ -104,7 +103,7 @@ let orthen v acc_eq_list res e =
 let add_locals m n locals =
   let rec loop locals i n =
     if i < n then
-      loop ((bool_param m.(i)) :: locals) (i+1) n
+      loop ((mk_bool_param m.(i)) :: locals) (i+1) n
     else locals in
   loop locals 0 n
 
@@ -112,10 +111,10 @@ let add_local_equations i n m lm acc =
   (* [mi = false;...; m1 = l_m1;...; mn = l_mn] *)
   let rec loop acc k =
     if k < n then
-      if k = i then loop ((eq (varpat(m.(k))) dfalse) :: acc) (k+1)
+      if k = i then loop ((mk_simple_equation (Evarpat (m.(k))) dfalse) :: acc) (k+1)
       else
         loop
-          ((eq (varpat(m.(k))) (bool_var lm.(k))) :: acc) (k+1)
+          ((mk_simple_equation (Evarpat (m.(k))) (mk_bool_var lm.(k))) :: acc) (k+1)
     else acc
   in loop acc 0
 
@@ -124,20 +123,20 @@ let add_global_equations n m lm res acc =
      l_mn = if res then true else true fby mn ] *)
   let rec loop acc k =
     if k < n then
-      loop
-        ((statefulleq (varpat(lm.(k)))
-            (match res with
-              | Rfalse -> pre_true (bool_var m.(k))
-              | _ -> ifres res dtrue (pre_true (bool_var m.(k)))
-            )
-         ) :: acc) (k+1)
+      let exp =            
+        (match res with
+           | Rfalse -> pre_true (mk_bool_var m.(k))
+           | _ -> ifres res dtrue (pre_true (mk_bool_var m.(k)))
+        ) in
+        loop
+          ((mk_equation (Eeq (Evarpat (lm.(k)), exp))) :: acc) (k+1)
     else acc in
   loop acc 0
 
 let defnames m n d =
   let rec loop acc k =
     if k < n
-    then loop (Env.add m.(k) tybool acc) (k+1)
+    then loop (Env.add m.(k) (Tid Initial.pbool) acc) (k+1)
     else acc in
   loop d 0
 
@@ -207,37 +206,49 @@ and translate res e =
           match res, e1 with
             | Rfalse, { e_desc = Econst(c) } ->
                 (* no reset *)
-		{ e with e_desc = 
-		    Eapp({ op with a_op = Epre(Some(c)) }, [e2]) }
+		            { e with e_desc = 
+		                Eapp({ op with a_op = Epre(Some c) }, [e2]) }
             | _ ->
                 ifres res e1
                   { e with e_desc = 
-		      Eapp({ op with a_op = Epre(default e1) }, [e2]) }
+		                  Eapp({ op with a_op = Epre(default e1) }, [e2]) }
         end
     | Eapp({ a_op = Earrow }, [e1;e2]) ->
         let e1 = translate res e1 in
         let e2 = translate res e2 in
         ifres res e1 e2
-    | Eapp({ a_op = Enode(f,params) } as op, e_list) ->
-        let e_list = List.map (translate res) e_list in
-        if true_reset res then
-          { e with e_desc = Eapp({ op with a_op = Eevery(f, params) },
-				(exp_of_res res) :: e_list) }
-        else
-          { e with e_desc = Eapp({ op with a_op = Enode(f,params) }, e_list ) }
-    | Eapp( { a_op = Eiterator(it,f, params, _) } as op, e_list) ->
-        let e_list = List.map (translate res) e_list in
-	  if true_reset res then
-	    let r = Some (exp_of_res res) in
-              { e with e_desc = Eapp({ op with a_op = Eiterator(it,f,params,r) },
-				     e_list) }
-          else
-	    { e with e_desc = Eapp(op, e_list) }
-    | Eapp({ a_op = Eevery(f, params) } as op, re :: e_list) ->
+
+    (* add reset to the current reset exp. *)
+    | Eapp({ a_op = Ecall(op_desc, Some re) } as op, e_list) ->
         let re = translate res re in
         let e_list = List.map (translate res) e_list in
-        { e with e_desc = Eapp({ op with a_op = Eevery(f, params)},
-			       (or_op res re) :: e_list) }
+        let op = { op with a_op = Ecall(op_desc, Some (or_op res re))} in
+          { e with e_desc = Eapp(op, e_list) }
+    (* create a new reset exp if necessary *)
+    | Eapp({ a_op = Ecall(op_desc, None) } as op, e_list) ->
+        let e_list = List.map (translate res) e_list in
+        if true_reset res then
+          let op = { op with a_op = Ecall(op_desc, Some (exp_of_res res)) } in
+            { e with e_desc = Eapp(op, e_list) }
+        else
+          { e with e_desc = Eapp(op, e_list ) }
+     (* add reset to the current reset exp. *)
+    | Eapp( { a_op = Earray_op (Eiterator(it, op_desc, Some re)) } as op, e_list) ->
+        let re = translate res re in
+        let e_list = List.map (translate res) e_list in
+	      let r = Some (or_op res re) in
+        let op = { op with a_op = Earray_op (Eiterator(it, op_desc, r)) } in
+          { e with e_desc = Eapp(op, e_list) }
+     (* create a new reset exp if necessary *)
+    | Eapp( { a_op = Earray_op (Eiterator(it, op_desc, None)) } as op, e_list) ->
+        let e_list = List.map (translate res) e_list in
+	        if true_reset res then
+	          let r = Some (exp_of_res res) in
+            let op = { op with a_op = Earray_op (Eiterator(it, op_desc, r)) } in
+              { e with e_desc = Eapp(op, e_list) }
+          else
+	          { e with e_desc = Eapp(op, e_list) }
+ 
     | Eapp(op, e_list) ->
         { e with e_desc = Eapp(op, List.map (translate res) e_list) }
     | Efield(e', field) ->
