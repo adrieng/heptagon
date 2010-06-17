@@ -26,6 +26,7 @@ type env =
       mutable types: type_def NamesEnv.t;
       mutable constr: ty NamesEnv.t;
       mutable structs : structure NamesEnv.t;
+      mutable fields: name NamesEnv.t;
       format_version : string;
     }
 
@@ -37,7 +38,7 @@ type modules =
 
 let current =
   { name = ""; values = NamesEnv.empty; types = NamesEnv.empty;
-    constr = NamesEnv.empty; structs = NamesEnv.empty;
+    constr = NamesEnv.empty; structs = NamesEnv.empty; fields = NamesEnv.empty;
     format_version = interface_format_version }
 
 let modules =

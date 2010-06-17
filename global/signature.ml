@@ -16,7 +16,7 @@ open Static
 let interface_format_version = "6"
 
 (** Node argument *)
-type arg = { a_type : ty; a_name : name option }
+type arg = { a_name : name option; a_type : ty }
 
 type param = { p_name : name }
 
@@ -27,7 +27,8 @@ type node =
     node_params : param list; (** Static parameters *)
     node_params_constraints : size_constr list }
 
-type structure = (name * ty) list
+type field = { f_name : name; f_type : ty }
+type structure = field list
 
 type type_def = | Tabstract | Tenum of name list | Tstruct of structure
 
