@@ -80,4 +80,4 @@ module IdentSet = struct
 end
 
 
-let print_ident ff id = fprintf ff "%s" (name id)
+let print_ident ff id = Format.fprintf ff "%s" (name id)

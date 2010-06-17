@@ -229,7 +229,7 @@ let switch e l = eqmake (Eswitch (e, l))
   
 let op_from_app app =
   match app.a_op with
-  | Ecall ((op, _, Eop), _) -> op_from_app_name op
+  | Ecall ( { op_name = op; op_kind = Eop }, _) -> op_from_app_name op
   | _ -> raise Not_static
   
 let rec size_exp_of_exp e =

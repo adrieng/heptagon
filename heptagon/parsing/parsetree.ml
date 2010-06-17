@@ -174,14 +174,14 @@ let mk_exp desc =
 let mk_app op =
   { a_op = op; }
 
+let mk_op_desc ln params kind =
+  { op_name = ln; op_params = params; op_kind = kind } 
+
 let mk_call desc exps =
   Eapp (mk_app (Ecall desc), exps)
 
 let mk_op_call s params exps =
-  mk_call (Name s, params, Eop)  exps
-
-let mk_op_desc ln params kind =
-  { op_name = ln; op_params = params; op_kind = kind } 
+  mk_call (mk_op_desc (Name s) params Eop)  exps
 
 let mk_array_op_call op exps =
   Eapp (mk_app (Earray_op op), exps)

@@ -110,7 +110,7 @@ let translate_const = function
 
 let op_from_app loc app =
   match app.a_op with
-    | Ecall (op, _, Eop) -> op_from_app_name op
+    | Ecall { op_name = op; op_kind = Eop } -> op_from_app_name op
     | _ -> Error.message loc Error.Estatic_exp_expected
 
 let check_const_vars = ref true
@@ -146,13 +146,16 @@ and translate_app const_env env app =
     | Efby -> Heptagon.Efby
     | Earrow -> Heptagon.Earrow
     | Eifthenelse -> Heptagon.Eifthenelse
-    | Ecall (ln, params, k) -> 
-        let params = List.map (translate_size_exp const_env) params in
-          Heptagon.Ecall ((ln, params, translate_op_kind k), None)
+    | Ecall desc -> Heptagon.Ecall (translate_op_desc const_env desc, None)
     | Efield_update f -> Heptagon.Efield_update f
     | Earray_op op -> Heptagon.Earray_op (translate_array_op const_env env op)
   in
     { Heptagon.a_op = op; }
+
+and translate_op_desc const_env desc =
+  { Heptagon.op_name = desc.op_name;
+    Heptagon.op_params = List.map (translate_size_exp const_env) desc.op_params;
+    Heptagon.op_kind = translate_op_kind desc.op_kind }
     
 and translate_array_op const_env env = function 
   | Eselect e_list -> Heptagon.Eselect (List.map (translate_size_exp const_env) e_list)
@@ -161,10 +164,9 @@ and translate_array_op const_env env = function
   | Eselect_slice -> Heptagon.Eselect_slice
   | Econcat -> Heptagon.Econcat
   | Eselect_dyn -> Heptagon.Eselect_dyn 
-  | Eiterator (it, (ln, params, k)) -> 
-      let params = List.map (translate_size_exp const_env) params in
-	      Heptagon.Eiterator (translate_iterator_type it,
-                            (ln, params, translate_op_kind k), None)
+  | Eiterator (it, desc) -> 
+	    Heptagon.Eiterator (translate_iterator_type it,
+                          translate_op_desc const_env desc, None)
 
 and translate_desc loc const_env env = function
   | Econst c -> Heptagon.Econst (translate_const c)
