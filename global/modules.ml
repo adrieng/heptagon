@@ -26,7 +26,7 @@ type env =
       mutable types: type_def NamesEnv.t;
       mutable constr: ty NamesEnv.t;
       mutable structs : structure NamesEnv.t;
-      mutable fields: name NamesEnv.t;
+      mutable fields : name NamesEnv.t;
       format_version : string;
     }
 
@@ -132,11 +132,15 @@ let add_constr f ty_res =
 let add_struct f fields =
   if NamesEnv.mem f current.structs then raise Already_defined;
   current.structs <- NamesEnv.add f fields current.structs
+let add_field f n =
+  if NamesEnv.mem f current.fields then raise Already_defined;
+  current.fields <- NamesEnv.add f n current.fields
 
 let find_value = find (fun ident m -> NamesEnv.find ident m.values)
 let find_type = find (fun ident m -> NamesEnv.find ident m.types)
 let find_constr = find (fun ident m -> NamesEnv.find ident m.constr)
 let find_struct = find (fun ident m -> NamesEnv.find ident m.structs)
+let find_field = find (fun ident m -> NamesEnv.find ident m.fields)
 
 let replace_value f signature =
   current.values <- NamesEnv.remove f current.values;

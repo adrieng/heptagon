@@ -43,3 +43,13 @@ let mk_arg name ty =
 let mk_param name = 
   { p_name = name }
 
+let mk_field n ty =
+  { f_name = n; f_type = ty }
+
+let rec field_assoc f = function
+  | [] -> raise Not_found
+  | { f_name = n; f_type = ty }::l ->
+      if shortname f = n then
+        ty
+      else
+        field_assoc f l
