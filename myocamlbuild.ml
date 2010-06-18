@@ -1,12 +1,7 @@
 open Ocamlbuild_plugin
 open Ocamlbuild_plugin.Options
 
-let sub_dirs = ["global"; "parsing"; "sigali"; "dataflow"; "sequential";
-                "analysis"; "translation"; "main"; "simulation"]
-
 let df = function
-  | Before_options ->
-      include_dirs := sub_dirs @ !include_dirs
   | After_rules ->
       (* Tell ocamlbuild about the camlp4 library. *)
       ocaml_lib ~extern:true ~dir:"+camlp4" "camlp4";

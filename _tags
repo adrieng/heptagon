@@ -1,4 +1,4 @@
-<global> or <utilities> or <minils> or <heptagon>:include
+<global> or <utilities> or <minils> or <heptagon> or <main>:include
 <**/*.ml>: debug, dtypes
 <preproc.ml>: camlp4of, use_camlp4
 <**/*.{byte,native}>: use_unix, use_str, debug
