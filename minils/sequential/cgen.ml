@@ -915,8 +915,4 @@ let global_file_header name prog =
 let translate name prog =
   let modname = (Filename.basename name) in
     global_name := String.capitalize modname;
-    (match !simulation_node with
-       | None -> ()
-       | Some s -> simulation_node := Some (String.capitalize name ^ "_" ^ s)
-    );
     (global_file_header modname prog) :: (cfile_list_of_oprog modname prog)
