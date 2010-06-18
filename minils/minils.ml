@@ -147,6 +147,8 @@ type program =
 let mk_exp ?(exp_ty = Tprod []) ?(clock = Cbase) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = exp_ty; e_ck = clock; e_loc = loc }
 
+let mk_equation pat exp =
+  { eq_lhs = pat; eq_rhs = exp; eq_loc = no_location }
 
 let rec size_exp_of_exp e =
   match e.e_desc with 
@@ -185,64 +187,67 @@ let is_record_type ty = match ty with
 	     Not_found -> false)
   | _ -> false
 
-(*
 module Vars =
 struct
+  let add x acc = 
+    if List.mem x acc then acc else x :: acc
+
   let rec vars_pat acc = function
-    | Evarpat(x) -> x :: acc
-    | Etuplepat(pat_list) -> List.fold_left vars_pat acc pat_list
+    | Evarpat x -> x :: acc
+    | Etuplepat pat_list -> List.fold_left vars_pat acc pat_list
 
   let rec vars_ck acc = function
-    | Con(ck, c, n) -> if List.mem (IVar n) acc then acc else (IVar n) :: acc
+    | Con(ck, c, n) -> add n acc
     | Cbase | Cvar { contents = Cindex _ } -> acc
-    | Cvar { contents = Clink ck }         -> vars_ck acc ck
+    | Cvar { contents = Clink ck } -> vars_ck acc ck
 
   let rec read is_left acc e =
-    let add x acc = if List.mem (IVar x) acc then acc else (IVar x) :: acc in
     let acc =
       match e.e_desc with
         | Emerge(x, c_e_list) ->
             let acc = add x acc in
-            List.fold_left (fun acc (_, e) -> read is_left acc e) acc c_e_list
+              List.fold_left (fun acc (_, e) -> read is_left acc e) acc c_e_list
         | Eifthenelse(e1, e2, e3) ->
             read is_left (read is_left (read is_left acc e1) e2) e3
         | Ewhen(e, c, x) ->
             let acc = add x acc in
-            read is_left acc e
-        | Eop(_, _, e_list)
+              read is_left acc e
         | Etuple(e_list) -> List.fold_left (read is_left) acc e_list
-        | Eapp(_, _, e_list) -> List.fold_left (read is_left) acc e_list
-        | Eevery(_, _, e_list, x) ->
+        | Ecall(_, e_list, None) -> 
+            List.fold_left (read is_left) acc e_list
+        | Ecall(_, e_list, Some x) ->
             let acc = add x acc in
               List.fold_left (read is_left) acc e_list
         | Efby(_, e) ->
             if is_left then vars_ck acc e.e_ck else read is_left acc e
-	| Ereset_mem (_, _,res) -> add res acc
-        | Evar(n) -> add n acc
-	| Efield({ e_desc = Evar x }, f) -> 
-	    let acc = add x acc in
-	    let x = IField(x,f) in
-	      if List.mem x acc then acc else x::acc
         | Efield(e, _) -> read is_left acc e
         | Estruct(f_e_list) ->
             List.fold_left (fun acc (_, e) -> read is_left acc e) acc f_e_list
         | Econst _ | Econstvar _ -> acc 
-    (*Array operators*)
-	| Earray e_list -> List.fold_left (read is_left) acc e_list
-	| Erepeat (_,e) -> read is_left acc e
-	| Eselect (_,e) -> read is_left acc e
-	| Eselect_dyn (e_list, _, e1, e2) -> 
-	    let acc = List.fold_left (read is_left) acc e_list in 
-	      read is_left (read is_left acc e1) e2
-	| Eupdate (_, e1, e2) | Efield_update (_, e1, e2) ->
-	    read is_left (read is_left acc e1) e2 
-	| Eselect_slice (_ , _, e) -> read is_left acc e
-	| Econcat (e1, e2) ->
-	    read is_left (read is_left acc e1) e2 
-	| Eiterator (_, _, _, _, e_list, _) ->  
-	    List.fold_left (read is_left) acc e_list
+        | Efield_update (_, e1, e2) -> 
+            read is_left (read is_left acc e1) e2 
+         (*Array operators*)
+	      | Earray e_list -> List.fold_left (read is_left) acc e_list
+        | Earray_op op -> read_array_op is_left acc op 
     in
       vars_ck acc e.e_ck
+
+  and read_array_op is_left acc = function 
+    | Erepeat (_,e) -> read is_left acc e
+	  | Eselect (_,e) -> read is_left acc e
+	  | Eselect_dyn (e_list, _, e1, e2) -> 
+	      let acc = List.fold_left (read is_left) acc e_list in 
+	        read is_left (read is_left acc e1) e2
+	  | Eupdate (_, e1, e2) ->
+	      read is_left (read is_left acc e1) e2 
+	  | Eselect_slice (_ , _, e) -> read is_left acc e
+	  | Econcat (e1, e2) ->
+	      read is_left (read is_left acc e1) e2 
+	  | Eiterator (_, _, _, e_list, None) ->  
+	      List.fold_left (read is_left) acc e_list
+	  | Eiterator (_, _, _, e_list, Some x) ->  
+        let acc = add x acc in
+	        List.fold_left (read is_left) acc e_list
 
   let rec remove x = function
     | [] -> []
@@ -254,72 +259,35 @@ struct
     match pat, e.e_desc with
       |  Evarpat(n), Efby(_, e1) ->
            if is_left
-           then remove (IVar n) (read is_left [] e1)
+           then remove n (read is_left [] e1)
            else read is_left [] e1
       | _ -> read is_left [] e
 
-  let rec remove_records = function
-    | [] -> []
-    | (IVar x)::l -> (IVar x)::(remove_records l)
-    | (IField(x,f))::l -> 
-	let l = remove (IVar x) l in
-	  (IField(x,f))::(remove_records l)
-
-  let read_ivars is_left eq =
-    remove_records (read is_left eq)
-
-  let read is_left eq =
-    filter_vars (read is_left eq)
-
   let antidep { eq_rhs = e } =
     match e.e_desc with Efby _ -> true | _ -> false
+
   let clock { eq_rhs = e } =
     match e.e_desc with
       | Emerge(_, (_, e) :: _) -> e.e_ck
       | _ -> e.e_ck
+
   let head ck =
     let rec headrec ck l =
       match ck with
         | Cbase | Cvar { contents = Cindex _ } -> l
         | Con(ck, c, n) -> headrec ck (n :: l)
-        | Cvar { contents = Clink ck } -> headrec ck l in
-    headrec ck []
+        | Cvar { contents = Clink ck } -> headrec ck l 
+    in
+      headrec ck []
 
-  let rec linear_use acc e =
-      match e.e_desc with
-        | Emerge(_, c_e_list) ->
-            List.fold_left (fun acc (_, e) -> linear_use acc e) acc c_e_list
-        | Eifthenelse(e1, e2, e3) ->
-            linear_use (linear_use (linear_use acc e1) e2) e3
-        | Ewhen(e, _, _) | Efield(e, _) | Efby(_, e) -> linear_use acc e
-        | Eop(_,_, e_list)
-        | Etuple(e_list) | Earray e_list
-        | Eapp(_,_, e_list) | Eiterator (_, _, _, _, e_list, _)
-        | Eevery(_,_, e_list, _) -> List.fold_left linear_use acc e_list
-        | Evar(n) ->
-	    (match e.e_linearity with
-	       | At _ -> if List.mem n acc then acc else n :: acc
-	       | _ -> acc
-	    )
-        | Estruct(f_e_list) ->
-            List.fold_left (fun acc (_, e) -> linear_use acc e) acc f_e_list
-        | Econst _ | Econstvar _ | Ereset_mem (_, _,_) -> acc 
-    (*Array operators*)
-	| Erepeat (_,e)
-	| Eselect (_,e) | Eselect_slice (_ , _, e) -> linear_use acc e
-	| Eselect_dyn (e_list, _, e1, e2) -> 
-	    let acc = List.fold_left linear_use acc e_list in 
-	      linear_use (linear_use acc e1) e2
-	| Eupdate (_, e1, e2) | Efield_update (_, e1, e2) 
-	| Econcat (e1, e2) ->
-	    linear_use (linear_use acc e1) e2 
-
-  let mem_reset { eq_rhs = e } =
+  (** Returns a list of memory vars (x in x = v fby e) 
+      appearing in an equation. *)
+  let memory_vars ({ eq_lhs = _; eq_rhs = e } as eq)  =
     match e.e_desc with
-      | Ereset_mem (y, _, _) -> [y]
+      |  Efby(_, _) -> def [] eq
       | _ -> []
 end
-*)
+
 (*
 (* data-flow dependences. pre-dependences are discarded *)
 module DataFlowDep = Make

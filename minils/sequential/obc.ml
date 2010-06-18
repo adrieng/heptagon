@@ -24,11 +24,11 @@ type op_name = longname
 type field_name = longname
 
 type ty =
-    | Tint
-    | Tfloat
-    | Tbool
-    | Tid of type_name
-    | Tarray of ty * int
+  | Tint
+  | Tfloat
+  | Tbool
+  | Tid of type_name
+  | Tarray of ty * int
 
 type type_dec =
     { t_name : name;
@@ -55,21 +55,21 @@ and exp =
   | Lhs of lhs
   | Const of const
   | Op of op_name * exp list
-  | Struct of type_name * (field_name * exp) list
-  | ArrayLit of exp list
+  | Struct_lit of type_name * (field_name * exp) list
+  | Array_lit of exp list
 
 type obj_call = 
   | Context of obj_name
   | Array_context of obj_name * lhs
 
 type act =
-    | Assgn of lhs * exp
-    | Step_ap of lhs list * obj_call * exp list
-    | Comp of act * act
-    | Case of exp * (longname * act) list
-    | For of var_name * int * int * act
-    | Reinit of obj_name
-    | Nothing
+  | Assgn of lhs * exp
+  | Step_ap of lhs list * obj_call * exp list
+  | Comp of act * act
+  | Case of exp * (longname * act) list
+  | For of var_name * int * int * act
+  | Reinit of obj_name
+  | Nothing
 
 type var_dec =
     { v_name : var_name;
@@ -104,24 +104,16 @@ type program =
       o_types : type_dec list;
       o_defs  : class_def list }
 
+let mk_var_dec name ty =
+  { v_name = name; v_type = ty }
+
 (** [is_scalar_type vd] returns whether the type corresponding
     to this variable declaration is scalar (ie a type that can
     be returned by a C function). *)
 let is_scalar_type vd =
     match vd.v_type with
-      | Tint | Tfloat -> true
-      | Tid name_int when name_int = pint -> true
-      | Tid name_float when name_float = pfloat -> true
-      | Tid name_bool when name_bool = pbool -> true
-      | _ -> false 
-
-let actual_type ty =
-  match ty with
-    | Tid(Name("float"))
-    | Tid(Modname { qual = "Pervasives"; id = "float" }) -> Tfloat
-    | Tid(Name("int"))
-    | Tid(Modname { qual = "Pervasives"; id = "int" }) -> Tint
-    | _ -> ty
+      | Tint | Tfloat | Tbool -> true
+      | _ -> false
 
 let rec var_name x =
   match x with
@@ -201,8 +193,6 @@ struct
     fprintf ff "@[<v>";
     print_ident ff vd.v_name;
     fprintf ff ": ";
-    if vd.v_pass_by_ref then 
-      fprintf ff "&";
     print_type ff vd.v_type;
     fprintf ff "@]"
 
@@ -238,14 +228,14 @@ struct
     | Lhs lhs -> print_lhs ff lhs
     | Const c         -> print_c ff c
     | Op(op, e_list) -> print_op ff op e_list
-    | Struct(_,f_e_list) ->
+    | Struct_lit(_,f_e_list) ->
   fprintf ff "@[<v 1>{";
   print_list ff
     (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
             print_exp ff e)
     ";" f_e_list;
   fprintf ff "}@]"
-    | ArrayLit e_list ->
+    | Array_lit e_list ->
 	fprintf ff "@[[";
         print_list ff print_exp ";" e_list;
         fprintf ff "]@]"
