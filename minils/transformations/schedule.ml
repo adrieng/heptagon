@@ -46,32 +46,32 @@ let schedule eq_list =
   let rec recook = function
     | [] -> []
     | node :: node_list -> node >> (recook node_list)
-	  
+	      
   and (>>) node node_list =
     try
       insert node node_list
     with
-	Not_found -> node :: node_list
+	      Not_found -> node :: node_list
 	  
   and insert node = function
     | [] -> raise Not_found
     | node1 :: node_list ->
-	if linked node node1 then raise Not_found
-	else
-	  try
-	    node1 :: (insert node node_list)
-	  with
-	    | Not_found ->
-		if join (containt node) (containt node1)
-	        then node :: node1 :: node_list
-		else raise Not_found in
+	      if linked node node1 then raise Not_found
+	      else
+	        try
+	          node1 :: (insert node node_list)
+	        with
+	          | Not_found ->
+		            if join (containt node) (containt node1)
+	              then node :: node1 :: node_list
+		            else raise Not_found in
     
   let node_list, _ = DataFlowDep.build eq_list in
   let node_list = recook (topological node_list) in
   let node_list = List.rev node_list in
   let node_list = recook node_list in
   let node_list = List.rev node_list in
-  List.map containt node_list
+    List.map containt node_list
 
 let schedule_contract ({ c_eq = eqs } as c) =
   let eqs = schedule eqs in

@@ -208,6 +208,7 @@ struct
   let rec read is_left acc e =
     let acc =
       match e.e_desc with
+        | Evar n -> add n acc
         | Emerge(x, c_e_list) ->
             let acc = add x acc in
               List.fold_left (fun acc (_, e) -> read is_left acc e) acc c_e_list
@@ -292,15 +293,13 @@ struct
       | _ -> []
 end
 
-(*
+
 (* data-flow dependences. pre-dependences are discarded *)
 module DataFlowDep = Make
   (struct
      type equation = eq
      let read eq = Vars.read true eq
      let def = Vars.def
-     let linear_read eq = Vars.linear_use [] eq.eq_rhs
-     let mem_reset = Vars.mem_reset
      let antidep = Vars.antidep
    end)
 
@@ -309,10 +308,7 @@ module AllDep = Make
   (struct
      type equation = eq
      let read eq = Vars.read false eq
-     let linear_read eq = Vars.linear_use [] eq.eq_rhs
-     let mem_reset = Vars.mem_reset
      let def = Vars.def
      let antidep eq = false
    end)
-*)
 
