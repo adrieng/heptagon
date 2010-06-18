@@ -111,10 +111,13 @@ and print_array_op ff = function
       fprintf ff "@[%a[%a..%a]@]"
         print_exp e print_size_exp idx1 print_size_exp idx2
   | Econcat (e1, e2) -> fprintf ff "%a @@ %a" print_exp e1 print_exp e2
-  | Eiterator (it, f, params, n, e_list, r) ->
-     fprintf ff "(%s (%a%a) <<%a>>)@ @[%a@]%a"
-       (iterator_to_string it) print_longname f print_params params
-       print_size_exp n (print_list_l print_exp "("","")") e_list print_every r
+  | Eiterator (it, f, n, e_list, r) ->
+     fprintf ff "(%s (%a)<<%a>>)@ @[%a@]%a"
+       (iterator_to_string it)
+       print_op f
+       print_size_exp n
+       (print_list_l print_exp "("","")") e_list
+       print_every r
 
 and print_tag_e_list ff tag_e_list =
   fprintf ff "@[%a@]"
