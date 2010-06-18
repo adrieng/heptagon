@@ -121,8 +121,10 @@ let rec typing h e =
     | Evar x -> Ck (typ_of_name h x)
     | Efby (c, e) -> typing h e
     | Etuple e_list -> Cprod (List.map (typing h) e_list)
-    | Ecall(_, e_list, None) ->
-        let ck_r = new_var ()
+    | Ecall(_, e_list, r) ->
+        let ck_r = match r with
+                   | None -> new_var()
+                   | Some(reset) -> typ_of_name h reset
         in (List.iter (expect h (Ck ck_r)) e_list; skeleton ck_r e.e_ty)
     | Ecall(_, e_list, Some(reset)) ->
         let ck_r = typ_of_name h reset
@@ -172,8 +174,10 @@ and typing_array_op h e = function
         let ck = new_var () in
         let ct = skeleton ck e.e_ty
         in (expect h (Ck ck) e1; expect h ct e2; ct)
-    | Eiterator (_, f, _, _, e_list, _) ->
-        let ck_r = new_var ()
+    | Eiterator (_, _, _, e_list, r) ->
+        let ck_r = match r with
+                   | None -> new_var()
+                   | Some(reset) -> typ_of_name h reset
         in (List.iter (expect h (Ck ck_r)) e_list; skeleton ck_r e.e_ty)
 
 
