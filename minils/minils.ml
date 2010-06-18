@@ -151,8 +151,8 @@ let mk_var_dec ?(ck = Cbase) name ty =
   { v_name = name; v_type = ty;
     v_clock = ck }
 
-let mk_equation pat exp =
-  { eq_lhs = pat; eq_rhs = exp; eq_loc = no_location }
+let mk_equation ?(loc = no_location) pat exp =
+  { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
 
 let rec size_exp_of_exp e =
   match e.e_desc with 
