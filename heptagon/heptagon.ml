@@ -122,7 +122,7 @@ type node_dec =
   { n_name : name; n_statefull : bool; n_input : var_dec list;
     n_output : var_dec list; n_local : var_dec list;
     n_contract : contract option; n_equs : eq list; n_loc : location;
-    n_params : name list;
+    n_params : param list;
     n_params_constraints : size_constr list
   }
 
@@ -184,78 +184,14 @@ let mk_simple_equation pat e =
 
 let mk_switch_equation ?(statefull = true) e l = 
   mk_equation ~statefull:statefull (Eswitch (e, l))
-
-
-
-(*
-let cfalse = Cconstr Initial.pfalse
   
-let ctrue = Cconstr Initial.ptrue
-  
-let make_bool desc = emake desc tybool
-  
-let bool_var n = make_bool (Evar n)
-  
-let bool_param n =
-  {
-    v_name = n;
-    v_type = tbool;
-    v_last = Var;
-    v_loc = no_location;
-    v_linearity = NotLinear;
-  }
-  
-let dfalse = make_bool (Econst (Cconstr Initial.pfalse))
-  
-let dtrue = make_bool (Econst (Cconstr Initial.ptrue))
-  
-let var n ty = emake (Evar n) ty
-  
-let param n ty =
-  {
-    v_name = n;
-    v_type = ty;
-    v_linearity = NotLinear;
-    v_last = Var;
-    v_loc = no_location;
-  }
-  
-let fby_state initial e =
-  { (e) with e_desc = Eapp (eop (Epre (Some (Cconstr initial))), [ e ]); }
-  
-let fby_false e = emake (Eapp (eop (Epre (Some cfalse)), [ e ])) tybool
-  
-let last_false x = emake (Elast x) tybool
-  
-let ifthenelse e1 e2 e3 =
-  emake (Eapp (eop Eifthenelse, [ e1; e2; e3 ])) e2.e_ty
-  
-let rec or_op e1 e2 =
-  { (e1) with e_desc = Eapp (eop (Eop (por, [])), [ e1; e2 ]); }
-  
-let pair e1 e2 = emake (Etuple [ e1; e2 ]) (Tprod [ e1.e_ty; e2.e_ty ])
-  
-let block defnames eqs =
-  {
-    b_local = [];
-    b_equs = eqs;
-    b_defnames = defnames;
-    b_statefull = true;
-    b_loc = no_location;
-  }
-  
-let eq pat e = eqmake (Eeq (pat, e))
-  
-let reset eq_list e = eqmake (Ereset (eq_list, e))
-  
-let switch e l = eqmake (Eswitch (e, l))
-  *)
-  
+(** @return a size exp operator from a Heptagon operator. *)
 let op_from_app app =
   match app.a_op with
   | Ecall ( { op_name = op; op_kind = Eop }, _) -> op_from_app_name op
   | _ -> raise Not_static
   
+(** Translates a Heptagon exp into a static size exp. *)
 let rec size_exp_of_exp e =
   match e.e_desc with
   | Econstvar n -> SVar n

@@ -891,7 +891,7 @@ let signature const_env inputs returns params constraints =
   in
     { node_inputs = List.map arg_dec_of_var_dec inputs;
       node_outputs = List.map arg_dec_of_var_dec returns;
-      node_params = List.map mk_param params; 
+      node_params = params; 
       node_params_constraints = constraints; }
 
 let solve loc env cl =

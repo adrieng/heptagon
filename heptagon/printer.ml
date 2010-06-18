@@ -322,7 +322,7 @@ let print_contract ff {c_local = l;
 
 let print_node_params ff = function
   | [] -> ()
-  | l -> print_list_r print_name "<<" "," ">>" ff l
+  | l -> print_list_r print_param "<<" "," ">>" ff l
 
 let print_node ff
     { n_name = n; n_input = ni;

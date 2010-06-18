@@ -284,7 +284,7 @@ let translate_node const_env env node =
       (translate_contract const_env env) node.n_contract;
     Heptagon.n_equs = List.map (translate_eq const_env env) node.n_equs;
     Heptagon.n_loc = node.n_loc; 
-    Heptagon.n_params = node.n_params;
+    Heptagon.n_params = List.map Signature.mk_param node.n_params;
     Heptagon.n_params_constraints = []; }
 
 let translate_typedec const_env ty =
