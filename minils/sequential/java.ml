@@ -8,29 +8,14 @@
 (**************************************************************************)
 (* $Id$ *)
 
-open Global
+open Signature
 open Modules
 open Format
 open Obc
 open Misc
 open Names
 open Ident
-
-let actual_type ty =
-  match ty with
-    | Tid(tn) when (shortname tn) = "float" -> Tfloat
-    | Tid(tn) when (shortname tn) = "int" -> Tint
-    | _ -> ty
-
-(******************************)
-let rec print_list ff print sep l =
-  match l with
-    | [] -> ()
-    | [x] -> print ff x
-    | x :: l ->
-        print ff x;
-        fprintf ff "%s@ " sep;
-        print_list ff print sep l
+open Pp_tools
 
 let jname_of_name name =
   let b = Buffer.create (String.length name) in
@@ -119,17 +104,17 @@ let print_assgt_field ff (name,_) =
 let print_struct_type ff tn fields =
   fprintf ff "@[<v>@[<v 2>public class %s {@ " tn;
   (* fields *)
-  print_list ff print_field "" fields;
+  print_list print_field "" "" "" ff fields;
   (* constructor *)
   let sorted_fields =
     List.sort
       (fun (n1,_) (n2,_) -> String.compare n1 n2)
       fields in
   fprintf ff "@ @[<v 2>public %s(@[<hov>" tn;
-  print_list ff print_const_field "," sorted_fields;
+  print_list print_const_field "" "," "" ff sorted_fields;
   fprintf ff "@]) {@ ";
   (* constructor assignments *)
-  print_list ff print_assgt_field "" fields;
+  print_list print_assgt_field "" "" "" ff fields;
   (* constructor end *)
   fprintf ff "@]@ }";
   (* class end *)
@@ -253,7 +238,7 @@ let rec print_exp ff e p avs ts single =
     | Lhs l -> print_lhs ff l avs single
     | Const c -> print_const ff c ts
     | Op (op, es) -> print_op ff op es p avs ts single
-    | Struct(type_name,fields) ->
+    | Struct_lit(type_name,fields) ->
         let fields =
 	        List.sort
 	          (fun (ln1,_) (ln2,_) -> String.compare (shortname ln1) (shortname ln2))
