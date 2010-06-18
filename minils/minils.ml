@@ -65,7 +65,11 @@ and array_op =
   | Eupdate of size_exp list * exp * exp (*indices, array, value*)
   | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound, array*)
   | Econcat of exp * exp
-  | Eiterator of iterator_type * longname * size_exp list * size_exp * exp list * ident option
+  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option
+(** [op_desc] is the function iterated,
+    [size_exp] is the size of the iteration,
+    [exp list] is the passed arguments,
+    [ident option] is the optional reset condition *)
    
 and op_desc = { op_name: longname; op_params: size_exp list; op_kind: op_kind }
 and op_kind = | Eop | Enode
