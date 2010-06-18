@@ -46,7 +46,7 @@ let compile_impl modname filename =
         end;
 
         (* Call the compiler*)
-        Hept_compiler.compile_impl pp p;
+        let p = Hept_compiler.compile_impl pp p in
 
         if !verbose
         then begin
@@ -78,7 +78,7 @@ let compile_interface modname filename =
     let l = Scoping.translate_interface l in
 
       (* Call the compiler*)
-      Hept_compiler.compile_interface l;
+    let l = Hept_compiler.compile_interface l in
 
       Modules.write itc;
 

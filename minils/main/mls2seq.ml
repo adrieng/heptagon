@@ -7,6 +7,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Compiler_utils
+
 (** Generation of a dataflow target *)
 let dataflow_target filename p target_languages =
   let rec one_target = function
