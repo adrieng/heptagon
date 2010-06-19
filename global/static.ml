@@ -130,7 +130,7 @@ let rec print_size_exp ff =
   | SConst i -> fprintf ff "%d" i
   | SVar id -> fprintf ff "%s" id
   | SOp (op, e1, e2) ->
-      fprintf ff "@[(%a %s %a@]"
+      fprintf ff "@[(%a %s %a)@]"
         print_size_exp e1 (op_to_string op) print_size_exp e2
   
 let print_size_constr ff = function

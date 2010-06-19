@@ -6,9 +6,7 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-(* the printer *)
-
-(* $Id$ *)
+(* The Heptagon printer *)
 
 open Location
 open Misc
@@ -329,11 +327,11 @@ let print_node ff
       n_local = nl; n_output = no; n_contract = contract; n_equs = ne;
       n_params = params; } =
   fprintf ff "@[<v 2>node ";
-  print_name ff n; 
-  print_node_params ff params;
-  print_list_r print_vd "(" ";" ")" ff ni;
+  print_name ff n;
+  fprintf ff "@[%a@]" print_node_params params;
+  fprintf ff "@[%a@]" (print_list_r print_vd "(" ";" ")") ni;
   fprintf ff " returns ";
-  print_list_r print_vd "(" ";" ")" ff no;
+  fprintf ff "@[%a@]" (print_list_r print_vd "(" ";" ")") no;
   fprintf ff "@,";
   optunit (print_contract ff) contract;
   if nl <> [] then begin
