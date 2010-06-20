@@ -8,8 +8,6 @@
 (**************************************************************************)
 (* Object code internal representation *)
 
-(* $Id$ *)
-
 open Misc
 open Names
 open Ident
