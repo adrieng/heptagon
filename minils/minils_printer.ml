@@ -59,10 +59,10 @@ let rec print_params ff l =
 and print_node_params ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_param "<<"","">>") l
   
-and print_args ff l =
+and print_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_exp "("","")") l
 
-and print_node_args ff l =
+and print_vd_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_vd "("","")") l
 
 and print_index ff idx =
@@ -90,7 +90,7 @@ and print_exp_desc ff = function
   | Efby (None, e) -> fprintf ff "pre %a" print_exp e
   | Ecall (op, args, reset) ->
       fprintf ff "@[<2>%a@,%a%a@]"
-        print_op op print_args args print_every reset
+        print_op op print_exp_tuple args print_every reset
   | Ewhen (e, c, n) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"
         print_exp e print_longname c print_ident n
@@ -101,51 +101,51 @@ and print_exp_desc ff = function
       fprintf ff "@[<2>merge %a@ %a@]"
         print_ident x print_tag_e_list tag_e_list
   | Etuple e_list -> 
-      fprintf ff "@[<2>%a@]" (print_list_r print_exp "("","")") e_list
+      print_exp_tuple ff e_list
   | Efield (e, field) ->
       fprintf ff "%a.%a" print_exp e print_longname field
   | Estruct f_e_list ->
-      print_record (print_couple print_longname print_exp """ =""") ff f_e_list
+      print_record (print_couple print_longname print_exp """ = """) ff f_e_list
   | Earray e_list ->
       fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") e_list
   | Earray_op(array_op) -> print_array_op ff array_op
   | Efield_update (f, e1, e2) ->
       fprintf ff "@[<2>(%a with .%a =@ %a)@]"
-        print_exp e1 print_longname f print_exp e2
+        print_exp e1  print_longname f  print_exp e2
 
 
 and print_array_op ff = function
-  | Erepeat (n, e) -> fprintf ff "%a^%a" print_exp e print_size_exp n
-  | Eselect (idx, e) -> fprintf ff "%a%a" print_exp e print_index idx
+  | Erepeat (n, e) -> fprintf ff "%a^%a" print_exp e  print_size_exp n
+  | Eselect (idx, e) -> fprintf ff "%a%a" print_exp e  print_index idx
   | Eselect_dyn (idx, _, e1, e2) ->
       fprintf ff "%a%a default %a"
-        print_exp e1 print_dyn_index idx print_exp e2
+        print_exp e1  print_dyn_index idx  print_exp e2
   | Eupdate (idx, e1, e2) ->
       fprintf ff "@[<2>(%a with %a =@ %a)@]"
         print_exp e1 print_index idx print_exp e2
   | Eselect_slice (idx1, idx2, e) ->
       fprintf ff "%a[%a..%a]"
-        print_exp e print_size_exp idx1 print_size_exp idx2
-  | Econcat (e1, e2) -> fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1 print_exp e2
+        print_exp e  print_size_exp idx1  print_size_exp idx2
+  | Econcat (e1, e2) -> fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
   | Eiterator (it, f, n, e_list, r) ->
-     fprintf ff "@[<2>(%s (%a)<<%a>>)@ @[<2>%a@]@]%a"
+     fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
        (iterator_to_string it)
        print_op f
        print_size_exp n
-       (print_list_l print_exp "("","")") e_list
+       print_exp_tuple e_list
        print_every r
 
 and print_tag_e_list ff tag_e_list =
   fprintf ff "@[%a@]"
     (print_list
-      (print_couple print_longname print_exp "("" ->"")") """""") tag_e_list
+      (print_couple print_longname print_exp "("" -> "")") """""") tag_e_list
 
 
 let print_eq ff { eq_lhs = p; eq_rhs = e } =
   if !Misc.full_type_info
   then fprintf ff "@[<2>%a :: %a =@ %a@]"
-         print_pat p print_ck e.e_ck print_exp e
-  else fprintf ff "@[<2>%a =@ %a@]" print_pat p print_exp e
+         print_pat p  print_ck e.e_ck  print_exp e
+  else fprintf ff "@[<2>%a =@ %a@]" print_pat p  print_exp e
 
 
 let print_eqs ff = function
@@ -168,7 +168,7 @@ and print_type_desc ff = function
         (print_record print_field) f_ty_list
 
 and print_field ff field =
-  fprintf ff "@[%a: %a@]" print_name field.f_name print_type field.f_type
+  fprintf ff "@[%a: %a@]" print_name field.f_name  print_type field.f_type
   
 let print_contract ff
     { c_local = l; c_eq = eqs;
@@ -178,7 +178,7 @@ let print_contract ff
 	  print_eqs eqs
 	  print_exp e_a
 	  print_exp e_g
-	  print_node_args cl
+	  print_vd_tuple cl
   
   
 let print_node ff
@@ -187,8 +187,8 @@ let print_node ff
   fprintf ff "@[node %s%a%a@ returns %a@]@\n%a%a%a@]@\n@."
     n
     print_node_params params
-    print_node_args ni
-    print_node_args no
+    print_vd_tuple ni
+    print_vd_tuple no
     (print_opt print_contract) contract
     print_local_vars nl
     print_eqs ne
@@ -206,8 +206,8 @@ let print_clock oc ct =
 
 let print oc { p_opened = pm; p_types = pt; p_nodes = pn } =
   let ff = formatter_of_out_channel oc
-  in
-  (List.iter (print_open_module ff) pm;
+  in (
+    List.iter (print_open_module ff) pm;
     List.iter (print_type_def ff) pt;
     List.iter (print_node ff) pn;
-    fprintf ff "@?")
+    fprintf ff "@?" )
