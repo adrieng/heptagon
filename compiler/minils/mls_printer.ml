@@ -7,13 +7,13 @@ open Format
 open Signature
 open Pp_tools
 
-(* Every print_ function is boxed, that is it doesn't export break points,
+(** Every print_ function is boxed, that is it doesn't export break points,
   Exceptions are print_list* print_type_desc *)
 
-(* Every print_ function is without heading white space,
+(** Every print_ function is without heading white space,
   except for print_type_desc *)
 
-(* Every print_ function is without heading carry return *)
+(** Every print_ function is without heading carry return *)
 
 let iterator_to_string i = 
   match i with 

@@ -1,10 +1,9 @@
 (* lexer.mll *)
 
-(* $Id$ *)
 
 {
 open Lexing
-open Parser
+open Mls_parser
 
 type lexical_error =
     Illegal_character
@@ -21,10 +20,11 @@ let keyword_table = ((Hashtbl.create 149) : (string, token) Hashtbl.t);;
 List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "node", NODE;
  "fun", FUN;
+ "safe", SAFE;
  "returns", RETURNS;
  "var", VAR;
  "val", VAL;
- "const", CONST;
+ "unsafe", UNSAFE;
  "let", LET;
  "tel", TEL;
  "end", END;
@@ -60,10 +60,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "enforce", ENFORCE;
  "with", WITH;
  "inlined", INLINED;
- "with", WITH;
- "map", MAP;
- "fold", FOLD;
- "mapfold", MAPFOLD;
+ "at", AT;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");
@@ -147,29 +144,18 @@ rule token = parse
   | "|"             {BAR}
   | "-"             {SUBTRACTIVE "-"}
   | "-."            {SUBTRACTIVE "-."}
-  | "^"             {POWER} 
-  | "["             {LBRACKET}
-  | "]"             {RBRACKET}
-  | "@"             {AROBASE}
-  | ".."            {DOUBLE_DOT}
-  | "<<"            {DOUBLE_LESS}
-  | ">>"            {DOUBLE_GREATER}
   | (['A'-'Z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {Constructor id}
   | (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       { let s = Lexing.lexeme lexbuf in
-          begin try
-	    Hashtbl.find keyword_table s
-          with 
-	      Not_found -> IDENT id
-	  end 
-      }
-  | ['0'-'9']+
-  | '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
-  | '0' ['o' 'O'] ['0'-'7']+
-  | '0' ['b' 'B'] ['0'-'1']+
+        try Hashtbl.find keyword_table s
+        with Not_found -> IDENT id }
+  | '-'? ['0'-'9']+
+  | '-'? '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
+  | '-'? '0' ['o' 'O'] ['0'-'7']+
+  | '-'? '0' ['b' 'B'] ['0'-'1']+
       { INT (int_of_string(Lexing.lexeme lexbuf)) }
-  | ['0'-'9']+ ('.' ['0'-'9']*)? (['e' 'E'] ['+' '-']? ['0'-'9']+)?
+  | '-'? ['0'-'9']+ ('.' ['0'-'9']*)? (['e' 'E'] ['+' '-']? ['0'-'9']+)?
       { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
   | "\""
       { reset_string_buffer();

@@ -78,8 +78,8 @@ let message loc kind =
       Printf.eprintf "%aType Clash: this expression has type %a, \n\
             but is expected to have type %a.\n" 
 	output_location loc
-	Printer.ptype actual_ty
-	Printer.ptype expected_ty
+	Hept_printer.ptype actual_ty
+	Hept_printer.ptype expected_ty
   | Earity_clash(actual_arit, expected_arit) ->
       Printf.eprintf "%aType Clash: this expression expects %d arguments,\n\
             but is expected to have %d.\n" 
@@ -118,7 +118,7 @@ let message loc kind =
       Printf.eprintf 
 	"%aSubscript used on a non array type : %a.\n"
 	output_location loc 
-	Printer.ptype ty
+	Hept_printer.ptype ty
  | Earray_subscript_should_be_const ->
       Printf.eprintf 
 	"%aSubscript has to be a static value.\n"
@@ -137,17 +137,17 @@ let message loc kind =
      Printf.eprintf 
        "%aThis type should be static : %a.\n"
 	output_location loc 
-	Printer.ptype ty
+	Hept_printer.ptype ty
  | Erecord_type_expected ty ->
      Printf.eprintf 
        "%aA record was expected (found %a).\n"
 	     output_location loc 
-	     Printer.ptype ty   
+	     Hept_printer.ptype ty   
  | Eno_such_field (ty, f) ->
      Printf.eprintf 
        "%aThe record type '%a' does not have a '%s' field.\n"
 	     output_location loc 
-	     Printer.ptype ty    
+	     Hept_printer.ptype ty    
        (shortname f)
  | Eempty_record -> 
      Printf.eprintf 

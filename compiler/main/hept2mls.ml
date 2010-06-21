@@ -18,8 +18,6 @@ open Types
 open Format
 open Printf
 
-module HeptPrinter = Printer
-
 open Minils
 open Signature
 

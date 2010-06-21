@@ -25,7 +25,7 @@ let no_location =  Loc(0,0)
 
 let error_prompt = ">"
 
-let get_current_location () =
+let current_loc () =
   Loc(symbol_start(), symbol_end())
 
 

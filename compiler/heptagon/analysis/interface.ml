@@ -45,7 +45,7 @@ module Type =
 module Printer =
 struct
   open Format
-  open Printer
+  open Hept_printer
     
   let deftype ff name tdesc =
     match tdesc with

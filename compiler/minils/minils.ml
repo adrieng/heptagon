@@ -65,8 +65,8 @@ and array_op =
   | Eupdate of size_exp list * exp * exp (*indices, array, value*)
   | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound, array*)
   | Econcat of exp * exp
-  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option
-(** [op_desc] is the function iterated,
+  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option (**
+    [op_desc] is the function iterated,
     [size_exp] is the size of the iteration,
     [exp list] is the passed arguments,
     [ident option] is the optional reset condition *)
@@ -153,6 +153,24 @@ let mk_var_dec ?(ck = Cbase) name ty =
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
+  
+let mk_node
+  ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
+  ?(loc = no_location) ?(param = []) ?(constraints = []) ?(pinst = []) name =
+    { n_name = name;
+      n_input = input;
+      n_output = output;
+      n_contract = contract;
+      n_local = local;
+      n_equs = eq;
+      n_loc = loc;
+      n_params = param; 
+      n_params_constraints = constraints;
+      n_params_instances = pinst; }
+
+let mk_type_dec ?(type_desc = Type_abs) ?(loc = no_location) name =
+  { t_name = name; t_desc = type_desc; t_loc = loc }
+
 
 let rec size_exp_of_exp e =
   match e.e_desc with 

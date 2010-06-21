@@ -7,7 +7,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* $Id$ *)
 
 (** Abstract syntax tree for C programs. *)
 (** {2 C abstract syntax tree } *)

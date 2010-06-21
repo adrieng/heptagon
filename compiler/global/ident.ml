@@ -32,7 +32,7 @@ let fresh s =
   num := !num + 1; 
   { num = !num; source = s; is_generated = true }
 
-let ident_of_var s = 
+let ident_of_name s = 
   num := !num + 1; 
   { num = !num; source = s; is_generated = false }
 

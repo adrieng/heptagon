@@ -171,7 +171,7 @@ and interface_desc =
 
 (* Helper functions to create AST. *)
 let mk_exp desc =
-  { e_desc = desc; e_loc = Location.get_current_location () }
+  { e_desc = desc; e_loc = Location.current_loc () }
 
 let mk_app op =
   { a_op = op; }
@@ -192,25 +192,25 @@ let mk_iterator_call it ln params exps =
   mk_array_op_call (Eiterator (it, mk_op_desc ln params Enode)) exps
 
 let mk_type_dec name desc =
-  { t_name = name; t_desc = desc; t_loc = Location.get_current_location () }
+  { t_name = name; t_desc = desc; t_loc = Location.current_loc () }
 
 let mk_equation desc =
-  { eq_desc = desc; eq_loc = Location.get_current_location () }
+  { eq_desc = desc; eq_loc = Location.current_loc () }
 
 let mk_interface_decl desc =
-  { interf_desc = desc; interf_loc = Location.get_current_location () }
+  { interf_desc = desc; interf_loc = Location.current_loc () }
 
 let mk_var_dec name ty last =
   { v_name = name; v_type = ty;
-    v_last = last; v_loc = Location.get_current_location () }
+    v_last = last; v_loc = Location.current_loc () }
 
 let mk_block locals eqs =
   { b_local = locals; b_equs = eqs; 
-    b_loc = Location.get_current_location () }
+    b_loc = Location.current_loc () }
 
 let mk_const_dec id ty e =
   { c_name = id; c_type = ty; c_value = e;
-    c_loc = Location.get_current_location (); }
+    c_loc = Location.current_loc (); }
 
 let mk_arg name ty =
   { a_type = ty; a_name = name }

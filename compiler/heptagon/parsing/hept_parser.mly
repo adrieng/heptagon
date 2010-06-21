@@ -24,7 +24,6 @@ open Parsetree
 %token AMPERSAND
 %token AMPERAMPER
 %token AUTOMATON
-%token SWITCH
 %token PRESENT
 %token RESET
 %token STATE
@@ -47,7 +46,7 @@ open Parsetree
 %token POWER
 %token LBRACKET
 %token RBRACKET
-%token WITH DOUBLE_DOT
+%token DOUBLE_DOT
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP FOLD MAPFOLD
@@ -168,7 +167,7 @@ node_dec:
    n_local  = $12;
    n_equs   = $14;
    n_params = $3;
-   n_loc = Location.get_current_location () }}
+   n_loc = Location.current_loc () }}
 ;
 
 node_or_fun:

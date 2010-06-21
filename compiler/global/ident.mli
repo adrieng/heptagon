@@ -16,9 +16,9 @@ val set_sourcename : ident -> string -> ident
 
 (** [fresh n] returns a fresh identifier with source name n *)
 val fresh : string -> ident
-(** [ident_of_var n] returns an identifier corresponding
+(** [ident_of_name n] returns an identifier corresponding
   to a _source_ variable (do not use it for generated variables). *)
-val ident_of_var : string -> ident
+val ident_of_name : string -> ident
 
 (** Maps taking an identifier as a key. *)
 module Env :

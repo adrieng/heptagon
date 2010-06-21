@@ -62,13 +62,13 @@ let add_var loc x env =
   if Rename.mem x env then
     Error.message loc (Error.Evariable_already_defined x)
   else (* create a new id for this var and add it to the env *)
-    Rename.add x (ident_of_var x) env
+    Rename.add x (ident_of_name x) env
 
 let add_const_var loc x env =
   if NamesEnv.mem x env then
     Error.message loc (Error.Econst_variable_already_defined x)
   else (* create a new id for this var and add it to the env *)
-    NamesEnv.add x (ident_of_var x) env
+    NamesEnv.add x (ident_of_name x) env
 
 let rec build_pat loc env = function
   | Evarpat x -> add_var loc x env

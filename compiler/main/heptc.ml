@@ -9,13 +9,27 @@
 (* the main *)
 
 open Misc
+open Location
 open Compiler_utils
 
+
+let parse parsing_fun lexing_fun lexbuf =
+  try
+    parsing_fun lexing_fun lexbuf
+  with
+    | Hept_lexer.Lexical_error(err, pos1, pos2) ->
+        lexical_error err (Loc(pos1, pos2))
+    | Parsing.Parse_error ->
+        let pos1 = Lexing.lexeme_start lexbuf
+        and pos2 = Lexing.lexeme_end lexbuf in
+        let l = Loc(pos1,pos2) in
+        syntax_error l
+
 let parse_implementation lexbuf =
-  parse Parser.program Lexer.token lexbuf
+  parse Hept_parser.program Hept_lexer.token lexbuf
 
 let parse_interface lexbuf =
-  parse Parser.interface Lexer.token lexbuf
+  parse Hept_parser.interface Hept_lexer.token lexbuf
 
 let interface modname filename =
   (* input and output files *)
@@ -71,7 +85,7 @@ let compile modname filename =
   try
     init_compiler modname source_name ic;
 
-    let pp = Printer.print stdout in
+    let pp = Hept_printer.print stdout in
 
     (* Parsing of the file *)
     let lexbuf = Lexing.from_channel ic in
@@ -91,9 +105,9 @@ let compile modname filename =
       (* Compile Heptagon to MiniLS *)
       let p = Hept2mls.program p in
         
-      let pp = Minils_printer.print stdout in
+      let pp = Mls_printer.print stdout in
         if !verbose then comment "Translation into MiniLs";
-        Minils_printer.print mlsc p;
+        Mls_printer.print mlsc p;
         
         (* Process the MiniLS AST *)
         let p = Mls_compiler.compile pp p in
