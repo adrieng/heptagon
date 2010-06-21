@@ -1,0 +1,17 @@
+(* Non correct transition *)
+
+node f(x:int) returns (y,z:int)
+let
+  automaton
+    state A do y = x until y = 2 then B
+    state B do y = x until y = 2 then A
+  end;
+  automaton
+    state C 
+      do z = y 
+      until z = 3 then D
+    state D 
+      do z = x 
+      until z = 4 then A
+  end
+tel

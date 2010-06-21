@@ -1,0 +1,24 @@
+(* pour debugger
+   set arguments -v test/good/t4.ept *)
+
+node f() returns (o:int)
+  var nat, nat2, r:int;
+  let
+    nat = 0 -> pre nat + 1;
+    reset
+      nat2 = 0 -> pre nat2 + 1;
+      reset
+        r = 0 -> pre r + 1;
+      every (true -> pre r = 4)
+    every (true -> pre nat2 = 10);
+    o = r + nat;
+  tel
+
+node g(x: int) returns (o: int)
+  let
+   automaton
+    state A do o = 1 until x = 1 then B
+    state B do o = 0 until x = 1 then A
+   end
+  tel
+

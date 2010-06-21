@@ -1,0 +1,69 @@
+(* pour debugger
+   directory parsing global analysis dataflow sequential sigali simulation translation main
+   set arguments -I ../test/good -v ../test/good/t2.ept *)
+
+type t
+
+type r2
+
+(*node hh(x: int) returns ()
+  var y, z: int;
+  let
+    y = pre z + 1;
+    z = 0 -> y;
+  tel
+
+node jj() returns ()
+  var last k: int;
+  let
+    automaton
+      state S1
+        do k = 1
+        until k = 0 then S2
+      state S2
+        do k = last k + 1 until k = 1 then S2
+    end
+  tel
+*)
+
+node g(x: bool) returns (o: bool)
+  let
+    o = T1.f(x)
+  tel
+
+node hhh() returns ()
+  var last o': int;
+  let
+    automaton
+      state S1
+        var r: int;
+        do o' = 1; r = 2
+        unless last o' = 0 then S1
+    end
+  tel
+
+node hh(x,z,m:int) returns (o:int)
+  var last k:int = 1;
+      last w: int = 0;
+  let
+    automaton
+      state S1
+        var r:int;
+        do 
+         k = m + 2;
+         r = k + 3;
+         w = 1 + 2;
+        until (1 = 0) then S2
+           |  (1 = 2) then S1
+        unless (2 = last k) then S1
+      state S2
+        do
+         k = 2;
+        until (1 = 0) then S2 
+    end;(*
+    present
+      | (x = 0) do o = pre o + 2
+      | (x = 2) do o = 4
+    default do o = 2
+    end *) o = 1
+  tel

@@ -1,0 +1,24 @@
+(* pour debugger
+   set arguments -v test/good/t8.ept *)
+
+type t1 = {x: int; y: int}
+type t2 = {z: t1; u: int}
+
+node g(x: t1) returns (o: t1)
+  let o = x tel
+
+node h(x: t1) returns (o: t1)
+  let o = g(x) tel
+
+
+node f(x: t1; z1:t2) returns (o:t2)
+  var last z: t1;
+      m: t2;
+      r: int;
+  let
+    o = z1;
+    m = { z = { y = 2; x = 1 }; u = 3 };
+    z = { x = 4; y = 2 };
+    r = m.z.x;
+  tel
+

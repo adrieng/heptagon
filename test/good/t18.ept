@@ -1,0 +1,11 @@
+node j(x, v_33: bool) returns (o: int)
+  let
+    automaton
+      state I
+         do o = 1
+         until (o = 2) then J
+      state J
+         do o = 2
+         until v_33 then I
+    end
+  tel

@@ -1,0 +1,22 @@
+(* pour debugger
+ set arguments -v test/good/t3.ept *)
+
+node f(x,z:int) returns (o:int)
+  var o1:int;
+  let
+    automaton
+      state Init 
+        do o = 1 + 2 
+	until (o = 0) then Two 
+      state Two do o = 2 + 3 until (o = 1) then Two
+    end;
+    automaton
+      state One
+        do o1 = 2
+        until (o = 2) then One
+      state Three
+        do o1 = 3
+        until (o = 3) then One
+    end
+  tel
+

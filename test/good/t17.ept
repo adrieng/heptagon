@@ -1,0 +1,7 @@
+node h(z: bool; x, y: int) returns (o2: int)
+  var o1, o: int;
+  let
+    (o1, o2) = if z then (1, 2) else (3, 4);
+    o = 0 -> pre o + 2
+  tel
+

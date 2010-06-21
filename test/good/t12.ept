@@ -1,0 +1,19 @@
+(*node foo() returns (res: int)
+var x, m, r, y : int;
+let
+  x = 0 fby y + 42;
+  m = 0 fby r + 42;
+  r = 1 + x;
+  y = 1 + m;
+  res = if true then r else y;
+tel*)
+
+node bar() returns (res: int)
+var x, m, r, y : int;
+let
+  x = 0 fby y + 42;
+  m = 0 fby r + 42;
+  r = if x > 50 then 1 + x else 42;
+  y = if m > 50 then 1 + m else 42;
+  res = if true then r else y;
+tel

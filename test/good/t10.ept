@@ -1,0 +1,17 @@
+(* pour debugger
+   set arguments -v test/good/t10.ept *)
+
+node f(x:int) returns (y:int)
+  let
+    y = 2*x;
+  tel
+
+node g(x:int) returns (y:int)
+  let
+    y = 3*x;
+  tel
+
+node h(x1,x2:int) returns (y:int)
+  let
+    y = f(x1) + g(x2)
+  tel

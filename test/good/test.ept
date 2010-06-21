@@ -1,0 +1,22 @@
+node (+)(x,y:int) returns (z:int)
+let
+  automaton
+    state Up
+      do z = x + y;
+      until z > 10 then Down
+    state Down
+      do z = x - y;
+      until z < -10 then Up
+  end
+tel
+
+
+node updown'() returns (y:int)
+let
+  y = (0 fby y) + 1
+tel
+
+node main() returns (y:int)
+let
+  y = updown'();
+tel

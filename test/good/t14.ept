@@ -1,0 +1,14 @@
+node count(c : int; r : bool) returns (res : int)
+let
+  res = 0 fby (if r then 0 else res + c);
+tel
+
+node byfour() returns (res : int)
+let
+  res = 0 fby (res + 4);
+tel
+
+node main() returns (c : int)
+let
+  c = count(byfour(), false);
+tel

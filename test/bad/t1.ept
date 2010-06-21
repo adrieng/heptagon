@@ -1,0 +1,5 @@
+node f(x:int) returns (y:int)
+let
+  y = x;
+  x = 0;
+tel

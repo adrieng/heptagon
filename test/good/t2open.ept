@@ -1,0 +1,39 @@
+(* pour debugger
+   set arguments -I test/good -v test/good/t2.ept *)
+
+open T1
+
+type t
+
+type r2
+node g(x: bool) returns (o: bool)
+  let
+    o = f(x)
+  tel
+
+node h(x,z,m:int) returns (o:int)
+  var last k:int = 0;
+      last w: int;
+  let
+    automaton
+      state S1
+        var r:int;
+        do 
+         k = m + 2;
+         r = k + 3;
+         w = 1 + 2;
+        until (1 = 0) then S2
+           |  (1 = 2) then S1
+        unless (2 = last k) then S2
+      state S2
+        do
+         k = 2;
+        until (1 = 0) then S2
+    end;
+    present
+      | (x = 0) do o = pre o + 2
+      | (x = 2) do o = 4
+    default do o = 2
+    end
+  tel
+

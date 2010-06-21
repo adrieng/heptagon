@@ -1,0 +1,11 @@
+(* pour debugger
+   set arguments -v test/good/t9.ept *)
+
+node f(x,z:int) returns (o1,o2:int)
+  let
+    switch (x = z)
+      | true var o'1: int; o'2: int;
+             do (o'1, o'2) = (1, 2); o1 = o'1; o2 = o'2;
+      | false do (o2, o1) = (3, 3);
+    end
+  tel

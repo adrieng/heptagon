@@ -1,0 +1,13 @@
+(* Unknown state name *)
+
+node f(x:int) returns (y:int)
+let
+    automaton
+      state A
+        do y = 2
+	until y = 2 then B
+      state B
+	do y = 3
+	until y = 3 then C
+    end
+tel

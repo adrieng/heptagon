@@ -1,0 +1,35 @@
+(* Causality loop *)
+
+node tr(x,y,z,t:bool) returns (v:bool)
+let
+    v = x or y or z or t;
+tel
+
+node f(v:bool) returns (x,y,z,t:bool)
+let
+    (x,y,z,t) = (v,v,v,v);
+tel
+
+node c(v:bool) returns (x,y,z,t:bool)
+let
+    (x,y,z,t) = (v,v,v,v);
+tel
+
+node j(v:bool) returns (x,y,z,t:bool)
+let
+    (x,y,z,t) = (v,v,v,v);
+tel
+
+node g() returns (y:bool)
+var x,x1,x2,x3,y1,y2,y3,z,z1,z2,z3,t,t1,t2,t3,v:bool;
+let
+  x = x1 or x2 or x3;
+  y = y1 or y2 or y3;
+  z = z1 or z2 or z3;
+  t = t1 or t2 or t3;
+  (x1,y1,z1,t1) = f(v);
+  (x2,y2,z2,t2) = c(v);
+  (x3,y3,z3,t3) = j(v);
+  v = tr(x,y,z,t);
+tel
+

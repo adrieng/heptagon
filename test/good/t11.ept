@@ -1,0 +1,12 @@
+(* Unary operators *)
+node f(x:bool;y:int) returns (z:int;t:bool)
+let
+  z = ~- y;
+  t = not x;
+tel
+
+node g(a:bool;b:int) returns (z:int;t:bool)
+let
+  (z,t) = f(a,b);
+tel
+

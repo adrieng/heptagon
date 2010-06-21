@@ -1,0 +1,347 @@
+#!/bin/bash
+
+# $Id$
+
+shopt -s nullglob
+
+# script de test
+
+compilo=../compiler/hec.byte
+coption=
+
+# compilateurs utilises pour les tests de gen. de code
+
+CAMLC=ocamlc
+JAVAC=javac
+LUSTREC=lustre
+CC=gcc
+MLC=mlc
+VHDLC=ghdl
+
+# par defaut : pas de test de generation de code
+
+caml=0
+java=0
+lustre=0
+c=0
+cold=0
+minils=0
+vhdl=0
+
+score=0
+max=0
+verbose=0
+
+for d in good bad; do
+  rm -f -r $d/*.obc $d/*_java $d/*_c $d/*_c-old\
+           $d/*.mci $d/*.mls $d/*.epci\
+           $d/*.lus $d/*.ml $d/*.cmi $d/*.cmo;
+done
+
+#rm -f inline/good/*.ml inline/good/*.cmi inline/good/*.cmo \
+#      inline/good/*.dcc inline/good/*.lci inline/good/a.out
+#../util/split sujet1/bad/bad.split
+#../util/split sujet1/good/good.split
+
+compile () {
+if [[ $verbose != 0 ]]; then
+  echo Compile -i $coption $1 $2
+  $compilo $coption -I good $1 $2;
+else
+  $compilo $coption -I good $1 $2 > /dev/null 2>&1;
+fi;
+}
+
+launch_check () {
+
+score=0
+max=0
+
+echo "Test"
+
+# les mauvais
+echo -n "mauvais "
+for f in bad/*.ept ; do
+    echo -n ".";
+    max=`expr $max + 1`;
+    if compile $f; then
+        echo
+        echo "ECHEC sur "$f" (devrait echouer)";
+    else
+        score=`expr $score + 1`;
+    fi
+done
+echo
+
+echo -n "bons"
+for f in good/*.ept; do
+    echec=0
+    echo -n ".";
+    max=`expr $max + 1`;
+    base_f=`basename $f .ept`
+    if compile $f; then
+      echec=0
+    else
+      echec=1
+    fi
+    # Compil. minils ?
+    if [[ ($echec == 0) && ($minils == 1) ]]; then
+      if $MLC good/${base_f}.mls > /dev/null 2>&1; then
+        echec=0
+      else
+        echec=2
+      fi
+    fi
+    # Compil. caml ?
+    if [[ ($echec == 0) && ($caml == 1) ]]; then
+      if $CAMLC -i good/${base_f}.ml > /dev/null; then
+        echec=0
+      else
+        echec=2
+      fi
+    fi
+    # Compil. java ?
+    if [[ ($echec == 0) && ($java == 1) ]]; then
+      pushd "good/${base_f}" > /dev/null
+      for java_file in *.java ; do
+        if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null; then
+          echec=${echec}
+        else
+          echec=3
+        fi
+      done
+      popd > /dev/null
+    fi
+    # Compil. lustre ?
+    if [[ ($echec == 0) && ($lustre == 1) ]]; then
+      if $LUSTREC good/${base_f}.lus > /dev/null; then
+        echec=0
+      else
+        echec=4
+      fi
+    fi
+    # Compil. c ?
+    if [[ ($echec == 0) && ($c == 1) ]]; then
+      pushd "good/${base_f}_c" > /dev/null
+      for c_file in *.c ; do
+        if $CC -I ../t1_c -c ${c_file} > /dev/null 2>&1; then
+          echec=${echec}
+        else
+          echec=5
+        fi
+      done
+      popd > /dev/null
+    fi
+    # Compil. c-old ?
+    if [[ ($echec == 0) && ($cold == 1) ]]; then
+      pushd "good/${base_f}_c-old" > /dev/null
+      for c_file in *.c ; do
+        if $CC -I ../t1_c-ng -c ${c_file} > /dev/null 2>&1; then
+          echec=${echec}
+        else
+          echec=6
+        fi
+      done
+      popd > /dev/null
+    fi
+    if [[ ($echec == 0) && ($vhdl == 1) ]]; then
+      pushd "good/${base_f}_vhdl" > /dev/null
+      for vhdl_file in *.vhd; do
+        if $VHDLC -a ${vhdl_file} && $VHDLC -e ${vhdl_file} > /dev/null 2>&1
+        then
+          echec=${echec}
+        else
+          echec=7
+        fi
+      done
+    fi
+
+    if [[ $echec == 0 ]]; then
+        score=`expr $score + 1`;
+    else
+        echo
+        echo "ECHEC sur "$f" (devrait reussir)";
+        case $echec in
+            1 )
+                echo "Echec de la compil. vers code objet";;
+            2 )
+                echo "Echec de la compil. caml";;
+            3 )
+                echo "Echec de la compil. java";;
+            4 )
+                echo "Echec de la compil. lustre";;
+            5 )
+                echo "Echec de la compil. c";;
+            6 )
+                echo "Echec de la compil. c-ng";;
+            7 )
+                echo "Echec de la compil. VHDL";;
+        esac
+    fi
+done
+echo
+
+percent=`expr 100 \* $score / $max`;
+
+echo -n "Test: $score/$max : $percent%";
+
+}
+
+activate_minils () {
+    minils=1
+}
+
+activate_caml () {
+    caml=1
+    coption="$coption -target caml"
+}
+
+activate_java () {
+    java=1
+    coption="$coption -target java"
+}
+
+activate_lustre () {
+    lustre=1
+    coption="$coption -target lustre"
+}
+
+activate_c () {
+    c=1
+    coption="$coption -target c"
+}
+
+activate_cold () {
+    cng=1
+    coption="$coption -target c-old"
+}
+
+activate_vhdl () {
+    vhdl=1
+    coption="$coption -target vhdl"
+}
+
+activate_tomato () {
+    coption="$coption -tomato"
+}
+
+activate_cse () {
+    coption="$coption -cse"
+}
+
+activate_inter () {
+    coption="$coption -inter"
+}
+
+activate_boolean () {
+    coption="$coption -bool"
+}
+
+activate_deadcode () {
+    coption="$coption -deadcode"
+}
+
+activate_all () {
+    activate_caml
+    activate_java
+    activate_lustre
+    activate_c
+    activate_cold
+    activate_vhdl
+    activate_boolean
+    activate_deadcode
+    activate_cse
+    activate_inter
+    activate_tomato
+}
+
+# -1, -2, -3, -v1, -v2, -v3 kept for backward compatibility
+# (to be suppressed)
+while [ $# -gt 0 ]; do
+    case $1 in
+  "-1" )
+      shift;;
+  "-2" )
+      activate_minils
+      shift;;
+  "-3" )
+      activate_minils
+      shift;;
+  "-v" )
+      verbose=1;
+      shift;;
+  "-all" )
+      activate_all
+      shift;;
+  "-caml" )
+      activate_caml
+      shift;;
+  "-java" )
+      activate_java
+      shift;;
+  "-lustre" )
+      activate_lustre
+      shift;;
+  "-tomato" )
+      activate_tomato
+      shift;;
+  "-cse" )
+      activate_cse
+      shift;;
+  "-inter" )
+      activate_inter
+      shift;;
+  "-c" )
+      activate_c
+      shift;;
+  "-c-old" )
+      activate_cold
+      shift;;
+  "-vhdl" )
+      activate_vhdl
+      shift;;
+  "-mls" )
+      activate_minils
+      shift;;
+  "-bool" )
+      activate_boolean
+      shift;;
+  "-deadcode" )
+      activate_deadcode
+      shift;;
+  "-v1" )
+      verbose=1;
+      shift;;
+  "-v2" )
+      verbose=1;
+      activate_minils
+      shift;;
+  "-v3" )
+      verbose=1;
+      shift;;
+  "-h" )
+      echo "usage : $0 <options> <compilo>"
+      echo "options : "
+      echo "-caml     : test of code generation (caml code)"
+      echo "-java     : test of code generation (java code)"
+      echo "-lustre   : test of code generation (lustre code)"
+      echo "-c        : test of code generation (c code)"
+      echo "-c-old     : test of code generation (c code, old backend)"
+      echo "-vhdl     : test of code generation (vhdl)"
+      echo "-bool     : test of boolean translation"
+      echo "-deadcode : test of deadcode removal"
+      echo "-inter    : test of intermediate equations removal"
+      echo "-tomato   : test of automata minimization"
+      echo "-cse      : test of common sub-expression elimination"
+      echo "-all      : test all"
+      echo "-v        : verbose"
+      exit 0;;
+  * )
+      compilo=$1
+      shift
+      coption="$coption $*"
+      break
+    esac
+done
+launch_check
+echo

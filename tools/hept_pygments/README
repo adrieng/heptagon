@@ -1,0 +1,10 @@
+This directory holds an Heptagon lexer for Pygments, a Python-based syntax
+highlighting system. It can be used for converting Heptagon source code to
+colorful LaTeX or HTML.
+
+To install, just run "python setup.py develop --install-dir=$DIR" where $DIR is
+a directory included in your $PYTHONPATH.
+
+For more information, refer to http://pygments.org.
+
+-- Adrien Guatto

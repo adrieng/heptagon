@@ -1,0 +1,12 @@
+(* pour debugger ../../compiler/hec.byte -i -v -I ../../lib norm.ept *)
+(* pour debugger
+   directory parsing global analysis dataflow sequential sigali simulation translation main
+   set arguments -v ../test/good/norm.ept *)
+
+(* revoir la fonction de normalisation des when/merge *)
+(* il faut que (e when c) soit une action si e est une action *)
+
+node m0() returns (o: int)
+  let
+    o = if true then if true then 1 else 2 else 3;
+  tel

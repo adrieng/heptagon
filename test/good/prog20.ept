@@ -1,0 +1,529 @@
+node ntasks(r1,s1,r2,s2,r3,s3,r4,s4,r5,s5,r6,s6,r7,s7,r8,s8,r9,s9,r10,s10,r11,s11,r12,s12,r13,s13,r14,s14,r15,s15,r16,s16,r17,s17,r18,s18,r19,s19,r20,s20,r21,s21,r22,s22,r23,s23,r24,s24,r25,s25,r26,s26,r27,s27,r28,s28,r29,s29,r30,s30,r31,s31,r32,s32,r33,s33,r34,s34,r35,s35,r36,s36,r37,s37,r38,s38,r39,s39,r40,s40,r41,s41,r42,s42,r43,s43,r44,s44,r45,s45,r46,s46,r47,s47,r48,s48,r49,s49,r50,s50,r51,s51,r52,s52,r53,s53,r54,s54,r55,s55,r56,s56,r57,s57,r58,s58,r59,s59,r60,s60:bool) returns (a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,a17,a18,a19,a20,a21,a22,a23,a24,a25,a26,a27,a28,a29,a30,a31,a32,a33,a34,a35,a36,a37,a38,a39,a40,a41,a42,a43,a44,a45,a46,a47,a48,a49,a50,a51,a52,a53,a54,a55,a56,a57,a58,a59,a60:bool)
+  contract
+  var err,err1,err2,err3,err4,err5,err6,err7,err8,err9,err10,err11,err12,err13,err14,err15,err16,err17,err18,err19,err20,err21,err22,err23,err24,err25,err26,err27,err28,err29,err30,err31,err32,err33,err34,err35,err36,err37,err38,err39,err40,err41,err42,err43,err44,err45,err46,err47,err48,err49,err50,err51,err52,err53,err54,err55,err56,err57,err58,err59:bool;
+  let
+    err = err1 or err2 or err3 or err4 or err5 or err6 or err7 or err8 or err9 or err10 or err11 or err12 or err13 or err14 or err15 or err16 or err17 or err18 or err19;
+    err1 = a1 & (a2 or a3 or a4 or a5 or a6 or a7 or a8 or a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err2 = a2 & (a3 or a4 or a5 or a6 or a7 or a8 or a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err3 = a3 & (a4 or a5 or a6 or a7 or a8 or a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err4 = a4 & (a5 or a6 or a7 or a8 or a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err5 = a5 & (a6 or a7 or a8 or a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err6 = a6 & (a7 or a8 or a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err7 = a7 & (a8 or a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err8 = a8 & (a9 or a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err9 = a9 & (a10 or a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err10 = a10 & (a11 or a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err11 = a11 & (a12 or a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err12 = a12 & (a13 or a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err13 = a13 & (a14 or a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err14 = a14 & (a15 or a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err15 = a15 & (a16 or a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err16 = a16 & (a17 or a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err17 = a17 & (a18 or a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err18 = a18 & (a19 or a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err19 = a19 & (a20 or a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err20 = a20 & (a21 or a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err21 = a21 & (a22 or a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err22 = a22 & (a23 or a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err23 = a23 & (a24 or a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err24 = a24 & (a25 or a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err25 = a25 & (a26 or a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err26 = a26 & (a27 or a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err27 = a27 & (a28 or a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err28 = a28 & (a29 or a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err29 = a29 & (a30 or a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err30 = a30 & (a31 or a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err31 = a31 & (a32 or a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err32 = a32 & (a33 or a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err33 = a33 & (a34 or a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err34 = a34 & (a35 or a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err35 = a35 & (a36 or a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err36 = a36 & (a37 or a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err37 = a37 & (a38 or a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err38 = a38 & (a39 or a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err39 = a39 & (a40 or a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err40 = a40 & (a41 or a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err41 = a41 & (a42 or a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err42 = a42 & (a43 or a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err43 = a43 & (a44 or a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err44 = a44 & (a45 or a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err45 = a45 & (a46 or a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err46 = a46 & (a47 or a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err47 = a47 & (a48 or a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err48 = a48 & (a49 or a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err49 = a49 & (a50 or a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err50 = a50 & (a51 or a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err51 = a51 & (a52 or a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err52 = a52 & (a53 or a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err53 = a53 & (a54 or a55 or a56 or a57 or a58 or a59 or a60);
+    err54 = a54 & (a55 or a56 or a57 or a58 or a59 or a60);
+    err55 = a55 & (a56 or a57 or a58 or a59 or a60);
+    err56 = a56 & (a57 or a58 or a59 or a60);
+    err57 = a57 & (a58 or a59 or a60);
+    err58 = a58 & (a59 or a60);
+    err59 = a59 & (a60);
+  tel
+  assume true
+  enforce (not err) with (c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20,c21,c22,c23,c24,c25,c26,c27,c28,c29,c30,c31,c32,c33,c34,c35,c36,c37,c38,c39,c40,c41,c42,c43,c44,c45,c46,c47,c48,c49,c50,c51,c52,c53,c54,c55,c56,c57,c58,c59,c60:bool)
+let
+  automaton
+    state Idle_1
+      do a1 = false until (r1 & c1) then Active_1
+    state Active_1
+      do a1 = true until s1 then Idle_1
+  end;
+  automaton
+    state Idle_2
+      do a2 = false until (r2 & c2) then Active_2
+    state Active_2
+      do a2 = true until s2 then Idle_2
+  end;
+  automaton
+    state Idle_3
+      do a3 = false until (r3 & c3) then Active_3
+    state Active_3
+      do a3 = true until s3 then Idle_3
+  end;
+  automaton
+    state Idle_4
+      do a4 = false until (r4 & c4) then Active_4
+    state Active_4
+      do a4 = true until s4 then Idle_4
+  end;
+  automaton
+    state Idle_5
+      do a5 = false until (r5 & c5) then Active_5
+    state Active_5
+      do a5 = true until s5 then Idle_5
+  end;
+  automaton
+    state Idle_6
+      do a6 = false until (r6 & c6) then Active_6
+    state Active_6
+      do a6 = true until s6 then Idle_6
+  end;
+  automaton
+    state Idle_7
+      do a7 = false until (r7 & c7) then Active_7
+    state Active_7
+      do a7 = true until s7 then Idle_7
+  end;
+  automaton
+    state Idle_8
+      do a8 = false until (r8 & c8) then Active_8
+    state Active_8
+      do a8 = true until s8 then Idle_8
+  end;
+  automaton
+    state Idle_9
+      do a9 = false until (r9 & c9) then Active_9
+    state Active_9
+      do a9 = true until s9 then Idle_9
+  end;
+  automaton
+    state Idle_10
+      do a10 = false until (r10 & c10) then Active_10
+    state Active_10
+      do a10 = true until s10 then Idle_10
+  end;
+  automaton
+    state Idle_11
+      do a11 = false until (r11 & c11) then Active_11
+    state Active_11
+      do a11 = true until s11 then Idle_11
+  end;
+  automaton
+    state Idle_12
+      do a12 = false until (r12 & c12) then Active_12
+    state Active_12
+      do a12 = true until s12 then Idle_12
+  end;
+  automaton
+    state Idle_13
+      do a13 = false until (r13 & c13) then Active_13
+    state Active_13
+      do a13 = true until s13 then Idle_13
+  end;
+  automaton
+    state Idle_14
+      do a14 = false until (r14 & c14) then Active_14
+    state Active_14
+      do a14 = true until s14 then Idle_14
+  end;
+  automaton
+    state Idle_15
+      do a15 = false until (r15 & c15) then Active_15
+    state Active_15
+      do a15 = true until s15 then Idle_15
+  end;
+  automaton
+    state Idle_16
+      do a16 = false until (r16 & c16) then Active_16
+    state Active_16
+      do a16 = true until s16 then Idle_16
+  end;
+  automaton
+    state Idle_17
+      do a17 = false until (r17 & c17) then Active_17
+    state Active_17
+      do a17 = true until s17 then Idle_17
+  end;
+  automaton
+    state Idle_18
+      do a18 = false until (r18 & c18) then Active_18
+    state Active_18
+      do a18 = true until s18 then Idle_18
+  end;
+  automaton
+    state Idle_19
+      do a19 = false until (r19 & c19) then Active_19
+    state Active_19
+      do a19 = true until s19 then Idle_19
+  end;
+  automaton
+    state Idle_20
+      do a20 = false until (r20 & c20) then Active_20
+    state Active_20
+      do a20 = true until s20 then Idle_20
+  end;
+  automaton
+    state Idle_21
+      do a21 = false until (r21 & c21) then Active_21
+    state Active_21
+      do a21 = true until s21 then Idle_21
+  end;
+  automaton
+    state Idle_22
+      do a22 = false until (r22 & c22) then Active_22
+    state Active_22
+      do a22 = true until s22 then Idle_22
+  end;
+  automaton
+    state Idle_23
+      do a23 = false until (r23 & c23) then Active_23
+    state Active_23
+      do a23 = true until s23 then Idle_23
+  end;
+  automaton
+    state Idle_24
+      do a24 = false until (r24 & c24) then Active_24
+    state Active_24
+      do a24 = true until s24 then Idle_24
+  end;
+  automaton
+    state Idle_25
+      do a25 = false until (r25 & c25) then Active_25
+    state Active_25
+      do a25 = true until s25 then Idle_25
+  end;
+  automaton
+    state Idle_26
+      do a26 = false until (r26 & c26) then Active_26
+    state Active_26
+      do a26 = true until s26 then Idle_26
+  end;
+  automaton
+    state Idle_27
+      do a27 = false until (r27 & c27) then Active_27
+    state Active_27
+      do a27 = true until s27 then Idle_27
+  end;
+  automaton
+    state Idle_28
+      do a28 = false until (r28 & c28) then Active_28
+    state Active_28
+      do a28 = true until s28 then Idle_28
+  end;
+  automaton
+    state Idle_29
+      do a29 = false until (r29 & c29) then Active_29
+    state Active_29
+      do a29 = true until s29 then Idle_29
+  end;
+  automaton
+    state Idle_30
+      do a30 = false until (r30 & c30) then Active_30
+    state Active_30
+      do a30 = true until s30 then Idle_30
+  end;
+  automaton
+    state Idle_31
+      do a31 = false until (r31 & c31) then Active_31
+    state Active_31
+      do a31 = true until s31 then Idle_31
+  end;
+  automaton
+    state Idle_32
+      do a32 = false until (r32 & c32) then Active_32
+    state Active_32
+      do a32 = true until s32 then Idle_32
+  end;
+  automaton
+    state Idle_33
+      do a33 = false until (r33 & c33) then Active_33
+    state Active_33
+      do a33 = true until s33 then Idle_33
+  end;
+  automaton
+    state Idle_34
+      do a34 = false until (r34 & c34) then Active_34
+    state Active_34
+      do a34 = true until s34 then Idle_34
+  end;
+  automaton
+    state Idle_35
+      do a35 = false until (r35 & c35) then Active_35
+    state Active_35
+      do a35 = true until s35 then Idle_35
+  end;
+  automaton
+    state Idle_36
+      do a36 = false until (r36 & c36) then Active_36
+    state Active_36
+      do a36 = true until s36 then Idle_36
+  end;
+  automaton
+    state Idle_37
+      do a37 = false until (r37 & c37) then Active_37
+    state Active_37
+      do a37 = true until s37 then Idle_37
+  end;
+  automaton
+    state Idle_38
+      do a38 = false until (r38 & c38) then Active_38
+    state Active_38
+      do a38 = true until s38 then Idle_38
+  end;
+  automaton
+    state Idle_39
+      do a39 = false until (r39 & c39) then Active_39
+    state Active_39
+      do a39 = true until s39 then Idle_39
+  end;
+  automaton
+    state Idle_40
+      do a40 = false until (r40 & c40) then Active_40
+    state Active_40
+      do a40 = true until s40 then Idle_40
+  end;
+  automaton
+    state Idle_41
+      do a41 = false 
+      until (r41 & c41) then Active_41
+          | (r41 & not c41) then Wait_41
+    state Wait_41
+      do a41 = false
+      until c41 then Active_41
+    state Active_41
+      do a41 = true until s41 then Idle_41
+  end;
+  automaton
+    state Idle_42
+      do a42 = false 
+      until (r42 & c42) then Active_42
+          | (r42 & not c42) then Wait_42
+    state Wait_42
+      do a42 = false
+      until c42 then Active_42
+    state Active_42
+      do a42 = true until s42 then Idle_42
+  end;
+  automaton
+    state Idle_43
+      do a43 = false 
+      until (r43 & c43) then Active_43
+          | (r43 & not c43) then Wait_43
+    state Wait_43
+      do a43 = false
+      until c43 then Active_43
+    state Active_43
+      do a43 = true until s43 then Idle_43
+  end;
+  automaton
+    state Idle_44
+      do a44 = false 
+      until (r44 & c44) then Active_44
+          | (r44 & not c44) then Wait_44
+    state Wait_44
+      do a44 = false
+      until c44 then Active_44
+    state Active_44
+      do a44 = true until s44 then Idle_44
+  end;
+  automaton
+    state Idle_45
+      do a45 = false 
+      until (r45 & c45) then Active_45
+          | (r45 & not c45) then Wait_45
+    state Wait_45
+      do a45 = false
+      until c45 then Active_45
+    state Active_45
+      do a45 = true until s45 then Idle_45
+  end;
+  automaton
+    state Idle_46
+      do a46 = false 
+      until (r46 & c46) then Active_46
+          | (r46 & not c46) then Wait_46
+    state Wait_46
+      do a46 = false
+      until c46 then Active_46
+    state Active_46
+      do a46 = true until s46 then Idle_46
+  end;
+  automaton
+    state Idle_47
+      do a47 = false 
+      until (r47 & c47) then Active_47
+          | (r47 & not c47) then Wait_47
+    state Wait_47
+      do a47 = false
+      until c47 then Active_47
+    state Active_47
+      do a47 = true until s47 then Idle_47
+  end;
+  automaton
+    state Idle_48
+      do a48 = false 
+      until (r48 & c48) then Active_48
+          | (r48 & not c48) then Wait_48
+    state Wait_48
+      do a48 = false
+      until c48 then Active_48
+    state Active_48
+      do a48 = true until s48 then Idle_48
+  end;
+  automaton
+    state Idle_49
+      do a49 = false 
+      until (r49 & c49) then Active_49
+          | (r49 & not c49) then Wait_49
+    state Wait_49
+      do a49 = false
+      until c49 then Active_49
+    state Active_49
+      do a49 = true until s49 then Idle_49
+  end;
+  automaton
+    state Idle_50
+      do a50 = false 
+      until (r50 & c50) then Active_50
+          | (r50 & not c50) then Wait_50
+    state Wait_50
+      do a50 = false
+      until c50 then Active_50
+    state Active_50
+      do a50 = true until s50 then Idle_50
+  end;
+  automaton
+    state Idle_51
+      do a51 = false 
+      until (r51 & c51) then Active_51
+          | (r51 & not c51) then Wait_51
+    state Wait_51
+      do a51 = false
+      until c51 then Active_51
+    state Active_51
+      do a51 = true until s51 then Idle_51
+  end;
+  automaton
+    state Idle_52
+      do a52 = false 
+      until (r52 & c52) then Active_52
+          | (r52 & not c52) then Wait_52
+    state Wait_52
+      do a52 = false
+      until c52 then Active_52
+    state Active_52
+      do a52 = true until s52 then Idle_52
+  end;
+  automaton
+    state Idle_53
+      do a53 = false 
+      until (r53 & c53) then Active_53
+          | (r53 & not c53) then Wait_53
+    state Wait_53
+      do a53 = false
+      until c53 then Active_53
+    state Active_53
+      do a53 = true until s53 then Idle_53
+  end;
+  automaton
+    state Idle_54
+      do a54 = false 
+      until (r54 & c54) then Active_54
+          | (r54 & not c54) then Wait_54
+    state Wait_54
+      do a54 = false
+      until c54 then Active_54
+    state Active_54
+      do a54 = true until s54 then Idle_54
+  end;
+  automaton
+    state Idle_55
+      do a55 = false 
+      until (r55 & c55) then Active_55
+          | (r55 & not c55) then Wait_55
+    state Wait_55
+      do a55 = false
+      until c55 then Active_55
+    state Active_55
+      do a55 = true until s55 then Idle_55
+  end;
+  automaton
+    state Idle_56
+      do a56 = false 
+      until (r56 & c56) then Active_56
+          | (r56 & not c56) then Wait_56
+    state Wait_56
+      do a56 = false
+      until c56 then Active_56
+    state Active_56
+      do a56 = true until s56 then Idle_56
+  end;
+  automaton
+    state Idle_57
+      do a57 = false 
+      until (r57 & c57) then Active_57
+          | (r57 & not c57) then Wait_57
+    state Wait_57
+      do a57 = false
+      until c57 then Active_57
+    state Active_57
+      do a57 = true until s57 then Idle_57
+  end;
+  automaton
+    state Idle_58
+      do a58 = false 
+      until (r58 & c58) then Active_58
+          | (r58 & not c58) then Wait_58
+    state Wait_58
+      do a58 = false
+      until c58 then Active_58
+    state Active_58
+      do a58 = true until s58 then Idle_58
+  end;
+  automaton
+    state Idle_59
+      do a59 = false 
+      until (r59 & c59) then Active_59
+          | (r59 & not c59) then Wait_59
+    state Wait_59
+      do a59 = false
+      until c59 then Active_59
+    state Active_59
+      do a59 = true until s59 then Idle_59
+  end;
+  automaton
+    state Idle_60
+      do a60 = false 
+      until (r60 & c60) then Active_60
+          | (r60 & not c60) then Wait_60
+    state Wait_60
+      do a60 = false
+      until c60 then Active_60
+    state Active_60
+      do a60 = true until s60 then Idle_60
+  end;
+tel

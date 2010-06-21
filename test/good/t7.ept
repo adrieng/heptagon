@@ -1,0 +1,14 @@
+(* pour debugger
+   set arguments -v test/good/t7.ept *)
+
+node f(x,z1:int) returns (o:int)
+  var last z: int;
+      last m: int;
+      r: int;
+  let
+    o = (-1);
+    r = 0 + pre o + 2;
+    z = last z + 2 + last m;
+    m = r + 2
+  tel
+
