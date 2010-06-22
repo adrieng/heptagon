@@ -101,6 +101,7 @@ let compile modname filename =
 
       (* Process the Heptagon AST *)
       let p = Hept_compiler.compile_impl pp p in
+        Modules.write itc;
 
       (* Compile Heptagon to MiniLS *)
       let p = Hept2mls.program p in
