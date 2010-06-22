@@ -72,7 +72,7 @@ and doc_locate_stdlib = "\t\tLocate standard libray"
 and doc_no_pervasives = "\tDo not load the pervasives module"
 and doc_target =
   "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
-  ^ " vhdl_seq, vhdl_df,\n\t\t\t java or z3z)"
+  ^ " java or z3z)"
 and doc_full_type_info = "\t\t\tPrint full type information"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is cleaned)"
