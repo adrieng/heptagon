@@ -11,9 +11,11 @@
 open Misc
 open Ident
 open Minils
+open Mls_printer
 open Signature
 open Types
 open Location
+open Printf
   
 type error = | Etypeclash of ct * ct
 
