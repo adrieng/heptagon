@@ -222,7 +222,7 @@ let rec unify t1 t2 =
 let unify t1 t2 =
   try unify t1 t2 with Unify -> error (Etype_clash(t1, t2))
 	
-let less_than statefull = if not statefull then error Estate_clash
+let less_than statefull = (*if not statefull then error Estate_clash*) ()
 
 let kind f statefull = function
   | { node_inputs = ty_list1;
