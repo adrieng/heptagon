@@ -225,7 +225,13 @@ let rec typing h e =
       in skeleton i e.e_ty
   | Ewhen (e, c, n) ->
       let { t_init = i1 } = Env.find n h in
-      let i2 = itype (typing h e) in skeleton (max i1 i2) e.e_ty
+      let i2 = itype (typing h e) in skeleton (max i1 i2) e.e_ty      
+  (* result of the encoding of e1 -> e2 == if true fby false then e1 else e2 *)
+  | Eifthenelse(
+      { e_desc = Efby(Some (Cconstr tn), { e_desc = Econst (Cconstr fn) }) },
+      e2, e3) when tn = Initial.ptrue & fn = Initial.pfalse ->
+	    expect h e3 (skeleton ione e3.e_ty);
+      let i = itype (typing h e2) in skeleton i e.e_ty
   | Eifthenelse (e1, e2, e3) ->
       let i1 = itype (typing h e1) in
       let i2 = itype (typing h e2) in
