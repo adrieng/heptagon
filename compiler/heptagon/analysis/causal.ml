@@ -18,6 +18,7 @@ open Heptagon
 open Location
 open Graph
 open Format
+open Pp_tools
 
 (* x = x + 1 is rejected because read(x) < write(x) is not causal *)
 (* build a dependency graph an checks for cycles *)
@@ -54,15 +55,6 @@ and nc =
     | Aac of ac
     | Aempty
 
-let rec print_list ff print sep l =
-  match l with
-    | [] -> ()
-    | [x] -> print ff x
-    | x :: l ->
-        print ff x;
-        fprintf ff "%s@ " sep;
-        print_list ff print sep l
-
 let output_ac ff ac =
   let rec print priority ff ac =
     fprintf ff "@[<hov 0>";
@@ -78,12 +70,10 @@ let output_ac ff ac =
             else fprintf ff "%a || %a")
             (print 0) ac1 (print 0) ac2
       | Atuple(acs) ->
-	  fprintf ff "(";
-	  print_list ff (print 1) ", " acs ;
-	  fprintf ff ")"
-      | Awrite(m) -> fprintf ff "%s" (sourcename m)
-      | Aread(m) -> fprintf ff "^%s" (sourcename m)
-      | Alastread(m) -> fprintf ff "last %s" (sourcename m)
+	        print_list_r (print 1) "(" "," ")" ff acs
+      | Awrite(m) -> fprintf ff "%s" (name m)
+      | Aread(m) -> fprintf ff "^%s" (name m)
+      | Alastread(m) -> fprintf ff "last %s" (name m)
     end;
     fprintf ff "@]" in
     fprintf ff "@[%a@]@?" (print 0) ac
