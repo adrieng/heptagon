@@ -140,44 +140,7 @@ let lhs_of_exp = function
 module Printer =
 struct
   open Format
-
-  let rec print_list ff print sep = function
-    | []     -> ()
-    | [x]    -> print ff x
-    | x :: l ->
-        print ff x;
-        fprintf ff "%s@ " sep;
-        print_list ff print sep l
-
-  (* Infix chars are surrounded by parenthesis *)
-  let is_infix =
-    let module StrSet = Set.Make(String) in
-    let set_infix =
-      List.fold_right
-  StrSet.add
-  ["or"; "quo"; "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"]
-  StrSet.empty in
-      fun s -> StrSet.mem s set_infix
-
-  let print_name ff s =
-    let c = String.get s 0 in
-    let s = if is_infix s then "(" ^ s ^ ")"
-      else match c with
-  | 'a' .. 'z' | 'A' .. 'Z' | '_' | '`' -> s
-  | '*' -> "( " ^ s ^ " )"
-  | _ -> if s = "()" then s else "(" ^ s ^ ")" in
-      fprintf ff "%s" s
-
-  let print_longname ff ln =
-    let ln = (* currentname ln*) ln in
-      match ln with
-  | Name(m) -> print_name ff m
-  | Modname({ qual = "Pervasives"; id = m }) -> print_name ff m
-  | Modname({ qual = m1; id = m2 }) ->
-      fprintf ff "%s." m1; print_name ff m2
-
-  let print_ident ff id =
-    fprintf ff "%s" (name id)    
+  open Pp_tools
 
   let rec print_type ff = function
     | Tint    -> fprintf ff "int"
@@ -185,8 +148,8 @@ struct
     | Tbool   -> fprintf ff "bool"
     | Tid(id) -> print_longname ff id
     | Tarray(ty, n) -> 
-	print_type ff ty;
-	fprintf ff "^%d" n
+	      print_type ff ty;
+	      fprintf ff "^%d" n
 
   let print_vd ff vd =
     fprintf ff "@[<v>";
@@ -221,28 +184,27 @@ struct
         print_exp ff idx;
         fprintf ff "]" 
 
-  and print_exps ff e_list = print_list ff print_exp "," e_list
+  and print_exps ff e_list = print_list_r print_exp "" "," "" ff e_list
 
   and print_exp ff = function
     | Lhs lhs -> print_lhs ff lhs
     | Const c         -> print_c ff c
     | Op(op, e_list) -> print_op ff op e_list
     | Struct_lit(_,f_e_list) ->
-  fprintf ff "@[<v 1>{";
-  print_list ff
+  fprintf ff "@[<v 1>";
+  print_list_r 
     (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
             print_exp ff e)
-    ";" f_e_list;
-  fprintf ff "}@]"
+    "{" ";" "}" ff f_e_list;
+  fprintf ff "@]"
     | Array_lit e_list ->
-	fprintf ff "@[[";
-        print_list ff print_exp ";" e_list;
-        fprintf ff "]@]"
+	fprintf ff "@[";
+        print_list_r print_exp "[" ";" "]" ff e_list;
+        fprintf ff "@]"
 
   and print_op ff op e_list =
     print_longname ff op;
-    fprintf ff "(@["; print_list ff print_exp ", " e_list;
-    fprintf ff ")@]"
+    print_list_r print_exp "(" "," ")" ff e_list
 
   let print_asgn ff pref x e =
     fprintf ff "@[%s" pref; print_lhs ff x; fprintf ff " = ";
@@ -275,9 +237,7 @@ struct
 	    (name x) i1 i2 
 	    print_act act
       | Step_ap (var_list, o, es) ->
-    fprintf ff "@[(";
-    print_list ff print_lhs "," var_list;
-    fprintf ff "@])";
+    print_list print_lhs "(" "," ")" ff var_list;
     fprintf ff " = "; print_obj_call ff o; fprintf ff ".step(";
     fprintf ff "@["; print_exps ff es; fprintf ff "@]";
     fprintf ff ")"
@@ -286,24 +246,24 @@ struct
       | Nothing -> fprintf ff "()"
 
   and print_tag_act_list ff tag_act_list =
-    print_list ff
+    print_list
       (fun ff (tag, a) ->
   fprintf ff "@[<hov 2>case@ ";
   print_longname ff tag;
   fprintf ff ":@ ";
   print_act ff a;
-        fprintf ff "@]") "" tag_act_list
+        fprintf ff "@]") "" "" "" ff tag_act_list
 
   let print_step ff { inp = inp; out = out; local = nl; bd = bd } =
     fprintf ff "@[<v 2>";
     fprintf ff "step(@[";
-    print_list ff print_vd ";" inp;
-    fprintf ff "@]) returns (@[";
-    print_list ff print_vd ";" out;
+    print_list_r print_vd "(" ";" ")" ff inp;
+    fprintf ff "@]) returns ";
+    print_list_r print_vd "(" ";" ")" ff out;
     fprintf ff "@]){@,";
     if nl <> [] then begin
       fprintf ff "@[<hov 4>var ";
-      print_list ff print_vd ";" nl;
+      print_list_r print_vd "" ";" "" ff nl;
       fprintf ff ";@]@,"
     end;
     print_act ff bd;
@@ -320,12 +280,12 @@ struct
     fprintf ff "@[<v 2>machine "; print_name ff id; fprintf ff " =@,";
     if mem <> [] then begin
       fprintf ff "@[<hov 4>var ";
-      print_list ff print_vd ";" mem;
+      print_list_r print_vd "" ";" "" ff mem;
       fprintf ff ";@]@,"
     end;
     if objs <> [] then begin
       fprintf ff "@[<hov 4>obj ";
-      print_list ff print_obj ";" objs;
+      print_list print_obj "" ";" "" ff objs;
       fprintf ff ";@]@,"
     end;
     print_reset ff reset;
@@ -338,17 +298,17 @@ struct
       | Type_abs -> fprintf ff "@[type %s@\n@]" name
       | Type_enum(tag_name_list) ->
     fprintf ff "@[type %s = " name;
-    print_list ff print_name "| " tag_name_list;
+    print_list_r print_name "" "|" "" ff tag_name_list;
     fprintf ff "@\n@]"
       | Type_struct(f_ty_list) ->
     fprintf ff "@[type %s = " name;
-    fprintf ff "@[<v 1>{";
-    print_list ff
+    fprintf ff "@[<v 1>";
+    print_list
       (fun ff (field, ty) ->
         print_name ff field;
               fprintf ff ": ";
-        print_type ff ty) ";" f_ty_list;
-    fprintf ff "}@]@.@]"
+        print_type ff ty) "{" ";" "}" ff f_ty_list;
+    fprintf ff "@]@.@]"
 
   let print_open_module ff name =
     fprintf ff "@[open ";
