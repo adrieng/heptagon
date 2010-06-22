@@ -6,7 +6,7 @@ shopt -s nullglob
 
 # script de test
 
-compilo=../compiler/hec.byte
+compilo=../compiler/heptc.byte
 coption=
 
 # compilateurs utilises pour les tests de gen. de code

@@ -167,7 +167,7 @@ let mk_equation ?(statefull = true) desc =
 
 let mk_var_dec ?(last = Var) name ty  =
   { v_name = name; v_type = ty;
-    v_last = last; v_loc = Location.current_loc () }
+    v_last = last; v_loc = no_location }
 
 let mk_block ?(statefull = true) defnames eqs =
   { b_local = []; b_equs = eqs; b_defnames = defnames;
