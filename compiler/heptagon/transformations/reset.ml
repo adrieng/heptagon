@@ -227,7 +227,7 @@ and translate res e =
     (* create a new reset exp if necessary *)
     | Eapp({ a_op = Ecall(op_desc, None) } as op, e_list) ->
         let e_list = List.map (translate res) e_list in
-        if true_reset res then
+        if true_reset res & op_desc.op_kind <> Eop then
           let op = { op with a_op = Ecall(op_desc, Some (exp_of_res res)) } in
             { e with e_desc = Eapp(op, e_list) }
         else
