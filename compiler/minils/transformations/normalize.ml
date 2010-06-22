@@ -19,7 +19,7 @@ and cfalse = Name "false"
 
 let equation (d_list, eq_list) ({ e_ty = te; e_ck = ck } as e) =
   let n = Ident.fresh "_v" in
-  let d_list = (mk_var_dec ~ck:ck n te) :: d_list in
+  let d_list = (mk_var_dec ~clock:ck n te) :: d_list in
   let eq_list = (mk_equation (Evarpat n) e) :: eq_list in
     (d_list, eq_list), n
 

@@ -147,9 +147,9 @@ type program =
 let mk_exp ?(exp_ty = Tprod []) ?(clock = Cbase) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = exp_ty; e_ck = clock; e_loc = loc }
 
-let mk_var_dec ?(ck = Cbase) name ty =
+let mk_var_dec ?(clock = Cbase) name ty =
   { v_name = name; v_type = ty;
-    v_clock = ck }
+    v_clock = clock }
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
