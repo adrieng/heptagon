@@ -170,6 +170,10 @@ and print_type_desc ff = function
 and print_field ff field =
   fprintf ff "@[%a: %a@]" print_name field.f_name  print_type field.f_type
   
+let print_const_dec ff c =
+  fprintf ff "const %a = %a" print_name c.c_name
+    print_size_exp c.c_value
+
 let print_contract ff
     { c_local = l; c_eq = eqs;
       c_assume = e_a; c_enforce = e_g; c_controllables = cl } =
@@ -204,10 +208,11 @@ let print_clock oc ct =
   let ff = formatter_of_out_channel oc
   in (print_clock ff ct; fprintf ff "@?")
 
-let print oc { p_opened = pm; p_types = pt; p_nodes = pn } =
+let print oc { p_opened = pm; p_types = pt; p_nodes = pn; p_consts = pc } =
   let ff = formatter_of_out_channel oc
   in (
     List.iter (print_open_module ff) pm;
     List.iter (print_type_def ff) pt;
+    List.iter (print_const_dec ff) pc;
     List.iter (print_node ff) pn;
     fprintf ff "@?" )
