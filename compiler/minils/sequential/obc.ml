@@ -182,6 +182,7 @@ struct
   let rec print_type ff = function
     | Tint    -> fprintf ff "int"
     | Tfloat  -> fprintf ff "float"
+    | Tbool   -> fprintf ff "bool"
     | Tid(id) -> print_longname ff id
     | Tarray(ty, n) -> 
 	print_type ff ty;
