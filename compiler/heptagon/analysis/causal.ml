@@ -148,47 +148,41 @@ let build ac =
   (* associate a graph node for each name declaration *)
   let nametograph n g n_to_graph = Env.add n g n_to_graph in
 
-  let rec associate_node g (n_to_graph,lin_map) = function
+  let rec associate_node g n_to_graph = function
     | Awrite(n) ->
-        nametograph n g n_to_graph, lin_map
+        nametograph n g n_to_graph
     | Atuple l ->
-	List.fold_left (associate_node g) (n_to_graph, lin_map) l
+	      List.fold_left (associate_node g) n_to_graph l
     | _ -> 
-	n_to_graph, lin_map
+	      n_to_graph
   in
 
   (* first build the association [n -> node] *)
   (* for every defined variable *)
-  let rec initialize ac n_to_graph lin_map =
+  let rec initialize ac n_to_graph =
     match ac with
       | Aand(ac1, ac2) ->
-          let n_to_graph, lin_map = initialize ac1 n_to_graph lin_map in
-            initialize ac2 n_to_graph lin_map
+          let n_to_graph = initialize ac1 n_to_graph in
+            initialize ac2 n_to_graph
       | Aseq(ac1, ac2) ->
-          let n_to_graph, lin_map = initialize ac1 n_to_graph lin_map in
-            initialize ac2 n_to_graph lin_map
+          let n_to_graph = initialize ac1 n_to_graph in
+            initialize ac2 n_to_graph
       | _ ->
           let g = make ac in
-	    associate_node g (n_to_graph, lin_map) ac
+	          associate_node g n_to_graph ac
   in
 
-  let make_graph ac n_to_graph lin_map =
+  let make_graph ac n_to_graph =
     let attach node n =
       try
         let g = Env.find n n_to_graph in add_depends node g
       with
-        | Not_found -> () in
-
-    let attach_lin node n =
-      try
-        let g = Env.find n lin_map in add_depends g node
-      with
-        | Not_found -> () in     
+        | Not_found -> () in 
 
     let rec add_dependence g = function
-        | Aread(n) -> attach g n; attach_lin g n
-	| Atuple l -> List.iter (add_dependence g) l
-	| _ -> ()
+        | Aread(n) -> attach g n
+	      | Atuple l -> List.iter (add_dependence g) l
+	      | _ -> ()
     in
 
     let rec node_for_ac ac =
@@ -227,7 +221,7 @@ let build ac =
                 top2;
               top1 @ top2, bot1 @ bot2
 	| Awrite(n) -> let g = Env.find n n_to_graph in [g], [g]
-	| Aread(n) -> let g = make ac in attach g n; attach_lin g n; [g], [g]
+	| Aread(n) -> let g = make ac in attach g n; [g], [g]
 	| Atuple(l) -> 
 	    let g = node_for_ac ac in
 	      List.iter (add_dependence g) l;
@@ -236,8 +230,8 @@ let build ac =
     let top_list, bot_list = make_graph ac in
       graph top_list bot_list in
 
-  let n_to_graph, lin_map = initialize ac Env.empty Env.empty in
-  let g = make_graph ac n_to_graph lin_map in
+  let n_to_graph = initialize ac Env.empty in
+  let g = make_graph ac n_to_graph in
     g
 
 (* the main entry. *)
