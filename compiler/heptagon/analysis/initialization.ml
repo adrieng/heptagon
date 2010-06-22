@@ -234,6 +234,8 @@ and apply h op e_list =
 	let i2 = itype (typing h e2) in
 	let i3 = itype (typing h e3) in
 	max i1 (max i2 i3)
+    | Ecall ({ op_kind = Eop }, _), e_list -> 
+        List.fold_left (fun acc e -> itype (typing h e)) izero e_list
     | (Ecall _ | Earray_op _| Efield_update _) , e_list ->
 	      List.iter (fun e -> initialized_exp h e) e_list; izero
 
