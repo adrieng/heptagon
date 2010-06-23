@@ -13,7 +13,7 @@ open Misc
 open Compiler_utils
 open Location
 
-let pp = Printer.print stdout
+let pp = Hept_printer.print stdout
 
 let parse_implementation lexbuf =
   parse Parser.program Lexer.token lexbuf
