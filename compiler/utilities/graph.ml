@@ -32,7 +32,7 @@ let make c =
   { g_containt = c; g_tag = new_tag (); g_visited = false;
     g_mark = -1; g_depends_on = []; g_depends_by = [] }
 let add_depends node1 node2 =
-  if not (node1.g_tag = node2.g_tag or linked node1 node2) then (
+  if not (node1.g_tag = node2.g_tag) then (
     node1.g_depends_on <- node2 :: node1.g_depends_on;
     node2.g_depends_by <- node1 :: node2.g_depends_by
   )
