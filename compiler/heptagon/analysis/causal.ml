@@ -181,7 +181,6 @@ let build ac =
 
     let rec add_dependence g = function
         | Aread(n) -> attach g n
-	      | Atuple l -> List.iter (add_dependence g) l
 	      | _ -> ()
     in
 
