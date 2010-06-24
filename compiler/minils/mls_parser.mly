@@ -90,6 +90,9 @@ let mk_var name ty = mk_var_dec name ty
 
 %%
 
+/*TODO deal with when merge and co*/
+/*TODO add arrow ?*/
+/*TODO be happy with the tools*/
 
 /** Tools **/
 
@@ -120,28 +123,25 @@ program:
       p_nodes = $4;
       p_consts = []}} /*TODO consts dans program*/
 
+pragma_headers: l=option_list(pragma) {l}
 pragma: p=PRAGMA {p}
 
-pragma_headers: l=option_list(pragma) {l}
-
-
+open_modules: l=option_list(opens) {l}
 opens: OPEN c=CONSTRUCTOR {c}
 
-open_modules: l=option_list(opens) {l}
-
+ident: n=NAME | LPAREN n=infix RPAREN | LPAREN n=prefix RPAREN { n }
 
 field_type : n=NAME COLON t=type_ident { (n, t) }
 
 type_ident: NAME { Tid(Name($1)) }
 
+type_decs: t=option_list(type_dec) {t}
 type_dec:
   | TYPE n=NAME                               { mk_type n Type_abs }
   | TYPE n=NAME EQUAL e=slist(BAR,NAME)       { mk_type n (Type_enum e) }
   | TYPE n=NAME EQUAL s=structure(field_type) { mk_type n (Type_struct s) }
 
-type_decs: t=option_list(type_dec) {t}
-
-
+node_decs: ns=option_list(node_dec) {ns}
 node_dec:
   NODE id=ident LPAREN args=params RPAREN RETURNS LPAREN out=params RPAREN
     vars=loc_vars LET eqs=equs TEL
@@ -151,8 +151,6 @@ node_dec:
          ~local: vars
          ~eq: eqs
          id }
-
-node_decs: ns=option_list(node_dec) {ns}
 
 params: p=option_slist(SEMICOL, var) {p}
 
@@ -164,16 +162,12 @@ var:
   | ns=slist(COMMA, NAME) COLON t=type_ident
       { List.map (fun id -> mk_var id t) ns }
 
-equ: p=pat EQUAL e=exp { mk_eq p e }
-
-
 equs: e=option_slist(SEMICOL, equ) ?SEMICOL {e}
-
+equ: p=pat EQUAL e=exp { mk_eq p e }
 
 pat:
   | n=NAME                            {Evarpat (ident_of_name n)}
   | LPAREN p=slist(COMMA, pat) RPAREN {Etuplepat p}
-
 
 longname: l=qualified(ident) {l}
   
@@ -218,8 +212,6 @@ exp:
   | exp DOT longname
       { make_exp (Efield($1, $3)) }
 
-
-ident: n=NAME | LPAREN n=infix RPAREN | LPAREN n=prefix RPAREN { n }
 
 %inline infix:
   | op=INFIX0 | op=INFIX1 | op=INFIX2 | op=INFIX3 | op=INFIX4  { op }
