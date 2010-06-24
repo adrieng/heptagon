@@ -1,4 +1,3 @@
-# $Id$
 
 DATE = \`eval date\`
 LIBDIR = \`eval pwd\`/../lib
@@ -162,7 +161,7 @@ debug: byte
 profile: OCAMLOPTFLAGS += -p
 profile: opt
 
-depend .depend: $(GENSOURCES)
+depend .depend: 
 	(for d in $(DIRECTORIES); \
 		do $(OCAMLDEP) $(INCLUDES) $$d/*.mli $$d/*.ml; \
 		done) > .depend
@@ -224,5 +223,7 @@ ML = $(OBJ:.cmo=.ml)
 
 wc:
 	wc $(ML)
+
+
 
 include .depend
