@@ -7,6 +7,7 @@
 (*                                                                        *)
 (**************************************************************************)
 (* clock checking *)
+
 open Misc
 open Ident
 open Minils
@@ -23,14 +24,13 @@ exception Unify
 let error kind = raise (TypingError kind)
   
 let message e kind =
-  ((match kind with | Etypeclash (actual_ct, expected_ct) -> ());
-   (*TODO remettre en route quand Printer fonctionne
+  match kind with | Etypeclash (actual_ct, expected_ct) ->
 	      Printf.eprintf "%aClock Clash: this expression has clock %a, \n\
                   but is expected to have clock %a.\n"
-			    Printer.print_exp e
-				  Printer.print_clock actual_ct
-				  Printer.print_clock expected_ct*)
-   raise Error)
+			    Mls_printer.print_exp e
+				  Mls_printer.print_clock actual_ct
+				  Mls_printer.print_clock expected_ct;
+   raise Error
   
 let index = ref 0
   
