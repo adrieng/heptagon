@@ -34,6 +34,13 @@ let op_from_string op = Modname { qual = "Pervasives"; id = op; }
   
 let rec lhs_of_idx_list e = function 
   | [] -> e | idx :: l -> Array (lhs_of_idx_list e l, idx)
+
+let array_elt_of_exp idx e =
+  match e with
+    | Const (Carray (_, c)) ->
+        Const c
+    | _ -> 
+        Lhs (Array(lhs_of_exp e, Lhs idx))
   
 (** Creates the expression that checks that the indices
     in idx_list are in the bounds. If idx_list=[e1;..;ep]
@@ -307,15 +314,14 @@ and translate_iterator const_env map it x name_list o n c_list =
   match it with
   | Minils.Imap ->
       let c_list =
-        List.map (fun e -> Lhs (Array (lhs_of_exp e, Lhs (Var x)))) c_list in
+        List.map (array_elt_of_exp (Var x)) c_list in
       let name_list = List.map (fun l -> Array (l, Lhs (Var x))) name_list in
       let objn = Array_context (o, Var x) in 
         For (x, 0, n, Step_ap (name_list, objn, c_list))
 
   | Minils.Imapfold ->
       let (c_list, acc_in) = split_last c_list in
-      let c_list =
-        List.map (fun e -> Lhs (Array (lhs_of_exp e, Lhs (Var x)))) c_list in
+      let c_list = List.map (array_elt_of_exp (Var x)) c_list in
       let objn = Array_context (o, Var x) in
       let (name_list, acc_out) = split_last name_list in
       let name_list = List.map (fun l -> Array (l, Lhs (Var x))) name_list in
@@ -326,8 +332,7 @@ and translate_iterator const_env map it x name_list o n c_list =
 
   | Minils.Ifold ->
       let (c_list, acc_in) = split_last c_list in
-      let c_list =
-        List.map (fun e -> Lhs (Array (lhs_of_exp e, Lhs (Var x)))) c_list in
+      let c_list = List.map (array_elt_of_exp (Var x)) c_list in
       let objn = Array_context (o, Var x) in
       let acc_out = last_element name_list in
         Comp (Assgn (acc_out, acc_in),
