@@ -1,0 +1,36 @@
+#!/bin/sh
+
+bad=0
+
+check_file() {
+  name=$1
+  tmp=$2
+
+  if [ `wc -L $tmp | awk '{ print $1 }'` -gt 80 ]; then
+    echo "File \"$name\" has lines with more than 80 columns."
+    bad=1
+  fi
+
+  grep -P '\t' $tmp > /dev/null
+  if [ $? -eq 0 ]; then
+    echo "File \"$name\" has tabulations in it."
+    bad=1
+  fi
+
+  grep -P '( |\t)+$' $tmp > /dev/null
+  if [ $? -eq 0 ]; then
+    echo "File \"$name\" has trailing whitespace."
+    bad=1
+  fi
+}
+
+for f in $(git diff-index --cached --name-only HEAD --diff-filter=ACMR | egrep "\.ml(i?)$")
+do
+  tf=$(git checkout-index --temp $f | cut -f 1)
+  trap "rm -f -- $tf" EXIT
+  check_file $f $tf
+  rm -f -- $tf
+  trap - EXIT
+done
+
+exit $bad

@@ -1,0 +1,15 @@
+This directory holds two shell scripts that can be used in conjunction with git
+to reject commits containing ill-formed .ml / .mli files. Are considered
+ill-formed files that contain:
+
+* Trailing whitespace.
+* Lines spanning more than 80 columns.
+* Tab characters.
+
+The "pre-commit" and "update" scripts respectively handle local commits ("git
+commit") and remote calls to "git push". To enable a script, just copy it to
+$GIT_DIR/hooks/.
+
+For more information, refer to the githooks manual page.
+
+-- Adrien Guatto

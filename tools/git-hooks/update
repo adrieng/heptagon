@@ -1,0 +1,72 @@
+#!/bin/sh
+# Check for lexical syntax of commits in the current push that
+
+refname="$1"
+oldrev="$2"
+newrev="$3"
+
+if [ -z "$GIT_DIR" ]; then
+  echo "Don't run this script from the command line." >&2
+  echo " (if you want, you could supply GIT_DIR then run" >&2
+  echo "  $0 <ref> <oldrev> <newrev>)" >&2
+  exit 1
+fi
+
+if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
+  echo "Usage: $0 <ref> <oldrev> <newrev>" >&2
+  exit 1
+fi
+
+# --- Check types
+# if $newrev is 0000...0000, it's a commit to delete a ref.
+zero="0000000000000000000000000000000000000000"
+if [ "$newrev" = "$zero" ]; then
+  newrev_type=delete
+else
+  newrev_type=$(git cat-file -t $newrev)
+fi
+
+# Good commit by default
+bad=0
+
+IFS='
+'
+
+# If the new object is a commit...
+if [ "$newrev_type" = "commit" ]; then
+  # Loop over the new revisions
+  for c in $(git rev-list $old_rev..$newrev); do
+    # And each new file
+    for s in $(git ls-tree $c | egrep '\.ml(i?)$'; do
+      f=$(echo $s | awk '{ print $3 }')
+      name=$(echo $s | awk '{ print $4 }')
+      tmp=$(tempfile) || exit 1
+      trap "rm -f -- '$tmp'" EXIT
+      git cat-file blob $f > $tmp
+      # $tmp now holds the content of new file $name
+
+      if [ `wc -L $tmp | awk '{ print $1 }'` -gt 80 ]; then
+        echo "Commit $c/File \"$name\" has lines with more than 80 columns."
+        bad=1
+      fi
+
+      grep -P '\t' $tmp > /dev/null
+      if [ $? -eq 0 ]; then
+        echo "Commit $c/File \"$name\" has tabulations in it."
+        bad=1
+      fi
+
+      grep -P '( |\t)+$' $tmp > /dev/null
+      if [ $? -eq 0 ]; then
+        echo "Commit $c/File \"$name\" has trailing whitespace."
+        bad=1
+      fi
+
+      # Delete temporary file and remove the associated trap
+      rm -f -- '$tmp'
+      trap - EXIT
+    done
+  done
+fi
+
+exit $bad
