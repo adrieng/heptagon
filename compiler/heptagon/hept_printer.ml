@@ -20,8 +20,8 @@ open Pp_tools
 open Types
 open Signature
 
-let iterator_to_string i = 
-  match i with 
+let iterator_to_string i =
+  match i with
     | Imap -> "map"
     | Ifold -> "fold"
     | Imapfold -> "mapfold"
@@ -98,79 +98,79 @@ and print_op ff op e_list =
         fprintf ff "@]"
     | Ecall({ op_name = f; op_params = params }, reset), e_list ->
         print_longname ff f;
-	      print_call_params ff params;
+        print_call_params ff params;
         print_exps ff e_list;
-	      (match reset with 
-	         | None -> ()
-	         | Some r -> fprintf ff " every %a" print_exp r
-	      )
-   | Efield_update f, [e1;e2] -> 
-	      fprintf ff "(@[";
-	      print_exp ff e1;
-	      fprintf ff " with .";
-	      print_longname ff f;
-	      fprintf ff " = ";
-	      print_exp ff e2;
-	      fprintf ff ")@]"
+        (match reset with
+           | None -> ()
+           | Some r -> fprintf ff " every %a" print_exp r
+        )
+    | Efield_update f, [e1;e2] ->
+        fprintf ff "(@[";
+        print_exp ff e1;
+        fprintf ff " with .";
+        print_longname ff f;
+        fprintf ff " = ";
+        print_exp ff e2;
+        fprintf ff ")@]"
     | Earray_op op, e_list ->
         print_array_op ff op e_list
 
-and print_array_op ff op e_list = 
+and print_array_op ff op e_list =
   match op, e_list with
     | Erepeat, [e1; e2] ->
-	      print_exp ff e1;
-	      fprintf ff "^";
-	      print_exp ff e2
-    | Eselect idx_list, [e] -> 
-	      print_exp ff e;
-	      print_list_r print_size_exp "[" "][" "]" ff idx_list
+        print_exp ff e1;
+        fprintf ff "^";
+        print_exp ff e2
+    | Eselect idx_list, [e] ->
+        print_exp ff e;
+        print_list_r print_size_exp "[" "][" "]" ff idx_list
     | Eselect_dyn, e::defe::idx_list ->
-	      fprintf ff "@[(";
-	      print_exp ff e;
-	      print_list_r print_exp "[" "][" "] default " ff idx_list;
-	      print_exp ff defe;
-	      fprintf ff ")@]"
+        fprintf ff "@[(";
+        print_exp ff e;
+        print_list_r print_exp "[" "][" "] default " ff idx_list;
+        print_exp ff defe;
+        fprintf ff ")@]"
     | Eupdate idx_list, [e1;e2] ->
-	      fprintf ff "(@[";
-	      print_exp ff e1;
-	      fprintf ff " with ";
-	      print_list_r print_size_exp "[" "][" "]" ff idx_list;
-	      fprintf ff " = ";
-	      print_exp ff e2;
-	      fprintf ff ")@]"
+        fprintf ff "(@[";
+        print_exp ff e1;
+        fprintf ff " with ";
+        print_list_r print_size_exp "[" "][" "]" ff idx_list;
+        fprintf ff " = ";
+        print_exp ff e2;
+        fprintf ff ")@]"
     | Eselect_slice, [e; idx1; idx2] ->
-	      print_exp ff e;
-	      fprintf ff "[";
-	      print_exp ff idx1;
-	      fprintf ff "..";
-	      print_exp ff idx2;
-	      fprintf ff "]"	
-    | Eiterator (it, { op_name = op; op_params = params } , reset), e::e_list -> 
-	      fprintf ff "("; 
-	      print_iterator ff it;
-	      fprintf ff " ";
-	      (match params with
-	         | [] -> print_longname ff op
-	         | l -> 
-	             fprintf ff "(";
-	             print_longname ff op;
-	             print_call_params ff params;
-	             fprintf ff ")"
-	      );
-	      fprintf ff " <<";
-	      print_exp ff e;
-	      fprintf ff ">>) ";
-	      print_exps ff e_list;
-	      (match reset with 
-	         | None -> ()
-	         | Some r -> fprintf ff " every %a" print_exp r
-	      )
-    | Econcat, [e1;e2] -> 
-	      fprintf ff "@[";
-	      print_exp ff e1;
-	      fprintf ff " @@ ";
-	      print_exp ff e2;
-	      fprintf ff "@]"
+        print_exp ff e;
+        fprintf ff "[";
+        print_exp ff idx1;
+        fprintf ff "..";
+        print_exp ff idx2;
+        fprintf ff "]"
+    | Eiterator (it, { op_name = op; op_params = params } , reset), e::e_list ->
+        fprintf ff "(";
+        print_iterator ff it;
+        fprintf ff " ";
+        (match params with
+           | [] -> print_longname ff op
+           | l ->
+               fprintf ff "(";
+               print_longname ff op;
+               print_call_params ff params;
+               fprintf ff ")"
+        );
+        fprintf ff " <<";
+        print_exp ff e;
+        fprintf ff ">>) ";
+        print_exps ff e_list;
+        (match reset with
+           | None -> ()
+           | Some r -> fprintf ff " every %a" print_exp r
+        )
+    | Econcat, [e1;e2] ->
+        fprintf ff "@[";
+        print_exp ff e1;
+        fprintf ff " @@ ";
+        print_exp ff e2;
+        fprintf ff "@]"
 
 let rec print_eq ff eq =
   match eq.eq_desc with
@@ -350,7 +350,7 @@ let print_open_module ff name =
 
 let ptype oc ty =
   let ff = formatter_of_out_channel oc in
-    print_type ff ty; fprintf ff "@?"
+  print_type ff ty; fprintf ff "@?"
 
 let print oc { p_opened = po; p_types = pt; p_nodes = pn; p_consts = pc } =
   let ff = formatter_of_out_channel oc in

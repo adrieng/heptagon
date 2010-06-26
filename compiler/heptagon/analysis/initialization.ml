@@ -21,19 +21,19 @@ open Location
 open Format
 
 type typ =
-    | Iproduct of typ list
-    | Ileaf of init
+  | Iproduct of typ list
+  | Ileaf of init
 
 and init =
     { mutable i_desc: init_desc;
       mutable i_index: int }
 
 and init_desc =
-    | Izero
-    | Ione
-    | Ivar
-    | Imax of init * init
-    | Ilink of init
+  | Izero
+  | Ione
+  | Ivar
+  | Imax of init * init
+  | Ilink of init
 
 type kind = | Last of init | Var
 
@@ -112,17 +112,17 @@ and iless left_i right_i =
     else
       match left_i.i_desc, right_i.i_desc with
         | (Izero, _) | (_, Ione) -> ()
-	| _, Izero -> initialized left_i
-	| Imax(i1, i2), _ ->
-	    iless i1 right_i; iless i2 right_i
-	| _, Ivar ->
-	    let left_i = occur_check right_i.i_index left_i in
-	    right_i.i_desc <- Ilink(left_i)
-	| _, Imax(i1, i2) ->
-	    let i1 = occur_check left_i.i_index i1 in
-	    let i2 = occur_check left_i.i_index i2 in
-	    right_i.i_desc <- Ilink(imax left_i (imax i1 i2))
-	| _ -> raise Unify
+        | _, Izero -> initialized left_i
+        | Imax(i1, i2), _ ->
+            iless i1 right_i; iless i2 right_i
+        | _, Ivar ->
+            let left_i = occur_check right_i.i_index left_i in
+            right_i.i_desc <- Ilink(left_i)
+        | _, Imax(i1, i2) ->
+            let i1 = occur_check left_i.i_index i1 in
+            let i2 = occur_check left_i.i_index i2 in
+            right_i.i_desc <- Ilink(imax left_i (imax i1 i2))
+        | _ -> raise Unify
 
 (* an inequation [a < t[a]] becomes [a = t[0]] *)
 and occur_check index i =
@@ -130,18 +130,18 @@ and occur_check index i =
     | Izero | Ione -> i
     | Ivar -> if i.i_index = index then izero else i
     | Imax(i1, i2) ->
-	max (occur_check index i1) (occur_check index i2)
+        max (occur_check index i1) (occur_check index i2)
     | Ilink(i) -> occur_check index i
 
 module Printer = struct
   open Format
 
   let rec print_list_r print po sep pf ff = function
-  | [] -> ()
-  | x :: l ->
-      fprintf ff "@[%s%a" po print x;
-      List.iter (fprintf ff "%s@]@ @[%a" sep print) l;
-      fprintf ff "%s@]" pf
+    | [] -> ()
+    | x :: l ->
+        fprintf ff "@[%s%a" po print x;
+        List.iter (fprintf ff "%s@]@ @[%a" sep print) l;
+        fprintf ff "%s@]" pf
 
   let rec fprint_init ff i = match i.i_desc with
     | Izero -> fprintf ff "0"
@@ -173,13 +173,13 @@ module Error = struct
 
   let message loc kind =
     begin match kind with
-        | Eclash(left_ty, right_ty) ->
-            Printf.eprintf "%aInitialization error: this expression has type \
+      | Eclash(left_ty, right_ty) ->
+          Printf.eprintf "%aInitialization error: this expression has type \
               %a, \n\
               but is expected to have type %a\n"
-              output_location loc
-              Printer.output_typ left_ty
-              Printer.output_typ right_ty
+            output_location loc
+            Printer.output_typ left_ty
+            Printer.output_typ right_ty
     end;
     raise Misc.Error
 end
@@ -195,49 +195,49 @@ let rec typing h e =
     | Econst _ | Econstvar _ -> leaf izero
     | Evar(x) | Elast(x) -> let { i_typ = i } = Env.find x h in leaf i
     | Etuple(e_list) ->
-	product (List.map (typing h) e_list)
+        product (List.map (typing h) e_list)
     | Eapp({a_op = op}, e_list) ->
-	let i = apply h op e_list in
-	skeleton i e.e_ty
+        let i = apply h op e_list in
+        skeleton i e.e_ty
     | Efield(e1, _) ->
-	let i = itype (typing h e1) in
-	skeleton i e.e_ty
+        let i = itype (typing h e1) in
+        skeleton i e.e_ty
     | Estruct(l) ->
-	let i =
-	  List.fold_left
-	    (fun acc (_, e) -> max acc (itype (typing h e))) izero l in
-	skeleton i e.e_ty
+        let i =
+          List.fold_left
+            (fun acc (_, e) -> max acc (itype (typing h e))) izero l in
+        skeleton i e.e_ty
     | Earray(e_list) ->
-	      let i =
-	        List.fold_left
-	          (fun acc e -> max acc (itype (typing h e))) izero e_list in
-	        skeleton i e.e_ty
+        let i =
+          List.fold_left
+            (fun acc e -> max acc (itype (typing h e))) izero e_list in
+        skeleton i e.e_ty
 
 (** Typing an application *)
 and apply h op e_list =
   match op, e_list with
     | Epre(None), [e] ->
-	initialized_exp h e;
-	ione
+        initialized_exp h e;
+        ione
     | Epre(Some _), [e] ->
-	initialized_exp h e;
-	izero
+        initialized_exp h e;
+        izero
     | Efby, [e1;e2] ->
-	initialized_exp h e2;
-	itype (typing h e1)
+        initialized_exp h e2;
+        itype (typing h e1)
     | Earrow, [e1;e2] ->
-	let ty1 = typing h e1 in
-	let _ = typing h e2 in
-	itype ty1
+        let ty1 = typing h e1 in
+        let _ = typing h e2 in
+        itype ty1
     | Eifthenelse, [e1; e2; e3] ->
-	let i1 = itype (typing h e1) in
-	let i2 = itype (typing h e2) in
-	let i3 = itype (typing h e3) in
-	max i1 (max i2 i3)
-    | Ecall ({ op_kind = Eop }, _), e_list -> 
+        let i1 = itype (typing h e1) in
+        let i2 = itype (typing h e2) in
+        let i3 = itype (typing h e3) in
+        max i1 (max i2 i3)
+    | Ecall ({ op_kind = Eop }, _), e_list ->
         List.fold_left (fun acc e -> itype (typing h e)) izero e_list
     | (Ecall _ | Earray_op _| Efield_update _) , e_list ->
-	      List.iter (fun e -> initialized_exp h e) e_list; izero
+        List.iter (fun e -> initialized_exp h e) e_list; izero
 
 and expect h e expected_ty =
   let actual_ty = typing h e in
@@ -257,15 +257,15 @@ and typing_eq h eq =
   match eq.eq_desc with
     | Eautomaton(handlers) -> typing_automaton h handlers
     | Eswitch(e, handlers) ->
-	initialized_exp h e;
-	typing_switch h handlers
+        initialized_exp h e;
+        typing_switch h handlers
     | Epresent(handlers, b) ->
-	typing_present h handlers b
+        typing_present h handlers b
     | Ereset(eq_list, e) ->
-	initialized_exp h e; typing_eqs h eq_list
+        initialized_exp h e; typing_eqs h eq_list
     | Eeq(pat, e) ->
-	let ty_pat = typing_pat h pat in
-	expect h e ty_pat
+        let ty_pat = typing_pat h pat in
+        expect h e ty_pat
 
 and typing_switch h handlers =
   let handler { w_block = b } = ignore (typing_block h b) in
@@ -286,12 +286,12 @@ and typing_automaton h state_handlers =
   let initialized h { s_block = { b_defnames = l } } =
     Env.fold
       (fun elt _ h ->
-            let { i_kind = k; i_typ = i } = Env.find elt h in
-            match k with
-              | Last _ ->
-		  let h = Env.remove elt h in
-		  Env.add elt { i_kind = Last(izero); i_typ = izero } h
-	      | _ -> h)
+         let { i_kind = k; i_typ = i } = Env.find elt h in
+         match k with
+           | Last _ ->
+               let h = Env.remove elt h in
+               Env.add elt { i_kind = Last(izero); i_typ = izero } h
+           | _ -> h)
       l h in
 
   (* typing the body of the automaton *)
@@ -306,9 +306,9 @@ and typing_automaton h state_handlers =
     List.iter (escape h) sunless in
 
   match state_handlers with
-  (* we do a special treatment for state variables which *)
-  (* are defined in the initial state if it cannot be immediately *)
-  (* exited *)
+      (* we do a special treatment for state variables which *)
+      (* are defined in the initial state if it cannot be immediately *)
+      (* exited *)
     | initial :: other_handlers when weak initial ->
         let h = initialized h initial in
         handler h initial;
@@ -337,19 +337,19 @@ let typing_contract h contract =
   match contract with
     | None -> h
     | Some { c_local = l_list; c_eq = eq_list; c_assume = e_a;
-	     c_enforce = e_g; c_controllables = c_list } ->
-	let h = sbuild h c_list in
-	let h' = build h l_list in
-	typing_eqs h' eq_list;
-	(* assumption *)
-	expect h' e_a (skeleton izero e_a.e_ty);
-	(* property *)
-	expect h' e_g (skeleton izero e_g.e_ty);
-	h
+             c_enforce = e_g; c_controllables = c_list } ->
+        let h = sbuild h c_list in
+        let h' = build h l_list in
+        typing_eqs h' eq_list;
+        (* assumption *)
+        expect h' e_a (skeleton izero e_a.e_ty);
+        (* property *)
+        expect h' e_g (skeleton izero e_g.e_ty);
+        h
 
 let typing_node { n_name = f; n_input = i_list; n_output = o_list;
-		  n_contract = contract;
-		  n_local = l_list; n_equs = eq_list } =
+                  n_contract = contract;
+                  n_local = l_list; n_equs = eq_list } =
   let h = sbuild Env.empty i_list in
   let h = sbuild h o_list in
   let h = typing_contract h contract in

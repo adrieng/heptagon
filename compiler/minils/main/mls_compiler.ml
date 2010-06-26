@@ -19,12 +19,12 @@ let compile pp p =
 
   (* Normalization to maximize opportunities *)
   let p = do_pass Normalize.program "Normalization" p pp true in
-    
+
   (* Scheduling *)
   let p = do_pass Schedule.program "Scheduling" p pp true in
-    
+
   (* Parametrized functions instantiation *)
-  let p = do_pass Callgraph.program 
+  let p = do_pass Callgraph.program
     "Parametrized functions instantiation" p pp true in
 
-    p
+  p

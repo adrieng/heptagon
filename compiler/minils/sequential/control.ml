@@ -17,7 +17,7 @@ open Misc
 
 let var_from_name map x =
   begin try
-    Env.find x map 
+    Env.find x map
   with
       _ -> assert false
   end
@@ -37,25 +37,25 @@ let rec control map ck s =
 
 let rec simplify act =
   match act with
-  | Obc.Assgn (lhs, e) -> 
-      (match e with 
-	 | Obc.Lhs l when l = lhs -> Obc.Nothing 
-	 | _ -> act
-      )
-  | Obc.Case(lhs, h) ->
-      (match simplify_handlers h with
-	 | [] -> Obc.Nothing
-	 | h -> Obc.Case(lhs, h)
-      )
-  | _ -> act
+    | Obc.Assgn (lhs, e) ->
+        (match e with
+           | Obc.Lhs l when l = lhs -> Obc.Nothing
+           | _ -> act
+        )
+    | Obc.Case(lhs, h) ->
+        (match simplify_handlers h with
+           | [] -> Obc.Nothing
+           | h -> Obc.Case(lhs, h)
+        )
+    | _ -> act
 
 and simplify_handlers = function
   | [] -> []
-  | (n,a)::h -> 
+  | (n,a)::h ->
       let h = simplify_handlers h in
       (match simplify a with
-	 | Obc.Nothing -> h
-	 | a -> (n,a)::h
+         | Obc.Nothing -> h
+         | a -> (n,a)::h
       )
 
 let rec join s1 s2 =

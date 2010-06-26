@@ -21,7 +21,7 @@ open Heptagon
 open Reset
 
 (*
-let defnames m n d =
+  let defnames m n d =
   let rec loop acc k = if k < n then loop (S.add m.(k) acc) (k+1) else acc in
   loop d 0
 *)
@@ -77,20 +77,21 @@ and translate v acc_eq_list e =
         let v, acc_eq_list,re = translate v acc_eq_list re in
         let n, v, acc_eq_list = equation v acc_eq_list re in
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
-          v,acc_eq_list,
+        v,acc_eq_list,
           { e with e_desc =
-              Eapp({ op with a_op = Ecall(op_desc, 
+              Eapp({ op with a_op = Ecall(op_desc,
                                           Some { re with e_desc = Evar(n) }) },
                    e_list) }
     | Eapp ({ a_op = Earray_op(Eiterator(it, op_desc, Some re)) } as op, e_list)
-	      when not (is_var re) ->
+        when not (is_var re) ->
         let v, acc_eq_list,re = translate v acc_eq_list re in
         let n, v, acc_eq_list = equation v acc_eq_list re in
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
-	      let re = { re with e_desc = Evar n } in
-          v,acc_eq_list,
+        let re = { re with e_desc = Evar n } in
+        v,acc_eq_list,
           { e with e_desc =
-              Eapp({ op with a_op = Earray_op(Eiterator(it, op_desc, Some re)) },
+              Eapp({ op with a_op =
+                       Earray_op(Eiterator(it, op_desc, Some re)) },
                    e_list) }
     | Eapp(f, e_list) ->
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in

@@ -19,7 +19,7 @@ let dataflow_target filename p target_languages =
         if !verbose then
           comment "Translation into dynamic system (Z/3Z equations)";
         Sigali.Printer.print dir p;
-        one_target others 
+        one_target others
     | ("vhdl_df" | "vhdl") :: others ->
         let dirname = build_path (filename ^ "_vhdl") in
         let dir = clean_dir dirname in

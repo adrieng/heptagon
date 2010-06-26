@@ -36,7 +36,7 @@ type cty =
   | Cty_int (** C machine-dependent integer type. *)
   | Cty_float (** C machine-dependent single-precision floating-point type. *)
   | Cty_char (** C character type. *)
-  | Cty_id of string (** Previously defined C type, such as an enum or struct. *)
+  | Cty_id of string (** Previously defined C type, such as an enum or struct.*)
   | Cty_ptr of cty (** C points-to-other-type type. *)
   | Cty_arr of int * cty (** A static array of the specified size. *)
   | Cty_void (** Well, [void] is not really a C type. *)
@@ -64,7 +64,7 @@ and cexpr =
   | Cconst of cconst (** Constants. *)
   | Clhs of clhs (** Left-hand-side expressions are obviously expressions! *)
   | Caddrof of clhs (** Take the address of a left-hand-side expression. *)
-  | Cstructlit of string * cexpr list (** Structure literal "{ f1, f2, ... }". *)
+  | Cstructlit of string * cexpr list (** Structure literal "{ f1, f2, ... }".*)
   | Carraylit of cexpr list (** Array literal [e1, e2, ...]. *)
 and cconst =
   | Ccint of int (** Integer constant. *)
@@ -84,7 +84,7 @@ and cstm =
   | Cskip (** A dummy instruction that does nothing and will not be printed. *)
   | Caffect of clhs * cexpr (** Affect the result of an expression to a lhs. *)
   | Cif of cexpr * cstm list * cstm list (** Alternative *)
-  | Cswitch of cexpr * (string * cstm list) list (** Case/switch over an enum. *)
+  | Cswitch of cexpr * (string * cstm list) list (** Case/switch over an enum.*)
   | Cwhile of cexpr * cstm list (** While loop. *)
   | Cfor of string * int * int * cstm list (** For loop. int <= string < int *)
   | Creturn of cexpr (** Ends a procedure/function by returning an expression.*)
@@ -110,7 +110,7 @@ type cfundef = {
 (** C top-level definitions. *)
 type cdef =
   | Cfundef of cfundef (** Function definition, see [cfundef]. *)
-  | Cvardef of string * cty (** A variable definition, with its name and type. *)
+  | Cvardef of string * cty (** A variable definition, with its name and type.*)
 
 (** [cdecl_of_cfundef cfd] returns a declaration for the function def. [cfd]. *)
 let cdecl_of_cfundef cfd = match cfd with
@@ -129,9 +129,9 @@ and cfile_desc =
 
 (** {3 Pretty-printing of the C ast.} *)
 
-(** [pp_list1 f sep fmt l] pretty-prints into the Format.formatter [fmt] elements
-    of the list [l] via the function [f], separated by [sep] strings and
-    breakable spaces. *)
+(** [pp_list1 f sep fmt l] pretty-prints into the Format.formatter [fmt]
+    elements of the list [l] via the function [f], separated by [sep] strings
+    and breakable spaces. *)
 let rec pp_list1 f sep fmt l = match l with
   | [] -> fprintf fmt ""
   | [x] -> fprintf fmt "%a" f x
@@ -156,17 +156,17 @@ let rec pp_cty fmt cty = match cty with
     and the string of indices. *)
 let rec pp_array_decl cty =
   match cty with
-    | Cty_arr(n, cty') -> 
-	let ty, s = pp_array_decl cty' in
-	  ty, sprintf "%s[%d]" s n
+    | Cty_arr(n, cty') ->
+        let ty, s = pp_array_decl cty' in
+        ty, sprintf "%s[%d]" s n
     | _ -> cty, ""
 
 (* pp_vardecl, featuring an ugly hack coping with C's inconsistent concrete
    syntax! *)
 let rec pp_vardecl fmt (s, cty) = match cty with
-  | Cty_arr (n, cty') -> 
+  | Cty_arr (n, cty') ->
       let ty, indices = pp_array_decl cty in
-	fprintf fmt "%a %s%s" pp_cty ty s indices
+      fprintf fmt "%a %s%s" pp_cty ty s indices
   | _ -> fprintf fmt "%a %s" pp_cty cty s
 and pp_paramdecl fmt (s, cty) = match cty with
   | Cty_arr (n, cty') -> fprintf fmt "%a* %s" pp_cty cty' s
@@ -196,7 +196,7 @@ and pp_cstm fmt stm = match stm with
         pp_cexpr c pp_cstm_list t pp_cstm_list e
   | Cfor(x, lower, upper, e) ->
       fprintf fmt "@[<v>@[<v 2>for (int %s = %d; %s < %d; ++%s) {%a@]@ }@]"
-	x lower x upper x  pp_cstm_list e
+        x lower x upper x  pp_cstm_list e
   | Cwhile (e, b) ->
       fprintf fmt "@[<v>@[<v 2>while (%a) {%a@]@ }@]" pp_cexpr e pp_cstm_list b
   | Csblock cb -> pp_cblock fmt cb
@@ -216,7 +216,7 @@ and pp_cexpr fmt ce = match ce with
   | Caddrof lhs -> fprintf fmt "&%a" pp_clhs lhs
   | Cstructlit (s, el) ->
       fprintf fmt "(%s){@[%a@]}" s (pp_list1 pp_cexpr ",") el
-  | Carraylit el -> 
+  | Carraylit el ->
       fprintf fmt "[@[%a@]]" (pp_list1 pp_cexpr ",") el
 and pp_clhs fmt lhs = match lhs with
   | Cvar s -> fprintf fmt "%s" s
@@ -224,9 +224,9 @@ and pp_clhs fmt lhs = match lhs with
   | Cfield (Cderef lhs, f) -> fprintf fmt "%a->%s" pp_clhs lhs f
   | Cfield (lhs, f) -> fprintf fmt "%a.%s" pp_clhs lhs f
   | Carray (lhs, e) ->
-      fprintf fmt "%a[%a]" 
-	pp_clhs lhs
-	pp_cexpr e
+      fprintf fmt "%a[%a]"
+        pp_clhs lhs
+        pp_cexpr e
 
 let pp_cdecl fmt cdecl = match cdecl with
   | Cdecl_enum (s, sl) ->
@@ -313,17 +313,17 @@ let lhs_of_exp e =
     | Clhs e -> e
     | _ -> assert false
 
-(** Returns the type of a pointer to a type, except for 
+(** Returns the type of a pointer to a type, except for
     types which are already pointers. *)
-let pointer_to ty = 
+let pointer_to ty =
   match ty with
-  | Cty_arr _ | Cty_ptr _ -> ty
-  | _ -> Cty_ptr ty
+    | Cty_arr _ | Cty_ptr _ -> ty
+    | _ -> Cty_ptr ty
 
 (** Returns whether a type is a pointer. *)
 let is_pointer_type = function
   | Cty_arr _ | Cty_ptr _ -> true
-  | _ -> false 
+  | _ -> false
 
 (** [array_base_ctype ty idx_list] returns the base type of an array
     type. If idx_list = [i1; ..; ip] and a is a variable of type ty,

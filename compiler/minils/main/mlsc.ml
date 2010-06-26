@@ -38,20 +38,20 @@ let compile_impl modname filename =
   let source_name = filename ^ ".mls"
   and mls_norm_name = filename ^ "_norm.mls"
   and obc_name = filename ^ ".obc" in
-  
+
   let ic = open_in source_name
   and mlsnc = open_out mls_norm_name
   and obc = open_out obc_name in
-  
+
   let close_all_files () =
     close_in ic;
     close_out obc;
     close_out mlsnc
   in
-  
+
   try
     init_compiler modname source_name ic;
-    
+
     (* Parsing of the file *)
     let lexbuf = Lexing.from_channel ic in
     let p = parse_implementation lexbuf in
@@ -60,28 +60,28 @@ let compile_impl modname filename =
       comment "Parsing";
       pp p
     end;
-    
+
     (* Call the compiler*)
     let p = Mls_compiler.compile pp p in
-    
+
     if !verbose
     then begin
       comment "Checking"
     end;
-    
-      (* Producing Object-based code *)
-	  let o = Mls2obc.program p in
-	  if !verbose then comment "Translation into Object-based code";
-	  Obc.Printer.print obc o;
-	  
-	  let pp = Obc.Printer.print stdout in
-	  if !verbose then pp o;
-	  
-	  (* Translation into dataflow and sequential languages *)
-	  targets filename p o !target_languages;
-    
+
+    (* Producing Object-based code *)
+    let o = Mls2obc.program p in
+    if !verbose then comment "Translation into Object-based code";
+    Obc.Printer.print obc o;
+
+    let pp = Obc.Printer.print stdout in
+    if !verbose then pp o;
+
+    (* Translation into dataflow and sequential languages *)
+    targets filename p o !target_languages;
+
     close_all_files ()
-  
+
   with x -> close_all_files (); raise x
 
 let compile file =
@@ -98,22 +98,22 @@ let main () =
   try
     Arg.parse
       [
-      "-v", Arg.Set verbose, doc_verbose;
-      "-version", Arg.Unit show_version, doc_version;
-      "-i", Arg.Set print_types, doc_print_types;
-      "-I", Arg.String add_include, doc_include;
-      "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
-      "-stdlib", Arg.String set_stdlib, doc_stdlib;
-      "-s", Arg.String set_simulation_node, doc_sim;
-      "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
-      "-target", Arg.String add_target_language, doc_target;
-      "-targetpath", Arg.String set_target_path, doc_target_path;
-      "-noinit", Arg.Clear init, doc_noinit;
-      "-fti", Arg.Set full_type_info, doc_full_type_info;
+        "-v", Arg.Set verbose, doc_verbose;
+        "-version", Arg.Unit show_version, doc_version;
+        "-i", Arg.Set print_types, doc_print_types;
+        "-I", Arg.String add_include, doc_include;
+        "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
+        "-stdlib", Arg.String set_stdlib, doc_stdlib;
+        "-s", Arg.String set_simulation_node, doc_sim;
+        "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
+        "-target", Arg.String add_target_language, doc_target;
+        "-targetpath", Arg.String set_target_path, doc_target_path;
+        "-noinit", Arg.Clear init, doc_noinit;
+        "-fti", Arg.Set full_type_info, doc_full_type_info;
       ]
       compile
       errmsg;
   with
-  | Misc.Error -> exit 2;;
+    | Misc.Error -> exit 2;;
 
 main ()

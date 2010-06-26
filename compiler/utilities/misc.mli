@@ -126,11 +126,11 @@ val unique : 'a list -> 'a list
 val incomplete_map : ('a -> 'a) -> 'a list -> 'a list
 
 (** [last_element l] returns the last element of the list l.*)
-val last_element : 'a list -> 'a 
+val last_element : 'a list -> 'a
 
-(** [split_last l] returns the list l without its last element 
+(** [split_last l] returns the list l without its last element
     and the last element of the list .*)
-val split_last : 'a list -> ('a list * 'a) 
+val split_last : 'a list -> ('a list * 'a)
 
 (** [remove x l] removes all occurrences of x from list l.*)
 val remove : 'a -> 'a list -> 'a list

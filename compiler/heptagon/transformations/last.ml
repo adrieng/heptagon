@@ -21,11 +21,11 @@ let last (eq_list, env, v) { v_name = n; v_type = t; v_last = last } =
         let lastn = Ident.fresh ("last" ^ (sourcename n)) in
         let eq = mk_equation (Eeq (Evarpat lastn,
                                    mk_exp (Eapp (mk_op (Epre default),
-			                                           [mk_exp (Evar n) t])) t)) in
-          eq:: eq_list,
+                                                 [mk_exp (Evar n) t])) t)) in
+        eq:: eq_list,
         Env.add n lastn env,
         (mk_var_dec lastn t) :: v
-          
+
 let extend_env env v = List.fold_left last ([], env, []) v
 
 let rec translate_eq env eq =
@@ -64,7 +64,7 @@ and translate env e =
         { e with e_desc =
             Estruct(List.map (fun (f, e) -> (f, translate env e)) e_f_list) }
     | Earray(e_list) ->
-	{ e with e_desc = Earray(List.map (translate env) e_list) }
+        { e with e_desc = Earray(List.map (translate env) e_list) }
 
 let translate_contract env contract =
   match contract with
@@ -93,7 +93,7 @@ let node ({ n_input = i; n_local = v; n_output = o;
   let contract, env = translate_contract env contract in
   let eq_lastn_n_list, env, last_v = extend_env env v in
   let eq_list = translate_eqs env eq_list in
-  { n with 
+  { n with
       n_input = i;
       n_output = o;
       n_local = v @ last_o @ last_v;

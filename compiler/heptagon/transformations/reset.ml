@@ -38,18 +38,19 @@ open Types
    l_m1 = if res then true else true fby m1;...;
    l_m3 = if res then true else true fby m3
 
-   e1 -> e2 is translated into if (true fby false) then e1 else e2 
+   e1 -> e2 is translated into if (true fby false) then e1 else e2
 *)
 
-let mk_bool_var n = 
+let mk_bool_var n =
   mk_exp (Evar n) (Tid Initial.pbool)
-let mk_bool_param n = 
+let mk_bool_param n =
   mk_var_dec n (Tid Initial.pbool)
 
 let or_op_call = mk_op ( Ecall(mk_op_desc Initial.por [] Eop, None) )
 
-let pre_true e =
-  { e with e_desc = Eapp(mk_op (Epre (Some (Cconstr Initial.ptrue))), [e]) }
+let pre_true e = {
+  e with e_desc = Eapp(mk_op (Epre (Some (Cconstr Initial.ptrue))), [e])
+}
 let init e = pre_true { dfalse with e_loc = e.e_loc }
 
 (* the boolean condition for a structural reset *)
@@ -84,7 +85,7 @@ let ifres res e2 e3 =
   match res with
     | Rfalse -> mk_ifthenelse (init e3) e2 e3
     | _ -> (* a reset occurs *)
-	      mk_ifthenelse (exp_of_res res) e2 e3
+        mk_ifthenelse (exp_of_res res) e2 e3
 
 (* add an equation *)
 let equation v acc_eq_list e =
@@ -111,10 +112,12 @@ let add_local_equations i n m lm acc =
   (* [mi = false;...; m1 = l_m1;...; mn = l_mn] *)
   let rec loop acc k =
     if k < n then
-      if k = i then loop ((mk_simple_equation (Evarpat (m.(k))) dfalse) :: acc) (k+1)
+      if k = i
+      then loop ((mk_simple_equation (Evarpat (m.(k))) dfalse) :: acc) (k+1)
       else
         loop
-          ((mk_simple_equation (Evarpat (m.(k))) (mk_bool_var lm.(k))) :: acc) (k+1)
+          ((mk_simple_equation (Evarpat (m.(k))) (mk_bool_var lm.(k))) :: acc)
+          (k+1)
     else acc
   in loop acc 0
 
@@ -123,13 +126,13 @@ let add_global_equations n m lm res acc =
      l_mn = if res then true else true fby mn ] *)
   let rec loop acc k =
     if k < n then
-      let exp =            
+      let exp =
         (match res with
            | Rfalse -> pre_true (mk_bool_var m.(k))
            | _ -> ifres res dtrue (pre_true (mk_bool_var m.(k)))
         ) in
-        loop
-          ((mk_equation (Eeq (Evarpat (lm.(k)), exp))) :: acc) (k+1)
+      loop
+        ((mk_equation (Eeq (Evarpat (lm.(k)), exp))) :: acc) (k+1)
     else acc in
   loop acc 0
 
@@ -206,12 +209,12 @@ and translate res e =
           match res, e1 with
             | Rfalse, { e_desc = Econst(c) } ->
                 (* no reset *)
-		            { e with e_desc = 
-		                Eapp({ op with a_op = Epre(Some c) }, [e2]) }
+                { e with e_desc =
+                    Eapp({ op with a_op = Epre(Some c) }, [e2]) }
             | _ ->
                 ifres res e1
-                  { e with e_desc = 
-		                  Eapp({ op with a_op = Epre(default e1) }, [e2]) }
+                  { e with e_desc =
+                      Eapp({ op with a_op = Epre(default e1) }, [e2]) }
         end
     | Eapp({ a_op = Earrow }, [e1;e2]) ->
         let e1 = translate res e1 in
@@ -223,32 +226,33 @@ and translate res e =
         let re = translate res re in
         let e_list = List.map (translate res) e_list in
         let op = { op with a_op = Ecall(op_desc, Some (or_op res re))} in
-          { e with e_desc = Eapp(op, e_list) }
-    (* create a new reset exp if necessary *)
+        { e with e_desc = Eapp(op, e_list) }
+          (* create a new reset exp if necessary *)
     | Eapp({ a_op = Ecall(op_desc, None) } as op, e_list) ->
         let e_list = List.map (translate res) e_list in
         if true_reset res & op_desc.op_kind <> Eop then
           let op = { op with a_op = Ecall(op_desc, Some (exp_of_res res)) } in
-            { e with e_desc = Eapp(op, e_list) }
+          { e with e_desc = Eapp(op, e_list) }
         else
           { e with e_desc = Eapp(op, e_list ) }
-     (* add reset to the current reset exp. *)
-    | Eapp( { a_op = Earray_op (Eiterator(it, op_desc, Some re)) } as op, e_list) ->
+            (* add reset to the current reset exp. *)
+    | Eapp( { a_op = Earray_op (Eiterator(it, op_desc, Some re)) } as op,
+            e_list) ->
         let re = translate res re in
         let e_list = List.map (translate res) e_list in
-	      let r = Some (or_op res re) in
+        let r = Some (or_op res re) in
         let op = { op with a_op = Earray_op (Eiterator(it, op_desc, r)) } in
-          { e with e_desc = Eapp(op, e_list) }
-     (* create a new reset exp if necessary *)
-    | Eapp( { a_op = Earray_op (Eiterator(it, op_desc, None)) } as op, e_list) ->
+        { e with e_desc = Eapp(op, e_list) }
+          (* create a new reset exp if necessary *)
+    | Eapp({ a_op = Earray_op (Eiterator(it, op_desc, None)) } as op, e_list) ->
         let e_list = List.map (translate res) e_list in
-	        if true_reset res then
-	          let r = Some (exp_of_res res) in
-            let op = { op with a_op = Earray_op (Eiterator(it, op_desc, r)) } in
-              { e with e_desc = Eapp(op, e_list) }
-          else
-	          { e with e_desc = Eapp(op, e_list) }
- 
+        if true_reset res then
+          let r = Some (exp_of_res res) in
+          let op = { op with a_op = Earray_op (Eiterator(it, op_desc, r)) } in
+          { e with e_desc = Eapp(op, e_list) }
+        else
+          { e with e_desc = Eapp(op, e_list) }
+
     | Eapp(op, e_list) ->
         { e with e_desc = Eapp(op, List.map (translate res) e_list) }
     | Efield(e', field) ->

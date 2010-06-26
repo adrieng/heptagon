@@ -34,7 +34,7 @@ let locate_stdlib () =
   let stdlib = try
     Sys.getenv "HEPTLIB"
   with
-    Not_found -> standard_lib in
+      Not_found -> standard_lib in
   Printf.printf "Standard library in %s\n" stdlib
 
 let show_version () =
@@ -141,13 +141,13 @@ let unique l =
   Hashtbl.fold (fun key data accu -> key :: accu) tbl []
 
 let rec incomplete_map f l =
-  match l with 
+  match l with
     | [] -> []
     | [a] -> [a]
     | a::l -> (f a)::(incomplete_map f l)
 
 let rec last_element l =
-  match l with 
+  match l with
     | [] -> assert false
     | [v] -> v
     | v::l -> last_element l
@@ -157,9 +157,9 @@ let rec last_element l =
 let rec split_last = function
   | [] -> assert false
   | [a] -> [], a
-  | v::l -> 
+  | v::l ->
       let l, a = split_last l in
-	v::l, a
+      v::l, a
 
 let remove x l =
   List.filter (fun y -> x <> y) l
@@ -174,7 +174,7 @@ let repeat_list v n =
     | 0 -> []
     | n -> v::(aux (n-1))
   in
-    aux n
+  aux n
 
 (** Same as List.mem_assoc but using the value instead of the key. *)
 let rec memd_assoc value = function
@@ -184,8 +184,8 @@ let rec memd_assoc value = function
 (** Same as List.assoc but searching for a data and returning the key. *)
 let rec assocd value = function
   | [] -> raise Not_found
-  | (k,d)::l -> 
+  | (k,d)::l ->
       if d = value then
-	k 
+        k
       else
-	assocd value l
+        assocd value l

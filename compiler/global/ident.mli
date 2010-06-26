@@ -24,7 +24,7 @@ val ident_of_name : string -> ident
 module Env :
 sig
   include (Map.S with type key = ident)
-  
+
   val append : 'a t -> 'a t -> 'a t
   val union : 'a t -> 'a t -> 'a t
   val diff : 'a t -> 'b t -> 'a t

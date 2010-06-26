@@ -52,12 +52,12 @@ let interface modname filename =
     (* Convert the parse tree to Heptagon AST *)
     let l = Scoping.translate_interface l in
 
-      (* Call the compiler*)
+    (* Call the compiler*)
     let l = Hept_compiler.compile_interface l in
-      
-      Modules.write itc;
 
-      close_all_files ()
+    Modules.write itc;
+
+    close_all_files ()
   with
     | x -> close_all_files (); raise x
 
@@ -99,34 +99,34 @@ let compile modname filename =
       pp p
     end;
 
-      (* Process the Heptagon AST *)
-      let p = Hept_compiler.compile_impl pp p in
-        Modules.write itc;
+    (* Process the Heptagon AST *)
+    let p = Hept_compiler.compile_impl pp p in
+    Modules.write itc;
 
-      (* Compile Heptagon to MiniLS *)
-      let p = Hept2mls.program p in
-        
-      let pp = Mls_printer.print stdout in
-        if !verbose then comment "Translation into MiniLs";
-        Mls_printer.print mlsc p;
-        
-        (* Process the MiniLS AST *)
-        let p = Mls_compiler.compile pp p in
+    (* Compile Heptagon to MiniLS *)
+    let p = Hept2mls.program p in
 
-          (* Compile MiniLS to Obc *)
-          let o = Mls2obc.program p in
-            (*if !verbose then*) comment "Translation into Obc";
-            Obc.Printer.print obc o;
-            
-            let pp = Obc.Printer.print stdout in
-              if !verbose then pp o;
-              
-              (* Translation into dataflow and sequential languages *)
-              Mls2seq.targets filename p o !target_languages;
-              
-              close_all_files ()
-                
-  with 
+    let pp = Mls_printer.print stdout in
+    if !verbose then comment "Translation into MiniLs";
+    Mls_printer.print mlsc p;
+
+    (* Process the MiniLS AST *)
+    let p = Mls_compiler.compile pp p in
+
+    (* Compile MiniLS to Obc *)
+    let o = Mls2obc.program p in
+    (*if !verbose then*) comment "Translation into Obc";
+    Obc.Printer.print obc o;
+
+    let pp = Obc.Printer.print stdout in
+    if !verbose then pp o;
+
+    (* Translation into dataflow and sequential languages *)
+    Mls2seq.targets filename p o !target_languages;
+
+    close_all_files ()
+
+  with
     | x -> close_all_files (); raise x
 
 let compile file =
@@ -157,7 +157,7 @@ let main () =
         "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
         "-target", Arg.String add_target_language, doc_target;
         "-targetpath", Arg.String set_target_path, doc_target_path;
-	      "-noinit", Arg.Clear init, doc_noinit;
+        "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
       ]
       compile

@@ -18,7 +18,7 @@ open Signature
 open Static
 open Types
 
-type iterator_type = 
+type iterator_type =
   | Imap
   | Ifold
   | Imapfold
@@ -45,9 +45,11 @@ and edesc =
   | Econstvar of name
   | Efby of const option * exp
   | Etuple of exp list
-  | Ecall of op_desc * exp list * ident option (** [op_desc] is the function called
-                              [exp list] is the passed arguments
-                              [ident option] is the optional reset condition *)
+  | Ecall of op_desc * exp list * ident option (** [op_desc] is the function
+                                                   called [exp list] is the
+                                                   passed arguments [ident
+                                                   option] is the optional reset
+                                                   condition *)
 
   | Ewhen of exp * longname * ident
   | Emerge of ident * (longname * exp) list
@@ -61,16 +63,17 @@ and edesc =
 and array_op =
   | Erepeat of size_exp * exp
   | Eselect of size_exp list * exp (*indices, array*)
-  | Eselect_dyn of exp list * size_exp list * exp * exp (*indices, bounds, array, default*)
+  | Eselect_dyn of exp list * size_exp list * exp * exp (* indices, bounds,
+                                                           array, default*)
   | Eupdate of size_exp list * exp * exp (*indices, array, value*)
-  | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound, array*)
+  | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound,
+                                                 array*)
   | Econcat of exp * exp
-  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option (**
-    [op_desc] is the function iterated,
-    [size_exp] is the size of the iteration,
-    [exp list] is the passed arguments,
-    [ident option] is the optional reset condition *)
-   
+  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option
+      (** [op_desc] is the function iterated, [size_exp] is the size of the
+          iteration, [exp list] is the passed arguments, [ident option] is the
+          optional reset condition *)
+
 and op_desc = { op_name: longname; op_params: size_exp list; op_kind: op_kind }
 and op_kind = | Eop | Enode
 
@@ -91,7 +94,7 @@ and const =
   | Cint of int
   | Cfloat of float
   | Cconstr of longname
-  | Carray of size_exp * const 
+  | Carray of size_exp * const
 
 and pat =
   | Etuplepat of pat list
@@ -123,7 +126,7 @@ type node_dec =
       n_local  : var_dec list;
       n_equs   : eq list;
       n_loc    : location;
-      n_params : param list; 
+      n_params : param list;
       n_params_constraints : size_constr list;
       n_params_instances : (int list) list; }(*TODO commenter ou passer en env*)
 
@@ -153,36 +156,36 @@ let mk_var_dec ?(clock = Cbase) name ty =
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
-  
+
 let mk_node
-  ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
-  ?(loc = no_location) ?(param = []) ?(constraints = []) ?(pinst = []) name =
-    { n_name = name;
-      n_input = input;
-      n_output = output;
-      n_contract = contract;
-      n_local = local;
-      n_equs = eq;
-      n_loc = loc;
-      n_params = param; 
-      n_params_constraints = constraints;
-      n_params_instances = pinst; }
+    ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
+    ?(loc = no_location) ?(param = []) ?(constraints = []) ?(pinst = []) name =
+  { n_name = name;
+    n_input = input;
+    n_output = output;
+    n_contract = contract;
+    n_local = local;
+    n_equs = eq;
+    n_loc = loc;
+    n_params = param;
+    n_params_constraints = constraints;
+    n_params_instances = pinst; }
 
 let mk_type_dec ?(type_desc = Type_abs) ?(loc = no_location) name =
   { t_name = name; t_desc = type_desc; t_loc = loc }
 
 
 let rec size_exp_of_exp e =
-  match e.e_desc with 
-  | Econstvar n -> SVar n
-  | Econst (Cint i) -> SConst i
-  | Ecall(op, [e1;e2], _) ->
-      let sop = op_from_app_name op.op_name in
-	    SOp(sop, size_exp_of_exp e1, size_exp_of_exp e2)
-  | _ -> raise Not_static
+  match e.e_desc with
+    | Econstvar n -> SVar n
+    | Econst (Cint i) -> SConst i
+    | Ecall(op, [e1;e2], _) ->
+        let sop = op_from_app_name op.op_name in
+        SOp(sop, size_exp_of_exp e1, size_exp_of_exp e2)
+    | _ -> raise Not_static
 
 (** @return the list of bounds of an array type*)
-let rec bounds_list ty = 
+let rec bounds_list ty =
   match ty with
     | Tarray(ty, n) -> n::(bounds_list ty)
     | _ -> []
@@ -191,10 +194,10 @@ let rec bounds_list ty =
     in a list of [var_dec]. *)
 let rec vd_find n = function
   | [] -> Format.printf "Not found var %s\n" (name n); raise Not_found
-  | vd::l -> 
+  | vd::l ->
       if vd.v_name = n then vd else vd_find n l
 
-(** @return whether an object of name [n] belongs to 
+(** @return whether an object of name [n] belongs to
     a list of [var_dec]. *)
 let rec vd_mem n = function
   | [] -> false
@@ -203,15 +206,15 @@ let rec vd_mem n = function
 (** @return whether [ty] corresponds to a record type. *)
 let is_record_type ty = match ty with
   | Tid n ->
-	    (try
-	       ignore (Modules.find_struct n); true
-	     with 
-	     Not_found -> false)
+      (try
+         ignore (Modules.find_struct n); true
+       with
+           Not_found -> false)
   | _ -> false
 
 module Vars =
 struct
-  let add x acc = 
+  let add x acc =
     if List.mem x acc then acc else x :: acc
 
   let rec vars_pat acc = function
@@ -229,48 +232,48 @@ struct
         | Evar n -> add n acc
         | Emerge(x, c_e_list) ->
             let acc = add x acc in
-              List.fold_left (fun acc (_, e) -> read is_left acc e) acc c_e_list
+            List.fold_left (fun acc (_, e) -> read is_left acc e) acc c_e_list
         | Eifthenelse(e1, e2, e3) ->
             read is_left (read is_left (read is_left acc e1) e2) e3
         | Ewhen(e, c, x) ->
             let acc = add x acc in
-              read is_left acc e
+            read is_left acc e
         | Etuple(e_list) -> List.fold_left (read is_left) acc e_list
-        | Ecall(_, e_list, None) -> 
+        | Ecall(_, e_list, None) ->
             List.fold_left (read is_left) acc e_list
         | Ecall(_, e_list, Some x) ->
             let acc = add x acc in
-              List.fold_left (read is_left) acc e_list
+            List.fold_left (read is_left) acc e_list
         | Efby(_, e) ->
             if is_left then vars_ck acc e.e_ck else read is_left acc e
         | Efield(e, _) -> read is_left acc e
         | Estruct(f_e_list) ->
             List.fold_left (fun acc (_, e) -> read is_left acc e) acc f_e_list
-        | Econst _ | Econstvar _ -> acc 
-        | Efield_update (_, e1, e2) -> 
-            read is_left (read is_left acc e1) e2 
-         (*Array operators*)
-	      | Earray e_list -> List.fold_left (read is_left) acc e_list
-        | Earray_op op -> read_array_op is_left acc op 
+        | Econst _ | Econstvar _ -> acc
+        | Efield_update (_, e1, e2) ->
+            read is_left (read is_left acc e1) e2
+              (*Array operators*)
+        | Earray e_list -> List.fold_left (read is_left) acc e_list
+        | Earray_op op -> read_array_op is_left acc op
     in
-      vars_ck acc e.e_ck
+    vars_ck acc e.e_ck
 
-  and read_array_op is_left acc = function 
+  and read_array_op is_left acc = function
     | Erepeat (_,e) -> read is_left acc e
-	  | Eselect (_,e) -> read is_left acc e
-	  | Eselect_dyn (e_list, _, e1, e2) -> 
-	      let acc = List.fold_left (read is_left) acc e_list in 
-	        read is_left (read is_left acc e1) e2
-	  | Eupdate (_, e1, e2) ->
-	      read is_left (read is_left acc e1) e2 
-	  | Eselect_slice (_ , _, e) -> read is_left acc e
-	  | Econcat (e1, e2) ->
-	      read is_left (read is_left acc e1) e2 
-	  | Eiterator (_, _, _, e_list, None) ->  
-	      List.fold_left (read is_left) acc e_list
-	  | Eiterator (_, _, _, e_list, Some x) ->  
+    | Eselect (_,e) -> read is_left acc e
+    | Eselect_dyn (e_list, _, e1, e2) ->
+        let acc = List.fold_left (read is_left) acc e_list in
+        read is_left (read is_left acc e1) e2
+    | Eupdate (_, e1, e2) ->
+        read is_left (read is_left acc e1) e2
+    | Eselect_slice (_ , _, e) -> read is_left acc e
+    | Econcat (e1, e2) ->
+        read is_left (read is_left acc e1) e2
+    | Eiterator (_, _, _, e_list, None) ->
+        List.fold_left (read is_left) acc e_list
+    | Eiterator (_, _, _, e_list, Some x) ->
         let acc = add x acc in
-	        List.fold_left (read is_left) acc e_list
+        List.fold_left (read is_left) acc e_list
 
   let rec remove x = function
     | [] -> []
@@ -299,11 +302,11 @@ struct
       match ck with
         | Cbase | Cvar { contents = Cindex _ } -> l
         | Con(ck, c, n) -> headrec ck (n :: l)
-        | Cvar { contents = Clink ck } -> headrec ck l 
+        | Cvar { contents = Clink ck } -> headrec ck l
     in
-      headrec ck []
+    headrec ck []
 
-  (** Returns a list of memory vars (x in x = v fby e) 
+  (** Returns a list of memory vars (x in x = v fby e)
       appearing in an equation. *)
   let memory_vars ({ eq_lhs = _; eq_rhs = e } as eq)  =
     match e.e_desc with

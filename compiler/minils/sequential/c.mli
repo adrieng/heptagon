@@ -21,7 +21,7 @@ type cty =
   | Cty_int (** C machine-dependent integer type. *)
   | Cty_float (** C machine-dependent single-precision floating-point type. *)
   | Cty_char (** C character type. *)
-  | Cty_id of string (** Previously defined C type, such as an enum or struct. *)
+  | Cty_id of string (** Previously defined C type, such as an enum or struct.*)
   | Cty_ptr of cty (** C points-to-other-type type. *)
   | Cty_arr of int * cty (** A static array of the specified size. *)
   | Cty_void (** Well, [void] is not really a C type. *)
@@ -45,7 +45,8 @@ and cexpr =
   | Cconst of cconst (** Constants. *)
   | Clhs of clhs (** Left-hand-side expressions are obviously expressions! *)
   | Caddrof of clhs (** Take the address of a left-hand-side expression. *)
-  | Cstructlit of string * cexpr list (** Structure literal " \{f1, f2, ... \}". *)
+  | Cstructlit of string * cexpr list (** Structure literal
+                                          " \{f1, f2, ... \}". *)
   | Carraylit of cexpr list (** Array literal [e1, e2, ...]. *)
 and cconst =
   | Ccint of int (** Integer constant. *)
@@ -65,7 +66,7 @@ and cstm =
   | Cskip (** A dummy instruction that does nothing and will not be printed. *)
   | Caffect of clhs * cexpr (** Affect the result of an expression to a lhs. *)
   | Cif of cexpr * cstm list * cstm list (** Alternative *)
-  | Cswitch of cexpr * (string * cstm list) list (** Case/switch over an enum. *)
+  | Cswitch of cexpr * (string * cstm list) list (** Case/switch over an enum.*)
   | Cwhile of cexpr * cstm list (** While loop. *)
   | Cfor of string * int * int * cstm list (** For loop. int <= string < int *)
   | Creturn of cexpr (** Ends a procedure/function by returning an expression.*)
@@ -91,7 +92,7 @@ type cfundef = {
 (** C top-level definitions. *)
 type cdef =
   | Cfundef of cfundef (** Function definition, see [cfundef]. *)
-  | Cvardef of string * cty (** A variable definition, with its name and type. *)
+  | Cvardef of string * cty (** A variable definition, with its name and type.*)
 
 val cdecl_of_cfundef : cdef -> cdecl
 
@@ -102,7 +103,7 @@ type cfile_desc =
                                             list *)
   | Csource of cdef list
 
-type cfile = string * cfile_desc 	(** File name * file content *)
+type cfile = string * cfile_desc (** File name * file content *)
 
 (** [output dir cprog] pretty-prints the C program [cprog] to new files in the
     directory [dir]. *)
@@ -115,7 +116,7 @@ val cname_of_name : string -> string
 (** Converts an expression to a lhs. *)
 val lhs_of_exp : cexpr -> clhs
 
-(** Returns the type of a pointer to a type, except for 
+(** Returns the type of a pointer to a type, except for
     types which are already pointers. *)
 val pointer_to : cty -> cty
 

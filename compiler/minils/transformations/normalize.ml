@@ -21,7 +21,7 @@ let equation (d_list, eq_list) ({ e_ty = te; e_ck = ck } as e) =
   let n = Ident.fresh "_v" in
   let d_list = (mk_var_dec ~clock:ck n te) :: d_list in
   let eq_list = (mk_equation (Evarpat n) e) :: eq_list in
-    (d_list, eq_list), n
+  (d_list, eq_list), n
 
 let intro context e =
   match e.e_desc with
@@ -41,8 +41,8 @@ let rec whenc context e c n =
              (context, e :: e_list))
             e_list (context, []) in
         context, { e with e_desc = Etuple(e_list); e_ck = Con(e.e_ck, c, n) }
-    (* | Emerge _ -> let context, x = equation context e in
-      context, when_on_c c n { e with e_desc = Evar(x) } *)
+          (* | Emerge _ -> let context, x = equation context e in
+             context, when_on_c c n { e with e_desc = Evar(x) } *)
     | _ -> context, when_on_c c n e
 
 (* transforms [merge x (c1, (e11,...,e1n));...;(ck, (ek1,...,ekn))] into *)
@@ -91,7 +91,7 @@ let const e c =
     | Con(ck_on, tag, x) ->
         Ewhen({ e with e_desc = const ck_on; e_ck = ck_on }, tag, x)
     | Cvar { contents = Clink ck } -> const ck in
-    const e.e_ck
+  const e.e_ck
 
 (* normal form for expressions and equations:                              *)
 (* - e ::= op(e,...,e) | x | C | e when C(x)                               *)
@@ -132,28 +132,29 @@ let rec translate kind context e =
                let context, act = translate merge_kind context e in
                context, ((tag, act) :: ta_list))
             tag_e_list (context, []) in
-          context, merge e n ta_list
+        context, merge e n ta_list
     | Eifthenelse(e1, e2, e3) ->
         let context, e1 = translate Any context e1 in
         let context, e2 = translate Act context e2 in
         let context, e3 = translate Act context e3 in
-          ifthenelse context e1 e2 e3
+        ifthenelse context e1 e2 e3
     | Etuple(e_list) ->
         let context, e_list = translate_list kind context e_list in
-          context, { e with e_desc = Etuple(e_list) }
+        context, { e with e_desc = Etuple(e_list) }
     | Ewhen(e1, c, n) ->
         let context, e1 = translate kind context e1 in
-          whenc context e1 c n
+        whenc context e1 c n
     | Ecall(op_desc, e_list, r) ->
-        let context, e_list = translate_list function_args_kind context e_list in
-          context, { e with e_desc = Ecall(op_desc, e_list, r) }
+        let context, e_list =
+          translate_list function_args_kind context e_list in
+        context, { e with e_desc = Ecall(op_desc, e_list, r) }
     | Efby(v, e1) ->
         let context, e1 = translate Exp context e1 in
         let context, e1' =
-	        if constant e1 then context, e1 
-	        else let context, n = equation context e1 in
-	          context, { e1 with e_desc = Evar(n) } in
-          context, { e with e_desc = Efby(v, e1') }
+          if constant e1 then context, e1
+          else let context, n = equation context e1 in
+          context, { e1 with e_desc = Evar(n) } in
+        context, { e with e_desc = Efby(v, e1') }
     | Evar _ -> context, e
     | Econst(c) -> context, { e with e_desc = const e (Econst c) }
     | Econstvar x -> context, { e with e_desc = const e (Econstvar x) }
@@ -169,45 +170,46 @@ let rec translate kind context e =
             l (context, []) in
         context, { e with e_desc = Estruct l }
     | Efield_update (f, e1, e2) ->
-	      let context, e1 = translate VRef context e1 in
-	      let context, e2 = translate Exp context e2 in  
-          context, { e with e_desc = Efield_update(f, e1, e2) }	
-    | Earray(e_list) -> 
-	      let context, e_list = translate_list kind context e_list in
-	        context, { e with e_desc = Earray(e_list) }
-    | Earray_op op -> 
+        let context, e1 = translate VRef context e1 in
+        let context, e2 = translate Exp context e2 in
+        context, { e with e_desc = Efield_update(f, e1, e2) }
+    | Earray(e_list) ->
+        let context, e_list = translate_list kind context e_list in
+        context, { e with e_desc = Earray(e_list) }
+    | Earray_op op ->
         let context, op = translate_array_exp kind context op in
-          context, { e with e_desc = Earray_op op }
+        context, { e with e_desc = Earray_op op }
   in add context kind e
 
 and translate_array_exp kind context op =
   match op with
     | Erepeat (n,e') ->
-	      let context, e' = translate VRef context e' in
-          context, Erepeat(n, e')
-    | Eselect (idx,e') -> 
-	      let context, e' = translate VRef context e' in
-          context, Eselect(idx, e')
+        let context, e' = translate VRef context e' in
+        context, Erepeat(n, e')
+    | Eselect (idx,e') ->
+        let context, e' = translate VRef context e' in
+        context, Eselect(idx, e')
     | Eselect_dyn (idx, bounds, e1, e2) ->
-	      let context, e1 = translate VRef context e1 in
-	      let context, idx = translate_list Exp context idx in
-	      let context, e2 = translate Exp context e2 in  
-          context, Eselect_dyn(idx, bounds, e1, e2) 
+        let context, e1 = translate VRef context e1 in
+        let context, idx = translate_list Exp context idx in
+        let context, e2 = translate Exp context e2 in
+        context, Eselect_dyn(idx, bounds, e1, e2)
     | Eupdate (idx, e1, e2)  ->
-	      let context, e1 = translate VRef context e1 in
-	      let context, e2 = translate Exp context e2 in  
-          context, Eupdate(idx, e1, e2)
+        let context, e1 = translate VRef context e1 in
+        let context, e2 = translate Exp context e2 in
+        context, Eupdate(idx, e1, e2)
     | Eselect_slice (idx1, idx2, e') ->
-	      let context, e' = translate VRef context e' in
-          context, Eselect_slice(idx1, idx2, e')
-    | Econcat (e1, e2) -> 
-	      let context, e1 = translate VRef context e1 in
-	      let context, e2 = translate VRef context e2 in  
-          context, Econcat(e1, e2) 
+        let context, e' = translate VRef context e' in
+        context, Eselect_slice(idx1, idx2, e')
+    | Econcat (e1, e2) ->
+        let context, e1 = translate VRef context e1 in
+        let context, e2 = translate VRef context e2 in
+        context, Econcat(e1, e2)
     | Eiterator (it, op_desc, n, e_list, reset) ->
-	      let context, e_list = translate_list function_args_kind context e_list in
-	        context, Eiterator(it, op_desc, n, e_list, reset) 
-       
+        let context, e_list =
+          translate_list function_args_kind context e_list in
+        context, Eiterator(it, op_desc, n, e_list, reset)
+
 and translate_list kind context e_list =
   match e_list with
       [] -> context, []
@@ -220,7 +222,7 @@ let rec translate_eq context eq =
   (* applies distribution rules *)
   (* [x = v fby e] should verifies that x is local *)
   (* [(p1,...,pn) = (e1,...,en)] into [p1 = e1;...;pn = en] *)
-  let rec distribute ((d_list, eq_list) as context) 
+  let rec distribute ((d_list, eq_list) as context)
       ({ eq_lhs = pat; eq_rhs = e } as eq) =
     match pat, e.e_desc with
       | Evarpat(x), Efby _ when not (vd_mem x d_list) ->
@@ -229,11 +231,11 @@ let rec translate_eq context eq =
           { eq with eq_rhs = { e with e_desc = Evar n } } :: eq_list
       | Etuplepat(pat_list), Etuple(e_list) ->
           let eqs = List.map2 mk_equation pat_list e_list in
-            List.fold_left distribute context eqs
+          List.fold_left distribute context eqs
       | _ -> d_list, eq :: eq_list in
 
   let context, e = translate Any context eq.eq_rhs in
-    distribute context { eq with eq_rhs = e }
+  distribute context { eq with eq_rhs = e }
 
 let translate_eq_list d_list eq_list =
   List.fold_left

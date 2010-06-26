@@ -22,7 +22,7 @@ let language_error lang =
 
 let comment s =
   if !verbose then Printf.printf "** %s done **\n" s; flush stdout
-    
+
 
 let do_pass f d p pp enabled =
   if enabled
@@ -58,9 +58,9 @@ let clean_dir dir =
   dir
 
 let init_compiler modname source_name ic =
-    Location.initialize source_name ic;
-    Modules.initialize modname;
-    Initial.initialize ()
+  Location.initialize source_name ic;
+  Modules.initialize modname;
+  Initial.initialize ()
 
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
@@ -75,7 +75,8 @@ and doc_target =
   ^ " java or z3z)"
 and doc_full_type_info = "\t\t\tPrint full type information"
 and doc_target_path =
-  "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is cleaned)"
+  "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
+  ^ " cleaned)"
 and doc_noinit = "\t\tDisable initialization analysis"
 
 let errmsg = "Options are:"

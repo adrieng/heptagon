@@ -13,9 +13,9 @@ open Format
 let rec print_list print lp sep rp ff = function
   | [] -> ()
   | x::l ->
-    fprintf ff "%s%a" lp print x;
-    List.iter (fprintf ff "%s@,%a" sep print) l;
-    fprintf ff "%s" rp
+      fprintf ff "%s%a" lp print x;
+      List.iter (fprintf ff "%s@,%a" sep print) l;
+      fprintf ff "%s" rp
 
 
 let rec print_list_r print lp sep rp ff = function
@@ -23,7 +23,7 @@ let rec print_list_r print lp sep rp ff = function
   | x :: l ->
       fprintf ff "%s%a" lp print x;
       List.iter (fprintf ff "%s@ %a" sep print) l;
-      fprintf ff "%s" rp 
+      fprintf ff "%s" rp
 
 
 let rec print_list_l print lp sep rp ff = function
@@ -31,11 +31,11 @@ let rec print_list_l print lp sep rp ff = function
   | x :: l ->
       fprintf ff "%s%a" lp print x;
       List.iter (fprintf ff "@ %s%a" sep print) l;
-      fprintf ff "%s" rp 
+      fprintf ff "%s" rp
 
 
 let print_couple print1 print2 lp sep rp ff (c1, c2) =
-  fprintf ff "%s%a%s@,%a%s" lp print1 c1 sep print2 c2 rp 
+  fprintf ff "%s%a%s@,%a%s" lp print1 c1 sep print2 c2 rp
 
 
 let print_opt print ff = function
@@ -58,32 +58,33 @@ let print_type_params ff pl =
 
 (* Map and Set redefinition to allow pretty printing
 
-module type P = sig
-        type t
-        val fprint : Format.formatter -> t -> unit
-end
+   module type P = sig
+   type t
+   val fprint : Format.formatter -> t -> unit
+   end
 
-module type ELT = sig
-        type t
-        val compare : t -> t -> int
-        val fprint : Format.formatter -> t -> unit
-end
+   module type ELT = sig
+   type t
+   val compare : t -> t -> int
+   val fprint : Format.formatter -> t -> unit
+   end
 
-module SetMake (Elt : ELT) = struct
-        module M = Set.Make(Elt)
-        include M
-        let fprint ff es =
-                Format.fprintf ff "@[<hov>{@ ";
-                iter (fun e -> Format.fprintf ff "%a@ " Elt.fprint e) es;
-                Format.fprintf ff "}@]";
-end
+   module SetMake (Elt : ELT) = struct
+   module M = Set.Make(Elt)
+   include M
+   let fprint ff es =
+   Format.fprintf ff "@[<hov>{@ ";
+   iter (fun e -> Format.fprintf ff "%a@ " Elt.fprint e) es;
+   Format.fprintf ff "}@]";
+   end
 
-module MapMake (Key : ELT) (Elt : P) = struct
-        module M = Map.Make(Key)
-        include M
-        let fprint prp  eem =
-                Format.fprintf prp  "[@[<hv 2>";
-                iter (fun k m -> Format.fprintf prp  "@ | %a -> %a" Key.fprint k Elt.fprint m) eem;
-                Format.fprintf prp  "@]@ ]";
-end
+   module MapMake (Key : ELT) (Elt : P) = struct
+   module M = Map.Make(Key)
+   include M
+   let fprint prp  eem =
+   Format.fprintf prp  "[@[<hv 2>";
+   iter (fun k m ->
+           Format.fprintf prp  "@ | %a -> %a" Key.fprint k Elt.fprint m) eem;
+   Format.fprintf prp  "@]@ ]";
+   end
 *)

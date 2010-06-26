@@ -33,15 +33,15 @@ type type_dec =
       t_desc : tdesc }
 
 and tdesc =
-    | Type_abs
-    | Type_enum of name list
-    | Type_struct of (name * ty) list
+  | Type_abs
+  | Type_enum of name list
+  | Type_struct of (name * ty) list
 
 type const =
-    | Cint of int
-    | Cfloat of float
-    | Cconstr of longname
-    | Carray of int * const
+  | Cint of int
+  | Cfloat of float
+  | Cconstr of longname
+  | Carray of int * const
 
 type lhs =
   | Var of var_name
@@ -56,7 +56,7 @@ and exp =
   | Struct_lit of type_name * (field_name * exp) list
   | Array_lit of exp list
 
-type obj_call = 
+type obj_call =
   | Context of obj_name
   | Array_context of obj_name * lhs
 
@@ -75,7 +75,7 @@ type var_dec =
 
 type obj_dec =
     { obj : obj_name;
-      cls : instance_name; 
+      cls : instance_name;
       size : int; }
 
 type step_fun =
@@ -83,8 +83,8 @@ type step_fun =
       out    : var_dec list;
       local  : var_dec list;
       controllables : var_dec list; (* GD : ugly patch to delay controllable
-				       variables definition to target code
-				       generation *)
+                                       variables definition to target code
+                                       generation *)
       bd     : act }
 
 type reset_fun = act
@@ -109,9 +109,9 @@ let mk_var_dec name ty =
     to this variable declaration is scalar (ie a type that can
     be returned by a C function). *)
 let is_scalar_type vd =
-    match vd.v_type with
-      | Tint | Tfloat | Tbool -> true
-      | _ -> false
+  match vd.v_type with
+    | Tint | Tfloat | Tbool -> true
+    | _ -> false
 
 let rec var_name x =
   match x with
@@ -120,7 +120,7 @@ let rec var_name x =
     | Field(x,_) -> var_name x
     | Array(l, _) -> var_name l
 
-(** Returns whether an object of name n belongs to 
+(** Returns whether an object of name n belongs to
     a list of var_dec. *)
 let rec vd_mem n = function
   | [] -> false
@@ -130,7 +130,7 @@ let rec vd_mem n = function
     in a list of var_dec. *)
 let rec vd_find n = function
   | [] -> Format.printf "Not found var %s\n" (name n); raise Not_found
-  | vd::l -> 
+  | vd::l ->
       if vd.v_name = n then vd else vd_find n l
 
 let lhs_of_exp = function
@@ -147,9 +147,9 @@ struct
     | Tfloat  -> fprintf ff "float"
     | Tbool   -> fprintf ff "bool"
     | Tid(id) -> print_longname ff id
-    | Tarray(ty, n) -> 
-	      print_type ff ty;
-	      fprintf ff "^%d" n
+    | Tarray(ty, n) ->
+        print_type ff ty;
+        fprintf ff "^%d" n
 
   let print_vd ff vd =
     fprintf ff "@[<v>";
@@ -170,19 +170,19 @@ struct
     | Cfloat f     -> fprintf ff "%f" f
     | Cconstr(tag) -> print_longname ff tag
     | Carray(n,c) ->
-	print_c ff c;
-	fprintf ff "^%d" n
+        print_c ff c;
+        fprintf ff "^%d" n
 
-  let rec print_lhs ff e = 
+  let rec print_lhs ff e =
     match e with
-    | Var x           -> print_ident ff x
-    | Mem x           -> fprintf ff "mem("; print_ident ff x; fprintf ff ")"
-    | Field (l, f)    -> print_lhs ff l; fprintf ff ".%s" (shortname f)
-    | Array(x, idx) ->
-	print_lhs ff x;
-	fprintf ff "[";
-        print_exp ff idx;
-        fprintf ff "]" 
+      | Var x           -> print_ident ff x
+      | Mem x           -> fprintf ff "mem("; print_ident ff x; fprintf ff ")"
+      | Field (l, f)    -> print_lhs ff l; fprintf ff ".%s" (shortname f)
+      | Array(x, idx) ->
+          print_lhs ff x;
+          fprintf ff "[";
+          print_exp ff idx;
+          fprintf ff "]"
 
   and print_exps ff e_list = print_list_r print_exp "" "," "" ff e_list
 
@@ -191,14 +191,14 @@ struct
     | Const c         -> print_c ff c
     | Op(op, e_list) -> print_op ff op e_list
     | Struct_lit(_,f_e_list) ->
-  fprintf ff "@[<v 1>";
-  print_list_r 
-    (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
-            print_exp ff e)
-    "{" ";" "}" ff f_e_list;
-  fprintf ff "@]"
+        fprintf ff "@[<v 1>";
+        print_list_r
+          (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
+             print_exp ff e)
+          "{" ";" "}" ff f_e_list;
+        fprintf ff "@]"
     | Array_lit e_list ->
-	fprintf ff "@[";
+        fprintf ff "@[";
         print_list_r print_exp "[" ";" "]" ff e_list;
         fprintf ff "@]"
 
@@ -214,45 +214,45 @@ struct
   let print_obj_call ff = function
     | Context o -> print_name ff o
     | Array_context (o, i) ->
-	fprintf ff "%a[%a]"
-	  print_name o
-	  print_lhs i
+        fprintf ff "%a[%a]"
+          print_name o
+          print_lhs i
 
   let rec print_act ff a =
     match a with
       | Assgn (x, e) -> print_asgn ff "" x e
       | Comp (a1, a2) ->
-    fprintf ff "@[<v>";
-    print_act ff a1;
-    fprintf ff ";@,";
-    print_act ff a2;
-    fprintf ff "@]"
+          fprintf ff "@[<v>";
+          print_act ff a1;
+          fprintf ff ";@,";
+          print_act ff a2;
+          fprintf ff "@]"
       | Case(e, tag_act_list) ->
-    fprintf ff "@[<v>@[<v 2>switch (";
-    print_exp ff e; fprintf ff ") {@,";
-    print_tag_act_list ff tag_act_list;
-    fprintf ff "@]@,}@]"
+          fprintf ff "@[<v>@[<v 2>switch (";
+          print_exp ff e; fprintf ff ") {@,";
+          print_tag_act_list ff tag_act_list;
+          fprintf ff "@]@,}@]"
       | For(x, i1, i2, act) ->
-	  fprintf ff "@[<v>@[<v 2>for %s=%d to %d : {@, %a @]@,}@]"
-	    (name x) i1 i2 
-	    print_act act
+          fprintf ff "@[<v>@[<v 2>for %s=%d to %d : {@, %a @]@,}@]"
+            (name x) i1 i2
+            print_act act
       | Step_ap (var_list, o, es) ->
-    print_list print_lhs "(" "," ")" ff var_list;
-    fprintf ff " = "; print_obj_call ff o; fprintf ff ".step(";
-    fprintf ff "@["; print_exps ff es; fprintf ff "@]";
-    fprintf ff ")"
+          print_list print_lhs "(" "," ")" ff var_list;
+          fprintf ff " = "; print_obj_call ff o; fprintf ff ".step(";
+          fprintf ff "@["; print_exps ff es; fprintf ff "@]";
+          fprintf ff ")"
       | Reinit o ->
-    print_name ff o; fprintf ff ".reset()"
+          print_name ff o; fprintf ff ".reset()"
       | Nothing -> fprintf ff "()"
 
   and print_tag_act_list ff tag_act_list =
     print_list
       (fun ff (tag, a) ->
-  fprintf ff "@[<hov 2>case@ ";
-  print_longname ff tag;
-  fprintf ff ":@ ";
-  print_act ff a;
-        fprintf ff "@]") "" "" "" ff tag_act_list
+         fprintf ff "@[<hov 2>case@ ";
+         print_longname ff tag;
+         fprintf ff ":@ ";
+         print_act ff a;
+         fprintf ff "@]") "" "" "" ff tag_act_list
 
   let print_step ff { inp = inp; out = out; local = nl; bd = bd } =
     fprintf ff "@[<v 2>";
@@ -297,18 +297,18 @@ struct
     match tdesc with
       | Type_abs -> fprintf ff "@[type %s@\n@]" name
       | Type_enum(tag_name_list) ->
-    fprintf ff "@[type %s = " name;
-    print_list_r print_name "" "|" "" ff tag_name_list;
-    fprintf ff "@\n@]"
+          fprintf ff "@[type %s = " name;
+          print_list_r print_name "" "|" "" ff tag_name_list;
+          fprintf ff "@\n@]"
       | Type_struct(f_ty_list) ->
-    fprintf ff "@[type %s = " name;
-    fprintf ff "@[<v 1>";
-    print_list
-      (fun ff (field, ty) ->
-        print_name ff field;
-              fprintf ff ": ";
-        print_type ff ty) "{" ";" "}" ff f_ty_list;
-    fprintf ff "@]@.@]"
+          fprintf ff "@[type %s = " name;
+          fprintf ff "@[<v 1>";
+          print_list
+            (fun ff (field, ty) ->
+               print_name ff field;
+               fprintf ff ": ";
+               print_type ff ty) "{" ";" "}" ff f_ty_list;
+          fprintf ff "@]@.@]"
 
   let print_open_module ff name =
     fprintf ff "@[open ";
@@ -323,6 +323,6 @@ struct
   let print oc p =
     let ff = formatter_of_out_channel oc in
     fprintf ff "@[-- Code generated by the MiniLucid Compiler@.";
-      fprintf ff "@[<v>"; print_prog ff p; fprintf ff "@]@]@."
+    fprintf ff "@[<v>"; print_prog ff p; fprintf ff "@]@]@."
 end
 

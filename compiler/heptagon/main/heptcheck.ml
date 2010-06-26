@@ -21,40 +21,40 @@ let parse_implementation lexbuf =
 let parse_interface lexbuf =
   parse Parser.interface Lexer.token lexbuf
 
-let compile_impl modname filename = 
+let compile_impl modname filename =
   (* input and output files *)
   let source_name = filename ^ ".ept" in
 
   let ic = open_in source_name in
   let close_all_files () =
-    close_in ic 
+    close_in ic
   in
 
-    try
-      init_compiler modname source_name ic;
-        
-      (* Parsing of the file *)
-      let lexbuf = Lexing.from_channel ic in
-      let p = parse_implementation lexbuf in
+  try
+    init_compiler modname source_name ic;
 
-      (* Convert the parse tree to Heptagon AST *)
-      let p = Scoping.translate_program p in
-        if !verbose
-        then begin
-          comment "Parsing";
-          pp p
-        end;
+    (* Parsing of the file *)
+    let lexbuf = Lexing.from_channel ic in
+    let p = parse_implementation lexbuf in
 
-        (* Call the compiler*)
-        let p = Hept_compiler.compile_impl pp p in
+    (* Convert the parse tree to Heptagon AST *)
+    let p = Scoping.translate_program p in
+    if !verbose
+    then begin
+      comment "Parsing";
+      pp p
+    end;
 
-        if !verbose
-        then begin
-          comment "Checking"
-        end;    
-        close_all_files ()
+    (* Call the compiler*)
+    let p = Hept_compiler.compile_impl pp p in
 
-    with x -> close_all_files (); raise x    
+    if !verbose
+    then begin
+      comment "Checking"
+    end;
+    close_all_files ()
+
+  with x -> close_all_files (); raise x
 
 let compile_interface modname filename =
   (* input and output files *)
@@ -77,10 +77,10 @@ let compile_interface modname filename =
     (* Convert the parse tree to Heptagon AST *)
     let l = Scoping.translate_interface l in
 
-      (* Call the compiler*)
+    (* Call the compiler*)
     let l = Hept_compiler.compile_interface l in
 
-      Modules.write itc;
+    Modules.write itc;
 
     close_all_files ()
   with
@@ -91,12 +91,12 @@ let compile file =
   then
     let filename = Filename.chop_suffix file ".ept" in
     let modname = String.capitalize(Filename.basename filename) in
-      compile_impl modname filename
+    compile_impl modname filename
   else if Filename.check_suffix file ".epi"
   then
     let filename = Filename.chop_suffix file ".epi" in
     let modname = String.capitalize(Filename.basename filename) in
-      compile_interface modname filename
+    compile_interface modname filename
   else
     raise (Arg.Bad ("Unknow file type: " ^ file))
 
@@ -111,7 +111,7 @@ let main () =
         "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
         "-stdlib", Arg.String set_stdlib, doc_stdlib;
         "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
-	      "-noinit", Arg.Clear init, doc_noinit;
+        "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
       ]
       compile

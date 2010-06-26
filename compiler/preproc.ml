@@ -12,8 +12,8 @@ open Unix
 
 (** [date] is a string denoting the current date. *)
 let date =
-  let days = [| "sunday"; "monday"; "tuesday"; "wednesday"; "thursday"; "friday";
-                "saturday" |]
+  let days = [| "sunday"; "monday"; "tuesday"; "wednesday"; "thursday";
+                "friday"; "saturday" |]
   and months = [| "january"; "february"; "march"; "april"; "may"; "june";
                   "july"; "august"; "september"; "october"; "november";
                   "december" |] in
@@ -43,14 +43,14 @@ let env = [("DATE", date); ("STDLIB", stdlib)]
     in [subst] and replaces them according to the couple found in the
     environment defined above. *)
 let filter =
-  object
-    inherit Ast.map as super
-    method expr e = match e with
-      | <:expr< $str:s$ >> when List.mem_assoc s env ->
-        let repl = try Sys.getenv s with Not_found -> List.assoc s env in
-        <:expr@here< $str:repl$ >>
-      | x -> x
-  end;;
+object
+  inherit Ast.map as super
+  method expr e = match e with
+    | <:expr< $str:s$ >> when List.mem_assoc s env ->
+      let repl = try Sys.getenv s with Not_found -> List.assoc s env in
+      <:expr@here< $str:repl$ >>
+    | x -> x
+end;;
 
 (** Tell Camlp4 about it. *)
 AstFilters.register_str_item_filter filter#str_item

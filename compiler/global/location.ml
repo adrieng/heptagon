@@ -10,7 +10,6 @@ type location =
          * int     (* Position of the next character following the last one *)
 
 
-
 let input_name = ref ""                 (* Input file name. *)
 
 let input_chan = ref stdin             (* The channel opened on the input. *)
@@ -32,12 +31,12 @@ let current_loc () =
 let output_lines oc char1 char2 charline1 line1 line2 =
   let n1 = char1 - charline1
   and n2 = char2 - charline1 in
-    if line2 > line1 then
-      Printf.fprintf oc 
-        ", line %d-%d, characters %d-%d:\n" line1 line2 n1 n2
-    else
-      Printf.fprintf oc ", line %d, characters %d-%d:\n" line1 n1 n2;
-    ()
+  if line2 > line1 then
+    Printf.fprintf oc
+      ", line %d-%d, characters %d-%d:\n" line1 line2 n1 n2
+  else
+    Printf.fprintf oc ", line %d, characters %d-%d:\n" line1 n1 n2;
+  ()
 
 
 let output_loc oc input seek line_flag (Loc(pos1, pos2)) =
@@ -49,30 +48,30 @@ let output_loc oc input seek line_flag (Loc(pos1, pos2)) =
     with End_of_file -> () in
   let copy_line () =
     let c = ref ' ' in
-      begin try
-        while c := input(); !c != '\n' do output_char oc !c done
-      with End_of_file ->
-        output_string oc "<EOF>"
-      end;
-      output_char oc '\n' in
+    begin try
+      while c := input(); !c != '\n' do output_char oc !c done
+    with End_of_file ->
+      output_string oc "<EOF>"
+    end;
+    output_char oc '\n' in
   let pr_line first len ch =
     let c = ref ' '
     and f = ref first
     and l = ref len in
-      try
-        while c := input (); !c != '\n' do
-	  if !f > 0 then begin
-            f := !f - 1;
-            output_char oc (if !c == '\t' then !c else ' ')
-          end
-          else if !l > 0 then begin
-            l := !l - 1;
-            output_char oc (if !c == '\t' then !c else ch)
-          end
-          else ()
-        done
-      with End_of_file ->
-        if !f = 0 && !l > 0 then pr_chars 5 ch in
+    try
+      while c := input (); !c != '\n' do
+        if !f > 0 then begin
+          f := !f - 1;
+          output_char oc (if !c == '\t' then !c else ' ')
+        end
+        else if !l > 0 then begin
+          l := !l - 1;
+          output_char oc (if !c == '\t' then !c else ch)
+        end
+        else ()
+      done
+    with End_of_file ->
+      if !f = 0 && !l > 0 then pr_chars 5 ch in
   let pos = ref 0
   and line1 = ref 1
   and line1_pos = ref 0
@@ -148,7 +147,7 @@ let output_location oc loc =
     oc (fun () -> input_char !input_chan) (seek_in !input_chan) true
     loc;
   seek_in !input_chan p
-  
+
 
 let output_input_name oc =
   Printf.fprintf oc "File \"%s\", line 1:\n" !input_name

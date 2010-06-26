@@ -12,7 +12,7 @@ open Names
 open Location
 open Signature
 
-type iterator_type = 
+type iterator_type =
   | Imap
   | Ifold
   | Imapfold
@@ -41,7 +41,7 @@ and app =
 
 and op =
   | Epre of const option
-  | Efby | Earrow | Eifthenelse 
+  | Efby | Earrow | Eifthenelse
   | Earray_op of array_op
   | Efield_update of longname
   | Ecall of op_desc
@@ -177,7 +177,7 @@ let mk_app op =
   { a_op = op; }
 
 let mk_op_desc ln params kind =
-  { op_name = ln; op_params = params; op_kind = kind } 
+  { op_name = ln; op_params = params; op_kind = kind }
 
 let mk_call desc exps =
   Eapp (mk_app (Ecall desc), exps)
@@ -205,7 +205,7 @@ let mk_var_dec name ty last =
     v_last = last; v_loc = Location.current_loc () }
 
 let mk_block locals eqs =
-  { b_local = locals; b_equs = eqs; 
+  { b_local = locals; b_equs = eqs;
     b_loc = Location.current_loc () }
 
 let mk_const_dec id ty e =

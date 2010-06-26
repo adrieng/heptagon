@@ -22,14 +22,14 @@ let mk_var_exp n ty =
 let mk_pair e1 e2 =
   mk_exp (Etuple [e1;e2]) (Tprod [e1.e_ty; e2.e_ty])
 
-let mk_reset_equation eq_list e = 
+let mk_reset_equation eq_list e =
   mk_equation (Ereset (eq_list, e))
 
-let mk_switch_equation e l = 
+let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
 
-let mk_exp_fby_false e = 
-  mk_exp (Eapp(mk_op (Epre (Some (Cconstr Initial.pfalse))), [e])) 
+let mk_exp_fby_false e =
+  mk_exp (Eapp(mk_op (Epre (Some (Cconstr Initial.pfalse))), [e]))
     (Tid Initial.pbool)
 
 let mk_exp_fby_state initial e =
@@ -44,7 +44,7 @@ let intro_type states =
   let state_type = "st" ^ n in
   state_type_dec_list :=
     (mk_type_dec state_type (Type_enum (list states))) :: !state_type_dec_list;
-    Name(state_type)
+  Name(state_type)
 
 (* an automaton may be a Moore automaton, i.e., with only weak transitions; *)
 (* a Mealy one, i.e., with only strong transition or mixed *)
@@ -113,37 +113,37 @@ and translate_automaton v eq_list handlers =
 
   let escapes n s rcont =
     let escape { e_cond = e; e_reset = r; e_next_state = n } cont =
-      mk_ifthenelse e (mk_pair (state n) (if r then dtrue else dfalse)) cont 
+      mk_ifthenelse e (mk_pair (state n) (if r then dtrue else dfalse)) cont
     in
-      List.fold_right escape s (mk_pair (state n) rcont) 
+    List.fold_right escape s (mk_pair (state n) rcont)
   in
 
   let strong { s_state = n; s_unless = su } =
     let defnames = Env.add resetname (Tid Initial.pbool) Env.empty in
     let defnames = Env.add statename tstatetype defnames in
-    let st_eq = mk_simple_equation 
+    let st_eq = mk_simple_equation
       (Etuplepat[Evarpat(statename); Evarpat(resetname)])
       (escapes n su (boolvar pre_next_resetname)) in
-      mk_block defnames [mk_reset_equation [st_eq]
-                           (boolvar pre_next_resetname)]
+    mk_block defnames [mk_reset_equation [st_eq]
+                         (boolvar pre_next_resetname)]
   in
 
   let weak { s_state = n; s_block = b; s_until = su } =
     let b = translate_block b in
     let defnames = Env.add next_resetname (Tid Initial.pbool) b.b_defnames in
     let defnames = Env.add next_statename tstatetype defnames in
-    let ns_eq = mk_simple_equation 
+    let ns_eq = mk_simple_equation
       (Etuplepat[Evarpat(next_statename); Evarpat(next_resetname)])
       (escapes n su dfalse) in
-      { b with b_equs = 
-          [mk_reset_equation (ns_eq::b.b_equs) (boolvar resetname)];
+    { b with b_equs =
+        [mk_reset_equation (ns_eq::b.b_equs) (boolvar resetname)];
         (* (or_op (boolvar pre_next_resetname) (boolvar resetname))]; *)
         b_defnames = defnames;
-    } 
+    }
   in
 
   let v =
-      (mk_var_dec next_statename (Tid(statetype))) ::
+    (mk_var_dec next_statename (Tid(statetype))) ::
       (mk_var_dec resetname (Tid Initial.pbool)) ::
       (mk_var_dec next_resetname (Tid Initial.pbool)) ::
       (mk_var_dec pre_next_resetname (Tid Initial.pbool)) :: v in
@@ -153,38 +153,38 @@ and translate_automaton v eq_list handlers =
     | true, false ->
         let switch_e = mk_exp_fby_state initial (statevar next_statename) in
         let switch_handlers = (List.map
-		                             (fun ({ s_state = n } as case) ->
-		                                { w_name = name n; w_block = weak case })
-		                             handlers) in
+                                 (fun ({ s_state = n } as case) ->
+                                    { w_name = name n; w_block = weak case })
+                                 handlers) in
         let switch_eq = mk_switch_equation switch_e switch_handlers in
-        let nr_eq = mk_simple_equation (Evarpat pre_next_resetname) 
-	                     (mk_exp_fby_false (boolvar (next_resetname))) in
+        let nr_eq = mk_simple_equation (Evarpat pre_next_resetname)
+          (mk_exp_fby_false (boolvar (next_resetname))) in
         let pnr_eq = mk_simple_equation (Evarpat resetname)
           (boolvar pre_next_resetname) in
-	      (* a Moore automaton with only weak transitions *)
-	      v, switch_eq :: nr_eq :: pnr_eq :: eq_list
+        (* a Moore automaton with only weak transitions *)
+        v, switch_eq :: nr_eq :: pnr_eq :: eq_list
     | _ ->
-	      (* the general case; two switch to generate,
-	         statename variable used and defined *)
+        (* the general case; two switch to generate,
+           statename variable used and defined *)
         let v = (mk_var_dec statename (Tid statetype)) :: v in
 
         let ns_switch_e = mk_exp_fby_state initial (statevar next_statename) in
         let ns_switch_handlers = List.map
-		                                (fun ({ s_state = n } as case) ->
-		                                   { w_name = name n; w_block = strong case })
-	                                  handlers in
+          (fun ({ s_state = n } as case) ->
+             { w_name = name n; w_block = strong case })
+          handlers in
         let ns_switch_eq = mk_switch_equation ns_switch_e ns_switch_handlers in
 
         let switch_e = statevar statename in
         let switch_handlers = List.map
-		                             (fun ({ s_state = n } as case) ->
-		                                { w_name = name n; w_block = weak case })
-		                             handlers in
+          (fun ({ s_state = n } as case) ->
+             { w_name = name n; w_block = weak case })
+          handlers in
         let switch_eq = mk_switch_equation switch_e switch_handlers in
 
-        let pnr_eq = mk_simple_equation (Evarpat pre_next_resetname) 
-	        (mk_exp_fby_false (boolvar (next_resetname))) in
-	        v, ns_switch_eq :: switch_eq :: pnr_eq :: eq_list
+        let pnr_eq = mk_simple_equation (Evarpat pre_next_resetname)
+          (mk_exp_fby_false (boolvar (next_resetname))) in
+        v, ns_switch_eq :: switch_eq :: pnr_eq :: eq_list
 
 let translate_contract ({ c_local = v; c_eq = eq_list} as c) =
   let v, eq_list = translate_eqs v eq_list in

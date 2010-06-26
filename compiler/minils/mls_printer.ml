@@ -8,15 +8,15 @@ open Signature
 open Pp_tools
 
 (** Every print_ function is boxed, that is it doesn't export break points,
-  Exceptions are print_list* print_type_desc *)
+    Exceptions are print_list* print_type_desc *)
 
 (** Every print_ function is without heading white space,
-  except for print_type_desc *)
+    except for print_type_desc *)
 
 (** Every print_ function is without heading carry return *)
 
-let iterator_to_string i = 
-  match i with 
+let iterator_to_string i =
+  match i with
     | Imap -> "map"
     | Ifold -> "fold"
     | Imapfold -> "mapfold"
@@ -40,13 +40,13 @@ let rec print_clock ff = function
 
 let print_vd ff { v_name = n; v_type = ty; v_clock = ck } =
   if !Misc.full_type_info then
-  fprintf ff "%a : %a :: %a" print_ident n print_type ty print_ck ck
+    fprintf ff "%a : %a :: %a" print_ident n print_type ty print_ck ck
   else fprintf ff "%a : %a" print_ident n print_type ty
-  
+
 let print_local_vars ff = function
   | [] -> ()
   | l -> fprintf ff "@[<4>%a@]@\n" (print_list_r print_vd "var "";"";") l
-  
+
 let rec print_c ff = function
   | Cint i -> fprintf ff "%d" i
   | Cfloat f -> fprintf ff "%f" f
@@ -58,7 +58,7 @@ let rec print_params ff l =
 
 and print_node_params ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_param "<<"","">>") l
-  
+
 and print_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_exp "("","")") l
 
@@ -70,17 +70,17 @@ and print_index ff idx =
 
 and print_dyn_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_exp "[""][""]") idx
-  
+
 and print_op ff op =
   fprintf ff "%a%a" print_longname op.op_name print_params op.op_params
-  
+
 and print_exp ff e =
-  if !Misc.full_type_info then 
+  if !Misc.full_type_info then
     fprintf ff "%a : %a" print_exp_desc e.e_desc print_type e.e_ty
   else fprintf ff "%a" print_exp_desc e.e_desc
 
 and print_every ff reset =
-  print_opt (fun ff id -> fprintf ff " every %a" print_ident id) ff reset 
+  print_opt (fun ff id -> fprintf ff " every %a" print_ident id) ff reset
 
 and print_exp_desc ff = function
   | Evar x -> print_ident ff x
@@ -100,7 +100,7 @@ and print_exp_desc ff = function
   | Emerge (x, tag_e_list) ->
       fprintf ff "@[<2>merge %a@ %a@]"
         print_ident x print_tag_e_list tag_e_list
-  | Etuple e_list -> 
+  | Etuple e_list ->
       print_exp_tuple ff e_list
   | Efield (e, field) ->
       fprintf ff "%a.%a" print_exp e print_longname field
@@ -128,23 +128,23 @@ and print_array_op ff = function
         print_exp e  print_size_exp idx1  print_size_exp idx2
   | Econcat (e1, e2) -> fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
   | Eiterator (it, f, n, e_list, r) ->
-     fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
-       (iterator_to_string it)
-       print_op f
-       print_size_exp n
-       print_exp_tuple e_list
-       print_every r
+      fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
+        (iterator_to_string it)
+        print_op f
+        print_size_exp n
+        print_exp_tuple e_list
+        print_every r
 
 and print_tag_e_list ff tag_e_list =
   fprintf ff "@[%a@]"
     (print_list
-      (print_couple print_longname print_exp "("" -> "")") """""") tag_e_list
+       (print_couple print_longname print_exp "("" -> "")") """""") tag_e_list
 
 
 let print_eq ff { eq_lhs = p; eq_rhs = e } =
   if !Misc.full_type_info
   then fprintf ff "@[<2>%a :: %a =@ %a@]"
-         print_pat p  print_ck e.e_ck  print_exp e
+    print_pat p  print_ck e.e_ck  print_exp e
   else fprintf ff "@[<2>%a =@ %a@]" print_pat p  print_exp e
 
 
@@ -156,9 +156,9 @@ let print_open_module ff name = fprintf ff "open %a@." print_name name
 
 let rec print_type_def ff { t_name = name; t_desc = tdesc } =
   fprintf ff "@[<2>type %s%a@]@." name print_type_desc tdesc
-  
+
 (** Small exception to the rule,
-  adding a heading space itself when needed and exporting a break*)
+    adding a heading space itself when needed and exporting a break*)
 and print_type_desc ff = function
   | Type_abs -> () (* that's the reason of the exception *)
   | Type_enum tag_name_list ->
@@ -169,7 +169,7 @@ and print_type_desc ff = function
 
 and print_field ff field =
   fprintf ff "@[%a: %a@]" print_name field.f_name  print_type field.f_type
-  
+
 let print_const_dec ff c =
   fprintf ff "const %a = %a" print_name c.c_name
     print_size_exp c.c_value
@@ -178,13 +178,13 @@ let print_contract ff
     { c_local = l; c_eq = eqs;
       c_assume = e_a; c_enforce = e_g; c_controllables = cl } =
   fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@ with %a@]"
-	  print_local_vars l
-	  print_eqs eqs
-	  print_exp e_a
-	  print_exp e_g
-	  print_vd_tuple cl
-  
-  
+    print_local_vars l
+    print_eqs eqs
+    print_exp e_a
+    print_exp e_g
+    print_vd_tuple cl
+
+
 let print_node ff
     { n_name = n; n_input = ni; n_output = no;
       n_contract = contract; n_local = nl; n_equs = ne; n_params = params } =

@@ -51,34 +51,34 @@ let java_type_default_value = function
   | Tid t ->
       begin try
         let { info = ty_desc } = find_type (t) in
-	      begin match ty_desc with
-	        | Tenum _ ->
-	            "int", "0"
-	        | _ ->
-	            let t = shortname t in
-	            if t = "bool"
-	            then ("boolean", "false")
-	            else (t, "null")
-	      end
+        begin match ty_desc with
+          | Tenum _ ->
+              "int", "0"
+          | _ ->
+              let t = shortname t in
+              if t = "bool"
+              then ("boolean", "false")
+              else (t, "null")
+        end
       with Not_found ->
-	      begin try
-	        let { t_desc = tdesc } =
-	          List.find (fun {t_name = tn} -> tn = (shortname t)) !o_types in
-	        begin match tdesc with
-	          | Type_enum _ ->
-	              "int", "0"
-	          | _ ->
-	              let t = shortname t in
-	              if t = "bool"
-	              then ("boolean", "false")
-	              else (t, "null")
-	        end
-	      with Not_found ->
-	        let t = shortname t in
-	        if t = "bool"
-	        then ("boolean", "false")
-	        else (t, "null")
-	      end
+        begin try
+          let { t_desc = tdesc } =
+            List.find (fun {t_name = tn} -> tn = (shortname t)) !o_types in
+          begin match tdesc with
+            | Type_enum _ ->
+                "int", "0"
+            | _ ->
+                let t = shortname t in
+                if t = "bool"
+                then ("boolean", "false")
+                else (t, "null")
+          end
+        with Not_found ->
+          let t = shortname t in
+          if t = "bool"
+          then ("boolean", "false")
+          else (t, "null")
+        end
       end
 
 let print_type ff ty =
@@ -125,8 +125,8 @@ let rec print_tags ff n = function
   | []   -> ()
   | tg :: tgs' ->
       fprintf ff "@ public static final int %a = %d;"
-	      print_name tg
-	      n;
+        print_name tg
+        n;
       print_tags ff (n+1) tgs'
 
 (* assumes tn is already translated with jname_of_name *)
@@ -140,23 +140,23 @@ let print_type_to_file java_dir headers { t_name = tn; t_desc = td} =
   match td with
     | Type_abs -> ()
     | Type_enum tgs ->
-	      let out_ch = open_out (java_dir ^ "/" ^ tn ^ ".java") in
-	      let ff = formatter_of_out_channel out_ch in
-	      Misc.print_header_info ff "/*" "*/";
-	      List.iter (fprintf ff "%s") headers;
-	      (* fprintf ff "@[<v>package %s;@\n@\n" headers; *)
-	      print_enum_type ff tn tgs;
-	      fprintf ff "@.";
-	      close_out out_ch
+        let out_ch = open_out (java_dir ^ "/" ^ tn ^ ".java") in
+        let ff = formatter_of_out_channel out_ch in
+        Misc.print_header_info ff "/*" "*/";
+        List.iter (fprintf ff "%s") headers;
+        (* fprintf ff "@[<v>package %s;@\n@\n" headers; *)
+        print_enum_type ff tn tgs;
+        fprintf ff "@.";
+        close_out out_ch
     | Type_struct fields ->
-	      let out_ch = open_out (java_dir ^ "/" ^ tn ^ ".java") in
-	      let ff = formatter_of_out_channel out_ch in
-	      Misc.print_header_info ff "/*" "*/";
-	      List.iter (fprintf ff "%s") headers;
-	      (* fprintf ff "@[<v>package %s;@\n@\n" headers; *)
-	      print_struct_type ff tn fields;
-	      fprintf ff "@.";
-	      close_out out_ch
+        let out_ch = open_out (java_dir ^ "/" ^ tn ^ ".java") in
+        let ff = formatter_of_out_channel out_ch in
+        Misc.print_header_info ff "/*" "*/";
+        List.iter (fprintf ff "%s") headers;
+        (* fprintf ff "@[<v>package %s;@\n@\n" headers; *)
+        print_struct_type ff tn fields;
+        fprintf ff "@.";
+        close_out out_ch
 
 let print_types java_dir headers tps =
   List.iter (print_type_to_file java_dir headers) tps
@@ -174,20 +174,20 @@ let print_const ff c ts =
     | Cconstr t ->
         let s =
           match t with
-	          | Name("true")
-	          | Modname({id = "true"}) -> "true"
-	          | Name("false")
-	          | Modname({id = "false"}) -> "false"
-	          | Name(tg)
-	          | Modname({id = tg}) ->
-	              (fst
+            | Name("true")
+            | Modname({id = "true"}) -> "true"
+            | Name("false")
+            | Modname({id = "false"}) -> "false"
+            | Name(tg)
+            | Modname({id = tg}) ->
+                (fst
                    (List.find
                       (fun (tn, tgs) ->
-		                     List.exists (fun tg' -> tg = tg') tgs)
+                         List.exists (fun tg' -> tg = tg') tgs)
                       ts))
-	              ^ "." ^ (jname_of_name tg)
+                ^ "." ^ (jname_of_name tg)
         in
-	      fprintf ff "%s" s
+        fprintf ff "%s" s
 
 let position a xs =
   let rec walk i = function
@@ -224,14 +224,14 @@ let priority = function
   | "|"                      -> 1
   | _                        -> 0
 
-let rec print_lhs ff e avs single = 
-    match e with
-      | Var x ->
-          print_var ff x avs single
-      | Mem x -> print_ident ff x
-      | Field(e, field) ->
-          print_lhs ff e avs single;
-          fprintf ff ".%s" (jname_of_name (shortname field))
+let rec print_lhs ff e avs single =
+  match e with
+    | Var x ->
+        print_var ff x avs single
+    | Mem x -> print_ident ff x
+    | Field(e, field) ->
+        print_lhs ff e avs single;
+        fprintf ff ".%s" (jname_of_name (shortname field))
 
 let rec print_exp ff e p avs ts single =
   match e with
@@ -240,12 +240,13 @@ let rec print_exp ff e p avs ts single =
     | Op (op, es) -> print_op ff op es p avs ts single
     | Struct_lit(type_name,fields) ->
         let fields =
-	        List.sort
-	          (fun (ln1,_) (ln2,_) -> String.compare (shortname ln1) (shortname ln2))
-	          fields in
+          List.sort
+            (fun (ln1,_) (ln2,_) ->
+               String.compare (shortname ln1) (shortname ln2))
+            fields in
         let exps = List.map (fun (_,e) -> e) fields in
         fprintf ff "new %a(@[<hov>"
-	        print_shortname type_name;
+          print_shortname type_name;
         print_exps ff exps 0 avs ts single;
         fprintf ff "@])"
 
@@ -254,9 +255,9 @@ and print_exps ff es p avs ts single =
     | [] -> ()
     | [e] -> print_exp ff e p avs ts single
     | e :: es' ->
-	      print_exp ff e p avs ts single;
-	      fprintf ff ",@ ";
-	      print_exps ff es' p avs ts single
+        print_exp ff e p avs ts single;
+        fprintf ff ",@ ";
+        print_exps ff es' p avs ts single
 
 and print_op ff op es p avs ts single =
   match (shortname op), es with
@@ -278,27 +279,27 @@ and print_op ff op es p avs ts single =
         print_exp ff e 6 avs ts single;
     | _ ->
         begin
-	        begin
-	          match op with
-	            | Name(op_name) ->
-	                print_name ff op_name;
-	            | Modname({ qual = mod_name; id = op_name }) ->
-	                fprintf ff "%a.%a"
-		                print_name (String.uncapitalize mod_name)
-		                print_name op_name
-	        end;
-	        fprintf ff "@[(";
-	        print_exps ff es 0 avs ts single;
-	        fprintf ff ")@]"
+          begin
+            match op with
+              | Name(op_name) ->
+                  print_name ff op_name;
+              | Modname({ qual = mod_name; id = op_name }) ->
+                  fprintf ff "%a.%a"
+                    print_name (String.uncapitalize mod_name)
+                    print_name op_name
+          end;
+          fprintf ff "@[(";
+          print_exps ff es 0 avs ts single;
+          fprintf ff ")@]"
         end
 
 let rec print_proj ff xs ao avs single =
   let rec walk ind = function
     | [] -> ()
     | x :: xs' ->
-	      print_lhs ff x avs single;
-	      fprintf ff " = %s.c_%d;@ " ao ind;
-	      walk (ind + 1) xs'
+        print_lhs ff x avs single;
+        fprintf ff " = %s.c_%d;@ " ao ind;
+        walk (ind + 1) xs'
   in walk 1 xs
 
 
@@ -315,46 +316,46 @@ let obj_call_to_string = function
 let rec print_act ff a objs avs ts single =
   match a with
     | Assgn (x, e) ->
-	      fprintf ff "@[";
-	      print_asgn ff x e avs ts single;
-	      fprintf ff ";@]"
+        fprintf ff "@[";
+        print_asgn ff x e avs ts single;
+        fprintf ff ";@]"
     | Step_ap (xs, o, es) ->
-	let o = obj_call_to_string o in
-	      (match xs with
-	         | [x] ->
-	             print_lhs ff x avs single;
-	             fprintf ff " = %s.step(" o;
-	             fprintf ff "@[";
+        let o = obj_call_to_string o in
+        (match xs with
+           | [x] ->
+               print_lhs ff x avs single;
+               fprintf ff " = %s.step(" o;
+               fprintf ff "@[";
                print_exps ff es 0 avs ts single;
                fprintf ff "@]";
-	             fprintf ff ");@ "
-	         | xs ->
-	             let cn = (List.find (fun od -> od.obj = o) objs).cls in
-	             let at = (jname_of_name (shortname cn)) ^ "Answer" in
-	             let ao = o ^ "_ans" in
-	             fprintf ff "%s %s = new %s();@ " at ao at;
-	             fprintf ff "%s = %s.step(" ao o;
-	             fprintf ff "@[";
+               fprintf ff ");@ "
+           | xs ->
+               let cn = (List.find (fun od -> od.obj = o) objs).cls in
+               let at = (jname_of_name (shortname cn)) ^ "Answer" in
+               let ao = o ^ "_ans" in
+               fprintf ff "%s %s = new %s();@ " at ao at;
+               fprintf ff "%s = %s.step(" ao o;
+               fprintf ff "@[";
                print_exps ff es 0 avs ts single;
                fprintf ff "@]";
-	             fprintf ff ");@ ";
-	             print_proj ff xs ao avs single)
+               fprintf ff ");@ ";
+               print_proj ff xs ao avs single)
     | Comp (a1, a2) ->
-	      print_act ff a1 objs avs ts single;
-	      (match a2 with
-	         | Nothing -> ()
-	         | _ -> fprintf ff "@ ");
-	      print_act ff a2 objs avs ts single
+        print_act ff a1 objs avs ts single;
+        (match a2 with
+           | Nothing -> ()
+           | _ -> fprintf ff "@ ");
+        print_act ff a2 objs avs ts single
     | Case (e, grds) ->
-	      let grds =
-	        List.map
-	          (fun (ln,act) -> (shortname ln),act) grds in
-	      if bool_case grds
-	      then print_if ff e grds objs avs ts single
-	      else (fprintf ff "@[<v>@[<v 2>switch (%a) {@ "
-		            (fun ff e -> print_exp ff e 0 avs ts single) e;
-	            print_grds ff grds objs avs ts single;
-	            fprintf ff "@]@ }@]");
+        let grds =
+          List.map
+            (fun (ln,act) -> (shortname ln),act) grds in
+        if bool_case grds
+        then print_if ff e grds objs avs ts single
+        else (fprintf ff "@[<v>@[<v 2>switch (%a) {@ "
+                (fun ff e -> print_exp ff e 0 avs ts single) e;
+              print_grds ff grds objs avs ts single;
+              fprintf ff "@]@ }@]");
     | Reinit o -> fprintf ff "%s.reset();" o
     | Nothing -> ()
 
@@ -362,57 +363,57 @@ and print_grds ff grds objs avs ts single =
   match grds with
     | [] -> ()
     | [(tg, act)] ->
-	      (* retrieve class name *)
-	      let cn = (fst
-		                (List.find
-		                   (fun (tn, tgs) ->
-			                    List.exists (fun tg' -> tg = tg') tgs)
-		                   ts)) in
-	      fprintf ff "@[<v 2>case %a.%a:@ "
-	        print_name cn
-	        print_name tg;
-	      print_act ff act objs avs ts single;
-	      fprintf ff "@ break;@]";	
+        (* retrieve class name *)
+        let cn = (fst
+                    (List.find
+                       (fun (tn, tgs) ->
+                          List.exists (fun tg' -> tg = tg') tgs)
+                       ts)) in
+        fprintf ff "@[<v 2>case %a.%a:@ "
+          print_name cn
+          print_name tg;
+        print_act ff act objs avs ts single;
+        fprintf ff "@ break;@]";
     | (tg, act) :: grds' ->
-	      (* retrieve class name *)
-	      let cn = (fst
-		                (List.find
-		                   (fun (tn, tgs) ->
-			                    List.exists (fun tg' -> tg = tg') tgs)
-		                   ts)) in
-	      fprintf ff "@[<v 2>case %a.%a:@ "
-	        print_name cn
-	        print_name tg;
-	      print_act ff act objs avs ts single;
-	      fprintf ff "@ break;@ @]@ ";
-	      print_grds ff grds' objs avs ts single
+        (* retrieve class name *)
+        let cn = (fst
+                    (List.find
+                       (fun (tn, tgs) ->
+                          List.exists (fun tg' -> tg = tg') tgs)
+                       ts)) in
+        fprintf ff "@[<v 2>case %a.%a:@ "
+          print_name cn
+          print_name tg;
+        print_act ff act objs avs ts single;
+        fprintf ff "@ break;@ @]@ ";
+        print_grds ff grds' objs avs ts single
 
 and print_if ff e grds objs avs ts single =
   match grds with
     | [("true", a)] ->
-	      fprintf ff "@[<v>@[<v 2>if (%a) {@ "
-	        (fun ff e -> print_exp ff e 0 avs ts single) e;
-	      print_act ff a objs avs ts single;
-	      fprintf ff "@]@ }@]"
+        fprintf ff "@[<v>@[<v 2>if (%a) {@ "
+          (fun ff e -> print_exp ff e 0 avs ts single) e;
+        print_act ff a objs avs ts single;
+        fprintf ff "@]@ }@]"
     | [("false", a)] ->
-	      fprintf ff "@[<v>@[<v 2>if (!%a) {@ "
-	        (fun ff e -> print_exp ff e 6 avs ts single) e;
-	      print_act ff a objs avs ts single;
-	      fprintf ff "@]@ }@]"
+        fprintf ff "@[<v>@[<v 2>if (!%a) {@ "
+          (fun ff e -> print_exp ff e 6 avs ts single) e;
+        print_act ff a objs avs ts single;
+        fprintf ff "@]@ }@]"
     | [("true", a1); ("false", a2)] ->
-	      fprintf ff "@[<v>@[<v 2>if (%a) {@ "
-	        (fun ff e -> print_exp ff e 0 avs ts single) e;
-	      print_act ff a1 objs avs ts single;
-	      fprintf ff "@]@ @[<v 2>} else {@ ";
-	      print_act ff a2 objs avs ts single;
-	      fprintf ff "@]@ }@]"
+        fprintf ff "@[<v>@[<v 2>if (%a) {@ "
+          (fun ff e -> print_exp ff e 0 avs ts single) e;
+        print_act ff a1 objs avs ts single;
+        fprintf ff "@]@ @[<v 2>} else {@ ";
+        print_act ff a2 objs avs ts single;
+        fprintf ff "@]@ }@]"
     | [("false", a2); ("true", a1)] ->
-	      fprintf ff "@[<v>@[<v 2>if (%a) {@ "
-	        (fun ff e -> print_exp ff e 0 avs ts single) e;
-	      print_act ff a1 objs avs ts single;
-	      fprintf ff "@]@ @[<v 2>} else {@ ";
-	      print_act ff a2 objs avs ts single;
-	      fprintf ff "@]@ }@]"
+        fprintf ff "@[<v>@[<v 2>if (%a) {@ "
+          (fun ff e -> print_exp ff e 0 avs ts single) e;
+        print_act ff a1 objs avs ts single;
+        fprintf ff "@]@ @[<v 2>} else {@ ";
+        print_act ff a2 objs avs ts single;
+        fprintf ff "@]@ }@]"
     | _ -> assert false
 
 and print_asgn ff x e avs ts single =
@@ -443,19 +444,19 @@ let rec print_objs ff ods =
   match ods with
     | [] -> ()
     | od :: ods' ->
-	      print_obj ff od;
-	      fprintf ff "@ ";
-	      print_objs ff ods'
+        print_obj ff od;
+        fprintf ff "@ ";
+        print_objs ff ods'
 
 let print_comps ff fds=
   let rec walk n = function
     | [] -> ()
     | fd :: fds' ->
         fprintf ff "@ ";
-	fprintf ff "public ";
+        fprintf ff "public ";
         print_type ff fd.v_type;
         fprintf ff " c_%s;" (string_of_int n);
-	      walk (n + 1) fds'
+        walk (n + 1) fds'
   in walk 1 fds
 
 let print_ans_struct ff name fields =
@@ -480,9 +481,9 @@ let rec print_in ff = function
 let rec print_mem ff = function
   | [] -> ()
   | vd :: m' ->
-	    print_vd ff vd;
-	    fprintf ff "@ ";
-	    print_mem ff m'
+      print_vd ff vd;
+      fprintf ff "@ ";
+      print_mem ff m'
 
 let print_loc ff vds = print_mem ff vds
 
@@ -501,7 +502,8 @@ let print_step ff n s objs ts single =
   print_act ff s.bd objs
     (List.map (fun vd -> vd.v_name) s.out) ts single;
   fprintf ff "@ @ return ";
-  if single then fprintf ff "%s" (jname_of_name (Ident.name (List.hd s.out).v_name))
+  if single
+  then fprintf ff "%s" (jname_of_name (Ident.name (List.hd s.out).v_name))
   else fprintf ff "step_ans";
   fprintf ff ";@]@ }@ @]"
 
@@ -513,7 +515,7 @@ let print_reset ff r ts =
 let print_class ff headers ts single opened_mod cl =
   let clid = jname_of_name cl.cl_id in
   List.iter (fprintf ff "%s") headers;
-(*   fprintf ff "@[<v>package %s;@\n@\n" headers; *)
+  (*   fprintf ff "@[<v>package %s;@\n@\n" headers; *)
   (* import opened modules *)
   List.iter
     (fun m ->
@@ -545,17 +547,17 @@ let print_class_and_answer_to_file java_dir headers ts opened_mod cl =
         let out_ch = open_out (java_dir ^ "/" ^ clid ^ "Answer.java") in
         let ff = formatter_of_out_channel out_ch in
         Misc.print_header_info ff "/*" "*/";
-	List.iter (fprintf ff "%s") headers;
-(*         fprintf ff "@[<v>package %s;@\n@\n" headers; *)
+        List.iter (fprintf ff "%s") headers;
+        (*         fprintf ff "@[<v>package %s;@\n@\n" headers; *)
         List.iter
-	        (fun m ->
-	           fprintf ff "import %s.*;@\n" (String.uncapitalize m))
-	        opened_mod;
+          (fun m ->
+             fprintf ff "import %s.*;@\n" (String.uncapitalize m))
+          opened_mod;
         print_ans_struct ff (clid ^ "Answer") cl.step.out;
         fprintf ff "@.";
         close_out out_ch;
         print_class_to_file false
-	        
+
 let print_classes java_dir headers ts opened_mod cls =
   List.iter
     (print_class_and_answer_to_file java_dir headers ts opened_mod)
@@ -563,11 +565,11 @@ let print_classes java_dir headers ts opened_mod cls =
 
 (******************************)
 let print java_dir p =
-  let headers = 
-    List.map snd 
-      (List.filter 
-	 (fun (tag,_) -> tag = "java") 
-	 p.o_pragmas) in
+  let headers =
+    List.map snd
+      (List.filter
+         (fun (tag,_) -> tag = "java")
+         p.o_pragmas) in
   print_types java_dir headers p.o_types;
   o_types := p.o_types;
   print_classes
@@ -578,7 +580,7 @@ let print java_dir p =
              | { t_desc = Type_abs }                   -> []
              | { t_name = tn; t_desc = Type_enum tgs } -> [tn, tgs]
              | { t_name = tn; t_desc = Type_struct fields } ->
-	               [tn, (List.map fst fields)])
+                 [tn, (List.map fst fields)])
           p.o_types))
     p.o_opened
     p.o_defs

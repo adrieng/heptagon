@@ -51,65 +51,65 @@ let findfile filename =
     raise(Cannot_find_file filename)
   else
     let rec find = function
-      [] ->
-        raise(Cannot_find_file filename)
-    | a::rest ->
-        let b = Filename.concat a filename in
+        [] ->
+          raise(Cannot_find_file filename)
+      | a::rest ->
+          let b = Filename.concat a filename in
           if Sys.file_exists b then b else find rest
     in find !load_path
 
 let load_module modname =
   let name = String.uncapitalize modname in
+  try
+    let filename = findfile (name ^ ".epci") in
+    let ic = open_in_bin filename in
     try
-      let filename = findfile (name ^ ".epci") in
-      let ic = open_in_bin filename in
-	try
-	  let m:env = input_value ic in
-	    if m.format_version <> interface_format_version then (
-	      Printf.eprintf "The file %s was compiled with \
+      let m:env = input_value ic in
+      if m.format_version <> interface_format_version then (
+        Printf.eprintf "The file %s was compiled with \
                        an older version of the compiler.\n \
                        Please recompile %s.ept first.\n" filename name;
-	      raise Error
-	    );
-	    close_in ic;
-	    m
-	with
-	  | End_of_file | Failure _ ->
-	      close_in ic;
-	      Printf.eprintf "Corrupted compiled interface file %s.\n\
-                        Please recompile %s.ept first.\n" filename name;
-	      raise Error
+        raise Error
+      );
+      close_in ic;
+      m
     with
-      | Cannot_find_file(filename) ->
-	  Printf.eprintf "Cannot find the compiled interface file %s.\n"
-	    filename;
-	  raise Error
+      | End_of_file | Failure _ ->
+          close_in ic;
+          Printf.eprintf "Corrupted compiled interface file %s.\n\
+                        Please recompile %s.ept first.\n" filename name;
+          raise Error
+  with
+    | Cannot_find_file(filename) ->
+        Printf.eprintf "Cannot find the compiled interface file %s.\n"
+          filename;
+        raise Error
 
 let find_module modname =
   try
     NamesEnv.find modname modules.modules
   with
       Not_found ->
-	let m = load_module modname in
-	  modules.modules <- NamesEnv.add modname m modules.modules;
-	  m
+        let m = load_module modname in
+        modules.modules <- NamesEnv.add modname m modules.modules;
+        m
 
 
 type 'a info = { qualid : qualident; info : 'a }
 
 let find where qualname =
-    let rec findrec ident = function
-      | [] -> raise Not_found
-      | m :: l ->
-	  try { qualid = { qual = m.name; id = ident };
-		info = where ident m }
-	  with Not_found -> findrec ident l in
+  let rec findrec ident = function
+    | [] -> raise Not_found
+    | m :: l ->
+        try { qualid = { qual = m.name; id = ident };
+              info = where ident m }
+        with Not_found -> findrec ident l in
 
-      match qualname with
-	| Modname({ qual = m; id = ident } as q) ->
-	    let current = if current.name = m then current else find_module m in
-	    { qualid = q; info = where ident current }
-	| Name(ident) -> findrec ident (current :: modules.opened)
+  match qualname with
+    | Modname({ qual = m; id = ident } as q) ->
+        let current = if current.name = m then current else find_module m in
+        { qualid = q; info = where ident current }
+    | Name(ident) -> findrec ident (current :: modules.opened)
 
 (* exported functions *)
 let open_module modname =
@@ -153,5 +153,5 @@ let currentname longname =
   match longname with
     | Name(n) -> longname
     | Modname{ qual = q; id = id} ->
-	if current.name = q then Name(id) else longname
+        if current.name = q then Name(id) else longname
 

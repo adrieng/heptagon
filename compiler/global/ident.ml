@@ -18,7 +18,7 @@ type ident = {
 
 let compare id1 id2 = compare id1.num id2.num
 let sourcename id = id.source
-let name id = 
+let name id =
   if id.is_generated then
     id.source ^ "_" ^ (string_of_int id.num)
   else
@@ -28,12 +28,12 @@ let set_sourcename id v =
   { id with source = v }
 
 let num = ref 0
-let fresh s = 
-  num := !num + 1; 
+let fresh s =
+  num := !num + 1;
   { num = !num; source = s; is_generated = true }
 
-let ident_of_name s = 
-  num := !num + 1; 
+let ident_of_name s =
+  num := !num + 1;
   { num = !num; source = s; is_generated = false }
 
 let fprint_t ff id = Format.fprintf ff "%s" (name id)
@@ -54,18 +54,18 @@ struct
   (* Environments union *)
   let union env1 env2 =
     fold (fun name elt env -> add name elt env) env2 env1
-      
+
   (* Environments difference : env1 - env2 *)
   let diff env1 env2 =
     fold (fun name _ env -> remove name env) env2 env1
-      
+
   (* Environments partition *)
   let partition p env =
     fold
       (fun key elt (env1,env2) ->
-	 if p(key)
-	 then ((add key elt env1),env2)
-       else (env1,(add key elt env2)))
+         if p(key)
+         then ((add key elt env1),env2)
+         else (env1,(add key elt env2)))
       env
       (empty, empty)
 end

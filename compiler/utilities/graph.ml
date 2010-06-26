@@ -9,8 +9,8 @@
 (* graph manipulation *)
 (* $Id$ *)
 type 'a graph =
-  { g_top: 'a node list;
-    g_bot: 'a node list }
+    { g_top: 'a node list;
+      g_bot: 'a node list }
 
 and 'a node =
     { g_containt: 'a;
@@ -38,9 +38,12 @@ let add_depends node1 node2 =
   )
 
 let remove_depends node1 node2 =
-  if not (node1.g_tag = node2.g_tag) then (
-    node1.g_depends_on <- List.filter (fun n -> n.g_tag <> node2.g_tag) node1.g_depends_on;
-    node2.g_depends_by <- List.filter (fun n -> n.g_tag <> node1.g_tag) node2.g_depends_by
+  if not (node1.g_tag = node2.g_tag)
+  then (
+    node1.g_depends_on <-
+      List.filter (fun n -> n.g_tag <> node2.g_tag) node1.g_depends_on;
+    node2.g_depends_by <-
+      List.filter (fun n -> n.g_tag <> node1.g_tag) node2.g_depends_by
   )
 
 let graph top_list bot_list = { g_top = top_list; g_bot = bot_list }
@@ -49,15 +52,15 @@ let graph top_list bot_list = { g_top = top_list; g_bot = bot_list }
 let topological g_list =
   let rec sortrec g_list seq =
     match g_list with
-    | [] -> seq
-    | g :: g_list ->
-        if g.g_visited then sortrec g_list seq
-        else
-          begin
-            g.g_visited <- true;
-            let seq = sortrec g.g_depends_on seq in
-            sortrec g_list (g :: seq)
-          end in
+      | [] -> seq
+      | g :: g_list ->
+          if g.g_visited then sortrec g_list seq
+          else
+            begin
+              g.g_visited <- true;
+              let seq = sortrec g.g_depends_on seq in
+              sortrec g_list (g :: seq)
+            end in
   let seq = sortrec g_list [] in
   List.iter
     (fun ({ g_visited = _ } as node) -> node.g_visited <- false) g_list;
@@ -104,8 +107,8 @@ let cycle g_list =
     | Cycle(index) -> Some(flush index)
 
 (** [accessible useful_nodes g_list] returns the list of
-  accessible nodes starting from useful_nodes and belonging to
-  g_list. *)
+    accessible nodes starting from useful_nodes and belonging to
+    g_list. *)
 let accessible useful_nodes g_list =
   let rec follow g =
     if not g.g_visited then
@@ -119,8 +122,8 @@ let accessible useful_nodes g_list =
   List.fold_left read [] g_list
 
 (** [exists_path nodes n1 n2] returns whether there is a path
-  from n1 to n2 in the graph. nodes is the list of all the nodes
-  in the graph. *)
+    from n1 to n2 in the graph. nodes is the list of all the nodes
+    in the graph. *)
 let exists_path nodes n1 n2 =
   List.mem n2 (accessible [n1] nodes)
 
