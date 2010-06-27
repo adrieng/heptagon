@@ -428,7 +428,7 @@ let print_vd ff vd =
   fprintf ff "@[<v>";
   print_name ff jty;
   fprintf ff " %s = %s;"
-    (jname_of_name (name vd.v_name))
+    (jname_of_name (name vd.v_ident))
     jdv;
   fprintf ff "@]"
 
@@ -467,7 +467,7 @@ let print_ans_struct ff name fields =
 let print_vd' ff vd =
   fprintf ff "@[";
   print_type ff vd.v_type;
-  fprintf ff "@ %s" (jname_of_name (name vd.v_name));
+  fprintf ff "@ %s" (jname_of_name (name vd.v_ident));
   fprintf ff "@]"
 
 let rec print_in ff = function
@@ -500,10 +500,10 @@ let print_step ff n s objs ts single =
   if single then fprintf ff "@ "
   else fprintf ff "%sAnswer step_ans = new %sAnswer();@ @ " n n;
   print_act ff s.bd objs
-    (List.map (fun vd -> vd.v_name) s.out) ts single;
+    (List.map (fun vd -> vd.v_ident) s.out) ts single;
   fprintf ff "@ @ return ";
   if single
-  then fprintf ff "%s" (jname_of_name (Ident.name (List.hd s.out).v_name))
+  then fprintf ff "%s" (jname_of_name (Ident.name (List.hd s.out).v_ident))
   else fprintf ff "step_ans";
   fprintf ff ";@]@ }@ @]"
 

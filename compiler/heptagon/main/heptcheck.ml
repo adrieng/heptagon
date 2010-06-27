@@ -15,11 +15,23 @@ open Location
 
 let pp = Hept_printer.print stdout
 
+let parse parsing_fun lexing_fun lexbuf =
+  try
+    parsing_fun lexing_fun lexbuf
+  with
+    | Hept_lexer.Lexical_error(err, pos1, pos2) ->
+        lexical_error err (Loc(pos1, pos2))
+    | Parsing.Parse_error ->
+        let pos1 = Lexing.lexeme_start lexbuf
+        and pos2 = Lexing.lexeme_end lexbuf in
+        let l = Loc(pos1,pos2) in
+        syntax_error l
+
 let parse_implementation lexbuf =
-  parse Parser.program Lexer.token lexbuf
+  parse Hept_parser.program Hept_lexer.token lexbuf
 
 let parse_interface lexbuf =
-  parse Parser.interface Lexer.token lexbuf
+  parse Hept_parser.interface Hept_lexer.token lexbuf
 
 let compile_impl modname filename =
   (* input and output files *)

@@ -15,7 +15,10 @@ let df = function
       dep ["ocaml"; "ocamldep"; "use_preproc"] ["preproc.cmo"];
 
       (* LablGTK use for graphical simulator *)
-      ocaml_lib ~extern:true ~dir:"+lablgtk2" "lablgtk"
+      ocaml_lib ~extern:true ~dir:"+lablgtk2" "lablgtk";
+      
+      flag ["ocaml"; "parser" ; "menhir" ; "use_menhir"] (S[A"--explain"]);
+  
   | _ -> ()
 
 let _ = dispatch df

@@ -13,6 +13,7 @@ open Names
 open Ident
 open Signature
 open Minils
+open Mls_utils
 
 let ctrue = Name "true"
 and cfalse = Name "false"

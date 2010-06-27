@@ -2,3 +2,4 @@
 <**/*.ml>: debug, dtypes
 <preproc.ml>: camlp4of, use_camlp4
 <**/*.{byte,native}>: use_unix, use_str, debug
+true: use_menhir

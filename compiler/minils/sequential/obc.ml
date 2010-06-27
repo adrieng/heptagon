@@ -70,7 +70,7 @@ type act =
   | Nothing
 
 type var_dec =
-    { v_name : var_name;
+    { v_ident : var_name;
       v_type : ty; }
 
 type obj_dec =
@@ -103,15 +103,14 @@ type program =
       o_defs  : class_def list }
 
 let mk_var_dec name ty =
-  { v_name = name; v_type = ty }
+  { v_ident = name; v_type = ty }
 
 (** [is_scalar_type vd] returns whether the type corresponding
     to this variable declaration is scalar (ie a type that can
     be returned by a C function). *)
-let is_scalar_type vd =
-  match vd.v_type with
-    | Tint | Tfloat | Tbool -> true
-    | _ -> false
+let is_scalar_type vd = match vd.v_type with
+  | Tint | Tfloat | Tbool -> true
+  | _ -> false
 
 let rec var_name x =
   match x with
@@ -124,14 +123,14 @@ let rec var_name x =
     a list of var_dec. *)
 let rec vd_mem n = function
   | [] -> false
-  | vd::l -> vd.v_name = n or (vd_mem n l)
+  | vd::l -> vd.v_ident = n or (vd_mem n l)
 
 (** Returns the var_dec object corresponding to the name n
     in a list of var_dec. *)
 let rec vd_find n = function
   | [] -> Format.printf "Not found var %s\n" (name n); raise Not_found
   | vd::l ->
-      if vd.v_name = n then vd else vd_find n l
+      if vd.v_ident = n then vd else vd_find n l
 
 let lhs_of_exp = function
   | Lhs l -> l
@@ -153,7 +152,7 @@ struct
 
   let print_vd ff vd =
     fprintf ff "@[<v>";
-    print_ident ff vd.v_name;
+    print_ident ff vd.v_ident;
     fprintf ff ": ";
     print_type ff vd.v_type;
     fprintf ff "@]"

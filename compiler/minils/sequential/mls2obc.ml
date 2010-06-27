@@ -16,17 +16,15 @@ open Obc
 open Control
 open Static
 
-let rec encode_name_params n =
-  function
-    | [] -> n
-    | p :: params -> encode_name_params (n ^ ("__" ^ (string_of_int p))) params
-
-let encode_longname_params n params =
-  match n with
-    | Name n -> Name (encode_name_params n params)
-    | Modname { qual = qual; id = id } ->
-        Modname { qual = qual; id = encode_name_params id params; }
-
+let rec encode_name_params n = function
+  | [] -> n
+  | p :: params -> encode_name_params (n ^ ("__" ^ (string_of_int p))) params
+  
+let encode_longname_params n params = match n with
+  | Name n -> Name (encode_name_params n params)
+  | Modname { qual = qual; id = id } ->
+      Modname { qual = qual; id = encode_name_params id params; }
+  
 let is_op = function
   | Modname { qual = "Pervasives"; id = _ } -> true | _ -> false
 
@@ -48,89 +46,84 @@ let array_elt_of_exp idx e =
     e1 <= n1 && .. && ep <= np *)
 let rec bound_check_expr idx_list bounds =
   match (idx_list, bounds) with
-    | ([ idx ], [ n ]) -> Op (op_from_string "<", [ idx; Const (Cint n) ])
-    | (idx :: idx_list, n :: bounds) ->
-        Op (op_from_string "&",
-            [ Op (op_from_string "<", [ idx; Const (Cint n) ]);
-              bound_check_expr idx_list bounds ])
-    | (_, _) -> assert false
-
-let rec translate_type const_env =
-  function
-    | Types.Tid id when id = Initial.pint -> Tint
-    | Types.Tid id when id = Initial.pfloat -> Tfloat
-    | Types.Tid id when id = Initial.pbool -> Tbool
-    | Types.Tid id -> Tid id
-    | Types.Tarray (ty, n) ->
-        Tarray (translate_type const_env ty, int_of_size_exp const_env n)
-    | Types.Tprod ty -> assert false
-
-let rec translate_const const_env =
-  function
-    | Minils.Cint v -> Cint v
-    | Minils.Cfloat v -> Cfloat v
-    | Minils.Cconstr c -> Cconstr c
-    | Minils.Carray (n, c) ->
-        Carray (int_of_size_exp const_env n, translate_const const_env c)
-
-let rec translate_pat map =
-  function
-    | Minils.Evarpat x -> [ var_from_name map x ]
-    | Minils.Etuplepat pat_list ->
-        List.fold_right (fun pat acc -> (translate_pat map pat) @ acc)
-          pat_list []
-
+  | ([ idx ], [ n ]) -> Op (op_from_string "<", [ idx; Const (Cint n) ])
+  | (idx :: idx_list, n :: bounds) ->
+      Op (op_from_string "&",
+        [ Op (op_from_string "<", [ idx; Const (Cint n) ]);
+          bound_check_expr idx_list bounds ])
+  | (_, _) -> assert false
+  
+let rec translate_type const_env = function
+  | Types.Tid id when id = Initial.pint -> Tint
+  | Types.Tid id when id = Initial.pfloat -> Tfloat
+  | Types.Tid id when id = Initial.pbool -> Tbool
+  | Types.Tid id -> Tid id
+  | Types.Tarray (ty, n) ->
+      Tarray (translate_type const_env ty, int_of_size_exp const_env n)
+  | Types.Tprod ty -> assert false
+  
+let rec translate_const const_env = function
+  | Minils.Cint v -> Cint v
+  | Minils.Cfloat v -> Cfloat v
+  | Minils.Cconstr c -> Cconstr c
+  | Minils.Carray (n, c) ->
+      Carray (int_of_size_exp const_env n, translate_const const_env c)
+  
+let rec translate_pat map = function
+  | Minils.Evarpat x -> [ var_from_name map x ]
+  | Minils.Etuplepat pat_list ->
+      List.fold_right (fun pat acc -> (translate_pat map pat) @ acc) 
+        pat_list []
+  
 (* [translate e = c] *)
-let rec
-    translate const_env map (m, si, j, s) (({ Minils.e_desc = desc } as e)) =
+let rec translate const_env map (m, si, j, s)
+                  (({ Minils.e_desc = desc } as e)) =
   match desc with
-    | Minils.Econst v -> Const (translate_const const_env v)
-    | Minils.Evar n -> Lhs (var_from_name map n)
-    | Minils.Econstvar n -> Const (Cint (int_of_size_exp const_env (SVar n)))
-    | Minils.Ecall ( { Minils.op_name = n;
-                       Minils.op_kind = Minils.Eop }, e_list, _) ->
-        Op (n, List.map (translate const_env map (m, si, j, s)) e_list)
-    | Minils.Ewhen (e, _, _) -> translate const_env map (m, si, j, s) e
-    | Minils.Efield (e, field) ->
-        let e = translate const_env map (m, si, j, s) e
-        in Lhs (Field (lhs_of_exp e, field))
-    | Minils.Estruct f_e_list ->
-        let type_name =
-          (match e.Minils.e_ty with
-             | Types.Tid name -> name
-             | _ -> assert false) in
-        let f_e_list =
-          List.map
-            (fun (f, e) -> (f, (translate const_env map (m, si, j, s) e)))
-            f_e_list
-        in Struct_lit (type_name, f_e_list)
-             (*Array operators*)
-    | Minils.Earray e_list ->
-        Array_lit (List.map (translate const_env map (m, si, j, s)) e_list)
-    | Minils.Earray_op (Minils.Eselect (idx, e)) ->
-        let e = translate const_env map (m, si, j, s) e in
-        let idx_list =
-          List.map (fun e -> Const (Cint (int_of_size_exp const_env e))) idx
-        in
-        Lhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
-    | _ -> (*Minils_printer.print_exp stdout e; flush stdout;*) assert false
+  | Minils.Econst v -> Const (translate_const const_env v)
+  | Minils.Evar n -> Lhs (var_from_name map n)
+  | Minils.Econstvar n -> Const (Cint (int_of_size_exp const_env (SVar n)))
+  | Minils.Ecall ( { Minils.op_name = n; Minils.op_kind = Minils.Eop }, e_list, _) ->
+      Op (n, List.map (translate const_env map (m, si, j, s)) e_list)
+  | Minils.Ewhen (e, _, _) -> translate const_env map (m, si, j, s) e
+  | Minils.Efield (e, field) ->
+      let e = translate const_env map (m, si, j, s) e
+      in Lhs (Field (lhs_of_exp e, field))
+  | Minils.Estruct f_e_list ->
+      let type_name =
+        (match e.Minils.e_ty with
+         | Types.Tid name -> name
+         | _ -> assert false) in
+      let f_e_list =
+        List.map
+          (fun (f, e) -> (f, (translate const_env map (m, si, j, s) e)))
+          f_e_list
+      in Struct_lit (type_name, f_e_list)
+  (*Array operators*)
+  | Minils.Earray e_list ->
+      Array_lit (List.map (translate const_env map (m, si, j, s)) e_list)
+  | Minils.Earray_op (Minils.Eselect (idx, e)) ->
+      let e = translate const_env map (m, si, j, s) e in
+      let idx_list =
+        List.map (fun e -> Const (Cint (int_of_size_exp const_env e))) idx
+      in
+      Lhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
+  | _ -> (*Minils_printer.print_exp stdout e; flush stdout;*) assert false
 
 (* [translate pat act = si, j, d, s] *)
 and translate_act const_env map ((m, _, _, _) as context) pat
-    ({ Minils.e_desc = desc } as act) =
+                  ({ Minils.e_desc = desc } as act) =
   match pat, desc with
-    | Minils.Etuplepat p_list, Minils.Etuple act_list ->
-        comp (List.map2 (translate_act const_env map context) p_list act_list)
-    | pat, Minils.Ewhen (e, _, _) ->
-        translate_act const_env map context pat e
-    | pat, Minils.Emerge (x, c_act_list) ->
-        let lhs = var_from_name map x
-        in
-        Case (Lhs lhs,
-              translate_c_act_list const_env map context pat c_act_list)
-    | Minils.Evarpat n, _ ->
-        Assgn (var_from_name map n, translate const_env map context act)
-    | _ -> (*Minils_printer.print_exp stdout act;*) assert false
+  | Minils.Etuplepat p_list, Minils.Etuple act_list ->
+      comp (List.map2 (translate_act const_env map context) p_list act_list)
+  | pat, Minils.Ewhen (e, _, _) ->
+      translate_act const_env map context pat e
+  | pat, Minils.Emerge (x, c_act_list) ->
+      let lhs = var_from_name map x in
+      Case (Lhs lhs
+            , translate_c_act_list const_env map context pat c_act_list)
+  | Minils.Evarpat n, _ ->
+      Assgn (var_from_name map n, translate const_env map context act)
+  | _ -> (*Minils_printer.print_exp stdout act;*) assert false
 
 and translate_c_act_list const_env map context pat c_act_list =
   List.map
@@ -140,177 +133,165 @@ and translate_c_act_list const_env map context pat c_act_list =
 and comp s_list =
   List.fold_right (fun s rest -> Comp (s, rest)) s_list Nothing
 
-let rec
-    translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
-    (m, si, j, s) =
-  let { Minils.e_desc = desc; Minils.e_ty = ty; Minils.e_ck = ck } = e
-  in
+let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
+                     (m, si, j, s) =
+  let { Minils.e_desc = desc; Minils.e_ty = ty; Minils.e_ck = ck } = e in
   match (pat, desc) with
-    | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
-        let x = var_from_name map n in
-        let si =
-          (match opt_c with
-             | None -> si
-             | Some c ->
-                 (Assgn (x, Const (translate_const const_env c))) :: si) in
-        let ty = translate_type const_env ty in
-        let m = (n, ty) :: m in
-        let action =
-          Assgn (var_from_name map n,
-                 translate const_env map (m, si, j, s) e)
-        in
-        m, si, j, (control map ck action) :: s
+  | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
+      let x = var_from_name map n in
+      let si = (match opt_c with
+        | None -> si
+        | Some c ->
+            (Assgn (x, Const (translate_const const_env c))) :: si) in
+      let ty = translate_type const_env ty in
+      let m = (n, ty) :: m in
+      let action = Assgn (var_from_name map n,
+                          translate const_env map (m, si, j, s) e)
+      in
+      m, si, j, (control map ck action) :: s
 
-    | pat, Minils.Ecall ({ Minils.op_name = n; Minils.op_params = params;
-                           Minils.op_kind = Minils.Enode },
+  | pat, Minils.Ecall ({ Minils.op_name = n; Minils.op_params = params;
+                         Minils.op_kind = Minils.Enode },
                          e_list, r) ->
-        let name_list = translate_pat map pat in
-        let c_list =
-          List.map (translate const_env map (m, si, j, s)) e_list in
-        let o = gen_symbol () in
-        let si = (Reinit o) :: si in
-        let params = List.map (int_of_size_exp const_env) params in
-        let j = (o, (encode_longname_params n params), 1) :: j in
-        let action = Step_ap (name_list, Context o, c_list) in
-        let s =
-          (match r with
-             | None -> (control map ck action) :: s
-             | Some r ->
-                 let ra =
-                   control map (Minils.Con (ck, Name "true", r)) (Reinit o)
-                 in ra :: (control map ck action) :: s
-          )
-        in
-        m, si, j, s
+      let name_list = translate_pat map pat in
+      let c_list = List.map (translate const_env map (m, si, j, s)) e_list in
+      let o = gen_symbol () in
+      let si = (Reinit o) :: si in
+      let params = List.map (int_of_size_exp const_env) params in
+      let j = (o, (encode_longname_params n params), 1) :: j in
+      let action = Step_ap (name_list, Context o, c_list) in
+      let s = (match r with
+        | None -> (control map ck action) :: s
+        | Some r ->
+             let ra =
+               control map (Minils.Con (ck, Name "true", r)) (Reinit o) in
+             ra :: (control map ck action) :: s ) in
+      m, si, j, s
 
-    | Minils.Etuplepat p_list, Minils.Etuple act_list ->
-        List.fold_right2
-          (fun pat e ->
-             translate_eq const_env map
-               (Minils.mk_equation pat e))
-          p_list act_list (m, si, j, s)
+  | Minils.Etuplepat p_list, Minils.Etuple act_list ->
+      List.fold_right2
+        (fun pat e ->
+           translate_eq const_env map
+             (Minils.mk_equation pat e))
+        p_list act_list (m, si, j, s)
 
-    | Minils.Evarpat x, Minils.Efield_update (f, e1, e2) ->
-        let x = var_from_name map x in
-        let copy = Assgn (x, translate const_env map (m, si, j, s) e1) in
-        let action =
-          Assgn (Field (x, f), translate const_env map (m, si, j, s) e2)
-        in
-        m, si, j, (control map ck copy) :: (control map ck action) :: s
+  | Minils.Evarpat x, Minils.Efield_update (f, e1, e2) ->
+      let x = var_from_name map x in
+      let copy = Assgn (x, translate const_env map (m, si, j, s) e1) in
+      let action =
+        Assgn (Field (x, f), translate const_env map (m, si, j, s) e2)
+      in
+      m, si, j, (control map ck copy) :: (control map ck action) :: s
 
-    | Minils.Evarpat x,
-        Minils.Earray_op (Minils.Eselect_slice (idx1, idx2, e)) ->
-        let idx1 = int_of_size_exp const_env idx1 in
-        let idx2 = int_of_size_exp const_env idx2 in
-        let cpt = Ident.fresh "i" in
-        let e = translate const_env map (m, si, j, s) e in
-        let idx =
-          Op (op_from_string "+", [ Lhs (Var cpt); Const (Cint idx1) ]) in
-        let action =
-          For (cpt, 0, (idx2 - idx1) + 1,
-               Assgn (Array (var_from_name map x, Lhs (Var cpt)),
-                      Lhs (Array (lhs_of_exp e, idx))))
-        in
-        m, si, j, (control map ck action) :: s
+  | Minils.Evarpat x,
+      Minils.Earray_op (Minils.Eselect_slice (idx1, idx2, e)) ->
+      let idx1 = int_of_size_exp const_env idx1 in
+      let idx2 = int_of_size_exp const_env idx2 in
+      let cpt = Ident.fresh "i" in
+      let e = translate const_env map (m, si, j, s) e in
+      let idx =
+        Op (op_from_string "+", [ Lhs (Var cpt); Const (Cint idx1) ]) in
+      let action =
+        For (cpt, 0, (idx2 - idx1) + 1,
+           Assgn (Array (var_from_name map x, Lhs (Var cpt)),
+                    Lhs (Array (lhs_of_exp e, idx))))
+      in
+      m, si, j, (control map ck action) :: s
 
-    | Minils.Evarpat x,
-          Minils.Earray_op (Minils.Eselect_dyn (idx, bounds, e1, e2)) ->
-        let x = var_from_name map x in
-        let e1 = translate const_env map (m, si, j, s) e1 in
-        let bounds = List.map (int_of_size_exp const_env) bounds in
-        let idx = List.map (translate const_env map (m, si, j, s)) idx in
-        let true_act =
-          Assgn (x, Lhs (lhs_of_idx_list (lhs_of_exp e1) idx)) in
-        let false_act =
-          Assgn (x, translate const_env map (m, si, j, s) e2) in
-        let cond = bound_check_expr idx bounds in
-        let action =
-          Case (cond,
-                [ ((Name "true"), true_act); ((Name "false"), false_act) ])
-        in
-        m, si, j, (control map ck action) :: s
+  | Minils.Evarpat x,
+        Minils.Earray_op (Minils.Eselect_dyn (idx, bounds, e1, e2)) ->
+      let x = var_from_name map x in
+      let e1 = translate const_env map (m, si, j, s) e1 in
+      let bounds = List.map (int_of_size_exp const_env) bounds in
+      let idx = List.map (translate const_env map (m, si, j, s)) idx in
+      let true_act =
+        Assgn (x, Lhs (lhs_of_idx_list (lhs_of_exp e1) idx)) in
+      let false_act =
+        Assgn (x, translate const_env map (m, si, j, s) e2) in
+    let cond = bound_check_expr idx bounds in
+    let action =
+        Case (cond,
+              [ ((Name "true"), true_act); ((Name "false"), false_act) ])
+    in
+    m, si, j, (control map ck action) :: s
 
-    | Minils.Evarpat x,
-            Minils.Earray_op (Minils.Eupdate (idx, e1, e2)) ->
-        let x = var_from_name map x in
-        let copy = Assgn (x, translate const_env map (m, si, j, s) e1) in
-        let idx =
-          List.map (fun se -> Const (Cint (int_of_size_exp const_env se)))
-            idx in
-        let action = Assgn (lhs_of_idx_list x idx,
-                            translate const_env map (m, si, j, s) e2)
-        in
-        m, si, j, (control map ck copy) :: (control map ck action) :: s
+  | Minils.Evarpat x,
+          Minils.Earray_op (Minils.Eupdate (idx, e1, e2)) ->
+      let x = var_from_name map x in
+      let copy = Assgn (x, translate const_env map (m, si, j, s) e1) in
+      let idx =
+         List.map (fun se -> Const (Cint (int_of_size_exp const_env se)))
+                  idx in
+      let action = Assgn (lhs_of_idx_list x idx,
+                          translate const_env map (m, si, j, s) e2)
+      in
+      m, si, j, (control map ck copy) :: (control map ck action) :: s
 
-    | Minils.Evarpat x,
-              Minils.Earray_op (Minils.Erepeat (n, e)) ->
-        let cpt = Ident.fresh "i" in
-        let action =
-          For (cpt, 0, int_of_size_exp const_env n,
-               Assgn (Array (var_from_name map x, Lhs (Var cpt)),
-                      translate const_env map (m, si, j, s) e))
-        in
-        m, si, j, (control map ck action) :: s
+  | Minils.Evarpat x,
+            Minils.Earray_op (Minils.Erepeat (n, e)) ->
+      let cpt = Ident.fresh "i" in
+      let action =
+        For (cpt, 0, int_of_size_exp const_env n,
+           Assgn (Array (var_from_name map x, Lhs (Var cpt)),
+                    translate const_env map (m, si, j, s) e))
+      in
+      m, si, j, (control map ck action) :: s
 
-    | Minils.Evarpat x,
-                Minils.Earray_op (Minils.Econcat (e1, e2)) ->
-        let cpt1 = Ident.fresh "i" in
-        let cpt2 = Ident.fresh "i" in
-        let x = var_from_name map x
-        in
-        (match e1.Minils.e_ty, e2.Minils.e_ty with
-           | Types.Tarray (_, n1), Types.Tarray (_, n2) ->
-               let e1 = translate const_env map (m, si, j, s) e1 in
-               let e2 = translate const_env map (m, si, j, s) e2 in
-               let n1 = int_of_size_exp const_env n1 in
-               let n2 = int_of_size_exp const_env n2 in
-               let a1 =
-                 For (cpt1, 0, n1,
-                      Assgn (Array (x, Lhs (Var cpt1)),
-                             Lhs (Array (lhs_of_exp e1, Lhs (Var cpt1))))) in
-               let idx =
-                 Op (op_from_string "+", [ Const (Cint n1); Lhs (Var cpt2) ]) in
-               let a2 =
-                 For (cpt2, 0, n2,
-                      Assgn (Array (x, idx),
-                             Lhs (Array (lhs_of_exp e2, Lhs (Var cpt2)))))
-               in
-               m, si, j,
-               (control map ck a1) :: (control map ck a2) :: s
-           | _ -> assert false
-        )
+  | Minils.Evarpat x,
+              Minils.Earray_op (Minils.Econcat (e1, e2)) ->
+      let cpt1 = Ident.fresh "i" in
+      let cpt2 = Ident.fresh "i" in
+      let x = var_from_name map x in
+      (match e1.Minils.e_ty, e2.Minils.e_ty with
+       | Types.Tarray (_, n1), Types.Tarray (_, n2) ->
+           let e1 = translate const_env map (m, si, j, s) e1 in
+           let e2 = translate const_env map (m, si, j, s) e2 in
+           let n1 = int_of_size_exp const_env n1 in
+           let n2 = int_of_size_exp const_env n2 in
+           let a1 =
+             For (cpt1, 0, n1,
+                  Assgn (Array (x, Lhs (Var cpt1)),
+                         Lhs (Array (lhs_of_exp e1, Lhs (Var cpt1))))) in
+           let idx =
+             Op (op_from_string "+", [ Const (Cint n1); Lhs (Var cpt2) ]) in
+           let a2 =
+             For (cpt2, 0, n2,
+                  Assgn (Array (x, idx),
+                         Lhs (Array (lhs_of_exp e2, Lhs (Var cpt2)))))
+           in
+           m, si, j, (control map ck a1) :: (control map ck a2) :: s
+       | _ -> assert false )
 
-    | pat, Minils.Earray_op (
-        Minils.Eiterator (it,
-                          { Minils.op_name = f; Minils.op_params = params;
-                            Minils.op_kind = k },
-                          n, e_list, reset)) ->
-        let name_list = translate_pat map pat in
-        let c_list =
-          List.map (translate const_env map (m, si, j, s)) e_list in
-        let o = gen_symbol () in
-        let n = int_of_size_exp const_env n in
-        let si =
-          (match k with
-             | Minils.Eop -> si
-             | Minils.Enode -> (Reinit o) :: si) in
-        let params = List.map (int_of_size_exp const_env) params in
-        let j = (o, (encode_longname_params f params), n) :: j in
-        let x = Ident.fresh "i" in
-        let action =
-          translate_iterator const_env map it x name_list o n c_list in
-        let s =
-          (match reset with
-             | None -> (control map ck action) :: s
-             | Some r ->
-                 (control map (Minils.Con (ck, Name "true", r)) (Reinit o)) ::
-                   (control map ck action) :: s
-          )
-        in (m, si, j, s)
+  | pat, Minils.Earray_op (
+      Minils.Eiterator (it,
+                        { Minils.op_name = f; Minils.op_params = params;
+                          Minils.op_kind = k },
+                        n, e_list, reset)) ->
+      let name_list = translate_pat map pat in
+      let c_list =
+        List.map (translate const_env map (m, si, j, s)) e_list in
+      let o = gen_symbol () in
+      let n = int_of_size_exp const_env n in
+      let si =
+        (match k with
+         | Minils.Eop -> si
+         | Minils.Enode -> (Reinit o) :: si) in
+      let params = List.map (int_of_size_exp const_env) params in
+      let j = (o, (encode_longname_params f params), n) :: j in
+      let x = Ident.fresh "i" in
+      let action =
+        translate_iterator const_env map it x name_list o n c_list in
+      let s =
+        (match reset with
+         | None -> (control map ck action) :: s
+         | Some r ->
+             (control map (Minils.Con (ck, Name "true", r)) (Reinit o)) ::
+               (control map ck action) :: s )
+      in (m, si, j, s)
 
-    | (pat, _) ->
-        let action = translate_act const_env map (m, si, j, s) pat e
-        in (m, si, j, ((control map ck action) :: s))
+  | (pat, _) ->
+      let action = translate_act const_env map (m, si, j, s) pat e
+      in (m, si, j, ((control map ck action) :: s))
 
 and translate_iterator const_env map it x name_list o n c_list =
   match it with
@@ -345,7 +326,7 @@ let translate_eq_list const_env map act_list =
   List.fold_right (translate_eq const_env map) act_list ([], [], [], [])
 
 let remove m d_list =
-  List.filter (fun { Minils.v_name = n } -> not (List.mem_assoc n m)) d_list
+  List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list
 
 let var_decl l =
   List.map (fun (x, t) -> mk_var_dec x t) l
@@ -353,7 +334,7 @@ let var_decl l =
 let obj_decl l = List.map (fun (x, t, i) -> { obj = x; cls = t; size = i; }) l
 
 let translate_var_dec const_env map l =
-  let one_var { Minils.v_name = x; Minils.v_type = t } =
+  let one_var { Minils.v_ident = x; Minils.v_type = t } =
     mk_var_dec x (translate_type const_env t)
   in
   List.map one_var l
@@ -380,22 +361,22 @@ let translate_contract const_env map =
 let subst_map inputs outputs locals mems =
   (* Create a map that simply maps each var to itself *)
   let m =
-    List.fold_left (fun m { Minils.v_name = x } -> Env.add x (Var x) m)
+    List.fold_left (fun m { Minils.v_ident = x } -> Env.add x (Var x) m)
       Env.empty (inputs @ outputs @ locals)
   in
   List.fold_left (fun m x -> Env.add x (Mem x) m) m mems
 
 let translate_node_aux const_env
-    {
-      Minils.n_name = f;
-      Minils.n_input = i_list;
-      Minils.n_output = o_list;
-      Minils.n_local = d_list;
-      Minils.n_equs = eq_list;
-      Minils.n_contract = contract;
-      Minils.n_params = params
-    } =
-  let mem_vars = List.flatten (List.map Minils.Vars.memory_vars eq_list) in
+                       {
+                         Minils.n_name = f;
+                         Minils.n_input = i_list;
+                         Minils.n_output = o_list;
+                         Minils.n_local = d_list;
+                         Minils.n_equs = eq_list;
+                         Minils.n_contract = contract;
+                         Minils.n_params = params
+                       } =
+  let mem_vars = List.flatten (List.map Mls_utils.Vars.memory_vars eq_list) in
   let subst_map = subst_map i_list o_list d_list mem_vars in
   let (m, si, j, s_list) = translate_eq_list const_env subst_map eq_list in
   let (m', si', j', s_list', d_list', c_list) =

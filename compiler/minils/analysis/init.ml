@@ -282,7 +282,7 @@ let build h eq_list =
 
 let sbuild h dec =
   List.fold_left
-    (fun h { v_name = n } -> Env.add n { t_init = izero; t_value = None; } h)
+    (fun h { v_ident = n } -> Env.add n { t_init = izero; t_value = None; } h)
     h dec
 
 let typing_contract h contract =

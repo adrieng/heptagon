@@ -8,10 +8,10 @@
 (**************************************************************************)
 (* scheduling of equations *)
 
-(* $Id$ *)
 
 open Misc
 open Minils
+open Mls_utils
 open Graph
 open Dep
 

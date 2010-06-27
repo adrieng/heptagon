@@ -20,14 +20,10 @@ let keyword_table = ((Hashtbl.create 149) : (string, token) Hashtbl.t);;
 List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "node", NODE;
  "fun", FUN;
- "safe", SAFE;
  "returns", RETURNS;
  "var", VAR;
- "val", VAL;
- "unsafe", UNSAFE;
  "let", LET;
  "tel", TEL;
- "end", END;
  "fby", FBY;
  "switch", SWITCH;
  "when", WHEN;
@@ -140,16 +136,18 @@ rule token = parse
   | "&&"            {AMPERAMPER}
   | "||"            {BARBAR}
   | ","             {COMMA}
-  | "->"            {ARROW}
+(*  | "->"            {ARROW} *)
   | "|"             {BAR}
   | "-"             {SUBTRACTIVE "-"}
   | "-."            {SUBTRACTIVE "-."}
+  | "<<"            {DOUBLE_LESS}
+  | ">>"            {DOUBLE_GREATER}
   | (['A'-'Z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
-      {Constructor id}
+      {CONSTRUCTOR id}
   | (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       { let s = Lexing.lexeme lexbuf in
         try Hashtbl.find keyword_table s
-        with Not_found -> IDENT id }
+        with Not_found -> NAME id }
   | '-'? ['0'-'9']+
   | '-'? '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
   | '-'? '0' ['o' 'O'] ['0'-'7']+

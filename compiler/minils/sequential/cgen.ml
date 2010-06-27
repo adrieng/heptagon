@@ -27,31 +27,26 @@ struct
     | Eno_unnamed_output
     | Ederef_not_pointer
 
-  let message loc kind =
-    begin match kind with
-      | Evar name ->
-          eprintf "%aCode generation : The variable name '%s' is unbound.\n"
-            output_location loc
-            name
-      | Enode name ->
-          eprintf "%aCode generation : The node name '%s' is unbound.\n"
-            output_location loc
-            name
-      | Eno_unnamed_output ->
-          eprintf "%aCode generation : Unnamed outputs are not supported.\n"
-            output_location loc
-      | Ederef_not_pointer ->
-          eprintf
-            "%aCode generation : Trying to deference a non pointer type.\n"
-            output_location loc
-    end;
+  let message loc kind = (match kind with
+    | Evar name ->
+        eprintf "%aCode generation : The variable name '%s' is unbound.\n"
+          output_location loc name
+    | Enode name ->
+        eprintf "%aCode generation : The node name '%s' is unbound.\n"
+          output_location loc name
+    | Eno_unnamed_output ->
+        eprintf "%aCode generation : Unnamed outputs are not supported.\n"
+          output_location loc
+    | Ederef_not_pointer ->
+        eprintf "%aCode generation : Trying to deference a non pointer type.\n"
+          output_location loc );
     raise Misc.Error
 end
 
 let rec struct_name ty =
   match ty with
-    | Cty_id n -> n
-    | _ -> assert false
+  | Cty_id n -> n
+  | _ -> assert false
 
 let cname_of_name' name = match name with
   | Name n -> Name (cname_of_name n)
@@ -151,7 +146,7 @@ let ctype_of_heptty ty =
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =
     let ty = ctype_of_otype vd.v_type in
-    name vd.v_name, ty
+    name vd.v_ident, ty
   in
   List.map cvar_of_ovar vl
 
@@ -165,7 +160,7 @@ let copname = function
 
 (** Translates an Obc var_dec to a tuple (name, cty). *)
 let cvar_of_vd vd =
-  name vd.v_name, ctype_of_otype vd.v_type
+  name vd.v_ident, ctype_of_otype vd.v_type
 
 (** If idx_list = [e1;..;ep], returns the lhs e[e1]...[ep] *)
 let rec csubscript_of_e_list e idx_list =
@@ -212,9 +207,8 @@ let rec assoc_type_lhs lhs var_env =
         array_base_ctype ty [1]
     | Cderef lhs ->
         (match assoc_type_lhs lhs var_env with
-           | Cty_ptr ty -> ty
-           | _ -> Error.message no_location Error.Ederef_not_pointer
-        )
+         | Cty_ptr ty -> ty
+         | _ -> Error.message no_location Error.Ederef_not_pointer)
     | Cfield(Cderef (Cvar "self"), x) -> assoc_type x var_env
     | Cfield(x, f) ->
         let ty = assoc_type_lhs x var_env in
@@ -268,12 +262,12 @@ let rec cexpr_of_exp var_env exp =
           (** Constants, the easiest translation. *)
     | Const lit ->
         (match lit with
-           | Cint i -> Cconst (Ccint i)
-           | Cfloat f -> Cconst (Ccfloat f)
-           | Cconstr c -> Cconst (Ctag (shortname c))
-           | Obc.Carray(n,c) ->
-               let cc = cexpr_of_exp var_env (Const c) in
-               Carraylit (repeat_list cc n)
+          | Cint i -> Cconst (Ccint i)
+          | Cfloat f -> Cconst (Ccfloat f)
+          | Cconstr c -> Cconst (Ctag (shortname c))
+          | Obc.Carray(n,c) ->
+              let cc = cexpr_of_exp var_env (Const c) in
+              Carraylit (repeat_list cc n)
         )
           (** Operators *)
     | Op(op, exps) ->
@@ -551,7 +545,7 @@ let fun_def_of_step_fun name obj_env mem sf =
           let args_inputs_state =
             List.map (fun (arg_name,_) -> Clhs(Cvar(arg_name))) args in
           let addr_controllables =
-            let addrof { v_name = c_name } =
+            let addrof { v_ident = c_name } =
               Caddrof (Cvar (Ident.name c_name)) in
             List.map addrof c_list in
           let args_ctrlr =
@@ -570,7 +564,7 @@ let fun_def_of_step_fun name obj_env mem sf =
   let epilogue = match sf.out with
     | [] -> []
     | [vd] when Obc.is_scalar_type (List.hd sf.out) ->
-        [Creturn (Clhs (Cvar (Ident.name vd.v_name)))]
+        [Creturn (Clhs (Cvar (Ident.name vd.v_ident)))]
     | out -> [] in
 
   (** Substitute the return value variables with the corresponding
