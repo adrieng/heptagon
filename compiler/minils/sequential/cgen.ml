@@ -505,6 +505,9 @@ let global_name = ref "";;
     data from standard input and then outputs result of [cd.step]. *)
 (* TODO: refactor into something more readable. *)
 let main_def_of_class_def cd =
+  let step_counter = Ident.fresh "step_c"
+  and max_step = Ident.fresh "step_max" in
+
   let format_for_type ty = match ty with
     | Tarray _ -> assert false
     | Tint | Tbool -> "%d"
@@ -529,7 +532,8 @@ let main_def_of_class_def cd =
           | Cvar vn -> (vn, [])
           | Carray (lhs, cvn) ->
               let (vn, args) = mk_prompt lhs in
-              (vn ^ "[%d]", cvn :: args) in
+              (vn ^ "[%d]", cvn :: args)
+          | _ -> assert false in
         let (prompt, args_format_s) = mk_prompt lhs in
         let scan_exp =
           let printf_s = Printf.sprintf "%s ? " prompt in
@@ -602,6 +606,7 @@ let main_def_of_class_def cd =
     @ cout
     @ concat scanf_decls
     @ concat printf_decls in
+
   (** The main function loops (while (1) { ... }) reading arguments for our node
       and prints the results. *)
   let body =
@@ -612,7 +617,7 @@ let main_def_of_class_def cd =
       Cfun_call (cd.cl_id ^ "_step", args) in
     concat scanf_calls
       (* Our function returns something only when the node has exactly one
-         non-array output. *)
+         scalar output. *)
     @ ([match cd.step.out with
           | [{ v_type = Tarray _; }] -> Csexpr funcall
           | [_] -> Caffect (Cvar "res", funcall)
@@ -620,17 +625,45 @@ let main_def_of_class_def cd =
     @ printf_calls
     @ [Csexpr (Cfun_call ("puts", [Cconst (Cstrlit "")]));
        Csexpr (Cfun_call ("fflush", [Clhs (Cvar "stdout")]))] in
+
   (** Do not forget to initialize memory via reset. *)
   let init_mem =
     Csexpr (Cfun_call (cd.cl_id ^ "_reset", [Caddrof (Cvar "mem")])) in
+
   Cfundef {
     f_name = "main";
     f_retty = Cty_int;
     f_args = [("argc", Cty_int); ("argv", Cty_ptr (Cty_ptr Cty_char))];
     f_body = {
-      var_decls = varlist;
-      block_body = [init_mem;
-                    Cwhile (Cconst (Ccint 1), body)];
+      var_decls =
+        (name step_counter, Cty_int) :: (name max_step, Cty_int) :: varlist;
+      block_body = [
+        (*
+          step_count = 0;
+          max_step = 0;
+          if (argc == 2)
+            max_step = atoi(argv[1]);
+        *)
+        Caffect (Cvar (name step_counter), Cconst (Ccint 0));
+        Caffect (Cvar (name max_step), Cconst (Ccint 0));
+        Cif (Cbop ("==", Clhs (Cvar "argc"), Cconst (Ccint 2)),
+             [Caffect (Cvar (name max_step),
+                       Cfun_call ("atoi",
+                                  [Clhs (Carray (Cvar "argv",
+                                                 Cconst (Ccint 1)))]))], []);
+        init_mem;
+        (* while (!max_step || step_c < max_step) *)
+        Cwhile (Cbop ("||",
+                      Cuop ("!", Clhs (Cvar (name max_step))),
+                      Cbop ("<",
+                            Clhs (Cvar (name step_counter)),
+                            Clhs (Cvar (name max_step)))),
+                (* step_counter = step_counter + 1; *)
+                Caffect (Cvar (name step_counter),
+                         Cbop ("+",
+                               Clhs (Cvar (name step_counter)),
+                               Cconst (Ccint 1)))
+                :: body)];
     }
   }
 
