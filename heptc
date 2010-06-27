@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#Small wrapper to deal with compilation of the compiler and the stdlib.
+
+COMPILER=heptc.byte
+COMPILER_DIR=compiler
+HEPTC=$COMPILER_DIR/$COMPILER
+
+if [ ! -x $HEPTC ] #compile the compiler
+then
+	cd compiler
+	ocamlbuild $COMPILER
+	cd -
+fi
+
+if [ ! -e lib/pervasives.epci ] #compile the stdlib
+then
+	$HEPTC -nopervasives lib/pervasives.epi
+fi
+
+$HEPTC -stdlib lib "$@" #call the compiler with the passed arguments.
