@@ -21,7 +21,7 @@ shift
 
 # Compile source file to VHDL, flattening node calls
 if [ $compile -eq 1 ]; then
-  hec.byte $@ -s main -target vhdl $F > tmp.sh || exit 1
+  heptc.native $@ -s main -target vhdl $F $@ > tmp.sh || exit 1
 fi
 
 # Display the resulting VHDL code
@@ -34,7 +34,8 @@ done
 cd $REP || exit 1
 
 # Properly compile it with GHDL; order matters
-sh ../tmp.sh && rm -f ../tmp.sh || exit 1
+ghdl -a types.vhd `grep node ../$F | perl -pe 's/node (.*?)\b*\(.*$/$1.vhd/'` \
+  main_tb.vhd || exit 1
 
 # Link everything using the generated test-bench
 ghdl -e main_tb || exit 1

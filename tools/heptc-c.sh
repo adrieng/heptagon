@@ -20,7 +20,7 @@ shift
 
 # Compile source file to VHDL, flattening node calls
 if [ $compile -eq 1 ]; then
-  hec.byte $@ -s main -target c $F || exit 1
+  heptc.native $@ -s main -target c $F $@ || exit 1
 fi
 
 # Compile it with GCC
