@@ -94,9 +94,9 @@ and cstm =
 type cdecl =
     (** C enum declaration, with associated value tags. *)
   | Cdecl_enum of string * string list
-      (** C structure declaration, with each field's name and type. *)
+    (** C structure declaration, with each field's name and type. *)
   | Cdecl_struct of string * (string * cty) list
-      (** C function declaration. *)
+    (** C function declaration. *)
   | Cdecl_function of string * cty * (string * cty) list
 
 (** C function definitions *)

@@ -78,6 +78,7 @@ and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
   ^ " cleaned)"
 and doc_noinit = "\t\tDisable initialization analysis"
+and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
 
 let errmsg = "Options are:"
 

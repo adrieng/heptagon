@@ -46,6 +46,9 @@ let show_version () =
 let verbose = ref false
 let print_types = ref false
 
+let assert_nodes = ref []
+let add_assert nd = assert_nodes := nd :: !assert_nodes
+
 let simulation = ref false
 let simulation_node : string option ref = ref None
 let set_simulation_node s =

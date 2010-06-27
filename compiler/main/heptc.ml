@@ -154,6 +154,7 @@ let main () =
         "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
         "-stdlib", Arg.String set_stdlib, doc_stdlib;
         "-s", Arg.String set_simulation_node, doc_sim;
+        "-assert", Arg.String add_assert, doc_assert;
         "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
         "-target", Arg.String add_target_language, doc_target;
         "-targetpath", Arg.String set_target_path, doc_target_path;

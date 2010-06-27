@@ -39,6 +39,12 @@ val verbose : bool ref
 (* Print types option *)
 val print_types : bool ref
 
+(* Nodes to check at run-time *)
+val assert_nodes : string list ref
+
+(* Add node (name) to the list of nodes to be checked. *)
+val add_assert : string -> unit
+
 (* Simulation mode *)
 val simulation : bool ref
 (* Simulated node *)
