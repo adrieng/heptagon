@@ -220,8 +220,7 @@ let build ac =
                 top2;
               top1 @ top2, bot1 @ bot2
 	      | Awrite(n) -> let g = Env.find n n_to_graph in [g], [g]
-	      | Aread(n) -> let g = make ac in attach g n; attach_lin g n; [g], [g]
-	      | Alinread(n) -> let g = Env.find n lin_map in attach g n; [g], [g]
+	      | Aread(n) -> let g = make ac in attach g n; [g], [g]
 	      | Atuple(l) -> 
             let make_graph_tuple ac = 
               match ac with
