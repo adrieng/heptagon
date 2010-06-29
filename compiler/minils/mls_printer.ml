@@ -135,10 +135,12 @@ and print_array_op ff = function
         print_exp_tuple e_list
         print_every r
 
+and print_handler ff c =
+  fprintf ff "@[<2>%a@]" (print_couple print_longname print_exp "("" -> "")") c
+
 and print_tag_e_list ff tag_e_list =
   fprintf ff "@[%a@]"
-    (print_list
-       (print_couple print_longname print_exp "("" -> "")") """""") tag_e_list
+    (print_list print_handler """""") tag_e_list
 
 
 let print_eq ff { eq_lhs = p; eq_rhs = e } =
