@@ -2,13 +2,16 @@
 
 #Small wrapper to deal with compilation of the compiler and the stdlib.
 
+SCRIPT_DIR=`dirname $0`
+COMPILER_DIR=compiler #relative to the script_dir
 COMPILER=heptc.byte
-COMPILER_DIR=compiler
 HEPTC=$COMPILER_DIR/$COMPILER
+
+cd $SCRIPT_DIR
 
 if [ ! -x $HEPTC ] #compile the compiler
 then
-	cd compiler
+	cd $COMPILER_DIR
 	ocamlbuild $COMPILER
 	cd -
 fi
@@ -18,4 +21,6 @@ then
 	$HEPTC -nopervasives lib/pervasives.epi
 fi
 
-$HEPTC -stdlib lib "$@" #call the compiler with the passed arguments.
+cd -
+
+$SCRIPT_DIR/$HEPTC -stdlib $SCRIPT_DIR/lib "$@" #call the compiler with the passed arguments.

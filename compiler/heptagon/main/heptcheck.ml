@@ -11,29 +11,11 @@
 
 open Misc
 open Compiler_utils
+open Hept_compiler
 open Location
 
-let pp = Hept_printer.print stdout
 
-let parse parsing_fun lexing_fun lexbuf =
-  try
-    parsing_fun lexing_fun lexbuf
-  with
-    | Hept_lexer.Lexical_error(err, pos1, pos2) ->
-        lexical_error err (Loc(pos1, pos2))
-    | Parsing.Parse_error ->
-        let pos1 = Lexing.lexeme_start lexbuf
-        and pos2 = Lexing.lexeme_end lexbuf in
-        let l = Loc(pos1,pos2) in
-        syntax_error l
-
-let parse_implementation lexbuf =
-  parse Hept_parser.program Hept_lexer.token lexbuf
-
-let parse_interface lexbuf =
-  parse Hept_parser.interface Hept_lexer.token lexbuf
-
-let compile_impl modname filename =
+let check_implementation modname filename =
   (* input and output files *)
   let source_name = filename ^ ".ept" in
 
@@ -51,66 +33,17 @@ let compile_impl modname filename =
 
     (* Convert the parse tree to Heptagon AST *)
     let p = Scoping.translate_program p in
-    if !verbose
-    then begin
-      comment "Parsing";
-      pp p
-    end;
+    comment "Parsing";
+    pp p;
 
     (* Call the compiler*)
     let p = Hept_compiler.compile_impl pp p in
+    comment "Checking";
 
-    if !verbose
-    then begin
-      comment "Checking"
-    end;
     close_all_files ()
 
   with x -> close_all_files (); raise x
 
-let compile_interface modname filename =
-  (* input and output files *)
-  let source_name = filename ^ ".epi" in
-  let obj_interf_name = filename ^ ".epci" in
-
-  let ic = open_in source_name in
-  let itc = open_out_bin obj_interf_name in
-  let close_all_files () =
-    close_in ic;
-    close_out itc in
-
-  try
-    init_compiler modname source_name ic;
-
-    (* Parsing of the file *)
-    let lexbuf = Lexing.from_channel ic in
-    let l = parse_interface lexbuf in
-
-    (* Convert the parse tree to Heptagon AST *)
-    let l = Scoping.translate_interface l in
-
-    (* Call the compiler*)
-    let l = Hept_compiler.compile_interface l in
-
-    Modules.write itc;
-
-    close_all_files ()
-  with
-    | x -> close_all_files (); raise x
-
-let compile file =
-  if Filename.check_suffix file ".ept"
-  then
-    let filename = Filename.chop_suffix file ".ept" in
-    let modname = String.capitalize(Filename.basename filename) in
-    compile_impl modname filename
-  else if Filename.check_suffix file ".epi"
-  then
-    let filename = Filename.chop_suffix file ".epi" in
-    let modname = String.capitalize(Filename.basename filename) in
-    compile_interface modname filename
-  else
-    raise (Arg.Bad ("Unknow file type: " ^ file))
 
 let main () =
   try
@@ -126,7 +59,7 @@ let main () =
         "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
       ]
-      compile
+      (compile check_implementation)
       errmsg;
   with
     | Misc.Error -> exit 2;;

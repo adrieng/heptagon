@@ -6,46 +6,16 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-(* the main *)
+
 
 open Misc
 open Location
 open Compiler_utils
-open Heptcheck
+open Hept_compiler
 
 
 
-let interface modname filename =
-  (* input and output files *)
-  let source_name = filename ^ ".epi"
-  and obj_interf_name = filename ^ ".epci" in
-
-  let ic = open_in source_name
-  and itc = open_out_bin obj_interf_name in
-  let close_all_files () =
-    close_in ic;
-    close_out itc in
-
-  try
-    init_compiler modname source_name ic;
-
-    (* Parsing of the file *)
-    let lexbuf = Lexing.from_channel ic in
-    let l = parse_interface lexbuf in
-
-    (* Convert the parse tree to Heptagon AST *)
-    let l = Scoping.translate_interface l in
-
-    (* Call the compiler*)
-    let l = Hept_compiler.compile_interface l in
-
-    Modules.write itc;
-
-    close_all_files ()
-  with
-    | x -> close_all_files (); raise x
-
-let compile modname filename =
+let compile_impl modname filename =
   (* input and output files *)
   let source_name = filename ^ ".ept"
   and obj_interf_name = filename ^ ".epci"
@@ -69,19 +39,15 @@ let compile modname filename =
   try
     init_compiler modname source_name ic;
 
-    let pp = Hept_printer.print stdout in
-
     (* Parsing of the file *)
     let lexbuf = Lexing.from_channel ic in
     let p = parse_implementation lexbuf in
 
     (* Convert the parse tree to Heptagon AST *)
     let p = Scoping.translate_program p in
-    if !verbose
-    then begin
-      comment "Parsing";
-      pp p
-    end;
+    comment "Parsing";
+
+    pp p;
 
     (* Process the Heptagon AST *)
     let p = Hept_compiler.compile_impl pp p in
@@ -91,7 +57,7 @@ let compile modname filename =
     let p = Hept2mls.program p in
 
     let pp = Mls_printer.print stdout in
-    if !verbose then comment "Translation into MiniLs";
+    comment "Translation into MiniLs";
     Mls_printer.print mlsc p;
 
     (* Process the MiniLS AST *)
@@ -99,7 +65,7 @@ let compile modname filename =
 
     (* Compile MiniLS to Obc *)
     let o = Mls2obc.program p in
-    (*if !verbose then*) comment "Translation into Obc";
+    comment "Translation into Obc";
     Obc.Printer.print obc o;
 
     let pp = Obc.Printer.print stdout in
@@ -113,19 +79,7 @@ let compile modname filename =
   with
     | x -> close_all_files (); raise x
 
-let compile file =
-  if Filename.check_suffix file ".ept"
-  then
-    let filename = Filename.chop_suffix file ".ept" in
-    let modname = String.capitalize(Filename.basename filename) in
-    compile modname filename
-  else if Filename.check_suffix file ".epi"
-  then
-    let filename = Filename.chop_suffix file ".epi" in
-    let modname = String.capitalize(Filename.basename filename) in
-    interface modname filename
-  else
-    raise (Arg.Bad ("don't know what to do with " ^ file))
+
 
 let main () =
   try
@@ -145,7 +99,7 @@ let main () =
         "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
       ]
-      compile
+      (compile compile_impl)
       errmsg;
   with
     | Misc.Error -> exit 2;;
