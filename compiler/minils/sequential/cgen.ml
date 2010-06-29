@@ -765,16 +765,16 @@ let main_def_of_class_def cd =
 
   let (scanf_calls, scanf_decls) =
     let read_lhs_of_ty_for_vd vd =
-      read_lhs_of_ty (Cvar (Ident.name vd.v_name)) vd.v_type in
+      read_lhs_of_ty (Cvar (Ident.name vd.v_ident)) vd.v_type in
     split (map read_lhs_of_ty_for_vd cd.step.inp) in
 
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd = match cd.step.out with
       | [{ v_type = Tarray _; }] ->
-          write_lhs_of_ty (Cfield (Cvar "mem", name vd.v_name)) vd.v_type
+          write_lhs_of_ty (Cfield (Cvar "mem", name vd.v_ident)) vd.v_type
       | [_] -> write_lhs_of_ty (Cvar "res") vd.v_type
       | _ ->
-          write_lhs_of_ty (Cfield (Cvar "mem", name vd.v_name)) vd.v_type in
+          write_lhs_of_ty (Cfield (Cvar "mem", name vd.v_ident)) vd.v_type in
     split (map write_lhs_of_ty_for_vd cd.step.out) in
 
   let cinp = cvarlist_of_ovarlist cd.step.inp in
@@ -794,7 +794,7 @@ let main_def_of_class_def cd =
   let step_l =
     let funcall =
       let args =
-        map (fun vd -> Clhs (Cvar (name vd.v_name))) cd.step.inp
+        map (fun vd -> Clhs (Cvar (name vd.v_ident))) cd.step.inp
         @ [Caddrof (Cvar "mem")] in
       Cfun_call (cd.cl_id ^ "_step", args) in
     concat scanf_calls
