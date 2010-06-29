@@ -25,35 +25,16 @@ let mk_var name ty = mk_var_dec name ty
 %token <int> INT
 %token <float> FLOAT
 %token <bool> BOOL
-%token <char> CHAR
-%token <string> STRING
 %token <string * string> PRAGMA
-%token TYPE FUN NODE RETURNS VAR OPEN
-%token FBY PRE SWITCH WHEN EVERY
+%token TYPE NODE RETURNS VAR OPEN
+%token FBY PRE WHEN
 %token OR STAR NOT
 %token AMPERSAND
 %token AMPERAMPER
-%token AUTOMATON
-%token PRESENT
 %token RESET
-%token STATE
-%token UNLESS
-%token UNTIL
-%token EMIT
-%token LAST
 %token IF
 %token THEN
 %token ELSE
-%token DEFAULT
-%token DO
-%token CONTINUE
-%token CASE
-%token CONTRACT
-%token ASSUME
-%token ENFORCE
-%token WITH
-%token INLINED
-%token AT
 %token DOUBLE_LESS DOUBLE_GREATER
 %token <string> PREFIX
 %token <string> INFIX0
@@ -65,23 +46,17 @@ let mk_var name ty = mk_var_dec name ty
 %token EOF
 
 
-%nonassoc prec_ident
-%left IF ELSE
-%right ARROW
-%nonassoc EVERY
+%left ELSE
+
 %left OR
 %left AMPERSAND
 %left INFIX0 EQUAL
 %right INFIX1 EQUALEQUAL BARBAR AMPERAMPER
-%left INFIX2 SUBTRACTIVE
+%left INFIX2 prefixs
 %left STAR INFIX3
 %left INFIX4
-%right prefixs
 %right FBY
 %right PRE
-%right LAST
-%right prec_apply
-%left DOT
 
 
 
@@ -164,7 +139,7 @@ equs: LET e=slist(SEMICOL, equ) TEL { e }
 equ: p=pat EQUAL e=exp { mk_equation p e }
 
 pat:
-  | n=NAME                            {Evarpat (ident_of_name n)}
+  | n=NAME                             {Evarpat (ident_of_name n)}
   | LPAREN p=snlist(COMMA, pat) RPAREN {Etuplepat p}
 
 longname: l=qualified(name) {l}
@@ -199,7 +174,7 @@ exp:
   | p_op=prefix e=exp %prec prefixs
         { mk_exp (Ecall(mk_op ~op_kind:Eop p_op, [e], None)) }
   | IF e1=exp THEN e2=exp ELSE e3=exp  { mk_exp (Eifthenelse(e1, e2, e3)) }
-  | e=simple_exp DOT m=longname               { mk_exp (Efield(e, m)) }
+  | e=simple_exp DOT m=longname        { mk_exp (Efield(e, m)) }
 
 
 

@@ -19,44 +19,23 @@ let keyword_table = ((Hashtbl.create 149) : (string, token) Hashtbl.t);;
 
 List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "node", NODE;
- "fun", FUN;
  "returns", RETURNS;
  "var", VAR;
  "let", LET;
  "tel", TEL;
  "fby", FBY;
- "switch", SWITCH;
  "when", WHEN;
  "type", TYPE;
- "every", EVERY;
  "true", BOOL(true);
  "false", BOOL(false);
  "pre", PRE;
  "or", OR;
  "not", NOT;
  "open", OPEN;
- "automaton", AUTOMATON;
- "switch", SWITCH;
- "present", PRESENT;
  "reset", RESET;
- "state", STATE;
- "unless", UNLESS;
- "until", UNTIL;
- "emit", EMIT;
- "last", LAST;
  "if", IF;
  "then", THEN;
  "else", ELSE;
- "default", DEFAULT;
- "continue", CONTINUE;
- "case", CASE;
- "do", DO;
- "contract", CONTRACT;
- "assume", ASSUME;
- "enforce", ENFORCE;
- "with", WITH;
- "inlined", INLINED;
- "at", AT;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");
@@ -155,22 +134,6 @@ rule token = parse
       { INT (int_of_string(Lexing.lexeme lexbuf)) }
   | '-'? ['0'-'9']+ ('.' ['0'-'9']*)? (['e' 'E'] ['+' '-']? ['0'-'9']+)?
       { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
-  | "\""
-      { reset_string_buffer();
-        let string_start = lexbuf.lex_start_pos + lexbuf.lex_abs_pos in
-        begin try
-          string lexbuf
-        with Lexical_error(Unterminated_string, _, string_end) ->
-          raise(Lexical_error(Unterminated_string, string_start, string_end))
-        end;
-        lexbuf.lex_start_pos <- string_start - lexbuf.lex_abs_pos;
-        STRING (get_stored_string()) }
-  | "'" [^ '\\' '\''] "'"
-      { CHAR(Lexing.lexeme_char lexbuf 1) }
-  | "'" '\\' ['\\' '\'' 'n' 't' 'b' 'r'] "'"
-      { CHAR(char_for_backslash (Lexing.lexeme_char lexbuf 2)) }
-  | "'" '\\' ['0'-'9'] ['0'-'9'] ['0'-'9'] "'"
-      { CHAR(char_for_decimal_code lexbuf 2) }
   | "(*@ " (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {
 	reset_string_buffer();

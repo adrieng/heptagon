@@ -15,10 +15,8 @@ open Parsetree
 %token <int> INT
 %token <float> FLOAT
 %token <bool> BOOL
-%token <char> CHAR
-%token <string> STRING
 %token <string * string> PRAGMA
-%token TYPE FUN NODE RETURNS VAR VAL IN OPEN END CONST
+%token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST
 %token FBY PRE SWITCH WHEN EVERY
 %token OR STAR NOT
 %token AMPERSAND
@@ -29,7 +27,6 @@ open Parsetree
 %token STATE
 %token UNLESS
 %token UNTIL
-%token EMIT
 %token LAST
 %token IF
 %token THEN
@@ -37,12 +34,10 @@ open Parsetree
 %token DEFAULT
 %token DO
 %token CONTINUE
-%token CASE
 %token CONTRACT
 %token ASSUME
 %token ENFORCE
 %token WITH
-%token INLINED
 %token POWER
 %token LBRACKET
 %token RBRACKET
@@ -63,9 +58,8 @@ open Parsetree
 %left WITH
 %nonassoc prec_ident
 %nonassoc LBRACKET
-%left IF ELSE
+%left ELSE
 %right ARROW
-%nonassoc EVERY
 %left OR
 %left AMPERSAND
 %left INFIX0 EQUAL
@@ -77,8 +71,6 @@ open Parsetree
 %right prec_uminus
 %right FBY
 %right PRE
-%right LAST
-%right prec_apply
 %left POWER
 %right PREFIX
 %left DOT
@@ -413,7 +405,7 @@ exp:
       { mk_exp (Eapp(mk_app Efby, [$1; $3])) }
   | PRE exp 
       { mk_exp (Eapp(mk_app (Epre None), [$2])) }
-  | node_name LPAREN exps RPAREN %prec prec_apply
+  | node_name LPAREN exps RPAREN
       { mk_exp (mk_call $1 $3) }
   | NOT exp
       { mk_exp (mk_op_call "not" [] [$2]) }
@@ -463,10 +455,10 @@ exp:
   | exp AROBASE exp 
       { mk_exp (mk_array_op_call Econcat [$1; $3]) }
 /*Iterators*/
-  | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN %prec prec_apply
+  | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_exp (mk_iterator_call $1 $2 [] ($4::$7)) }
   | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER 
-      RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN %prec prec_apply
+      RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_exp (mk_iterator_call $1 $3 $5 ($9::$12)) }
 /*Records operators */
   | exp WITH DOT longname EQUAL exp
