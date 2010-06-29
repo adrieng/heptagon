@@ -842,7 +842,7 @@ and typing_block statefull h
 and build h h0 dec =
   List.fold_left
     (fun (acc_dec, acc_defined, h)
-       ({ v_name = n; v_type = btype; v_last = l; v_loc = loc } as v) ->
+       ({ v_ident = n; v_type = btype; v_last = l; v_loc = loc } as v) ->
          try
            let ty = check_type btype in
            (* update type longname with module name from check_type *)
@@ -897,7 +897,7 @@ let typing_contract statefull h contract =
 
 let signature const_env inputs returns params constraints =
   let arg_dec_of_var_dec vd =
-    mk_arg (Some (name vd.v_name)) (check_type vd.v_type)
+    mk_arg (Some (name vd.v_ident)) (check_type vd.v_type)
   in
   { node_inputs = List.map arg_dec_of_var_dec inputs;
     node_outputs = List.map arg_dec_of_var_dec returns;

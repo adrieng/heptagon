@@ -90,7 +90,7 @@ let clear env c =
   clearec c
 
 let build dec =
-  let add acc { v_name = n; } = IdentSet.add n acc in
+  let add acc { v_ident = n; } = IdentSet.add n acc in
   List.fold_left add IdentSet.empty dec
 
 (** Main typing function *)

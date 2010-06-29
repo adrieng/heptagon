@@ -57,7 +57,7 @@ struct
   let add l env =
     Ecomp(env,
           List.fold_left
-            (fun acc { Heptagon.v_name = n } ->
+            (fun acc { Heptagon.v_ident = n } ->
                IdentSet.add n acc) IdentSet.empty l)
 
   (* sample e according to the clock [base on C1(x1) on ... on Cn(xn)] *)
@@ -113,7 +113,7 @@ let add_locals ni l_eqs s_eqs s_handlers =
               s_eqs s_handlers in
   addrec l_eqs s_eqs s_handlers
 
-let translate_var { Heptagon.v_name = n; Heptagon.v_type = ty; } =
+let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; } =
   mk_var_dec n ty
 
 let translate_locals locals l =

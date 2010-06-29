@@ -102,7 +102,7 @@ and present_handler = {
 }
 
 and var_dec = {
-  v_name : ident; mutable v_type : ty; v_last : last; v_loc : location
+  v_ident : ident; mutable v_type : ty; v_last : last; v_loc : location
 }
 
 and last =
@@ -168,7 +168,7 @@ let mk_equation ?(statefull = true) desc =
   { eq_desc = desc; eq_statefull = statefull; eq_loc = no_location; }
 
 let mk_var_dec ?(last = Var) name ty  =
-  { v_name = name; v_type = ty;
+  { v_ident = name; v_type = ty;
     v_last = last; v_loc = no_location }
 
 let mk_block ?(statefull = true) defnames eqs =

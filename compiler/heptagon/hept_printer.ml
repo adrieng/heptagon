@@ -43,7 +43,7 @@ and print_c ff = function
       fprintf ff "^";
       print_size_exp ff n
 
-and print_vd ff { v_name = n; v_type = ty; v_last = last } =
+and print_vd ff { v_ident = n; v_type = ty; v_last = last } =
   fprintf ff "@[<v>";
   begin match last with Last _ -> fprintf ff "last " | _ -> () end;
   print_ident ff n;

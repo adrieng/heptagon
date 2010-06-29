@@ -256,7 +256,7 @@ and translate_switch_handler loc const_env env sh =
     Heptagon.w_block = fst (translate_block const_env env sh.w_block) }
 
 and translate_var_dec const_env env vd =
-  { Heptagon.v_name = Rename.name vd.v_loc env vd.v_name;
+  { Heptagon.v_ident = Rename.name vd.v_loc env vd.v_name;
     Heptagon.v_type = translate_type const_env vd.v_type;
     Heptagon.v_last = translate_last env vd.v_last;
     Heptagon.v_loc = vd.v_loc }

@@ -14,7 +14,7 @@ open Ident
 
 (* introduce a fresh equation [last_x = pre(x)] for every *)
 (* variable declared with a last *)
-let last (eq_list, env, v) { v_name = n; v_type = t; v_last = last } =
+let last (eq_list, env, v) { v_ident = n; v_type = t; v_last = last } =
   match last with
     | Var -> (eq_list, env, v)
     | Last(default) ->

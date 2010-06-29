@@ -327,11 +327,11 @@ and build h dec =
     | Heptagon.Last(Some _) -> { i_kind = Last(izero); i_typ = izero }
     | Heptagon.Last(None) -> { i_kind = Last(ione); i_typ = new_var () } in
   List.fold_left
-    (fun h { v_name = n; v_last = last } -> Env.add n (kind last) h) h dec
+    (fun h { v_ident = n; v_last = last } -> Env.add n (kind last) h) h dec
 
 let sbuild h dec =
   List.fold_left
-    (fun h { v_name = n } -> Env.add n { i_kind = Var; i_typ = izero } h) h dec
+    (fun h { v_ident = n } -> Env.add n { i_kind = Var; i_typ = izero } h) h dec
 
 let typing_contract h contract =
   match contract with
