@@ -43,9 +43,11 @@ and edesc =
   | Econstvar of name
   | Efby of const option * exp
   | Etuple of exp list
-  | Ecall of op_desc * exp list * ident option (** [op_desc] is the function called
-                              [exp list] is the passed arguments
-                              [ident option] is the optional reset condition *)
+  | Ecall of op_desc * exp list * ident option (** [op_desc] is the function
+                                                   called [exp list] is the
+                                                   passed arguments [ident
+                                                   option] is the optional reset
+                                                   condition *)
 
   | Ewhen of exp * longname * ident
   | Emerge of ident * (longname * exp) list
@@ -65,11 +67,10 @@ and array_op =
   | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound,
                                                  array*)
   | Econcat of exp * exp
-  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option (**
-      [op_desc] is the function iterated,
-      [size_exp] is the size of the iteration,
-      [exp list] is the passed arguments,
-      [ident option] is the optional reset condition *)
+  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option
+      (** [op_desc] is the function iterated, [size_exp] is the size of the
+          iteration, [exp list] is the passed arguments, [ident option] is the
+          optional reset condition *)
 
 and op_desc = { op_name: longname; op_params: size_exp list; op_kind: op_kind }
 and op_kind = | Eop | Enode
@@ -154,24 +155,24 @@ let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
 
 let mk_node
-  ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
-  ?(loc = no_location) ?(param = []) ?(constraints = []) ?(pinst = []) name =
-    { n_name = name;
-      n_input = input;
-      n_output = output;
-      n_contract = contract;
-      n_local = local;
-      n_equs = eq;
-      n_loc = loc;
-      n_params = param;
-      n_params_constraints = constraints;
-      n_params_instances = pinst; }
+    ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
+    ?(loc = no_location) ?(param = []) ?(constraints = []) ?(pinst = []) name =
+  { n_name = name;
+    n_input = input;
+    n_output = output;
+    n_contract = contract;
+    n_local = local;
+    n_equs = eq;
+    n_loc = loc;
+    n_params = param;
+    n_params_constraints = constraints;
+    n_params_instances = pinst; }
 
 let mk_type_dec ?(type_desc = Type_abs) ?(loc = no_location) name =
   { t_name = name; t_desc = type_desc; t_loc = loc }
 
 let mk_op ?(op_params = []) ?(op_kind = Enode) lname =
-    { op_name = lname; op_params = op_params; op_kind = op_kind }
-    
+  { op_name = lname; op_params = op_params; op_kind = op_kind }
+
 let void = mk_exp (Etuple [])
 

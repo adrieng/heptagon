@@ -117,13 +117,13 @@ let rec cand nc1 nc2 =
     | nc1, Aor(nc2, nc22) -> Aor(cand nc1 nc2, cand nc1 nc22)
     | Aac(ac1), Aac(ac2) -> Aac(Aand(ac1, ac2))
 
-let rec ctuple l = 
+let rec ctuple l =
   let rec conv = function
     | Cwrite(n) -> Awrite(n)
     | Cread(n) -> Aread(n)
     | Clastread(n) -> Alastread(n)
     | Ctuple(l) -> Atuple (ctuple l)
-    | Cand (c1, c2) -> Aand (conv c1, conv c2) 
+    | Cand (c1, c2) -> Aand (conv c1, conv c2)
     | Cseq _ -> Format.printf "Unexpected seq\n"; assert false
     | Cor _ -> Format.printf "Unexpected or\n"; assert false
     | _ -> assert false
@@ -214,26 +214,26 @@ let build ac =
         | Aseq(ac1, ac2) ->
             let top1, bot1 = make_graph ac1 in
             let top2, bot2 = make_graph ac2 in
-              (* add extra dependences *)
-              List.iter
-                (fun top -> List.iter (fun bot -> add_depends top bot) bot1)
-                top2;
-              top1 @ top2, bot1 @ bot2
-	      | Awrite(n) -> let g = Env.find n n_to_graph in [g], [g]
-	      | Aread(n) -> let g = make ac in attach g n; [g], [g]
-	      | Atuple(l) -> 
-            let make_graph_tuple ac = 
+            (* add extra dependences *)
+            List.iter
+              (fun top -> List.iter (fun bot -> add_depends top bot) bot1)
+              top2;
+            top1 @ top2, bot1 @ bot2
+        | Awrite(n) -> let g = Env.find n n_to_graph in [g], [g]
+        | Aread(n) -> let g = make ac in attach g n; [g], [g]
+        | Atuple(l) ->
+            let make_graph_tuple ac =
               match ac with
                 | Aand _ | Atuple _ -> make_graph ac
                 | _ -> [], []
             in
-	          let g = node_for_ac ac in
-	            List.iter (add_dependence g) l;
-              let top_l, bot_l = List.split (List.map make_graph_tuple l) in 
-              let top_l = List.flatten top_l in
-              let bot_l = List.flatten bot_l in
-	              g::top_l, g::bot_l
-        | _ -> [], [] 
+            let g = node_for_ac ac in
+            List.iter (add_dependence g) l;
+            let top_l, bot_l = List.split (List.map make_graph_tuple l) in
+            let top_l = List.flatten top_l in
+            let bot_l = List.flatten bot_l in
+            g::top_l, g::bot_l
+        | _ -> [], []
 
     in
     let top_list, bot_list = make_graph ac in

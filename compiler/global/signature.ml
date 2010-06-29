@@ -22,10 +22,10 @@ type param = { p_name : name }
 
 (** Node signature *)
 type node =
-  { node_inputs : arg list;
-    node_outputs : arg list;
-    node_params : param list; (** Static parameters *)
-    node_params_constraints : size_constr list }
+    { node_inputs : arg list;
+      node_outputs : arg list;
+      node_params : param list; (** Static parameters *)
+      node_params_constraints : size_constr list }
 
 type field = { f_name : name; f_type : ty }
 type structure = field list
@@ -40,7 +40,7 @@ let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
 let mk_arg name ty = { a_type = ty; a_name = name }
 
 let mk_param name = { p_name = name }
-  
+
 
 let print_param ff p = Names.print_name ff p.p_name
 
