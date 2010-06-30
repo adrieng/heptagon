@@ -20,7 +20,7 @@ let parse parsing_fun lexing_fun lexbuf =
   with
     | Hept_lexer.Lexical_error(err, pos1, pos2) ->
         lexical_error err (Loc(pos1, pos2))
-    | Parsing.Parse_error ->
+    | Hept_parser.Error ->
         let pos1 = Lexing.lexeme_start lexbuf
         and pos2 = Lexing.lexeme_end lexbuf in
         let l = Loc(pos1,pos2) in
