@@ -105,13 +105,6 @@ type program =
 let mk_var_dec name ty =
   { v_ident = name; v_type = ty }
 
-(** [is_scalar_type vd] returns whether the type corresponding
-    to this variable declaration is scalar (ie a type that can
-    be returned by a C function). *)
-let is_scalar_type vd = match vd.v_type with
-  | Tint | Tfloat | Tbool -> true
-  | _ -> false
-
 let rec var_name x =
   match x with
     | Var x -> x

@@ -16,6 +16,9 @@ open Obc
 open Control
 open Static
 
+let gen_obj_name n =
+  (shortname n) ^ "_mem" ^ (gen_symbol ())
+
 let rec encode_name_params n = function
   | [] -> n
   | p :: params -> encode_name_params (n ^ ("__" ^ (string_of_int p))) params
@@ -150,13 +153,13 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         m, si, j, (control map ck action) :: s
 
     | pat, Minils.Ecall ({ Minils.op_name = n; Minils.op_params = params;
-                           Minils.op_kind = (Minils.Enode 
+                           Minils.op_kind = (Minils.Enode
                            | Minils.Efun) as op_kind },
                          e_list, r) ->
         let name_list = translate_pat map pat in
         let c_list = List.map (translate const_env map (m, si, j, s)) e_list in
-        let o = gen_symbol () in
-        let si = 
+        let o = gen_obj_name n in
+        let si =
           (match op_kind with
              | Minils.Enode -> (Reinit o) :: si
              | Minils.Efun -> si) in
@@ -168,7 +171,7 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                        let ra =
                          control map (Minils.Con (ck, Name "true", r))
                            (Reinit o) in
-                       ra :: (control map ck action) :: s 
+                       ra :: (control map ck action) :: s
                    | _, _ -> (control map ck action) :: s) in
         m, si, j, s
 
@@ -275,7 +278,7 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let name_list = translate_pat map pat in
         let c_list =
           List.map (translate const_env map (m, si, j, s)) e_list in
-        let o = gen_symbol () in
+        let o = gen_obj_name f in
         let n = int_of_size_exp const_env n in
         let si =
           (match k with

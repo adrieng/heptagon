@@ -102,12 +102,12 @@ let output_names_list sig_info =
   in
   List.map remove_option sig_info.info.node_outputs
 
-let is_scalar_type ty =
-  match ty with
-    | Types.Tid name_int when name_int = Initial.pint -> true
-    | Types.Tid name_float when name_float = Initial.pfloat -> true
-    | Types.Tid name_bool when name_bool = Initial.pbool -> true
-    | _ -> false
+let is_statefull n =
+  try
+    let _, sig_info = node_info n in
+      sig_info.info.node_statefull
+  with
+      Not_found -> Error.message no_location (Error.Enode (fullname n))
 
 (******************************)
 
@@ -352,28 +352,35 @@ let is_op = function
   | Modname { qual = "Pervasives"; id = _ } -> true
   | _ -> false
 
+let out_var_name_of_objn o =
+   o ^"_out_st"
+
 (** Creates the list of arguments to call a node. [targeting] is the targeting
     of the called node, [mem] represents the node context and [args] the
     argument list.*)
-let step_fun_call sig_info args mem =
-  args@[Caddrof mem]
+let step_fun_call var_env sig_info objn out args =
+  if sig_info.node_statefull then (
+    let mem =
+      (match objn with
+         | Context o -> Cfield (Cderef (Cvar "self"), o)
+         | Array_context (o, l) ->
+             let l = clhs_of_lhs var_env l in
+               Carray (Cfield (Cderef (Cvar "self"), o), Clhs l)
+      ) in
+      args@[Caddrof out; Caddrof mem]
+  ) else
+    args@[Caddrof out]
 
 (** Generate the statement to call [objn].
     [outvl] is a list of lhs where to put the results.
     [args] is the list of expressions to use as arguments.
     [mem] is the lhs where is stored the node's context.*)
 let generate_function_call var_env obj_env outvl objn args =
-  let mem =
-    (match objn with
-       | Context o -> Cfield (Cderef (Cvar "self"), o)
-       | Array_context (o, l) ->
-           let l = clhs_of_lhs var_env l in
-           Carray (Cfield (Cderef (Cvar "self"), o), Clhs l)
-    ) in
   (** Class name for the object to step. *)
   let classln = assoc_cn objn obj_env in
   let classn = shortname classln in
   let mod_classn, sig_info = node_info classln in
+  let out = Cvar (out_var_name_of_objn classn) in
 
   let fun_call =
     if is_op classln then
@@ -381,7 +388,7 @@ let generate_function_call var_env obj_env outvl objn args =
     else
       (** The step function takes scalar arguments and its own internal memory
           holding structure. *)
-      let args = step_fun_call sig_info.info args mem in
+      let args = step_fun_call var_env sig_info.info objn out args in
       (** Our C expression for the function call. *)
       Cfun_call (classn ^ "_step", args)
   in
@@ -391,24 +398,17 @@ let generate_function_call var_env obj_env outvl objn args =
       assigning each field to the corresponding local variable. *)
   match outvl with
     | [] -> [Csexpr fun_call]
-    | [vr] when is_scalar_type (List.hd sig_info.info.node_outputs).a_type ->
-        [Caffect (vr, fun_call)]
+    | [outv] when is_op classln ->
+        let ty = assoc_type_lhs outv var_env in
+          create_affect_stm outv fun_call ty
     | _ ->
         (* Remove options *)
         let out_sig = output_names_list sig_info in
         let create_affect outv out_name =
-          let ty =
-            match outv with
-              | Cvar x -> assoc_type x var_env
-              | Carray(Cvar x, _) -> array_base_ctype (assoc_type x var_env) [1]
-              | Carray(Cfield(Cderef (Cvar "self"), x), _) ->
-                  array_base_ctype (assoc_type x var_env) [1]
-              | _ -> Cty_void (*we don't care about the type*)
-          in
-          create_affect_stm outv
-            (Clhs (Cfield (mem,
-                           out_name))) ty in
-        (Csexpr fun_call)::(List.flatten (map2 create_affect outvl out_sig))
+          let ty = assoc_type_lhs outv var_env in
+            create_affect_stm outv (Clhs (Cfield (out, out_name))) ty
+        in
+          (Csexpr fun_call)::(List.flatten (map2 create_affect outvl out_sig))
 
 (** Create the statement dest = c where c = v^n^m... *)
 let rec create_affect_const var_env dest c =
@@ -504,39 +504,40 @@ let global_name = ref "";;
 (** Builds the argument list of step function*)
 let step_fun_args n sf =
   let args = cvarlist_of_ovarlist sf.inp in
-  args @ [("self", Cty_ptr (Cty_id (n ^ "_mem")))]
+  let out_arg =
+    (match sf.out with
+       | [] -> []
+       | _ -> [("out", Cty_ptr (Cty_id (n ^ "_out")))]
+    ) in
+  let context_arg =
+    if is_statefull (longname n) then
+      [("self", Cty_ptr (Cty_id (n ^ "_mem")))]
+    else
+      []
+  in
+    args @ out_arg @ context_arg
+
 
 (** [fun_def_of_step_fun name obj_env mods sf] returns a C function definition
     [name ^ "_out"] corresponding to the Obc step function [sf]. The object name
     <-> class name mapping [obj_env] is needed to translate internal steps and
     reset calls. A step function can have multiple return values, whereas C does
     not allow such functions. When it is the case, we declare a structure with a
-    field by return value. A scalar result is directly returned. *)
-let fun_def_of_step_fun name obj_env mem sf =
+    field by return value. *)
+let fun_def_of_step_fun name obj_env mem objs sf =
   let fun_name = name ^ "_step" in
   (** Its arguments, translating Obc types to C types and adding our internal
       memory structure. *)
   let args = step_fun_args name sf in
   (** Its normal local variables. *)
   let local_vars = List.map cvar_of_vd sf.local in
-  (** Local variables containing return values. *)
-  let ret_vars =
-    if List.length sf.out = 1 && Obc.is_scalar_type (List.hd sf.out) then
-      List.map cvar_of_vd sf.out
-    else
-      []
-  in
 
-  (** Return type, depending on the number of return values of our function. *)
-  let retty =
-    match sf.out with
-      | [] -> Cty_void
-      | [v] ->
-          if Obc.is_scalar_type v then
-            ctype_of_otype v.v_type
-          else
-            Cty_void
-      | _ -> Cty_void in
+  (** Out vars for function calls *)
+  let out_vars =
+    List.map (fun obj -> out_var_name_of_objn (shortname obj.cls),
+                Cty_id ((cname_of_name (shortname obj.cls)) ^ "_out"))
+      (List.filter (fun obj -> not (is_op obj.cls)) objs) in
+
   (** Controllable variables valuations *)
   let use_ctrlr, ctrlr_calls =
     match sf.controllables with
@@ -556,29 +557,21 @@ let fun_def_of_step_fun name obj_env mem sf =
           [Csexpr(funcall)] in
   (** The body *)
   let mems = List.map cvar_of_vd (mem@sf.out) in
-  let var_env = args @ mems @ local_vars in
+  let var_env = args @ mems @ local_vars @ out_vars in
   let body = cstm_of_act var_env obj_env sf.bd in
-
-  (** Our epilogue: affect each local variable holding a return value to
-      the correct structure field. *)
-  let epilogue = match sf.out with
-    | [] -> []
-    | [vd] when Obc.is_scalar_type (List.hd sf.out) ->
-        [Creturn (Clhs (Cvar (Ident.name vd.v_ident)))]
-    | out -> [] in
 
   (** Substitute the return value variables with the corresponding
       context field*)
   let map = Csubst.assoc_map_for_fun sf in
-  let body = List.map (Csubst.subst_stm map) (body@epilogue) in
+  let body = List.map (Csubst.subst_stm map) body in
 
   use_ctrlr,
   Cfundef {
     f_name = fun_name;
-    f_retty = retty;
+    f_retty = Cty_void;
     f_args = args;
     f_body = {
-      var_decls = ret_vars @ local_vars;
+      var_decls = local_vars @ out_vars;
       block_body = ctrlr_calls @ body
     }
   }
@@ -589,28 +582,30 @@ let mem_decl_of_class_def cd =
   (** This one just translates the class name to a struct name following the
       convention we described above. *)
   let struct_field_of_obj_dec l od =
-    if is_op od.cls then
-      l
-    else
+    if is_statefull od.cls then
       let clsname = shortname od.cls in
       let ty = Cty_id ((cname_of_name clsname) ^ "_mem") in
       let ty = if od.size <> 1 then Cty_arr (od.size, ty) else ty in
-      (od.obj, ty)::l
-  in
-
-  (** Fields corresponding to normal memory variables. *)
-  let mem_fields = List.map cvar_of_vd cd.mem in
-  (** Fields corresponding to object variables. *)
-  let obj_fields = List.fold_left struct_field_of_obj_dec [] cd.objs in
-  (** Fields corresponding to output variables. *)
-  let out_fields =
-    if (List.length cd.step.out) <> 1 or
-      not (Obc.is_scalar_type (List.hd cd.step.out)) then
-        List.map cvar_of_vd cd.step.out
+        (od.obj, ty)::l
     else
-      []
+      l
   in
-  Cdecl_struct (cd.cl_id ^ "_mem", mem_fields @ obj_fields @ out_fields)
+    if is_statefull (longname cd.cl_id) then (
+      (** Fields corresponding to normal memory variables. *)
+      let mem_fields = List.map cvar_of_vd cd.mem in
+      (** Fields corresponding to object variables. *)
+      let obj_fields = List.fold_left struct_field_of_obj_dec [] cd.objs in
+        [Cdecl_struct (cd.cl_id ^ "_mem", mem_fields @ obj_fields)]
+    ) else
+      []
+
+let out_decl_of_class_def cd =
+  match cd.step.out with
+    | [] -> []
+    | out ->
+        (** Fields corresponding to output variables. *)
+        let out_fields = List.map cvar_of_vd out in
+          [Cdecl_struct (cd.cl_id ^ "_out", out_fields)]
 
 (** [reset_fun_def_of_class_def cd] returns the defintion of the C function
     tasked to reset the class [cd]. *)
@@ -634,17 +629,24 @@ let cdefs_and_cdecls_of_class_def cd =
       variables and the state of other nodes. For a class named ["cname"], the
       structure will be called ["cname_mem"]. *)
   let memory_struct_decl = mem_decl_of_class_def cd in
+  let out_struct_decl = out_decl_of_class_def cd in
   let obj_env =
     List.map (fun od -> { od with cls = cname_of_name' od.cls }) cd.objs in
   let use_ctrlr,step_fun_def
-    = fun_def_of_step_fun cd.cl_id obj_env cd.mem cd.step in
+    = fun_def_of_step_fun cd.cl_id obj_env cd.mem cd.objs cd.step in
   (** C function for resetting our memory structure. *)
   let reset_fun_def = reset_fun_def_of_class_def cd in
   let res_fun_decl = cdecl_of_cfundef reset_fun_def in
   let step_fun_decl = cdecl_of_cfundef step_fun_def in
-  memory_struct_decl,
+  let fun_defs =
+    if is_statefull (longname cd.cl_id) then
+      ([res_fun_decl; step_fun_decl], [reset_fun_def; step_fun_def])
+    else
+      ([step_fun_decl], [step_fun_def]) in
+
+  memory_struct_decl @ out_struct_decl,
   use_ctrlr,
-  ([res_fun_decl; step_fun_decl], [reset_fun_def; step_fun_def])
+  fun_defs
 
 
 
@@ -962,7 +964,7 @@ let cfile_list_of_oprog name oprog =
     List.iter add_opened_module deps;
 
     let cfile_name = String.uncapitalize cd.cl_id in
-    let mem_cdecl,use_ctrlr,(cdecls, cdefs) =
+    let struct_decl,use_ctrlr,(cdecls, cdefs) =
       cdefs_and_cdecls_of_class_def cd in
 
     let cfile_mem = cfile_name ^ "_mem" in
@@ -972,7 +974,7 @@ let cfile_list_of_oprog name oprog =
     remove_opened_module name;
 
     let acc_cfiles = acc_cfiles @
-      [ (cfile_mem ^ ".h", Cheader (get_opened_modules (),[mem_cdecl]));
+      [ (cfile_mem ^ ".h", Cheader (get_opened_modules (), struct_decl));
         (cfile_name ^ ".h", Cheader (get_opened_modules (), cdecls));
         (cfile_name ^ ".c", Csource cdefs)] in
     deps@[cfile_name],acc_cfiles in
@@ -996,7 +998,7 @@ let cfile_list_of_oprog name oprog =
 
 let global_file_header name prog =
   let step_fun_decl cd =
-    let _,s = fun_def_of_step_fun cd.cl_id cd.objs cd.mem cd.step in
+    let _,s = fun_def_of_step_fun cd.cl_id cd.objs cd.mem cd.objs cd.step in
     cdecl_of_cfundef s
   in
   reset_opened_modules ();
@@ -1004,7 +1006,8 @@ let global_file_header name prog =
 
   let ty_decls = List.map decls_of_type_decl prog.o_types in
   let ty_decls = List.concat ty_decls in
-  let mem_step_fun_decls = List.map mem_decl_of_class_def prog.o_defs in
+  let mem_step_fun_decls = List.flatten (List.map mem_decl_of_class_def
+                                           prog.o_defs) in
   let reset_fun_decls =
     let cdecl_of_reset_fun cd =
       cdecl_of_cfundef (reset_fun_def_of_class_def cd) in

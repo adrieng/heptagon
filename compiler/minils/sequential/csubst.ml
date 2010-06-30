@@ -51,12 +51,10 @@ and subst_block map b =
 let assoc_map_for_fun sf =
   match sf.Obc.out with
     | [] -> NamesEnv.empty
-    | [vd] when Obc.is_scalar_type vd ->
-        NamesEnv.empty
     | out ->
         let fill_field map vd =
           NamesEnv.add (name vd.Obc.v_ident)
-            (Cfield (Cderef (Cvar "self"), name vd.Obc.v_ident)) map
+            (Cfield (Cderef (Cvar "out"), name vd.Obc.v_ident)) map
         in
         List.fold_left fill_field NamesEnv.empty out
 
