@@ -203,8 +203,9 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         m, si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
-          Minils.Earray_op (Minils.Eselect_dyn (idx, bounds, e1, e2)) ->
+          Minils.Earray_op (Minils.Eselect_dyn (idx, e1, e2)) ->
         let x = var_from_name map x in
+        let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
         let e1 = translate const_env map (m, si, j, s) e1 in
         let bounds = List.map (int_of_size_exp const_env) bounds in
         let idx = List.map (translate const_env map (m, si, j, s)) idx in

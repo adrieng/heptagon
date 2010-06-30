@@ -161,7 +161,7 @@ let rec typing h e =
 and typing_array_op h e = function
   | Erepeat (_, e) -> typing h e
   | Eselect (_, e) -> typing h e
-  | Eselect_dyn (e_list, _, e, defe) ->
+  | Eselect_dyn (e_list, e, defe) ->
       let ck = new_var () in
       let ct = skeleton ck e.e_ty
       in (expect h ct e; List.iter (expect h ct) e_list; ct)

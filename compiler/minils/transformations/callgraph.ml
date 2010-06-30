@@ -63,7 +63,7 @@ let rec collect_exp nodes env e =
         collect_array_exp nodes env op
 
 and collect_array_exp nodes env = function
-  | Eselect_dyn (e_list, _, e1, e2) ->
+  | Eselect_dyn (e_list, e1, e2) ->
       List.iter (collect_exp nodes env) e_list;
       collect_exp nodes env e1;
       collect_exp nodes env e2

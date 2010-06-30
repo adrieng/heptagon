@@ -105,7 +105,7 @@ struct
   and read_array_op is_left acc = function
     | Erepeat (_,e) -> read is_left acc e
     | Eselect (_,e) -> read is_left acc e
-    | Eselect_dyn (e_list, _, e1, e2) ->
+    | Eselect_dyn (e_list, e1, e2) ->
         let acc = List.fold_left (read is_left) acc e_list in
         read is_left (read is_left acc e1) e2
     | Eupdate (_, e1, e2) ->

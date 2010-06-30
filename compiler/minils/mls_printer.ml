@@ -118,7 +118,7 @@ and print_exp_desc ff = function
 and print_array_op ff = function
   | Erepeat (n, e) -> fprintf ff "%a^%a" print_exp e  print_size_exp n
   | Eselect (idx, e) -> fprintf ff "%a%a" print_exp e  print_index idx
-  | Eselect_dyn (idx, _, e1, e2) ->
+  | Eselect_dyn (idx, e1, e2) ->
       fprintf ff "%a%a default %a"
         print_exp e1  print_dyn_index idx  print_exp e2
   | Eupdate (idx, e1, e2) ->

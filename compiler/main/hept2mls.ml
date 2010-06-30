@@ -225,12 +225,8 @@ and translate_array_op env op e_list =
         Erepeat (size_exp_of_exp idx, e)
     | Heptagon.Eselect idx_list, [e] ->
         Eselect (idx_list, e)
-          (*Little hack: we need the to access the type of the array being
-            accessed to store the bounds (which will be used at code generation
-            time, where the types are harder to find). *)
     | Heptagon.Eselect_dyn, e::defe::idx_list ->
-        let bounds = bounds_list e.e_ty  in
-        Eselect_dyn (idx_list, bounds, e, defe)
+        Eselect_dyn (idx_list, e, defe)
     | Heptagon.Eupdate idx_list, [e1;e2] ->
         Eupdate (idx_list, e1, e2)
     | Heptagon.Eselect_slice, [e; idx1; idx2] ->

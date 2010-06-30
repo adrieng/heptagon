@@ -191,11 +191,11 @@ and translate_array_exp kind context op =
     | Eselect (idx,e') ->
         let context, e' = translate VRef context e' in
         context, Eselect(idx, e')
-    | Eselect_dyn (idx, bounds, e1, e2) ->
+    | Eselect_dyn (idx, e1, e2) ->
         let context, e1 = translate VRef context e1 in
         let context, idx = translate_list Exp context idx in
         let context, e2 = translate Exp context e2 in
-        context, Eselect_dyn(idx, bounds, e1, e2)
+        context, Eselect_dyn(idx, e1, e2)
     | Eupdate (idx, e1, e2)  ->
         let context, e1 = translate VRef context e1 in
         let context, e2 = translate Exp context e2 in
