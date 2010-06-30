@@ -1,6 +1,5 @@
 %{
 
-open Misc
 open Signature
 open Names
 open Ident
@@ -71,7 +70,6 @@ let mk_var name ty = mk_var_dec name ty
 %type <Minils.program> program
 
 %%
-/*TODO add arrow (init) ?*/
 
 /** Tools **/
 %inline slist(S, x)        : l=separated_list(S, x)                    {l} 
