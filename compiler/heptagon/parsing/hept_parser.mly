@@ -1,6 +1,5 @@
 %{
 
-open Misc
 open Signature
 open Location
 open Names
