@@ -29,7 +29,6 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "end", END;
  "fby", FBY;
  "switch", SWITCH;
- "when", WHEN;
  "type", TYPE;
  "every", EVERY;
  "true", BOOL(true);
@@ -164,7 +163,7 @@ rule token = parse
   | '0' ['o' 'O'] ['0'-'7']+
   | '0' ['b' 'B'] ['0'-'1']+
       { INT (int_of_string(Lexing.lexeme lexbuf)) }
-  | ['0'-'9']+ ('.' ['0'-'9']*)? (['e' 'E'] ['+' '-']? ['0'-'9']+)?
+  | ['0'-'9']+ ('.' ['0'-'9']+)? (['e' 'E'] ['+' '-']? ['0'-'9']+)?
       { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
   | "(*@ " (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {

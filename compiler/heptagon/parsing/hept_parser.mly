@@ -16,7 +16,7 @@ open Parsetree
 %token <bool> BOOL
 %token <string * string> PRAGMA
 %token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST
-%token FBY PRE SWITCH WHEN EVERY
+%token FBY PRE SWITCH EVERY
 %token OR STAR NOT
 %token AMPERSAND
 %token AMPERAMPER
@@ -53,10 +53,10 @@ open Parsetree
 %token <string> INFIX4
 %token EOF
 
+
 %right AROBASE
-%left WITH
 %nonassoc prec_ident
-%nonassoc LBRACKET
+%nonassoc DEFAULT
 %left ELSE
 %right ARROW
 %left OR
@@ -83,7 +83,7 @@ open Parsetree
 %%
 
 program:
-  | pragma_headers open_modules const_decs type_decs node_decs EOF 
+  | pragma_headers open_modules const_decs type_decs node_decs EOF
       {{ p_pragmas = $1;
 	 p_opened = List.rev $2;
          p_types = $4;
@@ -209,7 +209,7 @@ contract:
 	    c_enforce = $5;
 	    c_controllables = $6 }}
 ;
-      
+
 opt_equs:
   | /* empty */ { [] }
   | LET equs TEL { $2 }
@@ -400,9 +400,9 @@ node_name:
 
 exp:
   | simple_exp { $1 }
-  | simple_exp FBY exp  
+  | simple_exp FBY exp
       { mk_exp (Eapp(mk_app Efby, [$1; $3])) }
-  | PRE exp 
+  | PRE exp
       { mk_exp (Eapp(mk_app (Epre None), [$2])) }
   | node_name LPAREN exps RPAREN
       { mk_exp (mk_call $1 $3) }
@@ -438,30 +438,30 @@ exp:
       { mk_exp (Eapp(mk_app Earrow, [$1; $3])) }
   | LAST IDENT
       { mk_exp (Elast $2) }
-  | exp DOT longname 
+  | simple_exp DOT longname
       { mk_exp (Efield ($1, $3)) }
 /*Array operations*/
-  | exp POWER simple_exp 
+  | exp POWER simple_exp
       { mk_exp (mk_array_op_call Erepeat [$1; $3]) }
-  | exp indexes 
+  | simple_exp indexes
       { mk_exp (mk_array_op_call (Eselect $2) [$1]) }
-  | exp DOT indexes DEFAULT exp 
+  | simple_exp DOT indexes DEFAULT exp
       { mk_exp (mk_array_op_call Eselect_dyn ([$1; $5]@$3)) }
-  | exp WITH indexes EQUAL exp
-      { mk_exp (mk_array_op_call (Eupdate $3) [$1; $5]) }
-  | exp LBRACKET exp DOUBLE_DOT exp RBRACKET
+  | LBRACKET exp WITH indexes EQUAL exp RBRACKET
+      { mk_exp (mk_array_op_call (Eupdate $4) [$2; $6]) }
+  | simple_exp LBRACKET exp DOUBLE_DOT exp RBRACKET
       { mk_exp (mk_array_op_call Eselect_slice [$1; $3; $5]) }
-  | exp AROBASE exp 
+  | exp AROBASE exp
       { mk_exp (mk_array_op_call Econcat [$1; $3]) }
 /*Iterators*/
   | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_exp (mk_iterator_call $1 $2 [] ($4::$7)) }
-  | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER 
+  | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_exp (mk_iterator_call $1 $3 $5 ($9::$12)) }
 /*Records operators */
-  | exp WITH DOT longname EQUAL exp
-      { mk_exp (Eapp (mk_app (Efield_update $4), [$1; $6])) }
+  | LBRACE e=simple_exp WITH DOT ln=longname EQUAL nv=exp RBRACE
+      { mk_exp (Eapp (mk_app (Efield_update ln), [e; nv])) }
 ;
 
 call_params:
@@ -551,7 +551,7 @@ interface_decl:
   | OPEN Constructor { mk_interface_decl (Iopen $2) }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
-    { mk_interface_decl (Isignature({ sig_name = $3; 
+    { mk_interface_decl (Isignature({ sig_name = $3;
                                       sig_inputs = $6;
                                       sig_statefull = $2;
                                       sig_outputs = $10;

@@ -63,7 +63,7 @@ let mk_var name ty = mk_var_dec name ty
 %left WHEN
 %right FBY
 %right PRE
-%left POWER
+%right POWER
 
 
 %start program
@@ -162,30 +162,30 @@ simple_exp:
   | LPAREN e=exp RPAREN                { e }
 
 exp:
-  | e=simple_exp                       { e }
-  | c=const                            { mk_exp (Econst c) }
-  | const FBY exp                      { mk_exp (Efby(Some($1),$3)) }
-  | PRE exp                            { mk_exp (Efby(None,$2)) }
-  | op=funop a=exps r=reset            { mk_exp (Ecall(op, a, r)) }
+  | e=simple_exp                           { e }
+  | c=const                                { mk_exp (Econst c) }
+  | const FBY exp                          { mk_exp (Efby(Some($1),$3)) }
+  | PRE exp                                { mk_exp (Efby(None,$2)) }
+  | op=funop a=exps r=reset                { mk_exp (Ecall(op, a, r)) }
   | e1=exp i_op=infix e2=exp
         { mk_exp (Ecall(mk_op ~op_kind:Efun i_op, [e1; e2], None)) }
   | p_op=prefix e=exp %prec prefixs
         { mk_exp (Ecall(mk_op ~op_kind:Efun p_op, [e], None)) }
-  | IF e1=exp THEN e2=exp ELSE e3=exp  { mk_exp (Eifthenelse(e1, e2, e3)) }
-  | e=simple_exp DOT m=longname        { mk_exp (Efield(e, m)) }
+  | IF e1=exp THEN e2=exp ELSE e3=exp     { mk_exp (Eifthenelse(e1, e2, e3)) }
+  | e=simple_exp DOT m=longname           { mk_exp (Efield(e, m)) }
   | e=exp WHEN c=constructor LPAREN n=ident RPAREN
-        { mk_exp (Ewhen(e, c, n)) }
-  | MERGE n=ident h=handlers           { mk_exp (Emerge(n, h)) }
+                                           { mk_exp (Ewhen(e, c, n)) }
+  | MERGE n=ident h=handlers               { mk_exp (Emerge(n, h)) }
   | LPAREN r=exp WITH DOT ln=longname EQUAL nv=exp /*ordre louche...*/
         { mk_exp (Efield_update(ln, r, nv)) }
-  | op=array_op                        { mk_exp (Earray_op op) }
-/* ??? TODO   | Earray of exp list  [e1,e2,e3...] ???? */
+  | op=array_op                            { mk_exp (Earray_op op) }
+  | LBRACKET es=slist(COMMA, exp) RBRACKET { mk_exp (Earray es) }
 
-array_op: /* TODO quel vrai gain de séparer les array op ? gain pour cédric ?*/
-  | e=exp POWER p=e_param              { Erepeat(p, e) } /*ordre louche...*/
-  | e=simple_exp i=indexes             { Eselect(i, e) } /*ordre louche...*/
+array_op:
+  | e=exp POWER p=e_param              { Erepeat(p, e) }
+  | e=simple_exp i=indexes             { Eselect(i, e) }
 /*TODO  | e=exp i=indexes_dyn DEFAULT d=exp  { Eselect_dyn(i,???? ,e ,d) } */
-  | LPAREN e=exp WITH i=indexes EQUAL nv=exp  { Eupdate(i, e, nv) } /*ordre louche...*/
+  | LPAREN e=exp WITH i=indexes EQUAL nv=exp  { Eupdate(i, e, nv) }
   | e=simple_exp LBRACKET i1=e_param DOTDOT i2=e_param RBRACKET
       { Eselect_slice(i1, i2, e) }
   | e1=exp AROBASE e2=exp              { Econcat(e1,e2) }
