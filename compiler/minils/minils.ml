@@ -41,16 +41,13 @@ and edesc =
   | Econst of static_exp
   | Evar of ident
   | Econstvar of name
-  | Etuple of exp list
   | Efby of static_exp option * exp
   | Eapp of app * exp list * ident option
       (** ident option is the optional reset *)
   | Ewhen of exp * longname * ident
   | Emerge of ident * (longname * exp) list
-  | Efield of exp * longname
   | Estruct of (longname * exp) list
   | Eiterator of iterator_type * app * static_exp * exp list * ident option
-
 
 and app = { a_op: op; a_params: static_exp list }
 
@@ -59,14 +56,15 @@ and op =
   | Enode of longname
   | Eifthenelse
   | Efield_update of longname (* field name args would be [record ; value] *)
+  | Efield of longname
   | Earray
+  | Etuple
   | Erepeat
   | Eselect
   | Eselect_dyn
   | Eupdate
   | Eselect_slice
   | Econcat
-
 
 and ct =
   | Ck of ck
