@@ -1,5 +1,6 @@
 <global> or <utilities> or <minils> or <heptagon> or <main>:include
 <**/*.ml>: debug, dtypes
 <preproc.ml>: camlp4of, use_camlp4
-<**/*.{byte,native}>: use_unix, use_str, debug
+<**/hept_parser.ml>: use_menhirLib
+<**/*.{byte,native}>: use_unix, use_str, link_menhirLib, debug
 true: use_menhir
