@@ -38,41 +38,35 @@ and exp =
       e_loc: location }
 
 and edesc =
-  | Econst of const
+  | Econst of static_exp
   | Evar of ident
   | Econstvar of name
-  | Efby of const option * exp
   | Etuple of exp list
-  | Ecall of op_desc * exp list * ident option (** [op_desc] is the function
-                                                   called [exp list] is the
-                                                   passed arguments [ident
-                                                   option] is the optional reset
-                                                   condition *)
-
+  | Efby of static_exp option * exp
+  | Eapp of app * exp list * ident option
+      (** ident option is the optional reset *)
   | Ewhen of exp * longname * ident
   | Emerge of ident * (longname * exp) list
-  | Eifthenelse of exp * exp * exp
   | Efield of exp * longname
-  | Efield_update of longname * exp * exp (*field, record, value*)
   | Estruct of (longname * exp) list
-  | Earray of exp list
-  | Earray_op of array_op
+  | Eiterator of iterator_type * app * static_exp * exp list * ident option
 
-and array_op =
-  | Erepeat of size_exp * exp
-  | Eselect of size_exp list * exp (*indices, array*)
-  | Eselect_dyn of exp list * exp * exp (* indices, array, default*)
-  | Eupdate of size_exp list * exp * exp (*indices, array, value*)
-  | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound,
-                                                 array*)
-  | Econcat of exp * exp
-  | Eiterator of iterator_type * op_desc * size_exp * exp list * ident option
-      (** [op_desc] is the function iterated, [size_exp] is the size of the
-          iteration, [exp list] is the passed arguments, [ident option] is the
-          optional reset condition *)
 
-and op_desc = { op_name: longname; op_params: size_exp list; op_kind: op_kind }
-and op_kind = | Efun | Enode
+and app = { a_op: op; a_params: static_exp list }
+
+and op =
+  | Efun of longname
+  | Enode of longname
+  | Eifthenelse
+  | Efield_update of longname (* field name args would be [record ; value] *)
+  | Earray
+  | Erepeat
+  | Eselect
+  | Eselect_dyn
+  | Eupdate
+  | Eselect_slice
+  | Econcat
+
 
 and ct =
   | Ck of ck
@@ -91,7 +85,8 @@ and const =
   | Cint of int
   | Cfloat of float
   | Cconstr of longname
-  | Carray of size_exp * const
+  | Carray of static_exp * const
+  | Cop of
 
 and pat =
   | Etuplepat of pat list
@@ -129,7 +124,7 @@ type node_dec =
 
 type const_dec =
     { c_name : name;
-      c_value : size_exp;
+      c_value : static_exp;
       c_loc : location; }
 
 type program =

@@ -1,4 +1,4 @@
-(**************************************************************************)
+ (**************************************************************************)
 (*                                                                        *)
 (*  Heptagon                                                              *)
 (*                                                                        *)
@@ -26,50 +26,39 @@ and desc =
   | Econst of const
   | Evar of ident
   | Econstvar of name
-  | Elast of ident
   | Etuple of exp list
-  | Eapp of app * exp list
+  | Elast of ident
+  | Epre of static_exp option * exp
+  | Efby of exp * exp
   | Efield of exp * longname
   | Estruct of (longname * exp) list
   | Earray of exp list
+  | Eapp of app * exp list * exp option
+  | Eiterator of iterator_type * app * static_exp * exp list * exp option
 
-and app =
-    { a_op : op; }
+
+and app = { a_op: op; a_params: static_exp list }
 
 and op =
-  | Epre of const option
-  | Efby
-  | Earrow
+  | Efun of longname
+  | Enode of longname
   | Eifthenelse
-  | Earray_op of array_op
-  | Efield_update of longname
-  | Ecall of op_desc * exp option (** [op_desc] is the function called [exp
-                                      option] is the optional reset condition *)
-
-and array_op =
+  | Earrow
+  | Efield_update of longname (* field name args would be [record ; value] *)
+  | Earray
   | Erepeat
-  | Eselect of size_exp list
+  | Eselect
   | Eselect_dyn
-  | Eupdate of size_exp list
+  | Eupdate
   | Eselect_slice
   | Econcat
-  | Eiterator of iterator_type * op_desc * exp option (** [op_desc] node to map
-                                                          [exp option] reset *)
 
-and op_desc = { op_name : longname; op_params: size_exp list; op_kind: op_kind }
-and op_kind = | Efun | Enode
-
-and const =
-  | Cint of int
-  | Cfloat of float
-  | Cconstr of longname
-  | Carray of size_exp * const
 
 and pat =
-  | Etuplepat of pat list | Evarpat of ident
+  | Etuplepat of pat list
+  | Evarpat of ident
 
-type eq =
-    { eq_desc : eqdesc; eq_statefull : bool; eq_loc : location }
+type eq = { eq_desc : eqdesc; eq_statefull : bool; eq_loc : location }
 
 and eqdesc =
   | Eautomaton of state_handler list
@@ -128,7 +117,7 @@ type node_dec = {
 }
 
 type const_dec = {
-  c_name : name; c_type : ty; c_value : size_exp; c_loc : location }
+  c_name : name; c_type : ty; c_value : static_exp; c_loc : location }
 
 type program = {
   p_pragmas : (name * string) list; p_opened : name list;
@@ -193,13 +182,13 @@ let op_from_app app =
     | _ -> raise Not_static
 
 (** Translates a Heptagon exp into a static size exp. *)
-let rec size_exp_of_exp e =
+let rec static_exp_of_exp e =
   match e.e_desc with
     | Econstvar n -> Svar n
     | Econst (Cint i) -> Sconst i
     | Eapp (app, [ e1; e2 ]) ->
         let op = op_from_app app
-        in Sop (op, size_exp_of_exp e1, size_exp_of_exp e2)
+        in Sop (op, static_exp_of_exp e1, static_exp_of_exp e2)
     | _ -> raise Not_static
 
 (** @return the set of variables defined in [pat]. *)

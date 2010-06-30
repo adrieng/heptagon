@@ -10,7 +10,7 @@ open Static
 open Names
 
 type ty =
-  | Tprod of ty list | Tid of longname | Tarray of ty * size_exp
+  | Tprod of ty list | Tid of longname | Tarray of ty * static_exp
 
 let invalid_type = Tprod []
 
@@ -24,4 +24,4 @@ let rec print_type ff = function
       fprintf ff "@[<hov2>%a@]" (print_list_r print_type "(" " *" ")") ty_list
   | Tid id -> print_longname ff id
   | Tarray (ty, n) ->
-      fprintf ff "@[<hov2>%a^%a@]" print_type ty print_size_exp n
+      fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n

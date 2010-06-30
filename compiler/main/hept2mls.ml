@@ -222,7 +222,7 @@ let rec application env { Heptagon.a_op = op; } e_list =
 and translate_array_op env op e_list =
   match op, e_list with
     | Heptagon.Erepeat, [e; idx] ->
-        Erepeat (size_exp_of_exp idx, e)
+        Erepeat (static_exp_of_exp idx, e)
     | Heptagon.Eselect idx_list, [e] ->
         Eselect (idx_list, e)
     | Heptagon.Eselect_dyn, e::defe::idx_list ->
@@ -230,13 +230,13 @@ and translate_array_op env op e_list =
     | Heptagon.Eupdate idx_list, [e1;e2] ->
         Eupdate (idx_list, e1, e2)
     | Heptagon.Eselect_slice, [e; idx1; idx2] ->
-        Eselect_slice (size_exp_of_exp idx1, size_exp_of_exp idx2, e)
+        Eselect_slice (static_exp_of_exp idx1, static_exp_of_exp idx2, e)
     | Heptagon.Econcat, [e1; e2] ->
         Econcat (e1, e2)
     | Heptagon.Eiterator(it, op_desc, reset), idx::e_list ->
         Eiterator(translate_iterator_type it,
                   translate_op_desc op_desc,
-                  size_exp_of_exp idx, e_list,
+                  static_exp_of_exp idx, e_list,
                   translate_reset reset)
 
 let rec translate env

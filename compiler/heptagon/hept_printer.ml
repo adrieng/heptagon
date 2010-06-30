@@ -41,7 +41,7 @@ and print_c ff = function
   | Carray (n, c) ->
       print_c ff c;
       fprintf ff "^";
-      print_size_exp ff n
+      print_static_exp ff n
 
 and print_vd ff { v_ident = n; v_type = ty; v_last = last } =
   fprintf ff "@[<v>";
@@ -83,7 +83,7 @@ and print_exp ff e =
 
 and print_call_params ff = function
   | [] -> ()
-  | l -> print_list_r print_size_exp "<<" "," ">>" ff l
+  | l -> print_list_r print_static_exp "<<" "," ">>" ff l
 
 and print_op ff op e_list =
   match op, e_list with
@@ -123,7 +123,7 @@ and print_array_op ff op e_list =
         print_exp ff e2
     | Eselect idx_list, [e] ->
         print_exp ff e;
-        print_list_r print_size_exp "[" "][" "]" ff idx_list
+        print_list_r print_static_exp "[" "][" "]" ff idx_list
     | Eselect_dyn, e::defe::idx_list ->
         fprintf ff "@[(";
         print_exp ff e;
@@ -134,7 +134,7 @@ and print_array_op ff op e_list =
         fprintf ff "(@[";
         print_exp ff e1;
         fprintf ff " with ";
-        print_list_r print_size_exp "[" "][" "]" ff idx_list;
+        print_list_r print_static_exp "[" "][" "]" ff idx_list;
         fprintf ff " = ";
         print_exp ff e2;
         fprintf ff ")@]"
@@ -293,7 +293,7 @@ let print_const_dec ff c =
   fprintf ff " : ";
   print_type ff c.c_type;
   fprintf ff " = ";
-  print_size_exp ff c.c_value;
+  print_static_exp ff c.c_value;
   fprintf ff "@.@]"
 
 let print_contract ff {c_local = l;

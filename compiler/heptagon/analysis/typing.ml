@@ -200,7 +200,7 @@ let element_type ty =
     | Tarray (ty, _) -> ty
     | _ -> error (Esubscripted_value_not_an_array ty)
 
-let size_exp ty =
+let static_exp ty =
   match ty with
     | Tarray (_, e) -> e
     | _ -> error (Esubscripted_value_not_an_array ty)
@@ -354,7 +354,7 @@ let simplify_type loc const_env ty =
       Instanciation_failed -> message loc (Etype_should_be_static ty)
 
 let rec subst_type_vars m = function
-  | Tarray(ty, e) -> Tarray(subst_type_vars m ty, size_exp_subst m e)
+  | Tarray(ty, e) -> Tarray(subst_type_vars m ty, static_exp_subst m e)
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
   | t -> t
 
@@ -605,7 +605,7 @@ and typing_array_op statefull h op e_list =
   match op, e_list with
     | Erepeat, [e1; e2] ->
         let typed_e2 = expect statefull h (Tid Initial.pint) e2 in
-        let e2 = size_exp_of_exp e2 in
+        let e2 = static_exp_of_exp e2 in
         let typed_e1, t1 = typing statefull h e1 in
         add_size_constraint (Clequal (Sconst 1, e2));
         Tarray (t1, e2), op, [typed_e1; typed_e2]
@@ -628,9 +628,9 @@ and typing_array_op statefull h op e_list =
         let typed_idx2 = expect statefull h (Tid Initial.pint) idx2 in
         let typed_e, t1 = typing statefull h e in
         (*Create the expression to compute the size of the array *)
-        let e1 = Sop (Sminus, size_exp_of_exp idx2, size_exp_of_exp idx1) in
-        let e2 = Sop (Splus, e1, Sconst 1) in
-        add_size_constraint (Clequal (Sconst 1, e2));
+        let e1 = SOp (SMinus, static_exp_of_exp idx2, static_exp_of_exp idx1) in
+        let e2 = SOp (SPlus, e1, SConst 1) in
+        add_size_constr (LEqual (SConst 1, e2));
         Tarray (element_type t1, e2), op, [typed_e; typed_idx1; typed_idx2]
     | Econcat, [e1; e2] ->
         let typed_e1, t1 = typing statefull h e1 in
@@ -640,7 +640,7 @@ and typing_array_op statefull h op e_list =
         with
             TypingError(kind) -> message e1.e_loc kind
         end;
-        let n = Sop (Splus, size_exp t1, size_exp t2) in
+        let n = SOp (SPlus, static_exp t1, static_exp t2) in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
     | Eiterator (it, ({ op_name = f; op_params = params;
                         op_kind = k } as op_desc), reset),
@@ -655,7 +655,7 @@ and typing_array_op statefull h op e_list =
           instanciate_constr m ty_desc.node_params_constraints in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         let typed_e = expect statefull h (Tid Initial.pint) e in
-        let e = size_exp_of_exp e in
+        let e = static_exp_of_exp e in
         let ty, typed_e_list = typing_iterator statefull h it e
           expected_ty_list result_ty_list e_list in
         add_size_constraint (Clequal (Sconst 1, e));

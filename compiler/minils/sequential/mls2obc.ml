@@ -59,7 +59,7 @@ let rec translate_type const_env = function
   | Types.Tid id when id = Initial.pbool -> Tbool
   | Types.Tid id -> Tid id
   | Types.Tarray (ty, n) ->
-      Tarray (translate_type const_env ty, int_of_size_exp const_env n)
+      Tarray (translate_type const_env ty, int_of_static_exp const_env n)
   | Types.Tprod ty -> assert false
 
 let rec translate_const const_env = function
@@ -67,7 +67,7 @@ let rec translate_const const_env = function
   | Minils.Cfloat v -> Cfloat v
   | Minils.Cconstr c -> Cconstr c
   | Minils.Carray (n, c) ->
-      Carray (int_of_size_exp const_env n, translate_const const_env c)
+      Carray (int_of_static_exp const_env n, translate_const const_env c)
 
 let rec translate_pat map = function
   | Minils.Evarpat x -> [ var_from_name map x ]
@@ -81,7 +81,7 @@ let rec translate const_env map (m, si, j, s)
   match desc with
     | Minils.Econst v -> Const (translate_const const_env v)
     | Minils.Evar n -> Lhs (var_from_name map n)
-    | Minils.Econstvar n -> Const (Cint (int_of_size_exp const_env (Svar n)))
+    | Minils.Econstvar n -> Const (Cint (int_of_static_exp const_env (Svar n)))
     | Minils.Ecall ({ Minils.op_name = n; Minils.op_kind = Minils.Efun },
                     e_list, _) when Mls_utils.is_op n ->
         Op (n, List.map (translate const_env map (m, si, j, s)) e_list)
@@ -105,7 +105,7 @@ let rec translate const_env map (m, si, j, s)
     | Minils.Earray_op (Minils.Eselect (idx, e)) ->
         let e = translate const_env map (m, si, j, s) e in
         let idx_list =
-          List.map (fun e -> Const (Cint (int_of_size_exp const_env e))) idx
+          List.map (fun e -> Const (Cint (int_of_static_exp const_env e))) idx
         in
         Lhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
     | _ -> (*Minils_printer.print_exp stdout e; flush stdout;*) assert false
@@ -163,7 +163,7 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           (match op_kind with
              | Minils.Enode -> (Reinit o) :: si
              | Minils.Efun -> si) in
-        let params = List.map (int_of_size_exp const_env) params in
+        let params = List.map (int_of_static_exp const_env) params in
         let j = (o, (encode_longname_params n params), 1) :: j in
         let action = Step_ap (name_list, Context o, c_list) in
         let s = (match r, op_kind with
@@ -192,8 +192,8 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
 
     | Minils.Evarpat x,
         Minils.Earray_op (Minils.Eselect_slice (idx1, idx2, e)) ->
-        let idx1 = int_of_size_exp const_env idx1 in
-        let idx2 = int_of_size_exp const_env idx2 in
+        let idx1 = int_of_static_exp const_env idx1 in
+        let idx2 = int_of_static_exp const_env idx2 in
         let cpt = Ident.fresh "i" in
         let e = translate const_env map (m, si, j, s) e in
         let idx =
@@ -210,7 +210,7 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let x = var_from_name map x in
         let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
         let e1 = translate const_env map (m, si, j, s) e1 in
-        let bounds = List.map (int_of_size_exp const_env) bounds in
+        let bounds = List.map (int_of_static_exp const_env) bounds in
         let idx = List.map (translate const_env map (m, si, j, s)) idx in
         let true_act =
           Assgn (x, Lhs (lhs_of_idx_list (lhs_of_exp e1) idx)) in
@@ -228,7 +228,7 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let x = var_from_name map x in
         let copy = Assgn (x, translate const_env map (m, si, j, s) e1) in
         let idx =
-          List.map (fun se -> Const (Cint (int_of_size_exp const_env se)))
+          List.map (fun se -> Const (Cint (int_of_static_exp const_env se)))
             idx in
         let action = Assgn (lhs_of_idx_list x idx,
                             translate const_env map (m, si, j, s) e2)
@@ -239,7 +239,7 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
               Minils.Earray_op (Minils.Erepeat (n, e)) ->
         let cpt = Ident.fresh "i" in
         let action =
-          For (cpt, 0, int_of_size_exp const_env n,
+          For (cpt, 0, int_of_static_exp const_env n,
                Assgn (Array (var_from_name map x, Lhs (Var cpt)),
                       translate const_env map (m, si, j, s) e))
         in
@@ -254,8 +254,8 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
            | Types.Tarray (_, n1), Types.Tarray (_, n2) ->
                let e1 = translate const_env map (m, si, j, s) e1 in
                let e2 = translate const_env map (m, si, j, s) e2 in
-               let n1 = int_of_size_exp const_env n1 in
-               let n2 = int_of_size_exp const_env n2 in
+               let n1 = int_of_static_exp const_env n1 in
+               let n2 = int_of_static_exp const_env n2 in
                let a1 =
                  For (cpt1, 0, n1,
                       Assgn (Array (x, Lhs (Var cpt1)),
@@ -279,12 +279,12 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let c_list =
           List.map (translate const_env map (m, si, j, s)) e_list in
         let o = gen_obj_name f in
-        let n = int_of_size_exp const_env n in
+        let n = int_of_static_exp const_env n in
         let si =
           (match k with
              | Minils.Efun -> si
              | Minils.Enode -> (Reinit o) :: si) in
-        let params = List.map (int_of_size_exp const_env) params in
+        let params = List.map (int_of_static_exp const_env) params in
         let j = (o, (encode_longname_params f params), n) :: j in
         let x = Ident.fresh "i" in
         let action =

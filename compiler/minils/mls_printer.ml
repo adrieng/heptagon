@@ -51,10 +51,10 @@ let rec print_c ff = function
   | Cint i -> fprintf ff "%d" i
   | Cfloat f -> fprintf ff "%f" f
   | Cconstr tag -> print_longname ff tag
-  | Carray (n, c) -> fprintf ff "%a^%a" print_c c print_size_exp n
+  | Carray (n, c) -> fprintf ff "%a^%a" print_c c print_static_exp n
 
 let rec print_params ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_size_exp "<<"","">>") l
+  fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") l
 
 and print_node_params ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_param "<<"","">>") l
@@ -66,7 +66,7 @@ and print_vd_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_vd "("","")") l
 
 and print_index ff idx =
-  fprintf ff "@[<2>%a@]" (print_list print_size_exp "[""][""]") idx
+  fprintf ff "@[<2>%a@]" (print_list print_static_exp "[""][""]") idx
 
 and print_dyn_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_exp "[""][""]") idx
@@ -116,7 +116,7 @@ and print_exp_desc ff = function
 
 
 and print_array_op ff = function
-  | Erepeat (n, e) -> fprintf ff "%a^%a" print_exp e  print_size_exp n
+  | Erepeat (n, e) -> fprintf ff "%a^%a" print_exp e  print_static_exp n
   | Eselect (idx, e) -> fprintf ff "%a%a" print_exp e  print_index idx
   | Eselect_dyn (idx, e1, e2) ->
       fprintf ff "%a%a default %a"
@@ -126,13 +126,13 @@ and print_array_op ff = function
         print_exp e1 print_index idx print_exp e2
   | Eselect_slice (idx1, idx2, e) ->
       fprintf ff "%a[%a..%a]"
-        print_exp e  print_size_exp idx1  print_size_exp idx2
+        print_exp e  print_static_exp idx1  print_static_exp idx2
   | Econcat (e1, e2) -> fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
   | Eiterator (it, f, n, e_list, r) ->
       fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
         (iterator_to_string it)
         print_op f
-        print_size_exp n
+        print_static_exp n
         print_exp_tuple e_list
         print_every r
 
@@ -175,7 +175,7 @@ and print_field ff field =
 
 let print_const_dec ff c =
   fprintf ff "const %a = %a" print_name c.c_name
-    print_size_exp c.c_value
+    print_static_exp c.c_value
 
 let print_contract ff
     { c_local = l; c_eq = eqs;

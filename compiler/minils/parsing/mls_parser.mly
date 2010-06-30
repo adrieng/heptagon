@@ -189,7 +189,7 @@ array_op:
       { Eselect_slice(i1, i2, e) }
   | e1=exp AROBASE e2=exp                 { Econcat(e1,e2) }
   | LPAREN f=iterator LPAREN op=funop RPAREN
-      DOUBLE_LESS p=e_param DOUBLE_GREATER /* une seule dimension ? */
+      DOUBLE_LESS p=e_param DOUBLE_GREATER
         RPAREN a=exps r=reset             { Eiterator(f,op,p,a,r) }
 
 /* Static indexes [p1][p2]... */
@@ -214,7 +214,7 @@ reset: r=option(RESET,ident) { r }
 funop: ln=longname p=params(e_param) { mk_op ~op_kind:Enode ~op_params:p ln }
 
 
-e_param: e=exp { size_exp_of_exp e }
+e_param: e=exp { static_exp_of_exp e }
 n_param: n=NAME { mk_param n }
 params(param):
   | /*empty*/                                               { [] }

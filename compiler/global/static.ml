@@ -17,10 +17,14 @@
 open Names
 open Format
 
-type op = | Splus | Sminus | Stimes | Sdiv
-
-type size_exp =
-  | Sconst of int | Svar of name | Sop of op * size_exp * size_exp
+type static_exp =
+  | Sint of int
+  | Sfloat of float
+  | Sbool of bool
+  | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
+  | Sarray of static_exp list (** [ e1, e2, e3 ] *)
+  | Svar of name
+  | Sop of longname * static_exp list (** defined ops for now pervasives *)
 
 (** Constraints on size expressions. *)
 type size_constraint =
@@ -66,7 +70,7 @@ let rec simplify env =
                in Sconst n
            | (_, _) -> Sop (op, e1, e2))
 
-(** [int_of_size_exp env e] returns the value of the expression
+(** [int_of_static_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises
     Instanciation_failed if it cannot be computed (if a var has no value).*)
 let int_of_size_exp env e =
@@ -114,7 +118,7 @@ let rec solve const_env =
 
 (** Substitutes variables in the size exp with their value
     in the map (mapping vars to size exps). *)
-let rec size_exp_subst m =
+let rec static_exp_subst m =
   function
     | Svar n -> (try List.assoc n m with | Not_found -> Svar n)
     | Sop (op, e1, e2) -> Sop (op, size_exp_subst m e1, size_exp_subst m e2)
@@ -132,13 +136,13 @@ let instanciate_constr m constr =
 let op_to_string =
   function | Splus -> "+" | Sminus -> "-" | Stimes -> "*" | Sdiv -> "/"
 
-let rec print_size_exp ff =
+let rec print_static_exp ff =
   function
     | Sconst i -> fprintf ff "%d" i
     | Svar id -> fprintf ff "%s" id
     | Sop (op, e1, e2) ->
         fprintf ff "@[(%a %s %a)@]"
-          print_size_exp e1 (op_to_string op) print_size_exp e2
+          print_static_exp e1 (op_to_string op) print_static_exp e2
 
 let print_size_constraint ff = function
   | Cequal (e1, e2) ->

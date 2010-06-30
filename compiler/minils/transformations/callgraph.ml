@@ -57,7 +57,7 @@ let rec collect_exp nodes env e =
     | Ecall( { op_name = ln; op_params = params; op_kind = _ },
              e_list, _) ->
         List.iter (collect_exp nodes env) e_list;
-        let params = List.map (int_of_size_exp env) params in
+        let params = List.map (int_of_static_exp env) params in
         call_node_instance nodes ln params
     | Earray_op op ->
         collect_array_exp nodes env op
@@ -74,7 +74,7 @@ and collect_array_exp nodes env = function
       collect_exp nodes env e
   | Eiterator (_, { op_name = ln; op_params = params }, _, e_list, _) ->
       List.iter (collect_exp nodes env) e_list;
-      let params = List.map (int_of_size_exp env) params in
+      let params = List.map (int_of_static_exp env) params in
       call_node_instance nodes ln params
 
 and collect_eqs nodes env eq =
