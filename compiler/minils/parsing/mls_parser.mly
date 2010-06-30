@@ -170,9 +170,9 @@ exp:
   | PRE exp                            { mk_exp (Efby(None,$2)) }
   | op=node_app a=exps r=reset         { mk_exp (Ecall(op, a, r)) }
   | e1=exp i_op=infix e2=exp
-        { mk_exp (Ecall(mk_op ~op_kind:Eop i_op, [e1; e2], None)) }
+        { mk_exp (Ecall(mk_op ~op_kind:Efun i_op, [e1; e2], None)) }
   | p_op=prefix e=exp %prec prefixs
-        { mk_exp (Ecall(mk_op ~op_kind:Eop p_op, [e], None)) }
+        { mk_exp (Ecall(mk_op ~op_kind:Efun p_op, [e], None)) }
   | IF e1=exp THEN e2=exp ELSE e3=exp  { mk_exp (Eifthenelse(e1, e2, e3)) }
   | e=simple_exp DOT m=longname        { mk_exp (Efield(e, m)) }
 

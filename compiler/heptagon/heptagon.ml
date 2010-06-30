@@ -58,7 +58,7 @@ and array_op =
                                                           [exp option] reset *)
 
 and op_desc = { op_name : longname; op_params: size_exp list; op_kind: op_kind }
-and op_kind = | Eop | Enode
+and op_kind = | Efun | Enode
 
 and const =
   | Cint of int
@@ -138,7 +138,7 @@ type program = {
 }
 
 type signature = {
-  sig_name : name; sig_inputs : arg list;
+  sig_name : name; sig_inputs : arg list; sig_statefull : bool;
   sig_outputs : arg list; sig_params : param list
 }
 
@@ -190,7 +190,7 @@ let mk_switch_equation ?(statefull = true) e l =
 (** @return a size exp operator from a Heptagon operator. *)
 let op_from_app app =
   match app.a_op with
-    | Ecall ( { op_name = op; op_kind = Eop }, _) -> op_from_app_name op
+    | Ecall ( { op_name = op; op_kind = Efun }, _) -> op_from_app_name op
     | _ -> raise Not_static
 
 (** Translates a Heptagon exp into a static size exp. *)

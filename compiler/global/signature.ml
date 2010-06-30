@@ -13,7 +13,7 @@ open Static
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
-let interface_format_version = "6"
+let interface_format_version = "7"
 
 (** Node argument *)
 type arg = { a_name : name option; a_type : ty }
@@ -24,6 +24,7 @@ type param = { p_name : name }
 type node =
     { node_inputs : arg list;
       node_outputs : arg list;
+      node_statefull : bool;
       node_params : param list; (** Static parameters *)
       node_params_constraints : size_constr list }
 

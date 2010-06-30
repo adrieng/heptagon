@@ -19,11 +19,12 @@ open Types
 
 module Type =
 struct
-  let sigtype { sig_name = name; sig_inputs = i_list;
+  let sigtype { sig_name = name; sig_inputs = i_list; sig_statefull = statefull;
                 sig_outputs = o_list; sig_params = params } =
     let check_arg a = { a with a_type = check_type a.a_type } in
     name, { node_inputs = List.map check_arg i_list;
             node_outputs = List.map check_arg o_list;
+            node_statefull = statefull;
             node_params = params;
             node_params_constraints = []; }
 

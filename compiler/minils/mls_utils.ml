@@ -53,6 +53,9 @@ let is_record_type ty = match ty with
            Not_found -> false)
   | _ -> false
 
+let is_op = function
+  | Modname { qual = "Pervasives"; id = _ } -> true | _ -> false
+
 module Vars =
 struct
   let add x acc =

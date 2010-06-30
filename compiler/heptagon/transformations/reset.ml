@@ -46,7 +46,7 @@ let mk_bool_var n =
 let mk_bool_param n =
   mk_var_dec n (Tid Initial.pbool)
 
-let or_op_call = mk_op ( Ecall(mk_op_desc Initial.por [] Eop, None) )
+let or_op_call = mk_op ( Ecall(mk_op_desc Initial.por [] Efun, None) )
 
 let pre_true e = {
   e with e_desc = Eapp(mk_op (Epre (Some (Cconstr Initial.ptrue))), [e])
@@ -230,7 +230,7 @@ and translate res e =
           (* create a new reset exp if necessary *)
     | Eapp({ a_op = Ecall(op_desc, None) } as op, e_list) ->
         let e_list = List.map (translate res) e_list in
-        if true_reset res & op_desc.op_kind <> Eop then
+        if true_reset res & op_desc.op_kind = Enode then
           let op = { op with a_op = Ecall(op_desc, Some (exp_of_res res)) } in
           { e with e_desc = Eapp(op, e_list) }
         else

@@ -100,7 +100,7 @@ let translate_iterator_type = function
   | Imapfold -> Heptagon.Imapfold
 
 let translate_op_kind = function
-  | Eop -> Heptagon.Eop
+  | Efun -> Heptagon.Efun
   | Enode -> Heptagon.Enode
 
 let translate_const = function
@@ -110,7 +110,7 @@ let translate_const = function
 
 let op_from_app loc app =
   match app.a_op with
-    | Ecall { op_name = op; op_kind = Eop } -> op_from_app_name op
+    | Ecall { op_name = op; op_kind = Efun } -> op_from_app_name op
     | _ -> Error.message loc Error.Estatic_exp_expected
 
 let check_const_vars = ref true
@@ -329,6 +329,7 @@ let translate_signature s =
   { Heptagon.sig_name = s.sig_name;
     Heptagon.sig_inputs = List.map (translate_arg const_env) s.sig_inputs;
     Heptagon.sig_outputs = List.map (translate_arg const_env) s.sig_outputs;
+    Heptagon.sig_statefull = s.sig_statefull;
     Heptagon.sig_params = List.map Signature.mk_param s.sig_params; }
 
 let translate_interface_desc const_env = function

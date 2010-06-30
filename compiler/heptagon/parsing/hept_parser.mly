@@ -554,6 +554,7 @@ interface_decl:
     RETURNS LPAREN params_signature RPAREN
     { mk_interface_decl (Isignature({ sig_name = $3; 
                                       sig_inputs = $6;
+                                      sig_statefull = $2;
                                       sig_outputs = $10;
                                       sig_params = $4; })) }
 ;

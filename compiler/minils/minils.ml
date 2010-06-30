@@ -73,7 +73,7 @@ and array_op =
           optional reset condition *)
 
 and op_desc = { op_name: longname; op_params: size_exp list; op_kind: op_kind }
-and op_kind = | Eop | Enode
+and op_kind = | Efun | Enode
 
 and ct =
   | Ck of ck

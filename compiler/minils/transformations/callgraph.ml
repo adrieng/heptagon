@@ -53,10 +53,8 @@ let rec collect_exp nodes env e =
     | Efield_update(_, e1, e2) ->
         collect_exp nodes env e1;
         collect_exp nodes env e2
-          (* Do the real work: call node *)
-    | Ecall( { op_name = ln; op_params = params; op_kind = Eop }, e_list, _) ->
-        List.iter (collect_exp nodes env) e_list
-    | Ecall( { op_name = ln; op_params = params; op_kind = Enode },
+    (* Do the real work: call node *)
+    | Ecall( { op_name = ln; op_params = params; op_kind = _ },
              e_list, _) ->
         List.iter (collect_exp nodes env) e_list;
         let params = List.map (int_of_size_exp env) params in

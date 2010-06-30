@@ -25,9 +25,6 @@ let encode_longname_params n params = match n with
   | Modname { qual = qual; id = id } ->
       Modname { qual = qual; id = encode_name_params id params; }
 
-let is_op = function
-  | Modname { qual = "Pervasives"; id = _ } -> true | _ -> false
-
 let op_from_string op = Modname { qual = "Pervasives"; id = op; }
 
 let rec lhs_of_idx_list e = function
@@ -82,8 +79,8 @@ let rec translate const_env map (m, si, j, s)
     | Minils.Econst v -> Const (translate_const const_env v)
     | Minils.Evar n -> Lhs (var_from_name map n)
     | Minils.Econstvar n -> Const (Cint (int_of_size_exp const_env (SVar n)))
-    | Minils.Ecall ({ Minils.op_name = n; Minils.op_kind = Minils.Eop },
-                    e_list, _) ->
+    | Minils.Ecall ({ Minils.op_name = n; Minils.op_kind = Minils.Efun },
+                    e_list, _) when Mls_utils.is_op n ->
         Op (n, List.map (translate const_env map (m, si, j, s)) e_list)
     | Minils.Ewhen (e, _, _) -> translate const_env map (m, si, j, s) e
     | Minils.Efield (e, field) ->
@@ -153,22 +150,26 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         m, si, j, (control map ck action) :: s
 
     | pat, Minils.Ecall ({ Minils.op_name = n; Minils.op_params = params;
-                           Minils.op_kind = Minils.Enode },
+                           Minils.op_kind = (Minils.Enode 
+                           | Minils.Efun) as op_kind },
                          e_list, r) ->
         let name_list = translate_pat map pat in
         let c_list = List.map (translate const_env map (m, si, j, s)) e_list in
         let o = gen_symbol () in
-        let si = (Reinit o) :: si in
+        let si = 
+          (match op_kind with
+             | Minils.Enode -> (Reinit o) :: si
+             | Minils.Efun -> si) in
         let params = List.map (int_of_size_exp const_env) params in
         let j = (o, (encode_longname_params n params), 1) :: j in
         let action = Step_ap (name_list, Context o, c_list) in
-        let s = (match r with
-                   | None -> (control map ck action) :: s
-                   | Some r ->
+        let s = (match r, op_kind with
+                   | Some r, Minils.Enode ->
                        let ra =
                          control map (Minils.Con (ck, Name "true", r))
                            (Reinit o) in
-                       ra :: (control map ck action) :: s ) in
+                       ra :: (control map ck action) :: s 
+                   | _, _ -> (control map ck action) :: s) in
         m, si, j, s
 
     | Minils.Etuplepat p_list, Minils.Etuple act_list ->
@@ -277,7 +278,7 @@ let rec translate_eq const_env map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let n = int_of_size_exp const_env n in
         let si =
           (match k with
-             | Minils.Eop -> si
+             | Minils.Efun -> si
              | Minils.Enode -> (Reinit o) :: si) in
         let params = List.map (int_of_size_exp const_env) params in
         let j = (o, (encode_longname_params f params), n) :: j in

@@ -189,7 +189,7 @@ let rec const = function
   | Heptagon.Carray(n, c) -> Carray(n, const c)
 
 let translate_op_kind = function
-  | Heptagon.Eop -> Eop
+  | Heptagon.Efun -> Efun
   | Heptagon.Enode -> Enode
 
 let translate_op_desc { Heptagon.op_name = n; Heptagon.op_params = p;

@@ -214,7 +214,7 @@ let rec typing h e =
     | Etuple e_list -> product (List.map (typing h) e_list)
 
     (*TODO traitement singulier et empêche reset d'un 'op'*)
-    | Ecall (op, e_list, None) when op.op_kind = Eop ->
+    | Ecall (op, e_list, None) when op.op_kind = Efun ->
         let i = List.fold_left (fun acc e -> itype (typing h e)) izero e_list
         in skeleton i e.e_ty
     | Ecall (op, e_list, reset) when op.op_kind = Enode ->

@@ -54,7 +54,7 @@ and array_op =
   | Eiterator of iterator_type * op_desc
 
 and op_desc = { op_name : longname; op_params: exp list; op_kind: op_kind }
-and op_kind = | Eop | Enode
+and op_kind = | Efun | Enode
 
 and const =
   | Cint of int
@@ -155,6 +155,7 @@ type arg = { a_type : ty; a_name : name option }
 type signature =
     { sig_name    : name;
       sig_inputs  : arg list;
+      sig_statefull : bool;
       sig_outputs : arg list;
       sig_params  : name list; }
 
@@ -183,7 +184,7 @@ let mk_call desc exps =
   Eapp (mk_app (Ecall desc), exps)
 
 let mk_op_call s params exps =
-  mk_call (mk_op_desc (Name s) params Eop)  exps
+  mk_call (mk_op_desc (Name s) params Efun)  exps
 
 let mk_array_op_call op exps =
   Eapp (mk_app (Earray_op op), exps)

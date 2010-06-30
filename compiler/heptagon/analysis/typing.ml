@@ -222,14 +222,59 @@ let rec unify t1 t2 =
 let unify t1 t2 =
   try unify t1 t2 with Unify -> error (Etype_clash(t1, t2))
 
-let less_than statefull = (*if not statefull then error Estate_clash*) ()
+let less_than statefull = if not statefull then error Estate_clash
 
-let kind f statefull = function
-  | { node_inputs = ty_list1;
-      node_outputs = ty_list2 } ->
-      let ty_of_arg v = v.a_type in
-      (*if n & not(statefull) then error (Eshould_be_a_node(f)) *)
-      (*else n,*) List.map ty_of_arg ty_list1, List.map ty_of_arg ty_list2
+let rec is_statefull_exp e =
+  match e.e_desc with
+    | Econst _ | Econstvar _ | Evar _-> false
+    | Elast _ -> true
+    | Etuple e_list -> List.exists is_statefull_exp e_list
+    | Eapp({ a_op = (Efby | Epre _ | Earrow) }, _) -> true
+    | Eapp({ a_op = Ecall ({ op_kind = Enode }, _)}, _) -> true
+    | Eapp(_, e_list) -> List.exists is_statefull_exp e_list
+    | Efield(e, _) -> is_statefull_exp e
+    | Estruct _ | Earray _ -> false
+
+let rec is_statefull_eq_desc = function
+  | Eautomaton(handlers) -> 
+      (List.exists is_statefull_state_handler handlers)
+  | Eswitch(e, handlers) ->
+      (is_statefull_exp e) or
+        (List.exists is_statefull_switch_handler handlers)
+  | Epresent(handlers, b) ->
+      (is_statefull_block b) or
+        (List.exists is_statefull_present_handler handlers)
+  | Ereset(eq_list, e) ->
+      (is_statefull_exp e) or
+        (List.exists (fun eq -> eq.eq_statefull) eq_list)
+  | Eeq(_, e) -> is_statefull_exp e
+
+and is_statefull_block b =
+  b.b_statefull
+
+and is_statefull_present_handler ph =
+  (is_statefull_exp ph.p_cond) or
+    (is_statefull_block ph.p_block)
+
+and is_statefull_switch_handler sh =
+  is_statefull_block sh.w_block
+
+and is_statefull_state_handler sh =
+  (is_statefull_block sh.s_block) or
+    (List.exists is_statefull_escape sh.s_until) or
+    (List.exists is_statefull_escape sh.s_unless)
+
+and is_statefull_escape esc = 
+  is_statefull_exp esc.e_cond
+
+let kind f statefull k 
+    { node_inputs = ty_list1;
+      node_outputs = ty_list2;
+      node_statefull = n } =
+  let ty_of_arg v = v.a_type in
+  let k = if n then Enode else Efun in
+    if n & not(statefull) then error (Eshould_be_a_node f) 
+    else k, List.map ty_of_arg ty_list1, List.map ty_of_arg ty_list2
 
 let prod = function
   | []      -> assert false
@@ -386,7 +431,7 @@ let check_field_unicity l =
     else
       S.add (shortname f) acc
   in
-  List.fold_left add_field S.empty l
+  ignore (List.fold_left add_field S.empty l)
 
 (** @return the qualified name and list of fields of
     the type with name [n].
@@ -520,9 +565,10 @@ and typing_app statefull h op e_list =
         let typed_e2, t1 = typing statefull h e2 in
         let typed_e3 = expect statefull h t1 e3 in
         t1, op, [typed_e1; typed_e2; typed_e3]
-    | Ecall ( { op_name = f; op_params = params } as op_desc , reset), e_list ->
+    | Ecall ( { op_name = f; op_params = params; op_kind = k } as op_desc
+                , reset), e_list ->
         let { qualid = q; info = ty_desc } = find_value f in
-        let expected_ty_list, result_ty_list = kind f statefull ty_desc in
+        let k, expected_ty_list, result_ty_list = kind f statefull k ty_desc in
         let m = List.combine (List.map (fun p -> p.p_name) ty_desc.node_params)
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
@@ -532,7 +578,7 @@ and typing_app statefull h op e_list =
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         List.iter add_size_constr size_constrs;
         (prod result_ty_list,
-         Ecall ( { op_desc with op_name = Modname(q) }, reset),
+         Ecall ( { op_desc with op_name = Modname q; op_kind = k }, reset),
          typed_e_list)
     | Earray_op op, e_list ->
         let ty, op, e_list = typing_array_op statefull h op e_list in
@@ -596,11 +642,12 @@ and typing_array_op statefull h op e_list =
         end;
         let n = SOp (SPlus, size_exp t1, size_exp t2) in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
-    | Eiterator (it, ({ op_name = f; op_params = params } as op_desc), reset),
+    | Eiterator (it, ({ op_name = f; op_params = params; 
+                        op_kind = k } as op_desc), reset),
         e::e_list ->
         let { qualid = q; info = ty_desc } = find_value f in
         let f = Modname(q) in
-        let expected_ty_list, result_ty_list = kind f statefull ty_desc in
+        let k, expected_ty_list, result_ty_list = kind f statefull k ty_desc in
         let m = List.combine (List.map (fun p -> p.p_name) ty_desc.node_params)
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
@@ -613,7 +660,7 @@ and typing_array_op statefull h op e_list =
           expected_ty_list result_ty_list e_list in
         add_size_constr (LEqual (SConst 1, e));
         List.iter add_size_constr size_constrs;
-        ty, Eiterator(it, { op_desc with op_name = f }, reset),
+        ty, Eiterator(it, { op_desc with op_name = f; op_kind = k }, reset),
           typed_e::typed_e_list
 
     (*Arity problems*)
@@ -740,7 +787,7 @@ let rec typing_eq statefull h acc eq =
         Eeq(pat, typed_e),
         acc in
   { eq with
-      eq_statefull = statefull;
+      eq_statefull = is_statefull_eq_desc typed_desc;
       eq_desc = typed_desc },
   acc
 
@@ -831,7 +878,7 @@ and typing_block statefull h
       typing_eq_list statefull h0 Env.empty eq_list in
     let defnames = diff_env defined_names local_names in
     { b with
-        b_statefull = statefull;
+        b_statefull = List.exists (fun eq -> eq.eq_statefull) typed_eq_list;
         b_defnames = defnames;
         b_local = typed_l;
         b_equs = typed_eq_list },
@@ -895,12 +942,13 @@ let typing_contract statefull h contract =
                c_enforce = typed_e_g },
         controllable_names, h
 
-let signature const_env inputs returns params constraints =
+let signature const_env statefull inputs returns params constraints =
   let arg_dec_of_var_dec vd =
     mk_arg (Some (name vd.v_ident)) (check_type vd.v_type)
   in
   { node_inputs = List.map arg_dec_of_var_dec inputs;
     node_outputs = List.map arg_dec_of_var_dec returns;
+    node_statefull = statefull;
     node_params = params;
     node_params_constraints = constraints; }
 
@@ -910,7 +958,7 @@ let solve loc env cl =
   with
       Solve_failed c -> message loc (Econstraint_solve_failed c)
 
-let node const_env ({ n_name = f;
+let node const_env ({ n_name = f; n_statefull = statefull;
                       n_input = i_list; n_output = o_list;
                       n_contract = contract;
                       n_local = l_list; n_equs = eq_list; n_loc = loc;
@@ -921,11 +969,11 @@ let node const_env ({ n_name = f;
 
     (* typing contract *)
     let typed_contract, controllable_names, h =
-      typing_contract false h contract in
+      typing_contract statefull h contract in
 
     let typed_l_list, local_names, h = build h h l_list in
     let typed_eq_list, defined_names =
-      typing_eq_list false h Env.empty eq_list in
+      typing_eq_list statefull h Env.empty eq_list in
     (* if not (statefull) & (List.length o_list <> 1)
        then error (Etoo_many_outputs);*)
     let expected_names = add local_names output_names in
@@ -934,7 +982,7 @@ let node const_env ({ n_name = f;
 
     let cl = get_size_constr () in
     let cl = solve loc const_env cl in
-    add_value f (signature const_env i_list o_list node_params cl);
+    add_value f (signature const_env statefull i_list o_list node_params cl);
 
     { n with
         n_input = List.rev typed_i_list;
