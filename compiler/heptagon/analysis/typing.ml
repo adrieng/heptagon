@@ -236,7 +236,7 @@ let rec is_statefull_exp e =
     | Estruct _ | Earray _ -> false
 
 let rec is_statefull_eq_desc = function
-  | Eautomaton(handlers) -> 
+  | Eautomaton(handlers) ->
       (List.exists is_statefull_state_handler handlers)
   | Eswitch(e, handlers) ->
       (is_statefull_exp e) or
@@ -264,16 +264,16 @@ and is_statefull_state_handler sh =
     (List.exists is_statefull_escape sh.s_until) or
     (List.exists is_statefull_escape sh.s_unless)
 
-and is_statefull_escape esc = 
+and is_statefull_escape esc =
   is_statefull_exp esc.e_cond
 
-let kind f statefull k 
+let kind f statefull k
     { node_inputs = ty_list1;
       node_outputs = ty_list2;
       node_statefull = n } =
   let ty_of_arg v = v.a_type in
   let k = if n then Enode else Efun in
-    if n & not(statefull) then error (Eshould_be_a_node f) 
+    if n & not(statefull) then error (Eshould_be_a_node f)
     else k, List.map ty_of_arg ty_list1, List.map ty_of_arg ty_list2
 
 let prod = function
@@ -642,7 +642,7 @@ and typing_array_op statefull h op e_list =
         end;
         let n = SOp (SPlus, size_exp t1, size_exp t2) in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
-    | Eiterator (it, ({ op_name = f; op_params = params; 
+    | Eiterator (it, ({ op_name = f; op_params = params;
                         op_kind = k } as op_desc), reset),
         e::e_list ->
         let { qualid = q; info = ty_desc } = find_value f in
