@@ -114,7 +114,7 @@ let add context expected_kind ({ e_desc = de } as e) =
   let up = match de, expected_kind with
     | (Evar _ | Efield _ ) , VRef -> false
     | _ , VRef -> true
-    | Ecall ({ op_kind = Efun; op_name = n }, _, _), 
+    | Ecall ({ op_kind = Efun; op_name = n }, _, _),
         (Exp|Act) when is_op n -> false
     | ( Emerge _ | Etuple _
       | Ecall _  | Efby _ | Earray_op _ ), Exp -> true
