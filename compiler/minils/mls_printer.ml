@@ -104,14 +104,15 @@ and print_exp_desc ff = function
       print_exp_tuple ff e_list
   | Efield (e, field) ->
       fprintf ff "%a.%a" print_exp e print_longname field
+  | Efield_update (f, e1, e2) ->
+      fprintf ff "@[<2>{%a with .%a =@ %a}@]"
+        print_exp e1  print_longname f  print_exp e2
   | Estruct f_e_list ->
       print_record (print_couple print_longname print_exp """ = """) ff f_e_list
   | Earray e_list ->
       fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") e_list
   | Earray_op(array_op) -> print_array_op ff array_op
-  | Efield_update (f, e1, e2) ->
-      fprintf ff "@[<2>(%a with .%a =@ %a)@]"
-        print_exp e1  print_longname f  print_exp e2
+
 
 
 and print_array_op ff = function
