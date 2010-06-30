@@ -41,6 +41,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "map", MAP;
  "fold", FOLD;
  "mapfold", MAPFOLD;
+ "default", DEFAULT;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");

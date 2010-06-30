@@ -40,6 +40,7 @@ let mk_var name ty = mk_var_dec name ty
 %token AROBASE
 %token WITH
 %token DOTDOT
+%token DEFAULT
 %token LBRACKET RBRACKET
 %token MAP FOLD MAPFOLD
 %token <string> PREFIX
@@ -182,20 +183,22 @@ exp:
   | LBRACKET es=slist(COMMA, exp) RBRACKET { mk_exp (Earray es) }
 
 array_op:
-  | e=exp POWER p=e_param              { Erepeat(p, e) }
-  | e=simple_exp i=indexes             { Eselect(i, e) }
-/*TODO  | e=exp i=indexes_dyn DEFAULT d=exp  { Eselect_dyn(i,???? ,e ,d) } */
-  | LPAREN e=exp WITH i=indexes EQUAL nv=exp  { Eupdate(i, e, nv) }
+  | e=exp POWER p=e_param                 { Erepeat(p, e) }
+  | e=simple_exp i=indexes(e_param)       { Eselect(i, e) }
+  | e=exp i=indexes(exp) DEFAULT d=exp    { Eselect_dyn(i, e ,d) }
+  | LPAREN e=exp WITH i=indexes(e_param) EQUAL nv=exp  { Eupdate(i, e, nv) }
   | e=simple_exp LBRACKET i1=e_param DOTDOT i2=e_param RBRACKET
       { Eselect_slice(i1, i2, e) }
-  | e1=exp AROBASE e2=exp              { Econcat(e1,e2) }
+  | e1=exp AROBASE e2=exp                 { Econcat(e1,e2) }
   | LPAREN f=iterator LPAREN op=funop RPAREN
       DOUBLE_LESS p=e_param DOUBLE_GREATER /* une seule dimension ? */
-        RPAREN a=exps r=reset          { Eiterator(f,op,p,a,r) }
+        RPAREN a=exps r=reset             { Eiterator(f,op,p,a,r) }
 
 /* Static indexes [p1][p2]... */
-indexes: is=nonempty_list(index)       { is }
-index: LBRACKET p=e_param RBRACKET     { p }
+indexes(param): is=nonempty_list(index(param))       { is }
+index(param): LBRACKET p=param RBRACKET             { p }
+
+
 
 
 /* Merge handlers ( B -> e)( C -> ec)... */

@@ -61,8 +61,7 @@ and edesc =
 and array_op =
   | Erepeat of size_exp * exp
   | Eselect of size_exp list * exp (*indices, array*)
-  | Eselect_dyn of exp list * exp * exp (* indices,
-                                                           array, default*)
+  | Eselect_dyn of exp list * exp * exp (* indices, array, default*)
   | Eupdate of size_exp list * exp * exp (*indices, array, value*)
   | Eselect_slice of size_exp * size_exp * exp (*lower bound, upper bound,
                                                  array*)
