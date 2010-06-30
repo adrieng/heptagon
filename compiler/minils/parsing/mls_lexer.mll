@@ -25,6 +25,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "tel", TEL;
  "fby", FBY;
  "when", WHEN;
+ "merge", MERGE;
  "type", TYPE;
  "true", BOOL(true);
  "false", BOOL(false);
@@ -36,6 +37,10 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "if", IF;
  "then", THEN;
  "else", ELSE;
+ "with", WITH;
+ "map", MAP;
+ "fold", FOLD;
+ "mapfold", MAPFOLD;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");
@@ -102,11 +107,14 @@ let char_for_decimal_code lexbuf i =
 rule token = parse
   | [' ' '\010' '\013' '\009' '\012'] +   { token lexbuf }
   | "."             {DOT}
+  | ".."            {DOTDOT}
   | "("             {LPAREN}
   | ")"             {RPAREN}
   | "*"             { STAR }
   | "{"             {LBRACE}
   | "}"             {RBRACE}
+  | "["             {LBRACKET}
+  | "]"             {RBRACKET}
   | ":"             {COLON}
   | ";"             {SEMICOL}
   | "="             {EQUAL}
@@ -115,10 +123,12 @@ rule token = parse
   | "&&"            {AMPERAMPER}
   | "||"            {BARBAR}
   | ","             {COMMA}
-(*  | "->"            {ARROW} *)
+  | "->"            {ARROW}
   | "|"             {BAR}
   | "-"             {SUBTRACTIVE "-"}
   | "-."            {SUBTRACTIVE "-."}
+  | "^"             {POWER}
+  | "@"             {AROBASE}
   | "<<"            {DOUBLE_LESS}
   | ">>"            {DOUBLE_GREATER}
   | (['A'-'Z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)

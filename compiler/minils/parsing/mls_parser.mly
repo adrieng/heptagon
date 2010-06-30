@@ -32,10 +32,16 @@ let mk_var name ty = mk_var_dec name ty
 %token AMPERSAND
 %token AMPERAMPER
 %token RESET
-%token IF
-%token THEN
-%token ELSE
+%token IF THEN ELSE
 %token DOUBLE_LESS DOUBLE_GREATER
+%token ARROW
+%token MERGE
+%token POWER
+%token AROBASE
+%token WITH
+%token DOTDOT
+%token LBRACKET RBRACKET
+%token MAP FOLD MAPFOLD
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -45,9 +51,8 @@ let mk_var name ty = mk_var_dec name ty
 %token <string> INFIX4
 %token EOF
 
-
+%right AROBASE
 %left ELSE
-
 %left OR
 %left AMPERSAND
 %left INFIX0 EQUAL
@@ -55,32 +60,25 @@ let mk_var name ty = mk_var_dec name ty
 %left INFIX2 prefixs
 %left STAR INFIX3
 %left INFIX4
+%left WHEN
 %right FBY
 %right PRE
-
+%left POWER
 
 
 %start program
 %type <Minils.program> program
 
 %%
-
-/*TODO deal with when merge and co*/
-/*TODO add arrow ?*/
-/*TODO be happy with the tools*/
+/*TODO add arrow (init) ?*/
 
 /** Tools **/
-
-/* Redefinitions */
 %inline slist(S, x)        : l=separated_list(S, x)                    {l} 
 %inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
 %inline tuple(x)           : LPAREN h=x COMMA t=snlist(COMMA,x) RPAREN { h::t }
 %inline option(P,x):
   |/* empty */    { None }    
   | P v=x         { Some(v) }
-%inline option2(L,x,R):
-  |/* empty */    { None }
-  | L v=x R       { Some(v) }
 
 qualified(x) :
   | n=x { Name(n) }
@@ -90,7 +88,7 @@ structure(field): LBRACE s=snlist(SEMICOL,field) RBRACE {s}
  
 
 program:
-  | pragma_headers open_modules type_decs node_decs EOF 
+  | pragma_headers open_modules type_decs node_decs EOF /*TODO const decs */
     {{ p_pragmas = List.rev $1;
       p_opened = List.rev $2;
       p_types = $3;
@@ -142,9 +140,9 @@ pat:
   | n=NAME                             {Evarpat (ident_of_name n)}
   | LPAREN p=snlist(COMMA, pat) RPAREN {Etuplepat p}
 
-longname: l=qualified(name) {l}
+longname: l=qualified(name) {l} /* qualified var (not a constructor) */
   
-constructor:
+constructor: /* of type longname */
   | ln=qualified(CONSTRUCTOR)       {ln}
   | b=BOOL                          { Name(if b then "true" else "false") }
 
@@ -168,19 +166,51 @@ exp:
   | c=const                            { mk_exp (Econst c) }
   | const FBY exp                      { mk_exp (Efby(Some($1),$3)) }
   | PRE exp                            { mk_exp (Efby(None,$2)) }
-  | op=node_app a=exps r=reset         { mk_exp (Ecall(op, a, r)) }
+  | op=funop a=exps r=reset            { mk_exp (Ecall(op, a, r)) }
   | e1=exp i_op=infix e2=exp
         { mk_exp (Ecall(mk_op ~op_kind:Efun i_op, [e1; e2], None)) }
   | p_op=prefix e=exp %prec prefixs
         { mk_exp (Ecall(mk_op ~op_kind:Efun p_op, [e], None)) }
   | IF e1=exp THEN e2=exp ELSE e3=exp  { mk_exp (Eifthenelse(e1, e2, e3)) }
   | e=simple_exp DOT m=longname        { mk_exp (Efield(e, m)) }
+  | e=exp WHEN c=constructor LPAREN n=ident RPAREN
+        { mk_exp (Ewhen(e, c, n)) }
+  | MERGE n=ident h=handlers           { mk_exp (Emerge(n, h)) }
+  | LPAREN r=exp WITH DOT ln=longname EQUAL nv=exp /*ordre louche...*/
+        { mk_exp (Efield_update(ln, r, nv)) }
+  | op=array_op                        { mk_exp (Earray_op op) }
+/* ??? TODO   | Earray of exp list  [e1,e2,e3...] ???? */
+
+array_op: /* TODO quel vrai gain de séparer les array op ? gain pour cédric ?*/
+  | e=exp POWER p=e_param              { Erepeat(p, e) } /*ordre louche...*/
+  | e=simple_exp i=indexes             { Eselect(i, e) } /*ordre louche...*/
+/*TODO  | e=exp i=indexes_dyn DEFAULT d=exp  { Eselect_dyn(i,???? ,e ,d) } */
+  | LPAREN e=exp WITH i=indexes EQUAL nv=exp  { Eupdate(i, e, nv) } /*ordre louche...*/
+  | e=simple_exp LBRACKET i1=e_param DOTDOT i2=e_param RBRACKET
+      { Eselect_slice(i1, i2, e) }
+  | e1=exp AROBASE e2=exp              { Econcat(e1,e2) }
+  | LPAREN f=iterator LPAREN op=funop RPAREN
+      DOUBLE_LESS p=e_param DOUBLE_GREATER /* une seule dimension ? */
+        RPAREN a=exps r=reset          { Eiterator(f,op,p,a,r) }
+
+/* Static indexes [p1][p2]... */
+indexes: is=nonempty_list(index)       { is }
+index: LBRACKET p=e_param RBRACKET     { p }
 
 
+/* Merge handlers ( B -> e)( C -> ec)... */
+handlers: hs=nonempty_list(handler)    { hs }
+handler: LPAREN c=constructor ARROW e=exp RPAREN { c,e }
+
+
+iterator:
+  | MAP     { Imap }
+  | FOLD    { Ifold }
+  | MAPFOLD { Imapfold }
 
 reset: r=option(RESET,ident) { r }
 
-node_app: ln=longname p=params(e_param) { mk_op ~op_kind:Enode ~op_params:p ln }
+funop: ln=longname p=params(e_param) { mk_op ~op_kind:Enode ~op_params:p ln }
 
 
 e_param: e=exp { size_exp_of_exp e }
