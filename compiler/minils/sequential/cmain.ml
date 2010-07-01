@@ -38,25 +38,39 @@ let assert_node_res cd =
        "Cannot generate run-time check for node %s with non-boolean output.\n"
        cd.cl_id;
      exit 1);
-  let mem = (name (Ident.fresh ("mem_for_" ^ cd.cl_id)),
-             Cty_id (cd.cl_id ^ "_mem")) in
+  let mem =
+    (name (Ident.fresh ("mem_for_" ^ cd.cl_id)), Cty_id (cd.cl_id ^ "_mem"))
+  and out =
+    (name (Ident.fresh ("out_for_" ^ cd.cl_id)), Cty_id (cd.cl_id ^ "_out")) in
   let reset_i =
     Cfun_call (cd.cl_id ^ "_reset", [Caddrof (Cvar (fst mem))]) in
   let step_i =
     (*
-      if (!step()) {
+      step(&out, &mem);
+      if (!out.proper_name) {
         printf("Node $node failed at step %d.\n", step_count);
         return 1;
       }
     *)
-    Cif (Cuop ("!", Cfun_call (cd.cl_id ^ "_step", [Caddrof (Cvar (fst mem))])),
-         [Csexpr (Cfun_call ("printf",
-                             [Cconst (Cstrlit ("Node \\\"" ^ cd.cl_id
-                                               ^ "\\\" failed at step %d.\\n"));
-                              Clhs (Cvar (name step_counter))]));
-          Creturn (Cconst (Ccint 1))],
-         []) in
-  (mem, Csexpr reset_i, step_i);;
+    let outn = Ident.name ((List.hd cd.step.out).v_ident) in
+    Csblock
+      { var_decls = [];
+        block_body =
+          [
+            Csexpr (Cfun_call (cd.cl_id ^ "_step",
+                               [Caddrof (Cvar (fst out));
+                                Caddrof (Cvar (fst mem))]));
+            Cif (Cuop ("!", Clhs (Cfield (Cvar (fst out), outn))),
+                 [Csexpr (Cfun_call ("printf",
+                                     [Cconst (Cstrlit ("Node \\\"" ^ cd.cl_id
+                                                       ^ "\\\" failed at step" ^
+                                                       " %d.\\n"));
+                                      Clhs (Cvar (name step_counter))]));
+                  Creturn (Cconst (Ccint 1))],
+                 []);
+          ];
+      } in
+  ([out; mem], Csexpr reset_i, step_i);;
 
 (** [main_def_of_class_def cd] returns a [(var_list, rst_i, step_i)] where
     [var_list] (resp. [rst_i] and [step_i]) is a list of variables (resp. of
@@ -141,19 +155,13 @@ let main_def_of_class_def cd =
     split (map read_lhs_of_ty_for_vd cd.step.inp) in
 
   let (printf_calls, printf_decls) =
-    let write_lhs_of_ty_for_vd vd = match cd.step.out with
-      | [{ v_type = Tarray _; }] ->
-          write_lhs_of_ty (Cfield (Cvar "mem", name vd.v_ident)) vd.v_type
-      | [_] -> write_lhs_of_ty (Cvar "res") vd.v_type
-      | _ ->
-          write_lhs_of_ty (Cfield (Cvar "mem", name vd.v_ident)) vd.v_type in
+    let write_lhs_of_ty_for_vd vd =
+      write_lhs_of_ty (Cfield (Cvar "res", name vd.v_ident)) vd.v_type in
     split (map write_lhs_of_ty_for_vd cd.step.out) in
 
   let cinp = cvarlist_of_ovarlist cd.step.inp in
-  let cout = match cd.step.out with
-    | [{ v_type = Tarray _; }] -> []
-    | [vd] -> let vty = ctype_of_otype vd.v_type in [("res", vty)]
-    | _ -> [] in
+  let cout = ["res", (Cty_id (cd.cl_id ^ "_out"))] in
+
   let varlist =
     ("mem", Cty_id (cd.cl_id ^ "_mem"))
     :: cinp
@@ -167,15 +175,10 @@ let main_def_of_class_def cd =
     let funcall =
       let args =
         map (fun vd -> Clhs (Cvar (name vd.v_ident))) cd.step.inp
-        @ [Caddrof (Cvar "mem")] in
+        @ [Caddrof (Cvar "res"); Caddrof (Cvar "mem")] in
       Cfun_call (cd.cl_id ^ "_step", args) in
     concat scanf_calls
-      (* Our function returns something only when the node has exactly one
-         scalar output. *)
-    @ ([match cd.step.out with
-          | [{ v_type = Tarray _; }] -> Csexpr funcall
-          | [_] -> Caffect (Cvar "res", funcall)
-          | _ -> Csexpr funcall])
+    @ [Csexpr funcall]
     @ printf_calls
     @ [Csexpr (Cfun_call ("puts", [Cconst (Cstrlit "")]));
        Csexpr (Cfun_call ("fflush", [Clhs (Cvar "stdout")]))] in
@@ -244,7 +247,7 @@ let mk_main p = match (!Misc.simulation_node, !Misc.assert_nodes) with
       let (var_l, res_l, step_l) =
         let add cd (var_l, res_l, step_l) =
           let (var, res, step) = assert_node_res cd in
-          (var :: var_l, res :: res_l, step :: step_l) in
+          (var @ var_l, res :: res_l, step :: step_l) in
         List.fold_right add a_classes ([], [], []) in
 
       let (deps, var_l, res_l, step_l) =
