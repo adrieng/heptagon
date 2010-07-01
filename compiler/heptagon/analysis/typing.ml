@@ -628,9 +628,9 @@ and typing_array_op statefull h op e_list =
         let typed_idx2 = expect statefull h (Tid Initial.pint) idx2 in
         let typed_e, t1 = typing statefull h e in
         (*Create the expression to compute the size of the array *)
-        let e1 = SOp (SMinus, static_exp_of_exp idx2, static_exp_of_exp idx1) in
-        let e2 = SOp (SPlus, e1, SConst 1) in
-        add_size_constr (LEqual (SConst 1, e2));
+        let e1 = Sop (SMinus, static_exp_of_exp idx2, static_exp_of_exp idx1) in
+        let e2 = Sop (SPlus, e1, SConst 1) in
+        add_size_constr (Clequal (SConst 1, e2));
         Tarray (element_type t1, e2), op, [typed_e; typed_idx1; typed_idx2]
     | Econcat, [e1; e2] ->
         let typed_e1, t1 = typing statefull h e1 in
@@ -640,7 +640,7 @@ and typing_array_op statefull h op e_list =
         with
             TypingError(kind) -> message e1.e_loc kind
         end;
-        let n = SOp (SPlus, static_exp t1, static_exp t2) in
+        let n = Sop (SPlus, static_exp t1, static_exp t2) in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
     | Eiterator (it, ({ op_name = f; op_params = params;
                         op_kind = k } as op_desc), reset),

@@ -18,18 +18,20 @@ open Names
 open Format
 
 type static_exp =
+  | Svar of name
   | Sint of int
   | Sfloat of float
   | Sbool of bool
+  | Sconstructor of
   | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)
-  | Svar of name
-  | Sop of longname * static_exp list (** defined ops for now pervasives *)
+  | Sop of longname * static_exp list (** defined ops for now in pervasives *)
+
 
 (** Constraints on size expressions. *)
 type size_constraint =
-  | Cequal of size_exp * size_exp (* e1 = e2*)
-  | Clequal of size_exp * size_exp (* e1 <= e2 *)
+  | Cequal of static_exp * static_exp (* e1 = e2*)
+  | Clequal of static_exp * static_exp (* e1 <= e2 *)
   | Cfalse
 
 (* unsatisfiable constraint *)
@@ -121,16 +123,16 @@ let rec solve const_env =
 let rec static_exp_subst m =
   function
     | Svar n -> (try List.assoc n m with | Not_found -> Svar n)
-    | Sop (op, e1, e2) -> Sop (op, size_exp_subst m e1, size_exp_subst m e2)
+    | Sop (op, e1, e2) -> Sop (op, static_exp_subst m e1, static_exp_subst m e2)
     | s -> s
 
 (** Substitutes variables in the constraint list with their value
     in the map (mapping vars to size exps). *)
 let instanciate_constr m constr =
   let replace_one m = function
-      | Cequal (e1, e2) -> Cequal (size_exp_subst m e1, size_exp_subst m e2)
-      | Clequal (e1, e2) -> Clequal (size_exp_subst m e1, size_exp_subst m e2)
-      | Cfalse -> Cfalse
+    | Cequal (e1, e2) -> Cequal (static_exp_subst m e1, static_exp_subst m e2)
+    | Clequal (e1, e2) -> Clequal (static_exp_subst m e1, static_exp_subst m e2)
+    | Cfalse -> Cfalse
   in List.map (replace_one m) constr
 
 let op_to_string =
@@ -138,7 +140,7 @@ let op_to_string =
 
 let rec print_static_exp ff =
   function
-    | Sconst i -> fprintf ff "%d" i
+    | SConst i -> fprintf ff "%d" i
     | Svar id -> fprintf ff "%s" id
     | Sop (op, e1, e2) ->
         fprintf ff "@[(%a %s %a)@]"
@@ -146,10 +148,10 @@ let rec print_static_exp ff =
 
 let print_size_constraint ff = function
   | Cequal (e1, e2) ->
-      fprintf ff "@[%a = %a@]" print_size_exp e1 print_size_exp e2
+      fprintf ff "@[%a = %a@]" print_static_exp e1 print_static_exp e2
   | Clequal (e1, e2) ->
-      fprintf ff "@[%a <= %a@]" print_size_exp e1 print_size_exp e2
-  | Cfalse -> fprintf ff "False"
+      fprintf ff "@[%a <= %a@]" print_static_exp e1 print_static_exp e2
+  | Cfalse -> fprintf ff "Cfalse"
 
 let psize_constraint oc c =
   let ff = formatter_of_out_channel oc
