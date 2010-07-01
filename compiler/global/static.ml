@@ -1,12 +1,20 @@
-(** This module defines static expressions, used in arrays definition
+(**************************************************************************)
+(*                                                                        *)
+(*  Heptagon                                                              *)
+(*                                                                        *)
+(*  Author : Marc Pouzet                                                  *)
+(*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
+(*                                                                        *)
+(**************************************************************************)
 
-    and anywhere a static value is expected. For instance:
+(** This module defines static expressions, used in params and for constants.
+
     const n: int = 3;
     var x : int^n; var y : int^(n + 2);
     x[n - 1], x[1 + 3],...
 *)
-open Names
 
+open Names
 open Format
 
 type op = | SPlus | SMinus | STimes | SDiv
@@ -15,10 +23,10 @@ type size_exp =
   | SConst of int | SVar of name | SOp of op * size_exp * size_exp
 
 (** Constraints on size expressions. *)
-type size_constr =
-  | Equal of size_exp * size_exp (* e1 = e2*)
-  | LEqual of size_exp * size_exp (* e1 <= e2 *)
-  | False
+type size_constraint =
+  | Cequal of static_exp * static_exp (* e1 = e2*)
+  | Clequal of static_exp * static_exp (* e1 <= e2 *)
+  | Cfalse
 
 (* unsatisfiable constraint *)
 exception Instanciation_failed
@@ -41,8 +49,8 @@ let op_from_app_name n =
 let rec simplify env =
   function
     | SConst n -> SConst n
-    | SVar id -> (try simplify env (NamesEnv.find id env) with | _ -> SVar id)
-    | SOp (op, e1, e2) ->
+    | Svar id -> (try simplify env (NamesEnv.find id env) with | _ -> Svar id)
+    | Sop (op, e1, e2) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2
         in
@@ -56,7 +64,7 @@ let rec simplify env =
                     | SDiv ->
                         if n2 = 0 then raise Instanciation_failed else n1 / n2)
                in SConst n
-           | (_, _) -> SOp (op, e1, e2))
+           | (_, _) -> Sop (op, e1, e2))
 
 (** [int_of_size_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises
@@ -70,23 +78,23 @@ let int_of_size_exp env e =
     and a simplified constraint. *)
 let is_true env =
   function
-    | Equal (e1, e2) when e1 = e2 ->
-        ((Some true), (Equal (simplify env e1, simplify env e2)))
-    | Equal (e1, e2) ->
+    | Cequal (e1, e2) when e1 = e2 ->
+        ((Some true), (Cequal (simplify env e1, simplify env e2)))
+    | Cequal (e1, e2) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2
         in
         (match (e1, e2) with
-           | (SConst n1, SConst n2) -> ((Some (n1 = n2)), (Equal (e1, e2)))
-           | (_, _) -> (None, (Equal (e1, e2))))
-    | LEqual (e1, e2) ->
+           | (SConst n1, SConst n2) -> ((Some (n1 = n2)), (Cequal (e1, e2)))
+           | (_, _) -> (None, (Cequal (e1, e2))))
+    | Clequal (e1, e2) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2
         in
         (match (e1, e2) with
-           | (SConst n1, SConst n2) -> ((Some (n1 <= n2)), (LEqual (e1, e2)))
-           | (_, _) -> (None, (LEqual (e1, e2))))
-    | False -> (None, False)
+           | (SConst n1, SConst n2) -> ((Some (n1 <= n2)), (Clequal (e1, e2)))
+           | (_, _) -> (None, (Clequal (e1, e2))))
+    | Cfalse -> (None, Cfalse)
 
 exception Solve_failed of size_constr
 
@@ -108,18 +116,17 @@ let rec solve const_env =
     in the map (mapping vars to size exps). *)
 let rec size_exp_subst m =
   function
-    | SVar n -> (try List.assoc n m with | Not_found -> SVar n)
-    | SOp (op, e1, e2) -> SOp (op, size_exp_subst m e1, size_exp_subst m e2)
+    | Svar n -> (try List.assoc n m with | Not_found -> Svar n)
+    | Sop (op, e1, e2) -> Sop (op, size_exp_subst m e1, size_exp_subst m e2)
     | s -> s
 
 (** Substitutes variables in the constraint list with their value
     in the map (mapping vars to size exps). *)
 let instanciate_constr m constr =
-  let replace_one m =
-    function
-      | Equal (e1, e2) -> Equal (size_exp_subst m e1, size_exp_subst m e2)
-      | LEqual (e1, e2) -> LEqual (size_exp_subst m e1, size_exp_subst m e2)
-      | False -> False
+  let replace_one m = function
+      | Cequal (e1, e2) -> Cequal (size_exp_subst m e1, size_exp_subst m e2)
+      | Clequal (e1, e2) -> Clequal (size_exp_subst m e1, size_exp_subst m e2)
+      | Cfalse -> Cfalse
   in List.map (replace_one m) constr
 
 let op_to_string =
@@ -128,17 +135,17 @@ let op_to_string =
 let rec print_size_exp ff =
   function
     | SConst i -> fprintf ff "%d" i
-    | SVar id -> fprintf ff "%s" id
-    | SOp (op, e1, e2) ->
+    | Svar id -> fprintf ff "%s" id
+    | Sop (op, e1, e2) ->
         fprintf ff "@[(%a %s %a)@]"
           print_size_exp e1 (op_to_string op) print_size_exp e2
 
 let print_size_constr ff = function
-  | Equal (e1, e2) ->
+  | Cequal (e1, e2) ->
       fprintf ff "@[%a = %a@]" print_size_exp e1 print_size_exp e2
-  | LEqual (e1, e2) ->
+  | Clequal (e1, e2) ->
       fprintf ff "@[%a <= %a@]" print_size_exp e1 print_size_exp e2
-  | False -> fprintf ff "False"
+  | Cfalse -> fprintf ff "False"
 
 let psize_constr oc c =
   let ff = formatter_of_out_channel oc

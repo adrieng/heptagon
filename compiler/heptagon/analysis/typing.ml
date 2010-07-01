@@ -215,7 +215,7 @@ let rec unify t1 t2 =
              _ -> raise Unify
         )
     | Tarray (ty1, e1), Tarray (ty2, e2) ->
-        add_size_constr (Equal(e1,e2));
+        add_size_constr (Cequal(e1,e2));
         unify ty1 ty2
     | _ -> raise Unify
 
@@ -607,7 +607,7 @@ and typing_array_op statefull h op e_list =
         let typed_e2 = expect statefull h (Tid Initial.pint) e2 in
         let e2 = size_exp_of_exp e2 in
         let typed_e1, t1 = typing statefull h e1 in
-        add_size_constr (LEqual (SConst 1, e2));
+        add_size_constr (Clequal (SConst 1, e2));
         Tarray (t1, e2), op, [typed_e1; typed_e2]
     | Eselect idx_list, [e1] ->
         let typed_e1, t1 = typing statefull h e1 in
@@ -628,9 +628,9 @@ and typing_array_op statefull h op e_list =
         let typed_idx2 = expect statefull h (Tid Initial.pint) idx2 in
         let typed_e, t1 = typing statefull h e in
         (*Create the expression to compute the size of the array *)
-        let e1 = SOp (SMinus, size_exp_of_exp idx2, size_exp_of_exp idx1) in
-        let e2 = SOp (SPlus, e1, SConst 1) in
-        add_size_constr (LEqual (SConst 1, e2));
+        let e1 = Sop (SMinus, size_exp_of_exp idx2, size_exp_of_exp idx1) in
+        let e2 = Sop (SPlus, e1, SConst 1) in
+        add_size_constr (Clequal (SConst 1, e2));
         Tarray (element_type t1, e2), op, [typed_e; typed_idx1; typed_idx2]
     | Econcat, [e1; e2] ->
         let typed_e1, t1 = typing statefull h e1 in
@@ -640,7 +640,7 @@ and typing_array_op statefull h op e_list =
         with
             TypingError(kind) -> message e1.e_loc kind
         end;
-        let n = SOp (SPlus, size_exp t1, size_exp t2) in
+        let n = Sop (SPlus, size_exp t1, size_exp t2) in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
     | Eiterator (it, ({ op_name = f; op_params = params;
                         op_kind = k } as op_desc), reset),
@@ -658,7 +658,7 @@ and typing_array_op statefull h op e_list =
         let e = size_exp_of_exp e in
         let ty, typed_e_list = typing_iterator statefull h it e
           expected_ty_list result_ty_list e_list in
-        add_size_constr (LEqual (SConst 1, e));
+        add_size_constr (Clequal (SConst 1, e));
         List.iter add_size_constr size_constrs;
         ty, Eiterator(it, { op_desc with op_name = f; op_kind = k }, reset),
           typed_e::typed_e_list
@@ -718,8 +718,8 @@ and typing_array_subscript statefull h idx_list ty  =
   match ty, idx_list with
     | ty, [] -> ty
     | Tarray(ty, exp), idx::idx_list ->
-        add_size_constr (LEqual (SConst 0, idx));
-        add_size_constr (LEqual (idx, SOp(SMinus, exp, SConst 1)));
+        add_size_constr (Clequal (SConst 0, idx));
+        add_size_constr (Clequal (idx, Sop(SMinus, exp, SConst 1)));
         typing_array_subscript statefull h idx_list ty
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 

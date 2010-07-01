@@ -13,16 +13,17 @@ type err_kind = | Enot_size_exp
 
 let err_message ?(exp=void) ?(loc=exp.e_loc) = function
   | Enot_size_exp ->
-      Printf.eprintf "The expression %a should be a size_exp.@." print_exp exp;
+      Printf.eprintf "The expression %a should be a size_exp.@."
+        print_exp exp;
       raise Error
 
 let rec size_exp_of_exp e =
   match e.e_desc with
-    | Econstvar n -> SVar n
+    | Econstvar n -> Svar n
     | Econst (Cint i) -> SConst i
     | Ecall(op, [e1;e2], _) ->
         let sop = op_from_app_name op.op_name in
-        SOp(sop, size_exp_of_exp e1, size_exp_of_exp e2)
+        Sop(sop, size_exp_of_exp e1, size_exp_of_exp e2)
     | _ -> err_message ~exp:e Enot_size_exp
 
 (** @return the list of bounds of an array type*)

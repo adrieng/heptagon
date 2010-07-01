@@ -20,8 +20,7 @@ type iterator_type =
   | Ifold
   | Imapfold
 
-type exp =
-    { e_desc : desc; e_ty : ty; e_loc : location }
+type exp = { e_desc : desc; e_ty : ty; e_loc : location }
 
 and desc =
   | Econst of const
@@ -196,11 +195,11 @@ let op_from_app app =
 (** Translates a Heptagon exp into a static size exp. *)
 let rec size_exp_of_exp e =
   match e.e_desc with
-    | Econstvar n -> SVar n
+    | Econstvar n -> Svar n
     | Econst (Cint i) -> SConst i
     | Eapp (app, [ e1; e2 ]) ->
         let op = op_from_app app
-        in SOp (op, size_exp_of_exp e1, size_exp_of_exp e2)
+        in Sop (op, size_exp_of_exp e1, size_exp_of_exp e2)
     | _ -> raise Not_static
 
 (** @return the set of variables defined in [pat]. *)

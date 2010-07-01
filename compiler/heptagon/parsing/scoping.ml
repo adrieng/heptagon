@@ -119,11 +119,12 @@ let rec translate_size_exp const_env e = match e.e_desc with
       if !check_const_vars & not (NamesEnv.mem n const_env) then
         Error.message e.e_loc (Error.Econst_var n)
       else
-        SVar n
+        Svar n
   | Econst (Cint i) -> SConst i
   | Eapp(app, [e1;e2]) ->
       let op = op_from_app e.e_loc app in
-      SOp(op, translate_size_exp const_env e1, translate_size_exp const_env e2)
+      Sop(op, translate_size_exp const_env e1,
+              translate_size_exp const_env e2)
   | _ -> Error.message e.e_loc Error.Estatic_exp_expected
 
 let rec translate_type const_env = function
@@ -153,7 +154,8 @@ and translate_app const_env env app =
 
 and translate_op_desc const_env desc =
   { Heptagon.op_name = desc.op_name;
-    Heptagon.op_params = List.map (translate_size_exp const_env) desc.op_params;
+    Heptagon.op_params =
+      List.map (translate_size_exp const_env) desc.op_params;
     Heptagon.op_kind = translate_op_kind desc.op_kind }
 
 and translate_array_op const_env env = function
@@ -184,9 +186,9 @@ and translate_desc loc const_env env = function
   | Eapp ({ a_op = (Earray_op Erepeat)} as app, e_list) ->
       let e_list = List.map (translate_exp const_env env) e_list in
       (match e_list with
-         | [{ Heptagon.e_desc = Heptagon.Econst c }; e1 ] ->
-             Heptagon.Econst (Heptagon.Carray (Heptagon.size_exp_of_exp e1, c))
-         | _ -> Heptagon.Eapp (translate_app const_env env app, e_list)
+       | [{ Heptagon.e_desc = Heptagon.Econst c }; e1 ] ->
+           Heptagon.Econst (Heptagon.Carray (Heptagon.size_exp_of_exp e1, c))
+       | _ -> Heptagon.Eapp (translate_app const_env env app, e_list)
       )
   | Eapp (app, e_list) ->
       let e_list = List.map (translate_exp const_env env) e_list in
