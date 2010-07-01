@@ -90,6 +90,8 @@ let main_def_of_class_def cd =
     | Tint | Tfloat | Tbool -> None
     | Tid (Name sid | Modname { id = sid; }) -> Some sid in
 
+  let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
+
   (** Generates scanf statements. *)
   let rec read_lhs_of_ty lhs ty = match ty with
     | Tarray (ty, n) ->
@@ -132,7 +134,8 @@ let main_def_of_class_def cd =
         let iter_var = Ident.name (Ident.fresh "i") in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = write_lhs_of_ty lhs ty in
-        (Cfor (iter_var, 0, n, [reads]), bufs)
+        ([cprint_string "[ "; Cfor (iter_var, 0, n, reads); cprint_string "]"],
+          bufs)
     | _ ->
         let varn = Ident.name (Ident.fresh "buf") in
         let format_s = format_for_type ty in
@@ -142,9 +145,9 @@ let main_def_of_class_def cd =
           | Some sid -> [Cfun_call ("string_of_" ^ sid,
                                     [Clhs lhs;
                                      Clhs (Cvar varn)])] in
-        (Csexpr (Cfun_call ("printf",
-                            Cconst (Cstrlit ("=> " ^format_s ^ "\\t"))
-                            :: ep)),
+        ([Csexpr (Cfun_call ("printf",
+                             Cconst (Cstrlit (format_s ^ " "))
+                             :: ep))],
          match nbuf_opt with
            | None -> []
            | Some id -> [(varn, Cty_arr (20, Cty_char))]) in
@@ -156,8 +159,11 @@ let main_def_of_class_def cd =
 
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
-      write_lhs_of_ty (Cfield (Cvar "res", name vd.v_ident)) vd.v_type in
+      let (stm, vars) =
+        write_lhs_of_ty (Cfield (Cvar "res", name vd.v_ident)) vd.v_type in
+      (cprint_string "=> " :: stm, vars) in
     split (map write_lhs_of_ty_for_vd cd.step.out) in
+  let printf_calls = List.concat printf_calls in
 
   let cinp = cvarlist_of_ovarlist cd.step.inp in
   let cout = ["res", (Cty_id (cd.cl_id ^ "_out"))] in
