@@ -41,7 +41,7 @@ let sequential_target filename o target_languages =
     | "c" :: others ->
         let dirname = build_path (filename ^ "_c") in
         let dir = clean_dir dirname in
-        let c_ast = Cgen.translate filename o in
+        let c_ast = Cmain.translate filename o in
         C.output dir c_ast;
         one_target others
     | unknown_lg :: others -> unknown_lg :: one_target others
