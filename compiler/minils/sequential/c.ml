@@ -269,6 +269,7 @@ let pp_cfile_desc fmt filen cfile =
         Misc.print_header_info fmt "/*" "*/";
         fprintf fmt "#include <stdio.h>@\n";
         fprintf fmt "#include <string.h>@\n";
+        fprintf fmt "#include <stdlib.h>@\n";
         fprintf fmt "#include \"%s\"@\n@\n" headern;
         fprintf fmt "#define FALSE 0@\n#define TRUE 1@\n@\n";
         iter (pp_cdef fmt) cdefs
