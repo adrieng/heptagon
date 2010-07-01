@@ -13,7 +13,7 @@ open Static
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
-let interface_format_version = "7"
+let interface_format_version = "8"
 
 (** Node argument *)
 type arg = { a_name : name option; a_type : ty }
@@ -42,11 +42,11 @@ let mk_arg name ty = { a_type = ty; a_name = name }
 
 let mk_param name = { p_name = name }
 
+let mk_field n ty = { f_name = n; f_type = ty }
+
 
 let print_param ff p = Names.print_name ff p.p_name
 
-let mk_field n ty =
-  { f_name = n; f_type = ty }
 
 let rec field_assoc f = function
   | [] -> raise Not_found

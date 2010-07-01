@@ -32,7 +32,7 @@ and tdesc =
   | Type_struct of structure
 
 and exp =
-    { e_desc: edesc;        (* its descriptor *)
+    { e_desc: edesc;
       mutable e_ck: ck;
       mutable e_ty: ty;
       e_loc: location }
@@ -40,31 +40,37 @@ and exp =
 and edesc =
   | Econst of static_exp
   | Evar of ident
-  | Econstvar of name
   | Efby of static_exp option * exp
+                       (** static_exp fby exp *)
   | Eapp of app * exp list * ident option
-      (** ident option is the optional reset *)
+                       (** app ~args=(exp,exp...) reset ~r=ident *)
   | Ewhen of exp * longname * ident
+                       (** exp when Constructor(ident) *)
   | Emerge of ident * (longname * exp) list
+                       (** merge ident (Constructor -> exp)+ *)
   | Estruct of (longname * exp) list
+                       (** { field=exp; ... } *)
   | Eiterator of iterator_type * app * static_exp * exp list * ident option
+                       (** map f <<n>> (exp,exp...) reset ident *)
 
-and app = { a_op: op; a_params: static_exp list }
+and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
+    (** Unsafe applications could have side effects
+        and be delicate about optimizations, !be careful! *)
 
 and op =
-  | Efun of longname
-  | Enode of longname
-  | Eifthenelse
-  | Efield_update of longname (* field name args would be [record ; value] *)
-  | Efield of longname
-  | Earray
-  | Etuple
-  | Erepeat
-  | Eselect
-  | Eselect_dyn
-  | Eupdate
-  | Eselect_slice
-  | Econcat
+  | Etuple             (** (args) *)
+  | Efun of longname   (** "Stateless" longname <<a_params>> (args) reset r *)
+  | Enode of longname  (** "Stateful" longname <<a_params>> (args) reset r *)
+  | Eifthenelse        (** if arg1 then arg2 else arg3 *)
+  | Efield of longname (** arg1.longname *)
+  | Efield_update of longname (** { arg1 with longname = arg2 } *)
+  | Earray             (** [ args ] *)
+  | Earray_fill        (** [arg1^arg2] *)
+  | Eselect            (** arg1[a_params] *)
+  | Eselect_slice      (** arg1[a_param1..a_param2] *)
+  | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
+  | Eupdate            (** [ arg1 with a_params = arg2 ] *)
+  | Econcat            (** arg1@@arg2 *)
 
 and ct =
   | Ck of ck
@@ -105,8 +111,7 @@ type contract =
       c_enforce : exp;
       c_controllables : var_dec list;
       c_local : var_dec list;
-      c_eq : eq list;
-    }
+      c_eq : eq list }
 
 type node_dec =
     { n_name   : name;
@@ -123,14 +128,14 @@ type node_dec =
 type const_dec =
     { c_name : name;
       c_value : static_exp;
-      c_loc : location; }
+      c_loc : location }
 
 type program =
     { p_pragmas: (name * string) list;
       p_opened : name list;
       p_types  : type_dec list;
       p_nodes  : node_dec list;
-      p_consts : const_dec list; }
+      p_consts : const_dec list }
 
 
 
