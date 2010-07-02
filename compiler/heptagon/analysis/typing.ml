@@ -178,12 +178,12 @@ let find_field c =
 let find_struct c =
   try find_struct c with Not_found -> error (Eundefined(fullname c))
 
-let (curr_size_constraint : size_constr list ref) = ref []
+let (curr_size_constrs : size_constraint list ref) = ref []
 let add_size_constraint c =
-  curr_size_constraint := c::(!curr_size_constr)
+  curr_size_constrs := c :: !curr_size_constrs
 let get_size_constraint () =
-  let l = !curr_size_constraint in
-  curr_size_constraint := [];
+  let l = !curr_size_constrs in
+  curr_size_constrs := [];
   l
 
 let get_number_of_fields ty =
@@ -573,7 +573,7 @@ and typing_app statefull h op e_list =
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args statefull h expected_ty_list e_list in
-        let size_constraints =
+        let size_constrs =
           instanciate_constr m ty_desc.node_params_constraints in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         List.iter add_size_constraint size_constrs;
@@ -651,7 +651,7 @@ and typing_array_op statefull h op e_list =
         let m = List.combine (List.map (fun p -> p.p_name) ty_desc.node_params)
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
-        let size_constraints =
+        let size_constrs =
           instanciate_constr m ty_desc.node_params_constraints in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         let typed_e = expect statefull h (Tid Initial.pint) e in

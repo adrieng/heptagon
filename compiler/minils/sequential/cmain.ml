@@ -235,7 +235,7 @@ let main_skel var_list prologue body =
                                  Clhs (Cvar (name step_counter)),
                                  Cconst (Ccint 1)))
                   :: body);
-          Creturn (Cconst (Cint 0));
+          Creturn (Cconst (Ccint 0));
         ];
     }
   }
