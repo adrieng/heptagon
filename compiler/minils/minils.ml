@@ -124,7 +124,7 @@ type node_dec =
       n_equs   : eq list;
       n_loc    : location;
       n_params : param list;
-      n_params_constraints : size_constr list;
+      n_params_constraints : size_constraint list;
       n_params_instances : (int list) list; }(*TODO commenter ou passer en env*)
 
 type const_dec =

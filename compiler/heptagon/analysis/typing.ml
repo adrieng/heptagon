@@ -41,7 +41,7 @@ type error =
   | Esubscripted_value_not_an_array of ty
   | Earray_subscript_should_be_const
   | Eundefined_const of name
-  | Econstraint_solve_failed of size_constr
+  | Econstraint_solve_failed of size_constraint
   | Etype_should_be_static of ty
   | Erecord_type_expected of ty
   | Eno_such_field of ty * longname
@@ -132,7 +132,7 @@ let message loc kind =
         Printf.eprintf
           "%aThe following constraint cannot be satisified:\n %a.\n"
           output_location loc
-          psize_constr c
+          psize_constraint c
     | Etype_should_be_static ty ->
         Printf.eprintf
           "%aThis type should be static : %a.\n"
@@ -178,12 +178,12 @@ let find_field c =
 let find_struct c =
   try find_struct c with Not_found -> error (Eundefined(fullname c))
 
-let (curr_size_constr : size_constr list ref) = ref []
-let add_size_constr c =
-  curr_size_constr := c::(!curr_size_constr)
-let get_size_constr () =
-  let l = !curr_size_constr in
-  curr_size_constr := [];
+let (curr_size_constraint : size_constr list ref) = ref []
+let add_size_constraint c =
+  curr_size_constraint := c::(!curr_size_constr)
+let get_size_constraint () =
+  let l = !curr_size_constraint in
+  curr_size_constraint := [];
   l
 
 let get_number_of_fields ty =
@@ -215,7 +215,7 @@ let rec unify t1 t2 =
              _ -> raise Unify
         )
     | Tarray (ty1, e1), Tarray (ty2, e2) ->
-        add_size_constr (Cequal(e1,e2));
+        add_size_constraint (Cequal(e1,e2));
         unify ty1 ty2
     | _ -> raise Unify
 
@@ -573,10 +573,10 @@ and typing_app statefull h op e_list =
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args statefull h expected_ty_list e_list in
-        let size_constrs =
+        let size_constraints =
           instanciate_constr m ty_desc.node_params_constraints in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
-        List.iter add_size_constr size_constrs;
+        List.iter add_size_constraint size_constrs;
         (prod result_ty_list,
          Ecall ( { op_desc with op_name = Modname q; op_kind = k }, reset),
          typed_e_list)
@@ -607,7 +607,7 @@ and typing_array_op statefull h op e_list =
         let typed_e2 = expect statefull h (Tid Initial.pint) e2 in
         let e2 = size_exp_of_exp e2 in
         let typed_e1, t1 = typing statefull h e1 in
-        add_size_constr (Clequal (SConst 1, e2));
+        add_size_constraint (Clequal (SConst 1, e2));
         Tarray (t1, e2), op, [typed_e1; typed_e2]
     | Eselect idx_list, [e1] ->
         let typed_e1, t1 = typing statefull h e1 in
@@ -628,9 +628,9 @@ and typing_array_op statefull h op e_list =
         let typed_idx2 = expect statefull h (Tid Initial.pint) idx2 in
         let typed_e, t1 = typing statefull h e in
         (*Create the expression to compute the size of the array *)
-        let e1 = Sop (SMinus, size_exp_of_exp idx2, size_exp_of_exp idx1) in
-        let e2 = Sop (SPlus, e1, SConst 1) in
-        add_size_constr (Clequal (SConst 1, e2));
+        let e1 = Sop (Sminus, size_exp_of_exp idx2, size_exp_of_exp idx1) in
+        let e2 = Sop (Splus, e1, SConst 1) in
+        add_size_constraint (Clequal (SConst 1, e2));
         Tarray (element_type t1, e2), op, [typed_e; typed_idx1; typed_idx2]
     | Econcat, [e1; e2] ->
         let typed_e1, t1 = typing statefull h e1 in
@@ -640,7 +640,7 @@ and typing_array_op statefull h op e_list =
         with
             TypingError(kind) -> message e1.e_loc kind
         end;
-        let n = Sop (SPlus, size_exp t1, size_exp t2) in
+        let n = Sop (Splus, size_exp t1, size_exp t2) in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
     | Eiterator (it, ({ op_name = f; op_params = params;
                         op_kind = k } as op_desc), reset),
@@ -651,15 +651,15 @@ and typing_array_op statefull h op e_list =
         let m = List.combine (List.map (fun p -> p.p_name) ty_desc.node_params)
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
-        let size_constrs =
+        let size_constraints =
           instanciate_constr m ty_desc.node_params_constraints in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         let typed_e = expect statefull h (Tid Initial.pint) e in
         let e = size_exp_of_exp e in
         let ty, typed_e_list = typing_iterator statefull h it e
           expected_ty_list result_ty_list e_list in
-        add_size_constr (Clequal (SConst 1, e));
-        List.iter add_size_constr size_constrs;
+        add_size_constraint (Clequal (SConst 1, e));
+        List.iter add_size_constraint size_constrs;
         ty, Eiterator(it, { op_desc with op_name = f; op_kind = k }, reset),
           typed_e::typed_e_list
 
@@ -718,8 +718,8 @@ and typing_array_subscript statefull h idx_list ty  =
   match ty, idx_list with
     | ty, [] -> ty
     | Tarray(ty, exp), idx::idx_list ->
-        add_size_constr (Clequal (SConst 0, idx));
-        add_size_constr (Clequal (idx, Sop(SMinus, exp, SConst 1)));
+        add_size_constraint (Clequal (SConst 0, idx));
+        add_size_constraint (Clequal (idx, Sop(Sminus, exp, SConst 1)));
         typing_array_subscript statefull h idx_list ty
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 
@@ -980,7 +980,7 @@ let node const_env ({ n_name = f; n_statefull = statefull;
     included_env expected_names defined_names;
     included_env defined_names expected_names;
 
-    let cl = get_size_constr () in
+    let cl = get_size_constraint () in
     let cl = solve loc const_env cl in
     add_value f (signature const_env statefull i_list o_list node_params cl);
 

@@ -17,15 +17,15 @@
 open Names
 open Format
 
-type op = | SPlus | SMinus | STimes | SDiv
+type op = | Splus | Sminus | Stimes | Sdiv
 
 type size_exp =
-  | SConst of int | SVar of name | SOp of op * size_exp * size_exp
+  | SConst of int | Svar of name | Sop of op * size_exp * size_exp
 
 (** Constraints on size expressions. *)
 type size_constraint =
-  | Cequal of static_exp * static_exp (* e1 = e2*)
-  | Clequal of static_exp * static_exp (* e1 <= e2 *)
+  | Cequal of size_exp * size_exp (* e1 = e2*)
+  | Clequal of size_exp * size_exp (* e1 <= e2 *)
   | Cfalse
 
 (* unsatisfiable constraint *)
@@ -36,10 +36,10 @@ exception Not_static
 (** Returns the op from an operator full name. *)
 let op_from_app_name n =
   match n with
-    | Modname { qual = "Pervasives"; id = "+" } | Name "+" -> SPlus
-    | Modname { qual = "Pervasives"; id = "-" } | Name "-" -> SMinus
-    | Modname { qual = "Pervasives"; id = "*" } | Name "*" -> STimes
-    | Modname { qual = "Pervasives"; id = "/" } | Name "/" -> SDiv
+    | Modname { qual = "Pervasives"; id = "+" } | Name "+" -> Splus
+    | Modname { qual = "Pervasives"; id = "-" } | Name "-" -> Sminus
+    | Modname { qual = "Pervasives"; id = "*" } | Name "*" -> Stimes
+    | Modname { qual = "Pervasives"; id = "/" } | Name "/" -> Sdiv
     | _ -> raise Not_static
 
 (** [simplify env e] returns e simplified with the
@@ -58,10 +58,10 @@ let rec simplify env =
            | (SConst n1, SConst n2) ->
                let n =
                  (match op with
-                    | SPlus -> n1 + n2
-                    | SMinus -> n1 - n2
-                    | STimes -> n1 * n2
-                    | SDiv ->
+                    | Splus -> n1 + n2
+                    | Sminus -> n1 - n2
+                    | Stimes -> n1 * n2
+                    | Sdiv ->
                         if n2 = 0 then raise Instanciation_failed else n1 / n2)
                in SConst n
            | (_, _) -> Sop (op, e1, e2))
@@ -96,7 +96,7 @@ let is_true env =
            | (_, _) -> (None, (Clequal (e1, e2))))
     | Cfalse -> (None, Cfalse)
 
-exception Solve_failed of size_constr
+exception Solve_failed of size_constraint
 
 (** [solve env constr_list solves a list of constraints. It
     removes equations that can be decided and simplify others.
@@ -130,7 +130,7 @@ let instanciate_constr m constr =
   in List.map (replace_one m) constr
 
 let op_to_string =
-  function | SPlus -> "+" | SMinus -> "-" | STimes -> "*" | SDiv -> "/"
+  function | Splus -> "+" | Sminus -> "-" | Stimes -> "*" | Sdiv -> "/"
 
 let rec print_size_exp ff =
   function
@@ -140,14 +140,14 @@ let rec print_size_exp ff =
         fprintf ff "@[(%a %s %a)@]"
           print_size_exp e1 (op_to_string op) print_size_exp e2
 
-let print_size_constr ff = function
+let print_size_constraint ff = function
   | Cequal (e1, e2) ->
       fprintf ff "@[%a = %a@]" print_size_exp e1 print_size_exp e2
   | Clequal (e1, e2) ->
       fprintf ff "@[%a <= %a@]" print_size_exp e1 print_size_exp e2
   | Cfalse -> fprintf ff "False"
 
-let psize_constr oc c =
+let psize_constraint oc c =
   let ff = formatter_of_out_channel oc
-  in (print_size_constr ff c; fprintf ff "@?")
+  in (print_size_constraint ff c; fprintf ff "@?")
 

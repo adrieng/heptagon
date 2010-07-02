@@ -81,7 +81,7 @@ let rec translate const_env map (m, si, j, s)
   match desc with
     | Minils.Econst v -> Const (translate_const const_env v)
     | Minils.Evar n -> Lhs (var_from_name map n)
-    | Minils.Econstvar n -> Const (Cint (int_of_size_exp const_env (SVar n)))
+    | Minils.Econstvar n -> Const (Cint (int_of_size_exp const_env (Svar n)))
     | Minils.Ecall ({ Minils.op_name = n; Minils.op_kind = Minils.Efun },
                     e_list, _) when Mls_utils.is_op n ->
         Op (n, List.map (translate const_env map (m, si, j, s)) e_list)

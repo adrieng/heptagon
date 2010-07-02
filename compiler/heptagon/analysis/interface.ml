@@ -92,7 +92,7 @@ struct
        | [] -> ()
        | constr ->
            fprintf ff "\n with: @[";
-           print_list_r Static.print_size_constr "" "," "" ff constr;
+           print_list_r Static.print_size_constraint "" "," "" ff constr;
            fprintf ff "@]"
     );
     fprintf ff "@.@]"

@@ -26,7 +26,7 @@ type node =
       node_outputs : arg list;
       node_statefull : bool;
       node_params : param list; (** Static parameters *)
-      node_params_constraints : size_constr list }
+      node_params_constraints : size_constraint list }
 
 type field = { f_name : name; f_type : ty }
 type structure = field list

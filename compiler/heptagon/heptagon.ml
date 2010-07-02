@@ -124,7 +124,7 @@ type node_dec = {
   n_output : var_dec list; n_local : var_dec list;
   n_contract : contract option; n_equs : eq list; n_loc : location;
   n_params : param list;
-  n_params_constraints : size_constr list
+  n_params_constraints : size_constraint list
 }
 
 type const_dec = {
