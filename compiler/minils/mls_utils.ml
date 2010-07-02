@@ -19,11 +19,7 @@ let err_message ?(exp=void) ?(loc=exp.e_loc) = function
 
 let rec static_exp_of_exp e =
   match e.e_desc with
-    | Econstvar n -> Svar n
-    | Econst (Cint i) -> Sconst i
-    | Ecall(op, [e1;e2], _) ->
-        let sop = op_from_app_name op.op_name in
-        Sop(sop, static_exp_of_exp e1, static_exp_of_exp e2)
+    | Econst se -> se
     | _ -> err_message ~exp:e Enot_static_exp
 
 (** @return the list of bounds of an array type*)

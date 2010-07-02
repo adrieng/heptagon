@@ -27,39 +27,31 @@ and exp =
       e_loc: location }
 
 and desc =
-  | Econst of const
+  | Econst of static_exp
   | Evar of name
   | Elast of name
-  | Etuple of exp list
-  | Eapp of app * exp list
+  | Epre of exp option * exp
+  | Efby of exp * exp
   | Efield of exp * longname
   | Estruct of (longname * exp) list
-  | Earray of exp list
+  | Eapp of app * exp list
+  | Eiterator of iterator_type * app * static_exp * exp list
 
-and app =
-    { a_op : op; }
+and app = { a_op: op; a_params: static_exp list; }
 
 and op =
-  | Epre of const option
-  | Efby | Earrow | Eifthenelse
-  | Earray_op of array_op
-  | Efield_update of longname
-  | Ecall of op_desc
-
-and array_op =
-  | Erepeat | Eselect of exp list | Eselect_dyn
-  | Eupdate of exp list
+  | Etuple
+  | Enode of longname
+  | Eifthenelse
+  | Earrow
+  | Efield_update of longname (* field name args would be [record ; value] *)
+  | Earray
+  | Earray_fill
+  | Eselect
+  | Eselect_dyn
   | Eselect_slice
+  | Eupdate
   | Econcat
-  | Eiterator of iterator_type * op_desc
-
-and op_desc = { op_name : longname; op_params: exp list; op_kind: op_kind }
-and op_kind = | Efun | Enode
-
-and const =
-  | Cint of int
-  | Cfloat of float
-  | Cconstr of longname
 
 and pat =
   | Etuplepat of pat list
@@ -106,7 +98,7 @@ and var_dec =
       v_last : last;
       v_loc  : location; }
 
-and last = Var | Last of const option
+and last = Var | Last of exp option
 
 type type_dec =
     { t_name : name;
@@ -174,20 +166,14 @@ and interface_desc =
 let mk_exp desc =
   { e_desc = desc; e_loc = Location.current_loc () }
 
-let mk_app op =
-  { a_op = op; }
+let mk_app op params =
+  { a_op = op; a_params = params }
 
-let mk_op_desc ln params kind =
-  { op_name = ln; op_params = params; op_kind = kind }
+let mk_call ?(params=[]) op exps =
+  Eapp (mk_app op params, exps)
 
-let mk_call desc exps =
-  Eapp (mk_app (Ecall desc), exps)
-
-let mk_op_call s params exps =
-  mk_call (mk_op_desc (Name s) params Efun)  exps
-
-let mk_array_op_call op exps =
-  Eapp (mk_app (Earray_op op), exps)
+let mk_op_call  ?(params=[])s exps =
+  mk_call (Efun (Name s)) params exps
 
 let mk_iterator_call it ln params exps =
   mk_array_op_call (Eiterator (it, mk_op_desc ln params Enode)) exps

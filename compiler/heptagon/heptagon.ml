@@ -182,9 +182,6 @@ let op_from_app app =
 let rec static_exp_of_exp e =
   match e.e_desc with
     | Econst se -> se
-    | Eapp (app, [ e1; e2 ]) ->
-        let op = op_from_app app
-        in Sop (op, static_exp_of_exp e1, static_exp_of_exp e2)
     | _ -> raise Not_static
 
 (** @return the set of variables defined in [pat]. *)

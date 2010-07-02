@@ -63,11 +63,17 @@ let rec translate_type const_env = function
   | Types.Tprod ty -> assert false
 
 let rec translate_const const_env = function
-  | Minils.Cint v -> Cint v
-  | Minils.Cfloat v -> Cfloat v
-  | Minils.Cconstr c -> Cconstr c
-  | Minils.Carray (n, c) ->
-      Carray (int_of_static_exp const_env n, translate_const const_env c)
+  | Minils.Sint v -> Cint v
+  | Minils.Sbool v -> Cbool v
+  | Minils.Sfloat v -> Cfloat v
+  | Minils.Sconstructor c -> Cconstr c
+  | Minils.Sarray_power (n, c) ->
+      Carray_power (int_of_static_exp const_env n, translate_const const_env c)
+  | Minils.Sarray se_list ->
+      Carray (List.map (translate_const const_env) se_list)
+  | Minils.Stuple se_list ->
+      Ctuple (List.map (translate_const const_env) se_list)
+  | Minils.Svar n -> simplify const_env (SVar n)
 
 let rec translate_pat map = function
   | Minils.Evarpat x -> [ var_from_name map x ]
@@ -81,7 +87,6 @@ let rec translate const_env map (m, si, j, s)
   match desc with
     | Minils.Econst v -> Const (translate_const const_env v)
     | Minils.Evar n -> Lhs (var_from_name map n)
-    | Minils.Econstvar n -> Const (Cint (int_of_static_exp const_env (Svar n)))
     | Minils.Ecall ({ Minils.op_name = n; Minils.op_kind = Minils.Efun },
                     e_list, _) when Mls_utils.is_op n ->
         Op (n, List.map (translate const_env map (m, si, j, s)) e_list)

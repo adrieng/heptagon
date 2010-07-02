@@ -103,46 +103,59 @@ let translate_op_kind = function
   | Efun -> Heptagon.Efun
   | Enode -> Heptagon.Enode
 
-let translate_const = function
-  | Cint i -> Heptagon.Cint i
-  | Cfloat f -> Heptagon.Cfloat f
-  | Cconstr ln -> Heptagon.Cconstr ln
-
 let op_from_app loc app =
   match app.a_op with
     | Ecall { op_name = op; op_kind = Efun } -> op_from_app_name op
     | _ -> Error.message loc Error.Estatic_exp_expected
 
 let check_const_vars = ref true
-let rec translate_static_exp const_env e = match e.e_desc with
+let rec static_exp_of_exp const_env e = match e.e_desc with
   | Evar n ->
       if !check_const_vars & not (NamesEnv.mem n const_env) then
         Error.message e.e_loc (Error.Econst_var n)
       else
         Svar n
-  | Econst (Cint i) -> Sconst i
-  | Eapp(app, [e1;e2]) ->
+  | Econst se -> se
+  | Eapp({ a_op = Earray_fill }, [e;n]) ->
+      Sarray_power (static_exp_of_exp const_env e,
+                    static_exp_of_exp const_env n)
+  | Eapp({ a_op = Earray }, [e;n]) ->
+      Sarray (List.map (static_exp_of_exp const_env) e_list)
+  | Eapp({ a_op = Etuple }, [e;n]) ->
+      Stuple (List.map (static_exp_of_exp const_env) e_list)
+  | Eapp(app, e_list) ->
       let op = op_from_app e.e_loc app in
-      Sop(op, translate_static_exp const_env e1,
-              translate_static_exp const_env e2)
-  | _ -> Error.message e.e_loc Error.Estatic_exp_expected
+      Sop(op, List.map (static_exp_of_exp const_env) e_list)
+  | _ -> raise Not_static
+
+let expect_static_exp const_env e =
+  try
+    static_exp_of_exp const_env e
+  with
+      Not_static -> Error.message e.e_loc Error.Estatic_exp_expected
 
 let rec translate_type const_env = function
   | Tprod ty_list -> Types.Tprod(List.map (translate_type const_env) ty_list)
   | Tid ln -> Types.Tid ln
   | Tarray (ty, e) ->
       let ty = translate_type const_env ty in
-      Types.Tarray (ty, translate_static_exp const_env e)
+      Types.Tarray (ty, expect_static_exp const_env e)
 
 and translate_exp const_env env e =
-  { Heptagon.e_desc = translate_desc e.e_loc const_env env e.e_desc;
+  let desc =
+    try (* try to see if the exp is a constant *)
+      Econst (translate_static_exp const_env e)
+    with
+        Not_static -> translate_desc e.e_loc const_env env e.e_desc in
+  { Heptagon.e_desc = desc;
     Heptagon.e_ty = Types.invalid_type;
     Heptagon.e_loc = e.e_loc }
 
 and translate_app const_env env app =
   let op = match app.a_op with
     | Epre None -> Heptagon.Epre None
-    | Epre (Some c) -> Heptagon.Epre (Some (translate_const c))
+    | Epre (Some e) ->
+        Heptagon.Epre (Some (expect_static_exp const_env e))
     | Efby -> Heptagon.Efby
     | Earrow -> Heptagon.Earrow
     | Eifthenelse -> Heptagon.Eifthenelse
@@ -155,14 +168,14 @@ and translate_app const_env env app =
 and translate_op_desc const_env desc =
   { Heptagon.op_name = desc.op_name;
     Heptagon.op_params =
-      List.map (translate_static_exp const_env) desc.op_params;
+      List.map (expect_static_exp const_env) desc.op_params;
     Heptagon.op_kind = translate_op_kind desc.op_kind }
 
 and translate_array_op const_env env = function
   | Eselect e_list ->
-      Heptagon.Eselect (List.map (translate_static_exp const_env) e_list)
+      Heptagon.Eselect (List.map (expect_static_exp const_env) e_list)
   | Eupdate e_list ->
-      Heptagon.Eupdate (List.map (translate_static_exp const_env) e_list)
+      Heptagon.Eupdate (List.map (expect_static_exp const_env) e_list)
   | Erepeat -> Heptagon.Erepeat
   | Eselect_slice -> Heptagon.Eselect_slice
   | Econcat -> Heptagon.Econcat
@@ -172,7 +185,7 @@ and translate_array_op const_env env = function
                           translate_op_desc const_env desc, None)
 
 and translate_desc loc const_env env = function
-  | Econst c -> Heptagon.Econst (translate_const c)
+  | Econst c -> Heptagon.Econst c
   | Evar x ->
       if Rename.mem x env then (* defined var *)
         Heptagon.Evar (Rename.name loc env x)
@@ -183,13 +196,6 @@ and translate_desc loc const_env env = function
   | Elast x -> Heptagon.Elast (Rename.name loc env x)
   | Etuple e_list ->
       Heptagon.Etuple (List.map (translate_exp const_env env) e_list)
-  | Eapp ({ a_op = (Earray_op Erepeat)} as app, e_list) ->
-      let e_list = List.map (translate_exp const_env env) e_list in
-      (match e_list with
-       | [{ Heptagon.e_desc = Heptagon.Econst c }; e1 ] ->
-           Heptagon.Econst (Heptagon.Carray (Heptagon.static_exp_of_exp e1, c))
-       | _ -> Heptagon.Eapp (translate_app const_env env app, e_list)
-      )
   | Eapp (app, e_list) ->
       let e_list = List.map (translate_exp const_env env) e_list in
       Heptagon.Eapp (translate_app const_env env app, e_list)
@@ -260,16 +266,16 @@ and translate_switch_handler loc const_env env sh =
 and translate_var_dec const_env env vd =
   { Heptagon.v_ident = Rename.name vd.v_loc env vd.v_name;
     Heptagon.v_type = translate_type const_env vd.v_type;
-    Heptagon.v_last = translate_last env vd.v_last;
+    Heptagon.v_last = translate_last const_env env vd.v_last;
     Heptagon.v_loc = vd.v_loc }
 
 and translate_vd_list const_env env =
   List.map (translate_var_dec const_env env)
 
-and translate_last env = function
+and translate_last const_env env = function
   | Var -> Heptagon.Var
   | Last (None) -> Heptagon.Last None
-  | Last (Some c) -> Heptagon.Last (Some (translate_const c))
+  | Last (Some e) -> Heptagon.Last (Some (expect_static_exp const_env e))
 
 let translate_contract const_env env ct =
   { Heptagon.c_assume = translate_exp const_env env ct.c_assume;
@@ -310,7 +316,7 @@ let translate_typedec const_env ty =
 let translate_const_dec const_env cd =
   { Heptagon.c_name = cd.c_name;
     Heptagon.c_type = translate_type const_env cd.c_type;
-    Heptagon.c_value = translate_static_exp const_env cd.c_value;
+    Heptagon.c_value = expect_static_exp const_env cd.c_value;
     Heptagon.c_loc = cd.c_loc; }
 
 let translate_program p =

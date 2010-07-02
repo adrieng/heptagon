@@ -21,7 +21,8 @@ module Type =
 struct
   let sigtype { sig_name = name; sig_inputs = i_list; sig_statefull = statefull;
                 sig_outputs = o_list; sig_params = params } =
-    let check_arg a = { a with a_type = check_type a.a_type } in
+    let const_env = build_node_params NamesEnv.empty node_params in
+    let check_arg a = { a with a_type = check_type const_env a.a_type } in
     name, { node_inputs = List.map check_arg i_list;
             node_outputs = List.map check_arg o_list;
             node_statefull = statefull;
@@ -32,7 +33,7 @@ struct
     try
       match desc with
         | Iopen(n) -> open_module n
-        | Itypedef(tydesc) -> deftype NamesEnv.empty tydesc
+        | Itypedef(tydesc) -> deftype NamesEnv.empty NamesEnv.empty tydesc
         | Isignature(s) ->
             let name, s = sigtype s in
             add_value name s

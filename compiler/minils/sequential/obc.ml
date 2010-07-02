@@ -39,9 +39,12 @@ and tdesc =
 
 type const =
   | Cint of int
+  | Cbool of bool
   | Cfloat of float
   | Cconstr of longname
-  | Carray of int * const
+  | Carray_power of int * const
+  | Carray of const list
+  | Ctuple of const list
 
 type lhs =
   | Var of var_name

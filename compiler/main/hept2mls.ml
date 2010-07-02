@@ -182,12 +182,6 @@ let switch x ci_eqs_list =
   check ci_eqs_list;
   distribute ci_eqs_list
 
-let rec const = function
-  | Heptagon.Cint i -> Cint i
-  | Heptagon.Cfloat f -> Cfloat f
-  | Heptagon.Cconstr t -> Cconstr t
-  | Heptagon.Carray(n, c) -> Carray(n, const c)
-
 let translate_op_kind = function
   | Heptagon.Efun -> Efun
   | Heptagon.Enode -> Enode
@@ -210,8 +204,8 @@ let translate_iterator_type = function
 let rec application env { Heptagon.a_op = op; } e_list =
   match op, e_list with
     | Heptagon.Epre(None), [e] -> Efby(None, e)
-    | Heptagon.Epre(Some(c)), [e] -> Efby(Some(const c), e)
-    | Heptagon.Efby, [{ e_desc = Econst(c) } ; e] -> Efby(Some(c), e)
+    | Heptagon.Epre(Some c), [e] -> Efby(Some c, e)
+    | Heptagon.Efby, [{ e_desc = Econst c } ; e] -> Efby(Some c, e)
     | Heptagon.Eifthenelse, [e1;e2;e3] -> Eifthenelse(e1, e2, e3)
     | Heptagon.Ecall(op_desc, r), e_list ->
         Ecall(translate_op_desc op_desc, e_list, translate_reset r)
@@ -243,12 +237,10 @@ let rec translate env
     { Heptagon.e_desc = desc; Heptagon.e_ty = ty;
       Heptagon.e_loc = loc } =
   match desc with
-    | Heptagon.Econst(c) ->
+    | Heptagon.Econst c ->
         Env.const env (mk_exp ~loc:loc ~exp_ty:ty (Econst (const c)))
     | Heptagon.Evar x ->
         Env.con env x (mk_exp ~loc:loc ~exp_ty:ty (Evar x))
-    | Heptagon.Econstvar(x) ->
-        Env.const env (mk_exp ~loc:loc ~exp_ty:ty (Econstvar x))
     | Heptagon.Etuple(e_list) ->
         mk_exp ~loc:loc ~exp_ty:ty (Etuple (List.map (translate env) e_list))
     | Heptagon.Eapp(app, e_list) ->

@@ -216,7 +216,7 @@ opt_equs:
 ;
 
 opt_assume:
-  | /* empty */ {  mk_exp (Econst (Cconstr Initial.ptrue)) }
+  | /* empty */ {  mk_exp (Econst (Sconstructor Initial.ptrue)) }
   | ASSUME exp { $2 }
 ;
 
@@ -242,7 +242,7 @@ loc_params:
 var_last:
   | ident_list COLON ty_ident
       { List.map (fun id -> mk_var_dec id $3 Var) $1 }
-  | LAST IDENT COLON ty_ident EQUAL const
+  | LAST IDENT COLON ty_ident EQUAL exp
       { [ mk_var_dec $2 $4 (Last(Some($6))) ] }
   | LAST IDENT COLON ty_ident
       { [ mk_var_dec $2 $4 (Last(None)) ] }
@@ -442,7 +442,7 @@ exp:
       { mk_exp (Efield ($1, $3)) }
 /*Array operations*/
   | exp POWER simple_exp
-      { mk_exp (mk_array_op_call Erepeat [$1; $3]) }
+      { mk_exp (mk_call Erepeat [$1; $3]) }
   | simple_exp indexes
       { mk_exp (mk_array_op_call (Eselect $2) [$1]) }
   | simple_exp DOT indexes DEFAULT exp
@@ -483,7 +483,6 @@ indexes:
 constructor:
   | Constructor { Name($1) } %prec prec_ident
   | Constructor DOT Constructor { Modname({qual = $1; id = $3}) }
-  | BOOL { Name(if $1 then "true" else "false") }
 ;
 
 longname:
@@ -492,9 +491,10 @@ longname:
 ;
 
 const:
-  | INT { Cint($1) }
-  | FLOAT { Cfloat($1) }
-  | constructor { Cconstr($1) }
+  | INT { Sint $1 }
+  | FLOAT { Sfloat $1 }
+  | BOOL { Sbool $1 }
+  | constructor { Sconstructor $1 }
 ;
 
 tuple_exp:
