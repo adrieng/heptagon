@@ -23,36 +23,33 @@ type iterator_type =
 type exp = { e_desc : desc; e_ty : ty; e_loc : location }
 
 and desc =
-  | Econst of const
+  | Econst of static_exp
   | Evar of ident
-  | Econstvar of name
-  | Etuple of exp list
   | Elast of ident
   | Epre of static_exp option * exp
   | Efby of exp * exp
   | Efield of exp * longname
   | Estruct of (longname * exp) list
-  | Earray of exp list
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp * exp list * exp option
 
 
-and app = { a_op: op; a_params: static_exp list }
+and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
 
 and op =
+  | Etuple
   | Efun of longname
   | Enode of longname
   | Eifthenelse
   | Earrow
   | Efield_update of longname (* field name args would be [record ; value] *)
   | Earray
-  | Erepeat
+  | Earray_fill
   | Eselect
   | Eselect_dyn
-  | Eupdate
   | Eselect_slice
+  | Eupdate
   | Econcat
-
 
 and pat =
   | Etuplepat of pat list
@@ -94,7 +91,7 @@ and var_dec = {
 }
 
 and last =
-  | Var | Last of const option
+  | Var | Last of static_exp option
 
 type type_dec = {
   t_name : name; t_desc : type_desc; t_loc : location
@@ -163,8 +160,8 @@ let mk_block ?(statefull = true) defnames eqs =
   { b_local = []; b_equs = eqs; b_defnames = defnames;
     b_statefull = statefull; b_loc = no_location }
 
-let dfalse = mk_exp (Econst (Cconstr Initial.pfalse)) (Tid Initial.pbool)
-let dtrue = mk_exp (Econst (Cconstr Initial.ptrue)) (Tid Initial.pbool)
+let dfalse = mk_exp (Econst (Sconstructor Initial.pfalse)) (Tid Initial.pbool)
+let dtrue = mk_exp (Econst (Sconstructor Initial.ptrue)) (Tid Initial.pbool)
 
 let mk_ifthenelse e1 e2 e3 =
   { e3 with e_desc = Eapp(mk_op Eifthenelse, [e1; e2; e3]) }
@@ -184,8 +181,7 @@ let op_from_app app =
 (** Translates a Heptagon exp into a static size exp. *)
 let rec static_exp_of_exp e =
   match e.e_desc with
-    | Econstvar n -> Svar n
-    | Econst (Cint i) -> Sconst i
+    | Econst se -> se
     | Eapp (app, [ e1; e2 ]) ->
         let op = op_from_app app
         in Sop (op, static_exp_of_exp e1, static_exp_of_exp e2)
