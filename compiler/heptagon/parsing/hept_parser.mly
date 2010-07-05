@@ -3,7 +3,7 @@
 open Signature
 open Location
 open Names
-open Parsetree
+open Hept_parsetree
 
 %}
 

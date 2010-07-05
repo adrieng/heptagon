@@ -32,7 +32,7 @@ let check_implementation modname filename =
     let p = parse_implementation lexbuf in
 
     (* Convert the parse tree to Heptagon AST *)
-    let p = Scoping.translate_program p in
+    let p = Hept_scoping.translate_program p in
     comment "Parsing";
     pp p;
 

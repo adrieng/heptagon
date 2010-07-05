@@ -2,7 +2,7 @@
     names by qualified names *)
 
 open Location
-open Parsetree
+open Hept_parsetree
 open Names
 open Ident
 open Format
