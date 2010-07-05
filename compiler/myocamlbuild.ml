@@ -11,8 +11,11 @@ let df = function
 
       (* Menhir does not come with menhirLib.cmxa so we have to manually by-pass
          OCamlbuild's built-in logic and add the needed menhirLib.cmxa. *)
-      flag ["link"; "link_menhirLib"] (S [A "-I"; A "+menhirLib";
-                                          A "menhirLib.cmx"]);
+      flag ["link"; "native"; "link_menhirLib"] (S [A "-I"; A "+menhirLib";
+                                                    A "menhirLib.cmx"]);
+      flag ["link"; "byte"; "link_menhirLib"] (S [A "-I"; A "+menhirLib";
+                                                  A "menhirLib.cmo"]);
+
 
 
       (* Add preproc.cmo to the ocaml pre-processor when use_preproc is set *)
