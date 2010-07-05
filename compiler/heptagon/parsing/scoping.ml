@@ -108,10 +108,9 @@ let op_from_app loc app =
     | Ecall { op_name = op; op_kind = Efun } -> op_from_app_name op
     | _ -> Error.message loc Error.Estatic_exp_expected
 
-let check_const_vars = ref true
 let rec static_exp_of_exp const_env e = match e.e_desc with
   | Evar n ->
-      if !check_const_vars & not (NamesEnv.mem n const_env) then
+      if not (NamesEnv.mem n const_env) then
         Error.message e.e_loc (Error.Econst_var n)
       else
         Svar n
@@ -190,7 +189,7 @@ and translate_desc loc const_env env = function
       if Rename.mem x env then (* defined var *)
         Heptagon.Evar (Rename.name loc env x)
       else if NamesEnv.mem x const_env then (* defined as const var *)
-        Heptagon.Econstvar x
+        Heptagon.Econst (Svar x)
       else (* undefined var *)
         Error.message loc (Error.Evar x)
   | Elast x -> Heptagon.Elast (Rename.name loc env x)

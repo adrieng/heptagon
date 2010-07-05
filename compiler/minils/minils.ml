@@ -85,13 +85,6 @@ and link =
   | Cindex of int
   | Clink of ck
 
-and const =
-  | Cint of int
-  | Cfloat of float
-  | Cconstr of longname
-  | Carray of static_exp * const
-  | Cop of
-
 and pat =
   | Etuplepat of pat list
   | Evarpat of ident
