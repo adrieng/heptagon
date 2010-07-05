@@ -1,4 +1,4 @@
-<global> or <utilities> or <minils> or <heptagon> or <main>:include
+<global> or <utilities> or <minils> or <heptagon> or <main> or <sequential>:include
 <**/*.ml>: debug, dtypes
 <preproc.ml>: camlp4of, use_camlp4
 <**/hept_parser.ml>: use_menhirLib
