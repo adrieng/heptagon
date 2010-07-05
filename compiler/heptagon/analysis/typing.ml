@@ -573,7 +573,7 @@ and typing_app statefull h op e_list =
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args statefull h expected_ty_list e_list in
-        let size_constr =
+        let size_constrs =
           instanciate_constr m ty_desc.node_params_constraints in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         List.iter add_size_constraint size_constrs;
