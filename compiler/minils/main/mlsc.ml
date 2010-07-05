@@ -71,9 +71,9 @@ let compile_impl modname filename =
     (* Producing Object-based code *)
     let o = Mls2obc.program p in
     if !verbose then comment "Translation into Object-based code";
-    Obc.Printer.print obc o;
+    Obc_printer.print obc o;
 
-    let pp = Obc.Printer.print stdout in
+    let pp = Obc_printer.print stdout in
     if !verbose then pp o;
 
     (* Translation into dataflow and sequential languages *)

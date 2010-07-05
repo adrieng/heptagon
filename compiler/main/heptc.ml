@@ -66,7 +66,7 @@ let compile_impl modname filename =
     (* Compile MiniLS to Obc *)
     let o = Mls2obc.program p in
     comment "Translation into Obc";
-    Obc.Printer.print obc o;
+    Obc_printer.print obc o;
 
     let pp = Obc.Printer.print stdout in
     if !verbose then pp o;
