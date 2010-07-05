@@ -599,9 +599,11 @@ and typing_app statefull const_env h op e_list =
           params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args statefull h expected_ty_list e_list in
+        let result_ty_list = List.map (subst_type_vars m) result_ty_list in
+        (* Type static parameters and generate constraints *)
+        typing_node_params const_env h ty_desc.node_params params;
         let size_constrs =
           instanciate_constr m ty_desc.node_params_constraints in
-        let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         List.iter add_size_constraint size_constrs;
         (prod result_ty_list,
          Ecall ( { op_desc with op_name = Modname q; op_kind = k }, reset),
@@ -766,6 +768,10 @@ and typing_args statefull h expected_ty_list e_list =
     List.map2 (expect statefull h) expected_ty_list e_list
   with Invalid_argument _ ->
     error (Earity_clash(List.length e_list, List.length expected_ty_list))
+
+and typing_node_params const_env h params_sig params =
+  List.map2 (fun p_sig p -> expect_static_exp const_env no_location
+               p_sig.p_type p) params_sig params
 
 let rec typing_pat h acc = function
   | Evarpat(x) ->
@@ -977,7 +983,7 @@ let solve loc env cl =
       Solve_failed c -> message loc (Econstraint_solve_failed c)
 
 let build_node_params const_env l =
-  List.fold_left (fun env n -> NamesEnv.add n (Tid Initial.pint) env)
+  List.fold_left (fun env p -> NamesEnv.add p.p_name p.p_type env)
     const_env l
 
 let node const_env const_value_env ({ n_name = f; n_statefull = statefull;
@@ -1043,9 +1049,9 @@ let build_const_value_env cd_list =
     NamesEnv.empty cd_list
 
 let build_const_env cd_list =
-  let typing_const_dec const_envenv cd =
+  let typing_const_dec const_env cd =
     expect_static_exp const_env cd.c_loc cd.c_type cd.c_value;
-     NamesEnv.add cd.c_name cd.c_type env
+     NamesEnv.add cd.c_name cd.c_type const_env
   in
     List.fold_left typing_const_env NamesEnv.empty cd_list
 

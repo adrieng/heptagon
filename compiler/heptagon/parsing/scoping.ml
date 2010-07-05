@@ -284,6 +284,9 @@ let translate_contract const_env env ct =
     Heptagon.c_local = translate_vd_list const_env env ct.c_local;
     Heptagon.c_eq = List.map (translate_eq const_env env) ct.c_eq }
 
+let param_of_var_dec vd =
+  mk_param vd.v_name vd.v_type
+
 let translate_node const_env env node =
   let const_env = build_id_list node.n_loc const_env node.n_params in
   let env = build_vd_list env (node.n_input @ node.n_output @ node.n_local) in
@@ -296,7 +299,7 @@ let translate_node const_env env node =
       (translate_contract const_env env) node.n_contract;
     Heptagon.n_equs = List.map (translate_eq const_env env) node.n_equs;
     Heptagon.n_loc = node.n_loc;
-    Heptagon.n_params = List.map Signature.mk_param node.n_params;
+    Heptagon.n_params = List.map param_of_var_dec node.n_params;
     Heptagon.n_params_constraints = []; }
 
 let translate_typedec const_env ty =

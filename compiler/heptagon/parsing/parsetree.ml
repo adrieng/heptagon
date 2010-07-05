@@ -127,7 +127,7 @@ type node_dec =
       n_contract  : contract option;
       n_equs      : eq list;
       n_loc       : location;
-      n_params : name list; }
+      n_params : var_dec list; }
 
 type const_dec =
     { c_name : name;

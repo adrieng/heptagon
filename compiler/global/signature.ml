@@ -18,7 +18,7 @@ let interface_format_version = "8"
 (** Node argument *)
 type arg = { a_name : name option; a_type : ty }
 
-type param = { p_name : name }
+type param = { p_name : name; p_type : ty }
 
 (** Node signature *)
 type node =
@@ -40,7 +40,7 @@ let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
 
 let mk_arg name ty = { a_type = ty; a_name = name }
 
-let mk_param name = { p_name = name }
+let mk_param name ty = { p_name = name; p_type = ty }
 
 let mk_field n ty = { f_name = n; f_type = ty }
 

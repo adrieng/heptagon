@@ -197,7 +197,7 @@ nonmt_out_params:
 
 node_params:
   | /* empty */ { [] }
-  | DOUBLE_LESS ident_list DOUBLE_GREATER { $2 }
+  | DOUBLE_LESS nonmt_params DOUBLE_GREATER { $2 }
 ;
 
 contract:
