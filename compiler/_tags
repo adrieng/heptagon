@@ -2,5 +2,6 @@
 <**/*.ml>: debug, dtypes
 <preproc.ml>: camlp4of, use_camlp4
 <**/hept_parser.ml>: use_menhirLib
+<**/mls_parser.ml>: use_menhirLib
 <**/*.{byte,native}>: use_unix, use_str, link_menhirLib, debug
 true: use_menhir
