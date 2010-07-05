@@ -5,6 +5,8 @@ open Location
 open Names
 open Hept_parsetree
 
+let mk_static_exp = mk_static_exp ~loc:(current_loc())
+
 %}
 
 %token DOT LPAREN RPAREN LBRACE RBRACE COLON SEMICOL
@@ -491,10 +493,10 @@ longname:
 ;
 
 const:
-  | INT { Sint $1 }
-  | FLOAT { Sfloat $1 }
-  | BOOL { Sbool $1 }
-  | constructor { Sconstructor $1 }
+  | INT { mk_static_exp (Sint $1) }
+  | FLOAT {  mk_static_exp (Sfloat $1) }
+  | BOOL {  mk_static_exp (Sbool $1) }
+  | constructor {  mk_static_exp (Sconstructor $1) }
 ;
 
 tuple_exp:

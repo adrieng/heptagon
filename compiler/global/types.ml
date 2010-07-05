@@ -8,11 +8,13 @@
 (**************************************************************************)
 
 open Names
-
+open Location
 
 type ty = | Tprod of ty list | Tid of longname | Tarray of ty * static_exp
 
-type static_exp = { se_desc: static_exp_desc; se_typ:  loc: location }
+type static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
+
+and static_exp_desc =
   | Svar of name
   | Sint of int
   | Sfloat of float
@@ -25,7 +27,8 @@ type static_exp = { se_desc: static_exp_desc; se_typ:  loc: location }
 
 let invalid_type = Tprod []
 
-let const_array_of ty n = Tarray (ty, SConst n) (* TODO ??? *)
+let mk_static_exp ?(loc = no_location) ?(ty = invalid_type) =
+  { se_desc = desc; se_ty = ty; se_loc = loc }
 
 open Pp_tools
 open Format

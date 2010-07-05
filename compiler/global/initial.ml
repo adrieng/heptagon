@@ -20,6 +20,8 @@ let por = Modname({ qual = "Pervasives"; id = "or" })
 let pint = Modname({ qual = "Pervasives"; id = "int" })
 let pfloat = Modname({ qual = "Pervasives"; id = "float" })
 
+let mk_pervasives s = Modname({ qual = "Pervasives"; id = s })
+
 (* build the initial environment *)
 let initialize () =
   List.iter (fun (f, ty) -> Modules.add_type f ty) tglobal;
