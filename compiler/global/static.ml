@@ -17,16 +17,6 @@
 open Names
 open Format
 
-type static_exp =
-  | Svar of name
-  | Sint of int
-  | Sfloat of float
-  | Sbool of bool
-  | Sconstructor of longname
-  | Stuple of static_exp list
-  | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
-  | Sarray of static_exp list (** [ e1, e2, e3 ] *)
-  | Sop of longname * static_exp list (** defined ops for now in pervasives *)
 
 (** Constraints on size expressions. *)
 type size_constraint =
