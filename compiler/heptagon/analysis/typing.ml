@@ -282,38 +282,53 @@ let prod = function
   | ty_list -> Tprod ty_list
 
 let typing_static_exp const_env se =
-  match se with
-    | Sint -> Initial.pint
-    | Sbool -> Initial.pbool
-    | Sfloat -> Initial.pfloat
+  let desc, ty = match se with
+    | Sint -> Sint, Initial.pint
+    | Sbool -> Sbool, Initial.pbool
+    | Sfloat -> Sfloat, Initial.pfloat
     | Svar n ->
         (try
-           NamesEnv.find n const_env
+           Svar n, NamesEnv.find n const_env
         with
             Not_found -> message no_location (Eundefined_const n))
-    | Sconstructor ln ->
-  | Cconstr(c) ->
-      let { qualid = q; info = ty } = find_constr c in
-      Cconstr(Modname q), ty
+    | Sconstructor c ->
+        let { qualid = q; info = ty } = find_constr c in
+          Sconstructor(Modname q), ty
     | Sop (op, se_list) ->
-
+        let { qualid = q; info = ty_desc } = find_value op in
+        let typed_se_list = List.map2 (typing_static_args const_env)
+          (types_of_arg_list ty_desc.inputs) se_list in
+          Sop (Modname q, typed_se_list), types_of_arg_list ty_desc.outputs
     | Sarray_power (se, n) ->
-        expect_static_exp const_env no_location (Tid Initial.pint) n;
-        let ty = typing_static_exp const_env se in
-          Tarray(ty, n)
+        let typed_n = expect_static_exp const_env
+          no_location (Tid Initial.pint) n in
+        let typed_se, ty = typing_static_exp const_env se in
+          Sarray_power (typed_se, typed_n), Tarray(ty, n)
     | Sarray [] ->
         message no_location Eempty_array
     | Sarray se::se_list ->
-        let ty = typing_static_exp const_env se in
-          List.iter (expect_static_exp const_env ty) se_list;
-          Tarray(ty, mk_static_exp (Sint ((List.length se_list) + 1)))
+        let typed_se, ty = typing_static_exp const_env se in
+        let typed_se_list = List.map (expect_static_exp const_env ty) se_list in
+          typed_se::typed_se_list,
+        Tarray(ty, mk_static_exp (Sint ((List.length se_list) + 1)))
     | Stuple se_list ->
-        prod (List.map (typing_static_exp const_env) se_list)
+        let typed_se_list, ty_list = List.split
+          (List.map (typing_static_exp const_env) se_list) in
+        typed_se_list, prod ty_list
+  in
+   { se with se_type = ty; se_desc = desc }, ty
+
+and typing_static_args const_env expected_ty_list e_list =
+  try
+    List.map2 (expect_static_exp const_env) expected_ty_list e_list
+  with Invalid_argument _ ->
+    error (Earity_clash(List.length e_list, List.length expected_ty_list))
 
 and expect_static_exp const_env loc exp_ty se =
   try
-    let ty = typing_static_exp const_env se in
-      unify ty exp_ty
+    let se, ty = typing_static_exp const_env se in
+      unify ty exp_ty;
+      se
   with
       Unify -> message loc (Etype_clash(ty, exp_ty))
 
@@ -359,8 +374,8 @@ let name_mem n env =
 (** [check_type t] checks that t exists *)
 let rec check_type const_env = function
   | Tarray(ty, e) ->
-      expect_static_exp const_env (Tid Initial.pint) e;
-      Tarray(check_type const_env ty, e)
+      let typed_e = expect_static_exp const_env (Tid Initial.pint) e in
+        Tarray(check_type const_env ty, typed_e)
   | Tid(ty_name) ->
       (try Tid(Modname((find_type ty_name).qualid))
        with Not_found -> error (Eundefined(fullname ty_name)))
@@ -504,7 +519,7 @@ let rec typing statefull h e =
     let typed_desc,ty = match e.e_desc with
       | Econst(c) ->
           let typed_c, ty = typing_static_exp const_env c in
-          Econst(c),
+          Econst typed_c,
           ty
       | Evar(x) ->
           Evar(x),
@@ -601,12 +616,13 @@ and typing_app statefull const_env h op e_list =
         let typed_e_list = typing_args statefull h expected_ty_list e_list in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         (* Type static parameters and generate constraints *)
-        typing_node_params const_env h ty_desc.node_params params;
+        let typed_params = typing_node_params const_env h ty_desc.node_params params in
         let size_constrs =
           instanciate_constr m ty_desc.node_params_constraints in
         List.iter add_size_constraint size_constrs;
         (prod result_ty_list,
-         Ecall ( { op_desc with op_name = Modname q; op_kind = k }, reset),
+         Ecall ( { op_desc with op_name = Modname q; op_kind = k;
+                     op_params = typed_params }, reset),
          typed_e_list)
     | Earray_op op, e_list ->
         let ty, op, e_list = typing_array_op statefull h op e_list in
@@ -748,7 +764,7 @@ and typing_array_subscript statefull const_env h idx_list ty  =
   match ty, idx_list with
     | ty, [] -> ty
     | Tarray(ty, exp), idx::idx_list ->
-        expect_static_exp const_env (Tid Initial.pint) exp;
+        ignore (expect_static_exp const_env (Tid Initial.pint) exp);
         add_size_constraint (Clequal (mk_static_exp (Sint 0), idx));
         let bound =  mk_static_exp (Sop(mk_pervasives "-",
                                         [exp; mk_static_exp (Sint 1))) in
@@ -1054,18 +1070,21 @@ let build_const_value_env cd_list =
     NamesEnv.empty cd_list
 
 let build_const_env cd_list =
-  let typing_const_dec const_env cd =
-    expect_static_exp const_env cd.c_loc cd.c_type cd.c_value;
-     NamesEnv.add cd.c_name cd.c_type const_env
+  let typing_const_dec (const_env, cd_list) cd =
+      let ty = expect_static_exp const_env cd.c_loc cd.c_type cd.c_value in
+      let cd = { cd with c_type = ty } in
+        NamesEnv.add cd.c_name cd.c_type const_env, cd::cd_list
   in
-    List.fold_left typing_const_env NamesEnv.empty cd_list
+  let const_env, cd_list = List.fold_left typing_const_env
+    NamesEnv.empty cd_list in
+    const_env, List.rev cd_list
 
 let program
     ({ p_opened = opened; p_types = p_type_list;
        p_nodes = p_node_list; p_consts = p_consts_list } as p) =
-  let const_env = build_const_env p_consts_list in
+  let const_env, cd_list = build_const_env p_consts_list in
   let const_value_env = build_const_value_env p_consts_list in
   List.iter open_module opened;
   List.iter (deftype const_env const_value_env) p_type_list;
   let typed_node_list = List.map (node const_env const_value_env) p_node_list in
-  { p with p_nodes = typed_node_list }
+  { p with p_nodes = typed_node_list; p_consts = cd_list }
