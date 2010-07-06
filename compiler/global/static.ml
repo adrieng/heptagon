@@ -20,7 +20,7 @@ open Format
 type op = | Splus | Sminus | Stimes | Sdiv
 
 type size_exp =
-  | SConst of int | Svar of name | Sop of op * size_exp * size_exp
+  | Sconst of int | Svar of name | Sop of op * size_exp * size_exp
 
 (** Constraints on size expressions. *)
 type size_constraint =
@@ -48,14 +48,14 @@ let op_from_app_name n =
     that can be computed is replaced with the value of the result. *)
 let rec simplify env =
   function
-    | SConst n -> SConst n
+    | Sconst n -> Sconst n
     | Svar id -> (try simplify env (NamesEnv.find id env) with | _ -> Svar id)
     | Sop (op, e1, e2) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2
         in
         (match (e1, e2) with
-           | (SConst n1, SConst n2) ->
+           | (Sconst n1, Sconst n2) ->
                let n =
                  (match op with
                     | Splus -> n1 + n2
@@ -63,14 +63,14 @@ let rec simplify env =
                     | Stimes -> n1 * n2
                     | Sdiv ->
                         if n2 = 0 then raise Instanciation_failed else n1 / n2)
-               in SConst n
+               in Sconst n
            | (_, _) -> Sop (op, e1, e2))
 
 (** [int_of_size_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises
     Instanciation_failed if it cannot be computed (if a var has no value).*)
 let int_of_size_exp env e =
-  match simplify env e with | SConst n -> n | _ -> raise Instanciation_failed
+  match simplify env e with | Sconst n -> n | _ -> raise Instanciation_failed
 
 (** [is_true env constr] returns whether the constraint is satisfied
     in the environment (or None if this can be decided)
@@ -85,14 +85,14 @@ let is_true env =
         let e2 = simplify env e2
         in
         (match (e1, e2) with
-           | (SConst n1, SConst n2) -> ((Some (n1 = n2)), (Cequal (e1, e2)))
+           | (Sconst n1, Sconst n2) -> ((Some (n1 = n2)), (Cequal (e1, e2)))
            | (_, _) -> (None, (Cequal (e1, e2))))
     | Clequal (e1, e2) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2
         in
         (match (e1, e2) with
-           | (SConst n1, SConst n2) -> ((Some (n1 <= n2)), (Clequal (e1, e2)))
+           | (Sconst n1, Sconst n2) -> ((Some (n1 <= n2)), (Clequal (e1, e2)))
            | (_, _) -> (None, (Clequal (e1, e2))))
     | Cfalse -> (None, Cfalse)
 
@@ -134,7 +134,7 @@ let op_to_string =
 
 let rec print_size_exp ff =
   function
-    | SConst i -> fprintf ff "%d" i
+    | Sconst i -> fprintf ff "%d" i
     | Svar id -> fprintf ff "%s" id
     | Sop (op, e1, e2) ->
         fprintf ff "@[(%a %s %a)@]"

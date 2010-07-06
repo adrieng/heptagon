@@ -120,7 +120,7 @@ let rec translate_size_exp const_env e = match e.e_desc with
         Error.message e.e_loc (Error.Econst_var n)
       else
         Svar n
-  | Econst (Cint i) -> SConst i
+  | Econst (Cint i) -> Sconst i
   | Eapp(app, [e1;e2]) ->
       let op = op_from_app e.e_loc app in
       Sop(op, translate_size_exp const_env e1,

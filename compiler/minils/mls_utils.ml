@@ -20,7 +20,7 @@ let err_message ?(exp=void) ?(loc=exp.e_loc) = function
 let rec size_exp_of_exp e =
   match e.e_desc with
     | Econstvar n -> Svar n
-    | Econst (Cint i) -> SConst i
+    | Econst (Cint i) -> Sconst i
     | Ecall(op, [e1;e2], _) ->
         let sop = op_from_app_name op.op_name in
         Sop(sop, size_exp_of_exp e1, size_exp_of_exp e2)

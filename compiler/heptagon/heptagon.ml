@@ -196,7 +196,7 @@ let op_from_app app =
 let rec size_exp_of_exp e =
   match e.e_desc with
     | Econstvar n -> Svar n
-    | Econst (Cint i) -> SConst i
+    | Econst (Cint i) -> Sconst i
     | Eapp (app, [ e1; e2 ]) ->
         let op = op_from_app app
         in Sop (op, size_exp_of_exp e1, size_exp_of_exp e2)

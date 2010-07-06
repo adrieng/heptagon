@@ -32,7 +32,7 @@ let rec node_by_name s = function
         node_by_name s l
 
 let build env params_names params_values =
-  List.fold_left2 (fun m { p_name = n } v -> NamesEnv.add n (SConst v) m)
+  List.fold_left2 (fun m { p_name = n } v -> NamesEnv.add n (Sconst v) m)
     env params_names params_values
 
 let rec collect_exp nodes env e =

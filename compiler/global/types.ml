@@ -14,7 +14,7 @@ type ty =
 
 let invalid_type = Tprod []
 
-let const_array_of ty n = Tarray (ty, SConst n)
+let const_array_of ty n = Tarray (ty, Sconst n)
 
 open Pp_tools
 open Format

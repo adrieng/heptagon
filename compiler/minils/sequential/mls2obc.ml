@@ -409,7 +409,7 @@ let translate_node_aux const_env
   { cl_id = f; mem = m; objs = j; reset = si; step = step; }
 
 let build_params_list env params_names params_values =
-  List.fold_left2 (fun env { p_name = n }  v -> NamesEnv.add n (SConst v) env)
+  List.fold_left2 (fun env { p_name = n }  v -> NamesEnv.add n (Sconst v) env)
     env params_names params_values
 
 let translate_node const_env n =
