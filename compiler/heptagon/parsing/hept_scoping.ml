@@ -110,21 +110,23 @@ let op_from_app loc app =
 
 let rec static_exp_of_exp const_env e = match e.e_desc with
   | Evar n ->
-      if not (NamesEnv.mem n const_env) then
-        Error.message e.e_loc (Error.Econst_var n)
-      else
+      if NamesEnv.mem n const_env then
         Svar n
+      else
+        raise Not_static
   | Econst se -> se
   | Eapp({ a_op = Earray_fill }, [e;n]) ->
       Sarray_power (static_exp_of_exp const_env e,
                     static_exp_of_exp const_env n)
-  | Eapp({ a_op = Earray }, [e;n]) ->
+  | Eapp({ a_op = Earray }, e_list) ->
       Sarray (List.map (static_exp_of_exp const_env) e_list)
-  | Eapp({ a_op = Etuple }, [e;n]) ->
+  | Eapp({ a_op = Etuple }, e_list) ->
       Stuple (List.map (static_exp_of_exp const_env) e_list)
   | Eapp(app, e_list) ->
       let op = op_from_app e.e_loc app in
-      Sop(op, List.map (static_exp_of_exp const_env) e_list)
+        Sop(op, List.map (static_exp_of_exp const_env) e_list)
+  | Estruct e_list ->
+      Srecord (List.map (fun (f,e) -> f, static_exp_of_exp const_env e) e_list)
   | _ -> raise Not_static
 
 let expect_static_exp const_env e =

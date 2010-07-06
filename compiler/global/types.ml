@@ -23,6 +23,7 @@ and static_exp_desc =
   | Stuple of static_exp list
   | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)
+  | Srecord of (longname * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
   | Sop of longname * static_exp list (** defined ops for now in pervasives *)
 
 let invalid_type = Tprod []

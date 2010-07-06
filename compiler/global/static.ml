@@ -65,6 +65,8 @@ let rec simplify env se =
     | Sarray se_list -> Sarray (List.map (simplify env) se_list)
     | Sarray_power (se, n) -> Sarray_power (simplify env se, simplify env n)
     | Stuple se_list -> Stuple (List.map (simplify env) se_list)
+    | Srecord f_se_list ->
+        Srecord (List.map (fun (f,se) -> f, simplify env se) f_se_list)
 
 (** [int_of_static_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises
@@ -120,6 +122,8 @@ let rec static_exp_subst m = function
                                           static_exp_subst m n)
   | Sarray se_list -> Sarray (List.map (static_exp_subst env) se_list)
   | Stuple se_list -> Stuple (List.map (static_exp_subst env) se_list)
+  | Srecord f_se_list ->
+      Srecord (List.map (fun (f,se) -> f, static_exp_subst env se) f_se_list)
   | s -> s
 
 (** Substitutes variables in the constraint list with their value
@@ -145,6 +149,9 @@ let rec print_static_exp ff = function
   | Sarray se_list ->
       fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "["";""]") se_list
   | Stuple se_list -> print_static_exp_tuple se_list
+  | Srecord f_se_list ->
+      print_record (print_couple print_longname
+                      print_static_exp """ = """) ff f_se_list
 
 and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l
