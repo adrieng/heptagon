@@ -504,11 +504,7 @@ let global_name = ref "";;
 (** Builds the argument list of step function*)
 let step_fun_args n sf =
   let args = cvarlist_of_ovarlist sf.inp in
-  let out_arg =
-    (match sf.out with
-       | [] -> []
-       | _ -> [("out", Cty_ptr (Cty_id (n ^ "_out")))]
-    ) in
+  let out_arg = [("out", Cty_ptr (Cty_id (n ^ "_out")))] in
   let context_arg =
     if is_statefull (longname n) then
       [("self", Cty_ptr (Cty_id (n ^ "_mem")))]
@@ -600,12 +596,9 @@ let mem_decl_of_class_def cd =
       []
 
 let out_decl_of_class_def cd =
-  match cd.step.out with
-    | [] -> []
-    | out ->
-        (** Fields corresponding to output variables. *)
-        let out_fields = List.map cvar_of_vd out in
-          [Cdecl_struct (cd.cl_id ^ "_out", out_fields)]
+  (** Fields corresponding to output variables. *)
+  let out_fields = List.map cvar_of_vd cd.step.out in
+    [Cdecl_struct (cd.cl_id ^ "_out", out_fields)]
 
 (** [reset_fun_def_of_class_def cd] returns the defintion of the C function
     tasked to reset the class [cd]. *)
