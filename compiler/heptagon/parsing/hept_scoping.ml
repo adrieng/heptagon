@@ -347,6 +347,7 @@ let translate_signature s =
 let translate_interface_desc const_env = function
   | Iopen n -> Heptagon.Iopen n
   | Itypedef tydec -> Heptagon.Itypedef (translate_typedec const_env tydec)
+  | Iconstdef const_dec -> Heptagon.Iconstdef (translate_const_dec const_env const_dec)
   | Isignature s -> Heptagon.Isignature (translate_signature s)
 
 let translate_interface_decl const_env idecl =

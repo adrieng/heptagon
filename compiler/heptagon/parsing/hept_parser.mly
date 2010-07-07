@@ -550,6 +550,7 @@ interface_decls:
 
 interface_decl:
   | type_dec         { mk_interface_decl (Itypedef $1) }
+  | const_dec        { mk_interface_decl (Iconstdef $1) }
   | OPEN Constructor { mk_interface_decl (Iopen $2) }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN

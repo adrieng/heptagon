@@ -56,8 +56,16 @@ let apply_int_op op n1 n2 =
 let rec simplify env se =
   match se.se_desc with
     | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
-    | Svar id ->
-       (try simplify env (NamesEnv.find (shortname id) env) with | _ -> se)
+    | Svar ln ->
+        (try
+           let { info = cd } = find_const ln in
+             simplify env cd.c_value
+         with
+             Not_found ->
+               (match ln with
+                  | Name n -> (try simplify env (NamesEnv.find id env) with | _ -> se)
+                  | Modname _ -> se)
+        )
     | Sop (op, [e1; e2]) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2 in
@@ -126,8 +134,11 @@ let rec solve const_env =
 (** Substitutes variables in the size exp with their value
     in the map (mapping vars to size exps). *)
 let rec static_exp_subst m se =
-  let desc = match se.se_desc with
-    | Svar n -> (try List.assoc n m with | Not_found -> Svar n)
+  let desc = match se.e_desc with
+    | Svar ln ->
+        (match ln with
+          | Name n -> (try List.assoc n m with | Not_found -> Svar n)
+          | Modname _ -> Svar ln)
     | Sop (op, se_list) -> Sop (op, List.map (static_exp_subst m) se_list)
     | Sarray_power (se, n) -> Sarray_power (static_exp_subst m se,
                                             static_exp_subst m n)

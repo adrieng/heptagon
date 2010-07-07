@@ -27,7 +27,7 @@ type env =
       mutable constr: ty NamesEnv.t;
       mutable structs: structure NamesEnv.t;
       mutable fields: name NamesEnv.t;
-      (* TODO CP mutable consts: const_def NamesEnv.t; *)
+      mutable consts: const_def NamesEnv.t;
       format_version : string;
     }
 
@@ -40,7 +40,7 @@ type modules =
 let current =
   { name = ""; values = NamesEnv.empty; types = NamesEnv.empty;
     constr = NamesEnv.empty; structs = NamesEnv.empty; fields = NamesEnv.empty;
-    format_version = interface_format_version }
+    consts = NamesEnv.empty; format_version = interface_format_version }
 
 let modules =
   { current = current; opened = []; modules = NamesEnv.empty }
@@ -136,12 +136,16 @@ let add_struct f fields =
 let add_field f n =
   if NamesEnv.mem f current.fields then raise Already_defined;
   current.fields <- NamesEnv.add f n current.fields
+let add_const c n =
+  if NamesEnv.mem f current.consts then raise Already_defined;
+  current.consts <- NamesEnv.add f n current.consts
 
 let find_value = find (fun ident m -> NamesEnv.find ident m.values)
 let find_type = find (fun ident m -> NamesEnv.find ident m.types)
 let find_constr = find (fun ident m -> NamesEnv.find ident m.constr)
 let find_struct = find (fun ident m -> NamesEnv.find ident m.structs)
 let find_field = find (fun ident m -> NamesEnv.find ident m.fields)
+let find_const = find (fun ident m -> NamesEnv.find ident m.consts)
 
 let replace_value f signature =
   current.values <- NamesEnv.remove f current.values;

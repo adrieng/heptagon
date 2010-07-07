@@ -34,6 +34,7 @@ struct
       match desc with
         | Iopen(n) -> open_module n
         | Itypedef(tydesc) -> deftype NamesEnv.empty NamesEnv.empty tydesc
+        | Iconstdef cd -> typing_const_dec cd
         | Isignature(s) ->
             let name, s = sigtype s in
             add_value name s
@@ -64,6 +65,15 @@ struct
                fprintf ff ": ";
                print_type ff ty) "{" ";" "}" ff f_ty_list;
           fprintf ff "@]@.@]"
+
+  let constdef ff c =
+    fprintf ff "@[const ";
+    print_name ff c.c_name;
+    fprintf ff " : ";
+    print_type ff c.c_type;
+    fprintf ff " = ";
+    print_static_exp ff c.c_value;
+    fprintf ff "@.@]"
 
   let signature ff name { node_inputs = inputs;
                           node_outputs = outputs;
@@ -100,6 +110,7 @@ struct
 
   let print oc =
     let ff = formatter_of_out_channel oc in
-    NamesEnv.iter (fun key typdesc -> deftype ff key typdesc) current.types;
-    NamesEnv.iter (fun key sigtype -> signature ff key sigtype) current.values;
+      NamesEnv.iter (fun key typdesc -> deftype ff key typdesc) current.types;
+      NamesEnv.iter (fun key constdec -> constdef ff key constdec) current.consts;
+      NamesEnv.iter (fun key sigtype -> signature ff key sigtype) current.values;
 end

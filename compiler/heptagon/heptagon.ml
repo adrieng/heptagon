@@ -143,6 +143,7 @@ and interface_decl = { interf_desc : interface_desc; interf_loc : location }
 and interface_desc =
   | Iopen of name
   | Itypedef of type_dec
+  | Iconstdef of const_dec
   | Isignature of signature
 
 (* Helper functions to create AST. *)
