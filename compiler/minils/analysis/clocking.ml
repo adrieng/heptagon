@@ -126,9 +126,6 @@ let rec typing h e =
             | None -> new_var()
             | Some(reset) -> typ_of_name h reset
           in (List.iter (expect h (Ck ck_r)) e_list; skeleton ck_r e.e_ty)
-      | Ecall(_, e_list, Some(reset)) ->
-          let ck_r = typ_of_name h reset
-          in (List.iter (expect h (Ck ck_r)) e_list; skeleton ck_r e.e_ty)
       | Ewhen (e, c, n) ->
           let ck_n = typ_of_name h n
           in (expect h (skeleton ck_n e.e_ty) e;
