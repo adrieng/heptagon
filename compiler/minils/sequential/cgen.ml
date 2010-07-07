@@ -530,9 +530,10 @@ let fun_def_of_step_fun name obj_env mem objs sf =
 
   (** Out vars for function calls *)
   let out_vars =
-    List.map (fun obj -> out_var_name_of_objn (shortname obj.cls),
-                Cty_id ((cname_of_name (shortname obj.cls)) ^ "_out"))
-      (List.filter (fun obj -> not (is_op obj.cls)) objs) in
+    unique
+      (List.map (fun obj -> out_var_name_of_objn (shortname obj.cls),
+                   Cty_id ((cname_of_name (shortname obj.cls)) ^ "_out"))
+         (List.filter (fun obj -> not (is_op obj.cls)) objs)) in
 
   (** Controllable variables valuations *)
   let use_ctrlr, ctrlr_calls =
