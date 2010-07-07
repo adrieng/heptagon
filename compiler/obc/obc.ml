@@ -26,7 +26,7 @@ type ty =
   | Tfloat
   | Tbool
   | Tid of type_name
-  | Tarray of ty * int
+  | Tarray of ty * static_exp
 
 type type_dec =
     { t_name : name;
@@ -37,15 +37,6 @@ and tdesc =
   | Type_enum of name list
   | Type_struct of (name * ty) list
 
-type const =
-  | Cint of int
-  | Cbool of bool
-  | Cfloat of float
-  | Cconstr of longname
-  | Carray_power of int * const
-  | Carray of const list
-  | Ctuple of const list
-
 type lhs =
   | Var of var_name
   | Mem of var_name
@@ -54,7 +45,7 @@ type lhs =
 
 and exp =
   | Lhs of lhs
-  | Const of const
+  | Const of static_exp
   | Op of op_name * exp list
   | Struct_lit of type_name * (field_name * exp) list
   | Array_lit of exp list
@@ -63,24 +54,45 @@ type obj_call =
   | Context of obj_name
   | Array_context of obj_name * lhs
 
+(* act list au lieu de Comp *)
 type act =
   | Assgn of lhs * exp
-  | Step_ap of lhs list * obj_call * exp list
-  | Comp of act * act
-  | Case of exp * (longname * act) list
-  | For of var_name * int * int * act
+  | Call of lhs list * obj_call * exp list
+  | Case of exp * (longname * act list) list
+  | For of var_name * static_exp * static_exp * act list
   | Reinit of obj_name
-  | Nothing
 
 type var_dec =
     { v_ident : var_name;
-      v_type : ty; }
+      v_type : ty;
+      (*v_controllable : bool*) }
 
 type obj_dec =
-    { obj : obj_name;
-      cls : instance_name;
-      size : int; }
+    { o_name : obj_name;
+      o_method : fun_name;
+      o_class : instance_name;
+      o_size : int; }
 
+type method_def =
+    { f_name : fun_name;
+      f_inputs : var_dec list;
+      f_outputs : var_dec list;
+      f_locals : var_dec list;
+      f_body : act list }
+
+type class_def =
+    { c_name : class_name;
+      c_mems : var_dec list;
+      c_objs  : obj_dec list;
+      c_methods: method_def list; (*Map ?*) }
+
+type program =
+    { p_pragmas: (name * string) list;
+      p_opened : name list;
+      p_types : type_dec list;
+      p_defs  : class_def list }
+
+(*
 type step_fun =
     { inp    : var_dec list;
       out    : var_dec list;
@@ -91,19 +103,7 @@ type step_fun =
       bd     : act }
 
 type reset_fun = act
-
-type class_def =
-    { cl_id : class_name;
-      mem   : var_dec list;
-      objs  : obj_dec list;
-      reset : reset_fun;
-      step  : step_fun; }
-
-type program =
-    { o_pragmas: (name * string) list;
-      o_opened : name list;
-      o_types : type_dec list;
-      o_defs  : class_def list }
+    *)
 
 let mk_var_dec name ty =
   { v_ident = name; v_type = ty }
