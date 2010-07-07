@@ -16,6 +16,8 @@ type ident = {
   is_generated : bool;
 }
 
+type var_ident = ident
+
 let compare id1 id2 = compare id1.num id2.num
 let sourcename id = id.source
 let name id =

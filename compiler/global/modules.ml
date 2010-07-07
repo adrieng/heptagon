@@ -25,8 +25,9 @@ type env =
       mutable values: node NamesEnv.t;
       mutable types: type_def NamesEnv.t;
       mutable constr: ty NamesEnv.t;
-      mutable structs : structure NamesEnv.t;
-      mutable fields : name NamesEnv.t;
+      mutable structs: structure NamesEnv.t;
+      mutable fields: name NamesEnv.t;
+      (* TODO CP mutable consts: const_def NamesEnv.t; *)
       format_version : string;
     }
 

@@ -16,6 +16,7 @@
 
 open Names
 open Format
+open Types
 
 
 (** Constraints on size expressions. *)
@@ -46,20 +47,21 @@ let apply_int_op op n1 n2 =
         let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
           Sint n
     | _ -> (* unknown operator, reconstrcut the op *)
-        Sop (op, Sint n1, Sint n2)
+        Sop (op, [mk_static_exp (Sint n1); mk_static_exp (Sint n2)]) (*TODO CP*)
 
 (** [simplify env e] returns e simplified with the
     variables values taken from env (mapping vars to integers).
     Variables are replaced with their values and every operator
     that can be computed is replaced with the value of the result. *)
 let rec simplify env se =
-  match se with
-    | Sint _ | Sfloat _ | Sbool _ | Sconstructor -> se
-    | Svar id -> (try simplify env (NamesEnv.find id env) with | _ -> se)
+  match se.se_desc with
+    | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
+    | Svar id ->
+       (try simplify env (NamesEnv.find (shortname id) env) with | _ -> se)
     | Sop (op, [e1; e2]) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2 in
-        (match e1.e_desc, e2.e_desc with
+        (match e1.se_desc, e2.se_desc with
            | Sint n1, Sint n2 -> { se with se_desc = apply_int_op op n1 n2 }
            | _, _ -> { se with se_desc = Sop (op, [e1; e2]) }
         )
@@ -80,27 +82,27 @@ let rec simplify env se =
     Instanciation_failed if it cannot be computed (if a var has no value).*)
 let int_of_static_exp env e =
   let e =  simplify env e in
-  match e.e_desc with | Sint n -> n | _ -> raise Instanciation_failed
+  match e.se_desc with | Sint n -> n | _ -> raise Instanciation_failed
 
 (** [is_true env constr] returns whether the constraint is satisfied
     in the environment (or None if this can be decided)
     and a simplified constraint. *)
 let is_true env =
   function
-    | Cequal e1, e2 when e1 = e2 ->
+    | Cequal (e1, e2) when e1 = e2 ->
         Some true, Cequal (simplify env e1, simplify env e2)
     | Cequal (e1, e2) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2
         in
-        (match e1.e_desc, e2.e_desc with
+        (match e1.se_desc, e2.se_desc with
            | Sint n1, Sint n2 -> Some (n1 = n2), Cequal (e1, e2)
            | (_, _) -> None, Cequal (e1, e2))
     | Clequal (e1, e2) ->
         let e1 = simplify env e1 in
         let e2 = simplify env e2
         in
-        (match e1.e_desc, e2.e_desc with
+        (match e1.se_desc, e2.se_desc with
            | Sint n1, Sint n2 -> Some (n1 <= n2), Clequal (e1, e2)
            | _, _ -> None, Clequal (e1, e2))
     | Cfalse -> None, Cfalse
@@ -124,15 +126,15 @@ let rec solve const_env =
 (** Substitutes variables in the size exp with their value
     in the map (mapping vars to size exps). *)
 let rec static_exp_subst m se =
-  let desc = match se.e_desc with
+  let desc = match se.se_desc with
     | Svar n -> (try List.assoc n m with | Not_found -> Svar n)
     | Sop (op, se_list) -> Sop (op, List.map (static_exp_subst m) se_list)
     | Sarray_power (se, n) -> Sarray_power (static_exp_subst m se,
                                             static_exp_subst m n)
-    | Sarray se_list -> Sarray (List.map (static_exp_subst env) se_list)
-    | Stuple se_list -> Stuple (List.map (static_exp_subst env) se_list)
+    | Sarray se_list -> Sarray (List.map (static_exp_subst m) se_list)
+    | Stuple se_list -> Stuple (List.map (static_exp_subst m) se_list)
     | Srecord f_se_list ->
-        Srecord (List.map (fun (f,se) -> f, static_exp_subst env se) f_se_list)
+        Srecord (List.map (fun (f,se) -> f, static_exp_subst m se) f_se_list)
     | s -> s
   in
     { se with se_desc = desc }
@@ -146,26 +148,8 @@ let instanciate_constr m constr =
     | Cfalse -> Cfalse
   in List.map (replace_one m) constr
 
-let rec print_static_exp ff se = match se.e_desc with
-  | Sint i -> fprintf ff "%d" i
-  | Sbool b -> fprintf ff "%b" b
-  | Sfloat f -> fprintf ff "%f" f
-  | Sconstructor ln -> print_longname ff ln
-  | Svar id -> fprintf ff "%s" id
-  | Sop (op, se_list) ->
-      fprintf ff "@[<2>%a@,%a@]"
-        print_longname op  print_static_exp_tuple se_list
-  | Sarray_power (se, n) ->
-      fprintf ff "%a^%a" print_static_exp se  print_static_exp n
-  | Sarray se_list ->
-      fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "["";""]") se_list
-  | Stuple se_list -> print_static_exp_tuple se_list
-  | Srecord f_se_list ->
-      print_record (print_couple print_longname
-                      print_static_exp """ = """) ff f_se_list
 
-and print_static_exp_tuple ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l
+open Format
 
 let print_size_constraint ff = function
   | Cequal (e1, e2) ->

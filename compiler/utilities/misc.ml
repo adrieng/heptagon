@@ -192,3 +192,10 @@ let rec assocd value = function
         k
       else
         assocd value l
+
+(** Mapfold *)
+let mapfold f acc l =
+  let l,acc = List.fold_left (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)
+                     ([],acc) l in
+  List.rev l, acc
+

@@ -153,3 +153,5 @@ val memd_assoc : 'b -> ('a * 'b) list -> bool
 (** Same as List.assoc but searching for a data and returning the key. *)
 val assocd: 'b -> ('a * 'b) list -> 'a
 
+(** Mapfold *)
+val mapfold: ('a -> 'b -> 'c * 'a) -> 'a -> 'b list -> 'c list * 'a

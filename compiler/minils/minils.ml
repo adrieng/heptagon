@@ -21,36 +21,36 @@ type iterator_type =
   | Ifold
   | Imapfold
 
-type type_dec =
-    { t_name: name;
-      t_desc: tdesc;
-      t_loc: location }
+type type_dec = {
+  t_name: name;
+  t_desc: tdesc;
+  t_loc: location }
 
 and tdesc =
   | Type_abs
   | Type_enum of name list
   | Type_struct of structure
 
-and exp =
-    { e_desc: edesc;
-      mutable e_ck: ck;
-      mutable e_ty: ty;
-      e_loc: location }
+and exp = {
+  e_desc: edesc;
+  mutable e_ck: ck;
+  mutable e_ty: ty;
+  e_loc: location }
 
 and edesc =
   | Econst of static_exp
-  | Evar of ident
+  | Evar of var_ident
   | Efby of static_exp option * exp
                        (** static_exp fby exp *)
-  | Eapp of app * exp list * ident option
+  | Eapp of app * exp list * var_ident option
                        (** app ~args=(exp,exp...) reset ~r=ident *)
-  | Ewhen of exp * longname * ident
+  | Ewhen of exp * constructor_name * var_ident
                        (** exp when Constructor(ident) *)
-  | Emerge of ident * (longname * exp) list
+  | Emerge of var_ident * (constructor_name * exp) list
                        (** merge ident (Constructor -> exp)+ *)
-  | Estruct of (longname * exp) list
+  | Estruct of (field_name * exp) list
                        (** { field=exp; ... } *)
-  | Eiterator of iterator_type * app * static_exp * exp list * ident option
+  | Eiterator of iterator_type * app * static_exp * exp list * var_ident option
                        (** map f <<n>> (exp,exp...) reset ident *)
 
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
@@ -59,8 +59,8 @@ and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
 
 and op =
   | Etuple             (** (args) *)
-  | Efun of longname   (** "Stateless" longname <<a_params>> (args) reset r *)
-  | Enode of longname  (** "Stateful" longname <<a_params>> (args) reset r *)
+  | Efun of fun_name   (** "Stateless" longname <<a_params>> (args) reset r *)
+  | Enode of fun_name  (** "Stateful" longname <<a_params>> (args) reset r *)
   | Eifthenelse        (** if arg1 then arg2 else arg3 *)
   | Efield             (** arg1.a_param1 *)
   | Efield_update      (** { arg1 with a_param1 = arg2 } *)
@@ -79,7 +79,7 @@ and ct =
 and ck =
   | Cbase
   | Cvar of link ref
-  | Con of ck * longname * ident
+  | Con of ck * constructor_name * var_ident
 
 and link =
   | Cindex of int
@@ -87,50 +87,46 @@ and link =
 
 and pat =
   | Etuplepat of pat list
-  | Evarpat of ident
+  | Evarpat of var_ident
 
-type eq =
-    { eq_lhs : pat;
-      eq_rhs : exp;
-      eq_loc : location }
+type eq = {
+  eq_lhs : pat;
+  eq_rhs : exp;
+  eq_loc : location }
 
-type var_dec =
-    { v_ident : ident;
-      v_type : ty;
-      v_clock : ck }
+type var_dec = {
+  v_ident : var_ident;
+  v_type : ty;
+  v_clock : ck }
 
-type contract =
-    { c_assume : exp;
-      c_enforce : exp;
-      c_controllables : var_dec list;
-      c_local : var_dec list;
-      c_eq : eq list }
+type contract = {
+  c_assume : exp;
+  c_enforce : exp;
+  c_local : var_dec list;
+  c_eq : eq list }
 
-type node_dec =
-    { n_name   : name;
-      n_input  : var_dec list;
-      n_output : var_dec list;
-      n_contract : contract option;
-      n_local  : var_dec list;
-      n_equs   : eq list;
-      n_loc    : location;
-      n_params : param list;
-      n_params_constraints : size_constraint list;
-      n_params_instances : (int list) list; }(*TODO commenter ou passer en env*)
+type node_dec = {
+  n_name   : name;
+  n_input  : var_dec list;
+  n_output : var_dec list;
+  n_contract : contract option;
+  n_local  : var_dec list;
+  n_equs   : eq list;
+  n_loc    : location;
+  n_params : param list; (** TODO CP mettre des petits commentaires *)
+  n_params_constraints : size_constr list;
+  n_params_instances : (static_exp list) list }
 
-type const_dec =
-    { c_name : name;
-      c_value : static_exp;
-      c_loc : location }
+type const_dec = {
+  c_name : name;
+  c_value : static_exp;
+  c_loc : location }
 
-type program =
-    { p_pragmas: (name * string) list;
-      p_opened : name list;
-      p_types  : type_dec list;
-      p_nodes  : node_dec list;
-      p_consts : const_dec list }
-
-
+type program = {
+  p_opened : name list;
+  p_types  : type_dec list;
+  p_nodes  : node_dec list;
+  p_consts : const_dec list }
 
 (*Helper functions to build the AST*)
 
@@ -138,8 +134,7 @@ let mk_exp ?(exp_ty = Tprod []) ?(clock = Cbase) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = exp_ty; e_ck = clock; e_loc = loc }
 
 let mk_var_dec ?(clock = Cbase) ident ty =
-  { v_ident = ident; v_type = ty;
-    v_clock = clock }
+  { v_ident = ident; v_type = ty; v_clock = clock }
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
@@ -159,7 +154,7 @@ let mk_node
     n_params_instances = pinst; }
 
 let mk_type_dec ?(type_desc = Type_abs) ?(loc = no_location) name =
-  { t_name = name; t_desc = type_desc; t_loc = loc }
+   t_name = name; t_desc = type_desc; t_loc = loc }
 
 let mk_op ?(op_params = []) ?(op_kind = Enode) lname =
   { op_name = lname; op_params = op_params; op_kind = op_kind }

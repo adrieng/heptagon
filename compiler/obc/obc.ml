@@ -13,33 +13,31 @@ open Names
 open Ident
 open Types
 
-type var_name = ident
-type type_name = longname
-type fun_name = longname
+
 type class_name = name
 type instance_name = longname
 type obj_name = name
 type op_name = longname
-type field_name = longname
 
 type type_dec =
     { t_name : name;
-      t_desc : tdesc }
+      t_desc : tdesc;
+      t_loc : loc }
 
 and tdesc =
   | Type_abs
   | Type_enum of name list
   | Type_struct of (name * ty) list
 
-type lhs = { l_desc : lhs_desc; l_ty : ty }
+type lhs = { l_desc : lhs_desc; l_ty : ty; l_loc : loc }
 
 and lhs_desc =
-  | Lvar of var_name
-  | Lmem of var_name
+  | Lvar of var_ident
+  | Lmem of var_ident
   | Lfield of lhs * field_name
   | Larray of lhs * exp
 
-and exp = { e_desc : exp_desc; e_ty : ty }
+and exp = { e_desc : exp_desc; e_ty : ty; e_loc : loc }
 
 and exp_desc =
   | Elhs of lhs
@@ -55,24 +53,26 @@ type obj_call =
 type method_name =
   | Mreset
   | Mstep
-  | Mother of name
+  | Mmethod of name
 
 type act =
   | Aassgn of lhs * exp
   | Acall of lhs list * obj_call * method_name * exp list
-  | Acase of exp * (longname * block) list
-  | Afor of var_name * static_exp * static_exp * block
+  | Acase of exp * (constructor_name * block) list
+  | Afor of var_ident * static_exp * static_exp * block
 
 and block = act list
 
 type var_dec =
-    { v_ident : var_name;
-      v_type : ty; (*v_controllable : bool*) }
+    { v_ident : var_ident;
+      v_type : ty; (* TODO should be here, v_controllable : bool*)
+      v_loc : loc }
 
 type obj_dec =
     { o_name : obj_name;
       o_class : instance_name;
-      o_size : static_exp; }
+      o_size : static_exp;
+      o_loc : loc }
 
 type method_def =
     { f_name : fun_name;
@@ -85,11 +85,11 @@ type class_def =
     { c_name : class_name;
       c_mems : var_dec list;
       c_objs  : obj_dec list;
-      c_methods: method_def list; }
+      c_methods: method_def list;
+      c_loc : loc }
 
 type program =
-    { p_pragmas: (name * string) list;
-      p_opened : name list;
+    { p_opened : name list;
       p_types : type_dec list;
       p_defs  : class_def list }
 
@@ -102,12 +102,12 @@ let mk_exp ?(ty=invalid_type) desc =
 let mk_lhs ?(ty=invalid_type) desc =
   { l_desc = desc; l_ty = ty }
 
-let rec var_name x =
+let rec var_ident x =
   match x with
     | Lvar x -> x
     | Lmem x -> x
-    | Lfield(x,_) -> var_name x
-    | Larray(l, _) -> var_name l
+    | Lfield(x,_) -> var_ident x
+    | Larray(l, _) -> var_ident l
 
 (** Returns whether an object of name n belongs to
     a list of var_dec. *)

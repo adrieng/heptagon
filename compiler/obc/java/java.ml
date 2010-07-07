@@ -164,8 +164,8 @@ let print_types java_dir headers tps =
 (******************************)
 
 type answer =
-  | Sing of var_name
-  | Mult of var_name list
+  | Sing of var_ident
+  | Mult of var_ident list
 
 let print_const ff c ts =
   match c with

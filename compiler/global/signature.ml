@@ -34,7 +34,6 @@ type structure = field list
 
 type type_def = | Tabstract | Tenum of name list | Tstruct of structure
 
-
 let names_of_arg_list l = List.map (fun ad -> ad.a_name) l
 
 let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
@@ -46,9 +45,6 @@ let mk_param name ty = { p_name = name; p_type = ty }
 let mk_field n ty = { f_name = n; f_type = ty }
 
 
-let print_param ff p =
-  fprintf ff "%a:%a"  Names.print_name p.p_name  print_type p.p_type
-
 let rec field_assoc f = function
   | [] -> raise Not_found
   | { f_name = n; f_type = ty }::l ->
@@ -56,3 +52,10 @@ let rec field_assoc f = function
         ty
       else
         field_assoc f l
+
+
+open Format
+
+let print_param ff p =
+  fprintf ff "%a:%a"  Names.print_name p.p_name  print_type p.p_type
+

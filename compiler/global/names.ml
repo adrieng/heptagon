@@ -10,6 +10,17 @@ type longname =
 
 and qualident = { qual: string; id: string }
 
+type type_name = longname
+
+type fun_name = longname
+
+type field_name = longname
+
+type constructor_name = longname
+
+type constant_name = longname
+
+
 module NamesM = struct
   type t = name
   let compare = compare
