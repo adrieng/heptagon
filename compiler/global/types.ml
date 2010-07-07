@@ -10,8 +10,6 @@
 open Names
 open Location
 
-type ty = | Tprod of ty list | Tid of longname | Tarray of ty * static_exp
-
 type static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
 
 and static_exp_desc =
@@ -25,6 +23,8 @@ and static_exp_desc =
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)
   | Srecord of (longname * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
   | Sop of longname * static_exp list (** defined ops for now in pervasives *)
+
+type ty = | Tprod of ty list | Tid of longname | Tarray of ty * static_exp
 
 let invalid_type = Tprod []
 

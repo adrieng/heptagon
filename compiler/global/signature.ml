@@ -18,6 +18,7 @@ let interface_format_version = "8"
 (** Node argument *)
 type arg = { a_name : name option; a_type : ty }
 
+(** Node static parameters *)
 type param = { p_name : name; p_type : ty }
 
 (** Node signature *)
@@ -45,8 +46,8 @@ let mk_param name ty = { p_name = name; p_type = ty }
 let mk_field n ty = { f_name = n; f_type = ty }
 
 
-let print_param ff p = Names.print_name ff p.p_name
-
+let print_param ff p =
+  fprintf ff "%a:%a"  Names.print_name p.p_name  print_type p.p_type
 
 let rec field_assoc f = function
   | [] -> raise Not_found
