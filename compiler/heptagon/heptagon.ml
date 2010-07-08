@@ -35,7 +35,6 @@ and desc =
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp * exp list * exp option
 
-
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
 
 and op =
@@ -44,7 +43,7 @@ and op =
   | Enode of fun_name
   | Eifthenelse
   | Earrow
-  | Efield_update of field_name (* field name args would be [record ; value] *)
+  | Efield_update (* field name args would be [record ; value] *)
   | Earray
   | Earray_fill
   | Eselect
@@ -193,10 +192,10 @@ let op_from_app app =
     | _ -> raise Not_static
 
 (** Translates a Heptagon exp into a static size exp. *)
-let rec static_exp_of_exp e =
+(*let rec static_exp_of_exp e =
   match e.e_desc with
     | Econst se -> se
-    | _ -> raise Not_static
+    | _ -> raise Not_static *)
 
 (** @return the set of variables defined in [pat]. *)
 let vars_pat pat =

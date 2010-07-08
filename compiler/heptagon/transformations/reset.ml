@@ -45,11 +45,11 @@ let mk_bool_var n =
 let mk_bool_param n =
   mk_var_dec n (Tid Initial.pbool)
 
-let or_op_call = mk_op ( Ecall(mk_op_desc Initial.por [] Efun, None) )
+let or_op_call = mk_op (Efun Initial.por)
 
-let pre_true e = {
-  e with e_desc = Eapp(mk_op (Epre (Some (Cconstr Initial.ptrue))), [e])
-}
+let pre_true e =
+  { e with e_desc = Epre (Some (mk_static_exp ~ty:(Tid Initial.pbool)
+                              (Sconstructor Initial.ptrue)), e) }
 let init e = pre_true { dfalse with e_loc = e.e_loc }
 
 (* the boolean condition for a structural reset *)
@@ -68,7 +68,7 @@ let rec or_op res e =
   match res with
     | Rfalse -> e
     | Rorthen(res, n) ->
-        or_op res { e with e_desc = Eapp(or_op_call, [mk_bool_var n; e]) }
+        or_op res { e with e_desc = Eapp(or_op_call, [mk_bool_var n; e], None) }
 
 let default e =
   match e.e_desc with
@@ -198,69 +198,61 @@ and translate_switch res locals acc_eq_list switch_handlers =
 
 and translate res e =
   match e.e_desc with
-    | Econst _ | Evar _ | Econstvar _ | Elast _ -> e
-    | Etuple(e_list) ->
-        { e with e_desc = Etuple(List.map (translate res) e_list) }
-    | Eapp({a_op = Efby } as op, [e1;e2]) ->
+    | Econst _ | Evar _ | Elast _ -> e
+    | Efby (e1, e2) ->
         let e1 = translate res e1 in
         let e2 = translate res e2 in
         begin
           match res, e1 with
-            | Rfalse, { e_desc = Econst(c) } ->
+            | Rfalse, { e_desc = Econst c } ->
                 (* no reset *)
-                { e with e_desc =
-                    Eapp({ op with a_op = Epre(Some c) }, [e2]) }
+                { e with e_desc = Epre(Some c, e2) }
             | _ ->
                 ifres res e1
-                  { e with e_desc =
-                      Eapp({ op with a_op = Epre(default e1) }, [e2]) }
+                  { e with e_desc = Epre(default e1, e2) }
         end
-    | Eapp({ a_op = Earrow }, [e1;e2]) ->
+    | Eapp({ a_op = Earrow }, [e1;e2], _) ->
         let e1 = translate res e1 in
         let e2 = translate res e2 in
         ifres res e1 e2
+    | Epre (c, e1) ->
+        { e with e_desc = Epre (c, translate res e1)}
 
     (* add reset to the current reset exp. *)
-    | Eapp({ a_op = Ecall(op_desc, Some re) } as op, e_list) ->
+    | Eapp({ a_op = Enode _ } as op, e_list, Some re) ->
         let re = translate res re in
         let e_list = List.map (translate res) e_list in
-        let op = { op with a_op = Ecall(op_desc, Some (or_op res re))} in
-        { e with e_desc = Eapp(op, e_list) }
-          (* create a new reset exp if necessary *)
-    | Eapp({ a_op = Ecall(op_desc, None) } as op, e_list) ->
-        let e_list = List.map (translate res) e_list in
-        if true_reset res & op_desc.op_kind = Enode then
-          let op = { op with a_op = Ecall(op_desc, Some (exp_of_res res)) } in
-          { e with e_desc = Eapp(op, e_list) }
-        else
-          { e with e_desc = Eapp(op, e_list ) }
-            (* add reset to the current reset exp. *)
-    | Eapp( { a_op = Earray_op (Eiterator(it, op_desc, Some re)) } as op,
-            e_list) ->
-        let re = translate res re in
-        let e_list = List.map (translate res) e_list in
-        let r = Some (or_op res re) in
-        let op = { op with a_op = Earray_op (Eiterator(it, op_desc, r)) } in
-        { e with e_desc = Eapp(op, e_list) }
-          (* create a new reset exp if necessary *)
-    | Eapp({ a_op = Earray_op (Eiterator(it, op_desc, None)) } as op, e_list) ->
+          { e with e_desc = Eapp(op, e_list, Some (or_op res re)) }
+    (* create a new reset exp if necessary *)
+    | Eapp({ a_op = Enode _ } as op, e_list, None) ->
         let e_list = List.map (translate res) e_list in
         if true_reset res then
-          let r = Some (exp_of_res res) in
-          let op = { op with a_op = Earray_op (Eiterator(it, op_desc, r)) } in
-          { e with e_desc = Eapp(op, e_list) }
+          { e with e_desc = Eapp(op, e_list, Some (exp_of_res res)) }
         else
-          { e with e_desc = Eapp(op, e_list) }
+          { e with e_desc = Eapp(op, e_list, None) }
+    (* add reset to the current reset exp. *)
+    | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, Some re) ->
+        let re = translate res re in
+        let e_list = List.map (translate res) e_list in
+          { e with e_desc = Eiterator(it, op, n, e_list, Some (or_op res re)) }
+    (* create a new reset exp if necessary *)
+    | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, None) ->
+        let e_list = List.map (translate res) e_list in
+        if true_reset res then
+          { e with e_desc = Eiterator(it, op, n, e_list, Some (exp_of_res res)) }
+        else
+          { e with e_desc = Eiterator(it, op, n, e_list, None) }
+    | Eiterator(it, op, n, e_list, r) ->
+        let e_list = List.map (translate res) e_list in
+          { e with e_desc = Eiterator(it, op, n, e_list, None) }
 
-    | Eapp(op, e_list) ->
-        { e with e_desc = Eapp(op, List.map (translate res) e_list) }
+    | Eapp(op, e_list, _) ->
+        { e with e_desc = Eapp(op, List.map (translate res) e_list, None) }
     | Efield(e', field) ->
         { e with e_desc = Efield(translate res e', field) }
     | Estruct(e_f_list) ->
         { e with e_desc =
             Estruct(List.map (fun (f, e) -> (f, translate res e)) e_f_list) }
-    | Earray(e_list) ->
-        { e with e_desc = Earray(List.map (translate res) e_list) }
 
 let translate_contract ({ c_local = v;
                           c_eq = eq_list;
@@ -271,10 +263,10 @@ let translate_contract ({ c_local = v;
   let e_g = translate rfalse e_g in
   { c with c_local = v; c_eq = eq_list; c_assume = e_a; c_enforce = e_g }
 
-let node (n) =
+let node n =
   let c = optional translate_contract n.n_contract in
   let var, eqs = translate_eqs rfalse n.n_local [] n.n_equs in
   { n with n_local = var; n_equs = eqs; n_contract = c }
 
-let program (p) =
+let program p =
   { p with p_nodes = List.map node p.p_nodes }

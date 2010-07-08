@@ -20,8 +20,8 @@ let last (eq_list, env, v) { v_ident = n; v_type = t; v_last = last } =
     | Last(default) ->
         let lastn = Ident.fresh ("last" ^ (sourcename n)) in
         let eq = mk_equation (Eeq (Evarpat lastn,
-                                   mk_exp (Eapp (mk_op (Epre default),
-                                                 [mk_exp (Evar n) t])) t)) in
+                                   mk_exp (Epre (default,
+                                                 mk_exp (Evar n) t)) t)) in
         eq:: eq_list,
         Env.add n lastn env,
         (mk_var_dec lastn t) :: v
@@ -51,20 +51,20 @@ and translate_block env ({ b_local = v; b_equs = eq_list } as b) =
 
 and translate env e =
   match e.e_desc with
-      Econst _ | Evar _ | Econstvar _ -> e
+    | Econst _ | Evar _ -> e
     | Elast(x) ->
         let lx = Env.find x env in { e with e_desc = Evar(lx) }
-    | Etuple(e_list) ->
-        { e with e_desc = Etuple(List.map (translate env) e_list) }
-    | Eapp(op, e_list) ->
-        { e with e_desc = Eapp(op, List.map (translate env) e_list) }
+    | Epre(c, e) ->
+        { e with e_desc = Epre(c, translate env e) }
+    | Efby (e1, e2) ->
+        { e with e_desc = Efby(translate env e1, translate env e2) }
+    | Eapp(op, e_list, r) ->
+        { e with e_desc = Eapp(op, List.map (translate env) e_list, r) }
     | Efield(e', field) ->
         { e with e_desc = Efield(translate env e', field) }
     | Estruct(e_f_list) ->
         { e with e_desc =
             Estruct(List.map (fun (f, e) -> (f, translate env e)) e_f_list) }
-    | Earray(e_list) ->
-        { e with e_desc = Earray(List.map (translate env) e_list) }
 
 let translate_contract env contract =
   match contract with
@@ -72,9 +72,7 @@ let translate_contract env contract =
     | Some { c_local = v;
              c_eq = eq_list;
              c_assume = e_a;
-             c_enforce = e_g;
-             c_controllables = cl } ->
-        let _, env, _ = extend_env env cl in
+             c_enforce = e_g } ->
         let eq_lastn_n_list, env', last_v = extend_env env v in
         let eq_list = translate_eqs env' eq_list in
         let e_a = translate env' e_a in
@@ -82,8 +80,7 @@ let translate_contract env contract =
         Some { c_local = v @ last_v;
                c_eq = eq_lastn_n_list @ eq_list;
                c_assume = e_a;
-               c_enforce = e_g;
-               c_controllables = List.rev cl },
+               c_enforce = e_g },
         env
 
 let node ({ n_input = i; n_local = v; n_output = o;

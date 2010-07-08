@@ -3,6 +3,7 @@
 open Signature
 open Location
 open Names
+open Types
 open Hept_parsetree
 
 let mk_static_exp = mk_static_exp ~loc:(current_loc())
@@ -77,10 +78,10 @@ let mk_static_exp = mk_static_exp ~loc:(current_loc())
 %left DOT
 
 %start program
-%type <Parsetree.program> program
+%type <Hept_parsetree.program> program
 
 %start interface
-%type <Parsetree.interface> interface
+%type <Hept_parsetree.interface> interface
 
 %%
 
@@ -218,7 +219,7 @@ opt_equs:
 ;
 
 opt_assume:
-  | /* empty */ {  mk_exp (Econst (Sconstructor Initial.ptrue)) }
+  | /* empty */ {  mk_exp (Econst (mk_static_exp (Sconstructor Initial.ptrue))) }
   | ASSUME exp { $2 }
 ;
 
@@ -389,81 +390,82 @@ simple_exp:
   | LBRACE field_exp_list RBRACE
       { mk_exp (Estruct $2) }
   | LBRACKET array_exp_list RBRACKET
-      { mk_exp (Earray $2) }
+      { mk_exp (mk_call Earray $2) }
   | LPAREN tuple_exp RPAREN
-      { mk_exp (Etuple $2) }
+      { mk_exp (mk_call Etuple $2) }
   | LPAREN exp RPAREN
       { $2 }
 ;
 
 node_name:
   | longname call_params
-      { mk_op_desc $1 $2 Enode }
+      { mk_app (Enode $1) $2 }
 
 exp:
   | simple_exp { $1 }
   | simple_exp FBY exp
-      { mk_exp (Eapp(mk_app Efby, [$1; $3])) }
+      { mk_exp (Efby ($1, $3)) }
   | PRE exp
-      { mk_exp (Eapp(mk_app (Epre None), [$2])) }
+      { mk_exp (Epre (None, $2)) }
   | node_name LPAREN exps RPAREN
-      { mk_exp (mk_call $1 $3) }
+      { mk_exp (Eapp($1, $3)) }
   | NOT exp
-      { mk_exp (mk_op_call "not" [] [$2]) }
+      { mk_exp (mk_op_call "not" [$2]) }
   | exp INFIX4 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_exp (mk_op_call $2 [$1; $3]) }
   | exp INFIX3 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_exp (mk_op_call $2 [$1; $3]) }
   | exp INFIX2 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_exp (mk_op_call $2 [$1; $3]) }
   | exp INFIX1 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_exp (mk_op_call $2 [$1; $3]) }
   | exp INFIX0 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_exp (mk_op_call $2 [$1; $3]) }
   | exp EQUAL exp
-      { mk_exp (mk_op_call "=" [] [$1; $3]) }
+      { mk_exp (mk_op_call "=" [$1; $3]) }
   | exp OR exp
-      { mk_exp (mk_op_call "or" [] [$1; $3]) }
+      { mk_exp (mk_op_call "or" [$1; $3]) }
   | exp STAR exp
-      { mk_exp (mk_op_call "*" [] [$1; $3]) }
+      { mk_exp (mk_op_call "*" [$1; $3]) }
   | exp AMPERSAND exp
-      { mk_exp (mk_op_call "&" [] [$1; $3]) }
+      { mk_exp (mk_op_call "&" [$1; $3]) }
   | exp SUBTRACTIVE exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_exp (mk_op_call $2 [$1; $3]) }
   | PREFIX exp
-      { mk_exp (mk_op_call $1 [] [$2]) }
+      { mk_exp (mk_op_call $1 [$2]) }
   | SUBTRACTIVE exp %prec prec_uminus
-      { mk_exp (mk_op_call ("~"^$1) [] [$2]) }
+      { mk_exp (mk_op_call ("~"^$1) [$2]) }
   | IF exp THEN exp ELSE exp
-      { mk_exp (Eapp(mk_app Eifthenelse, [$2; $4; $6])) }
+      { mk_exp (mk_call Eifthenelse [$2; $4; $6]) }
   | simple_exp ARROW exp
-      { mk_exp (Eapp(mk_app Earrow, [$1; $3])) }
+      { mk_exp (mk_call Earrow [$1; $3]) }
   | LAST IDENT
       { mk_exp (Elast $2) }
   | simple_exp DOT longname
       { mk_exp (Efield ($1, $3)) }
 /*Array operations*/
   | exp POWER simple_exp
-      { mk_exp (mk_call Erepeat [$1; $3]) }
+      { mk_exp (mk_call ~params:[$3] Earray_fill [$1]) }
   | simple_exp indexes
-      { mk_exp (mk_array_op_call (Eselect $2) [$1]) }
+      { mk_exp (mk_call ~params:$2 Eselect [$1]) }
   | simple_exp DOT indexes DEFAULT exp
-      { mk_exp (mk_array_op_call Eselect_dyn ([$1; $5]@$3)) }
+      { mk_exp (mk_call Eselect_dyn ([$1; $5]@$3)) }
   | LBRACKET exp WITH indexes EQUAL exp RBRACKET
-      { mk_exp (mk_array_op_call (Eupdate $4) [$2; $6]) }
+      { mk_exp (mk_call ~params:$4 Eupdate [$2; $6]) }
   | simple_exp LBRACKET exp DOUBLE_DOT exp RBRACKET
-      { mk_exp (mk_array_op_call Eselect_slice [$1; $3; $5]) }
+      { mk_exp (mk_call ~params:[$3; $5] Eselect_slice [$1]) }
   | exp AROBASE exp
-      { mk_exp (mk_array_op_call Econcat [$1; $3]) }
+      { mk_exp (mk_call Econcat [$1; $3]) }
 /*Iterators*/
   | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_exp (mk_iterator_call $1 $2 [] ($4::$7)) }
+      { mk_exp (mk_iterator_call $1 $2 [] $4 $7) }
   | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_exp (mk_iterator_call $1 $3 $5 ($9::$12)) }
+      { mk_exp (mk_iterator_call $1 $3 $5 $9 $12) }
 /*Records operators */
   | LBRACE e=simple_exp WITH DOT ln=longname EQUAL nv=exp RBRACE
-      { mk_exp (Eapp (mk_app (Efield_update ln), [e; nv])) }
+    { let fn = mk_exp (Econst (mk_static_exp (Sconstructor ln))) in
+        mk_exp (mk_call ~params:[fn] Efield_update [e; nv]) }
 ;
 
 call_params:

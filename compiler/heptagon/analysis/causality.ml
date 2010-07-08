@@ -97,27 +97,24 @@ let build dec =
 let rec typing e =
   match e.e_desc with
     | Econst(c) -> cempty
-    | Econstvar(x) -> cempty
     | Evar(x) -> read x
     | Elast(x) -> lastread x
-    | Etuple(e_list) ->
-        candlist (List.map typing e_list)
-    | Eapp({a_op = op}, e_list) -> apply op e_list
+    | Epre (_, e) -> pre (typing e)
+    | Efby (e1, e2) ->
+        let t1 = typing e1 in
+        let t2 = pre (typing e2) in
+          candlist [t1; t2]
+    | Eapp({ a_op = op }, e_list, _) -> apply op e_list
     | Efield(e1, _) -> typing e1
     | Estruct(l) ->
         let l = List.map (fun (_, e) -> typing e) l in
         candlist l
-    | Earray(e_list) ->
-        candlist (List.map typing e_list)
+    | Eiterator (_, _, _, e_list, _) ->
+        ctuplelist (List.map typing e_list)
 
 (** Typing an application *)
 and apply op e_list =
   match op, e_list with
-    | Epre(_), [e] -> pre (typing e)
-    | Efby, [e1;e2] ->
-        let t1 = typing e1 in
-        let t2 = pre (typing e2) in
-        candlist [t1; t2]
     | Earrow, [e1;e2] ->
         let t1 = typing e1 in
         let t2 = typing e2 in
@@ -127,21 +124,12 @@ and apply op e_list =
         let i2 = typing e2 in
         let i3 = typing e3 in
         cseq t1 (cor i2 i3)
-    | Ecall _, e_list ->
+    | (Efun _| Enode _ | Econcat | Eselect_slice
+      | Eselect_dyn | Eselect _ | Earray_fill), e_list ->
         ctuplelist (List.map typing e_list)
-    | Efield_update _, [e1;e2] ->
-        let t1 = typing e1 in
-        let t2 = typing e2 in
-        cseq t2 t1
-    | Earray_op op, e_list ->
-        apply_array_op op e_list
-
-and apply_array_op op e_list =
-  match op, e_list with
-    | (Eiterator (_, _, _) | Econcat | Eselect_slice
-      | Eselect_dyn | Eselect _ | Erepeat), e_list ->
-        ctuplelist (List.map typing e_list)
-    | Eupdate _, [e1;e2] ->
+    | (Earray | Etuple), e_list ->
+        candlist (List.map typing e_list)
+    | (Eupdate _ | Efield_update _), [e1;e2] ->
         let t1 = typing e1 in
         let t2 = typing e2 in
         cseq t2 t1
@@ -198,7 +186,7 @@ let typing_contract loc contract =
   match contract with
     | None -> cempty
     | Some { c_local = l_list; c_eq = eq_list; c_assume = e_a;
-             c_enforce = e_g; c_controllables = c_list } ->
+             c_enforce = e_g } ->
         let teq = typing_eqs eq_list in
         let t_contract = cseq (typing e_a) (cseq teq (typing e_g)) in
         Causal.check loc t_contract;

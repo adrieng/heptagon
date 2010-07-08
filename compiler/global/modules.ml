@@ -136,7 +136,7 @@ let add_struct f fields =
 let add_field f n =
   if NamesEnv.mem f current.fields then raise Already_defined;
   current.fields <- NamesEnv.add f n current.fields
-let add_const c n =
+let add_const f n =
   if NamesEnv.mem f current.consts then raise Already_defined;
   current.consts <- NamesEnv.add f n current.consts
 

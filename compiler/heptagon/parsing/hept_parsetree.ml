@@ -11,6 +11,7 @@
 open Names
 open Location
 open Signature
+open Types
 
 type iterator_type =
   | Imap
@@ -35,16 +36,17 @@ and desc =
   | Efield of exp * longname
   | Estruct of (longname * exp) list
   | Eapp of app * exp list
-  | Eiterator of iterator_type * app * static_exp * exp list
+  | Eiterator of iterator_type * app * exp * exp list
 
-and app = { a_op: op; a_params: static_exp list; }
+and app = { a_op: op; a_params: exp list; }
 
 and op =
   | Etuple
   | Enode of longname
+  | Efun of longname
   | Eifthenelse
   | Earrow
-  | Efield_update of longname (* field name args would be [record ; value] *)
+  | Efield_update (* field name args would be [record ; value] *)
   | Earray
   | Earray_fill
   | Eselect
@@ -149,7 +151,7 @@ type signature =
       sig_inputs  : arg list;
       sig_statefull : bool;
       sig_outputs : arg list;
-      sig_params  : name list; }
+      sig_params  : var_dec list; }
 
 type interface = interface_decl list
 
@@ -173,11 +175,11 @@ let mk_app op params =
 let mk_call ?(params=[]) op exps =
   Eapp (mk_app op params, exps)
 
-let mk_op_call  ?(params=[])s exps =
-  mk_call (Efun (Name s)) params exps
+let mk_op_call ?(params=[]) s exps =
+  mk_call ~params:params (Efun (Name s)) exps
 
-let mk_iterator_call it ln params exps =
-  mk_array_op_call (Eiterator (it, mk_op_desc ln params Enode)) exps
+let mk_iterator_call it ln params n exps =
+  Eiterator (it, mk_app (Enode ln) params, n, exps)
 
 let mk_type_dec name desc =
   { t_name = name; t_desc = desc; t_loc = Location.current_loc () }

@@ -17,13 +17,8 @@
 open Names
 open Format
 open Types
-
-
-(** Constraints on size expressions. *)
-type size_constraint =
-  | Cequal of static_exp * static_exp (* e1 = e2*)
-  | Clequal of static_exp * static_exp (* e1 <= e2 *)
-  | Cfalse
+open Signature
+open Modules
 
 (* unsatisfiable constraint *)
 exception Instanciation_failed
@@ -63,7 +58,7 @@ let rec simplify env se =
          with
              Not_found ->
                (match ln with
-                  | Name n -> (try simplify env (NamesEnv.find id env) with | _ -> se)
+                  | Name n -> (try simplify env (NamesEnv.find n env) with | _ -> se)
                   | Modname _ -> se)
         )
     | Sop (op, [e1; e2]) ->
@@ -134,21 +129,25 @@ let rec solve const_env =
 (** Substitutes variables in the size exp with their value
     in the map (mapping vars to size exps). *)
 let rec static_exp_subst m se =
-  let desc = match se.e_desc with
+  match se.se_desc with
     | Svar ln ->
         (match ln with
-          | Name n -> (try List.assoc n m with | Not_found -> Svar n)
-          | Modname _ -> Svar ln)
-    | Sop (op, se_list) -> Sop (op, List.map (static_exp_subst m) se_list)
-    | Sarray_power (se, n) -> Sarray_power (static_exp_subst m se,
-                                            static_exp_subst m n)
-    | Sarray se_list -> Sarray (List.map (static_exp_subst m) se_list)
-    | Stuple se_list -> Stuple (List.map (static_exp_subst m) se_list)
+           | Name n -> (try List.assoc n m with | Not_found -> se)
+           | Modname _ -> se)
+    | Sop (op, se_list) ->
+        { se with se_desc = Sop (op, List.map (static_exp_subst m) se_list) }
+    | Sarray_power (se, n) ->
+        { se with se_desc = Sarray_power (static_exp_subst m se,
+                                          static_exp_subst m n) }
+    | Sarray se_list ->
+        { se with se_desc = Sarray (List.map (static_exp_subst m) se_list) }
+    | Stuple se_list ->
+        { se with se_desc = Stuple (List.map (static_exp_subst m) se_list) }
     | Srecord f_se_list ->
-        Srecord (List.map (fun (f,se) -> f, static_exp_subst m se) f_se_list)
-    | s -> s
-  in
-    { se with se_desc = desc }
+        { se with se_desc =
+            Srecord (List.map
+                       (fun (f,se) -> f, static_exp_subst m se) f_se_list) }
+    | _ -> se
 
 (** Substitutes variables in the constraint list with their value
     in the map (mapping vars to size exps). *)

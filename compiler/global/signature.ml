@@ -9,7 +9,6 @@
 (* global data in the symbol tables *)
 open Names
 open Types
-open Static
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
@@ -20,6 +19,12 @@ type arg = { a_name : name option; a_type : ty }
 
 (** Node static parameters *)
 type param = { p_name : name; p_type : ty }
+
+(** Constraints on size expressions. *)
+type size_constraint =
+  | Cequal of static_exp * static_exp (* e1 = e2*)
+  | Clequal of static_exp * static_exp (* e1 <= e2 *)
+  | Cfalse
 
 (** Node signature *)
 type node =

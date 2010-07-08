@@ -20,7 +20,7 @@ let mk_var_exp n ty =
   mk_exp (Evar n) ty
 
 let mk_pair e1 e2 =
-  mk_exp (Etuple [e1;e2]) (Tprod [e1.e_ty; e2.e_ty])
+  mk_exp (mk_op_app Etuple [e1;e2]) (Tprod [e1.e_ty; e2.e_ty])
 
 let mk_reset_equation eq_list e =
   mk_equation (Ereset (eq_list, e))
@@ -29,11 +29,11 @@ let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
 
 let mk_exp_fby_false e =
-  mk_exp (Eapp(mk_op (Epre (Some (Cconstr Initial.pfalse))), [e]))
+  mk_exp (Epre (Some (mk_static_exp (Sconstructor Initial.pfalse)), e))
     (Tid Initial.pbool)
 
 let mk_exp_fby_state initial e =
-  { e with e_desc = Eapp(mk_op (Epre (Some (Cconstr initial))), [e]) }
+  { e with e_desc = Epre (Some (mk_static_exp (Sconstructor initial)), e) }
 
 (* the list of enumerated types introduced to represent states *)
 let state_type_dec_list = ref []
@@ -107,7 +107,8 @@ and translate_automaton v eq_list handlers =
   let pre_next_resetname = Ident.fresh "pnr" in
 
   let name n = Name(NamesEnv.find n states) in
-  let state n = mk_exp (Econst (Cconstr (name n))) tstatetype in
+  let state n = mk_exp (Econst (mk_static_exp
+                                  (Sconstructor (name n)))) tstatetype in
   let statevar n = mk_var_exp n tstatetype in
   let boolvar n = mk_var_exp n (Tid Initial.pbool) in
 

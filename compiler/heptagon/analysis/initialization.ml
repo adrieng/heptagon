@@ -192,11 +192,20 @@ let less_exp e actual_ty expected_ty =
 (** Main typing function *)
 let rec typing h e =
   match e.e_desc with
-    | Econst _ | Econstvar _ -> leaf izero
+    | Econst _ -> leaf izero
     | Evar(x) | Elast(x) -> let { i_typ = i } = Env.find x h in leaf i
-    | Etuple(e_list) ->
+    | Epre(None, e) ->
+        initialized_exp h e;
+        skeleton ione e.e_ty
+    | Epre(Some _, e) ->
+        initialized_exp h e;
+        skeleton izero e.e_ty
+    | Efby (e1, e2) ->
+        initialized_exp h e2;
+        skeleton (itype (typing h e1)) e.e_ty
+    | Eapp({ a_op = Etuple }, e_list, _) ->
         product (List.map (typing h) e_list)
-    | Eapp({a_op = op}, e_list) ->
+    | Eapp({ a_op = op }, e_list, _) ->
         let i = apply h op e_list in
         skeleton i e.e_ty
     | Efield(e1, _) ->
@@ -207,36 +216,27 @@ let rec typing h e =
           List.fold_left
             (fun acc (_, e) -> max acc (itype (typing h e))) izero l in
         skeleton i e.e_ty
-    | Earray(e_list) ->
-        let i =
-          List.fold_left
-            (fun acc e -> max acc (itype (typing h e))) izero e_list in
-        skeleton i e.e_ty
+    | Eiterator (_, _, _, e_list, _) ->
+        List.iter (fun e -> initialized_exp h e) e_list;
+        skeleton izero e.e_ty
 
 (** Typing an application *)
 and apply h op e_list =
   match op, e_list with
-    | Epre(None), [e] ->
-        initialized_exp h e;
-        ione
-    | Epre(Some _), [e] ->
-        initialized_exp h e;
-        izero
-    | Efby, [e1;e2] ->
-        initialized_exp h e2;
-        itype (typing h e1)
     | Earrow, [e1;e2] ->
         let ty1 = typing h e1 in
         let _ = typing h e2 in
         itype ty1
+    | Earray, e_list ->
+        List.fold_left
+          (fun acc e -> max acc (itype (typing h e))) izero e_list
     | Eifthenelse, [e1; e2; e3] ->
         let i1 = itype (typing h e1) in
         let i2 = itype (typing h e2) in
         let i3 = itype (typing h e3) in
         max i1 (max i2 i3)
- (*   | Ecall ({ op_kind = Efun }, _), e_list ->
-        List.fold_left (fun acc e -> itype (typing h e)) izero e_list *)
-    | (Ecall _ | Earray_op _| Efield_update _) , e_list ->
+    (** TODO: init of safe/unsafe nodes *)
+    | _ , e_list ->
         List.iter (fun e -> initialized_exp h e) e_list; izero
 
 and expect h e expected_ty =
@@ -337,8 +337,7 @@ let typing_contract h contract =
   match contract with
     | None -> h
     | Some { c_local = l_list; c_eq = eq_list; c_assume = e_a;
-             c_enforce = e_g; c_controllables = c_list } ->
-        let h = sbuild h c_list in
+             c_enforce = e_g } ->
         let h' = build h l_list in
         typing_eqs h' eq_list;
         (* assumption *)

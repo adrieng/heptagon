@@ -47,12 +47,6 @@ let print_local_vars ff = function
   | [] -> ()
   | l -> fprintf ff "@[<4>%a@]@\n" (print_list_r print_vd "var "";"";") l
 
-let rec print_c ff = function
-  | Cint i -> fprintf ff "%d" i
-  | Cfloat f -> fprintf ff "%f" f
-  | Cconstr tag -> print_longname ff tag
-  | Carray (n, c) -> fprintf ff "%a^%a" print_c c print_static_exp n
-
 let rec print_params ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") l
 
@@ -70,9 +64,6 @@ and print_index ff idx =
 
 and print_dyn_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_exp "[""][""]") idx
-
-and print_op ff op =
-  fprintf ff "%a%a" print_longname op.op_name print_params op.op_params
 
 and print_exp ff e =
   if !Misc.full_type_info then

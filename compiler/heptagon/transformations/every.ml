@@ -67,36 +67,25 @@ and translate_switch acc_eq_list switch_handlers =
 
 and translate v acc_eq_list e =
   match e.e_desc with
-      Econst _ | Evar _ | Econstvar _ | Elast _ -> v,acc_eq_list,e
-    | Etuple(e_list) ->
-        let v, acc_eq_list,e_list = translate_list v acc_eq_list e_list in
-        v,acc_eq_list,
-        { e with e_desc = Etuple e_list }
-    | Eapp ({ a_op = Ecall(op_desc, Some re) } as op, e_list)
-        when not (is_var re) ->
+      Econst _ | Evar _ | Elast _ | Efby _ | Epre _ -> v,acc_eq_list,e
+    | Eapp (op, e_list, Some re) when not (is_var re) ->
         let v, acc_eq_list,re = translate v acc_eq_list re in
         let n, v, acc_eq_list = equation v acc_eq_list re in
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
+        let re = { re with e_desc = Evar(n) } in
         v,acc_eq_list,
-          { e with e_desc =
-              Eapp({ op with a_op = Ecall(op_desc,
-                                          Some { re with e_desc = Evar(n) }) },
-                   e_list) }
-    | Eapp ({ a_op = Earray_op(Eiterator(it, op_desc, Some re)) } as op, e_list)
-        when not (is_var re) ->
+          { e with e_desc = Eapp (op, e_list, Some re) }
+    | Eiterator(it, op, n, e_list, Some re) when not (is_var re) ->
         let v, acc_eq_list,re = translate v acc_eq_list re in
-        let n, v, acc_eq_list = equation v acc_eq_list re in
+        let x, v, acc_eq_list = equation v acc_eq_list re in
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
-        let re = { re with e_desc = Evar n } in
+        let re = { re with e_desc = Evar x } in
         v,acc_eq_list,
-          { e with e_desc =
-              Eapp({ op with a_op =
-                       Earray_op(Eiterator(it, op_desc, Some re)) },
-                   e_list) }
-    | Eapp(f, e_list) ->
+          { e with e_desc = Eiterator(it, op, n, e_list, Some re) }
+    | Eapp(op, e_list, None) ->
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
         v, acc_eq_list,
-        { e with e_desc = Eapp(f, e_list) }
+        { e with e_desc = Eapp(op, e_list, None) }
     | Efield(e', field) ->
         let v, acc_eq_list, e' = translate v acc_eq_list e' in
         v,acc_eq_list,
@@ -110,10 +99,6 @@ and translate v acc_eq_list e =
             (v,acc_eq_list,[]) e_f_list in
         v,acc_eq_list,
         { e with e_desc = Estruct(List.rev e_f_list) }
-    | Earray(e_list) ->
-        let v, acc_eq_list,e_list = translate_list v acc_eq_list e_list in
-        v,acc_eq_list,
-        { e with e_desc = Earray(e_list) }
 
 and translate_list v acc_eq_list e_list =
   let v,acc_eq_list,acc_e =

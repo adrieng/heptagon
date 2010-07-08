@@ -114,7 +114,7 @@ type node_dec = {
   n_equs   : eq list;
   n_loc    : location;
   n_params : param list; (** TODO CP mettre des petits commentaires *)
-  n_params_constraints : size_constr list;
+  n_params_constraints : size_constraint list;
   n_params_instances : (static_exp list) list }
 
 type const_dec = {
@@ -154,10 +154,10 @@ let mk_node
     n_params_instances = pinst; }
 
 let mk_type_dec ?(type_desc = Type_abs) ?(loc = no_location) name =
-   t_name = name; t_desc = type_desc; t_loc = loc }
+  { t_name = name; t_desc = type_desc; t_loc = loc }
 
-let mk_op ?(op_params = []) ?(op_kind = Enode) lname =
-  { op_name = lname; op_params = op_params; op_kind = op_kind }
+let mk_app ?(params=[]) ?(unsafe=false) op =
+  { a_op = op; a_params = params; a_unsafe = unsafe }
 
-let void = mk_exp (Etuple [])
+let void = mk_exp (Eapp (mk_app Etuple, [], None))
 

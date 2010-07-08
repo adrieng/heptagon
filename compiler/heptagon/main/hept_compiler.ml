@@ -86,7 +86,7 @@ let compile_interface modname filename =
     let l = parse_interface lexbuf in
 
     (* Convert the parse tree to Heptagon AST *)
-    let l = Scoping.translate_interface l in
+    let l = Hept_scoping.translate_interface l in
 
     (* Compile*)
     Interface.Type.main l;
