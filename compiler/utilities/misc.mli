@@ -106,6 +106,8 @@ val use_new_reset_encoding : bool ref
 
 (* Misc. functions *)
 val optional : ('a -> 'b) -> 'a option -> 'b option
+(** Optional with accumulator *)
+val optional_wacc : ('a -> 'b -> 'c*'a) -> 'a -> 'b option -> ('c option * 'a)
 val optunit : ('a -> unit) -> 'a option -> unit
 val split_string : string -> char -> string list
 
@@ -152,6 +154,11 @@ val memd_assoc : 'b -> ('a * 'b) list -> bool
 
 (** Same as List.assoc but searching for a data and returning the key. *)
 val assocd: 'b -> ('a * 'b) list -> 'a
+
+
+(** Ast iterators *)
+exception Fallback
+
 
 (** Mapfold *)
 val mapfold: ('a -> 'b -> 'c * 'a) -> 'a -> 'b list -> 'c list * 'a

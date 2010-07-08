@@ -100,6 +100,10 @@ let optional f = function
   | None -> None
   | Some x -> Some (f x)
 
+let optional_wacc f acc = function
+  | None -> None, acc
+  | Some x -> let x, acc = f acc x in Some x, acc
+
 let optunit f = function
   | None -> ()
   | Some x -> f x
@@ -192,6 +196,10 @@ let rec assocd value = function
         k
       else
         assocd value l
+
+
+(** Compiler iterators *)
+exception Fallback
 
 (** Mapfold *)
 let mapfold f acc l =
