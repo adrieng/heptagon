@@ -1,15 +1,9 @@
 open Obc
 open Format
 open Pp_tools
-
-let rec print_type ff = function
-  | Tint    -> fprintf ff "int"
-  | Tfloat  -> fprintf ff "float"
-  | Tbool   -> fprintf ff "bool"
-  | Tid(id) -> print_longname ff id
-  | Tarray(ty, n) ->
-      print_type ff ty;
-      fprintf ff "^%d" n
+open Types
+open Ident
+open Names
 
 let print_vd ff vd =
   fprintf ff "@[<v>";
@@ -18,27 +12,20 @@ let print_vd ff vd =
   print_type ff vd.v_type;
   fprintf ff "@]"
 
-let print_obj ff { cls = cls; obj = obj; size = n } =
-  fprintf ff "@[<v>"; print_name ff obj;
-  fprintf ff " : "; print_longname ff cls;
-  if n <> 1 then
-    fprintf ff "[%d]" n;
+let print_obj ff o =
+  fprintf ff "@[<v>"; print_name ff o.o_name;
+  fprintf ff " : "; print_longname ff o.o_class;
+  (match o.o_size with
+     | Some se -> print_static_exp ff se;
+     | None -> ());
   fprintf ff ";@]"
 
-let rec print_c ff = function
-  | Cint i       -> fprintf ff "%d" i
-  | Cfloat f     -> fprintf ff "%f" f
-  | Cconstr(tag) -> print_longname ff tag
-  | Carray(n,c) ->
-      print_c ff c;
-      fprintf ff "^%d" n
-
 let rec print_lhs ff e =
-  match e with
-    | Var x           -> print_ident ff x
-    | Mem x           -> fprintf ff "mem("; print_ident ff x; fprintf ff ")"
-    | Field (l, f)    -> print_lhs ff l; fprintf ff ".%s" (shortname f)
-    | Array(x, idx) ->
+  match e.l_desc with
+    | Lvar x -> print_ident ff x
+    | Lmem x -> fprintf ff "mem("; print_ident ff x; fprintf ff ")"
+    | Lfield (l, f) -> print_lhs ff l; fprintf ff ".%s" (shortname f)
+    | Larray(x, idx) ->
         print_lhs ff x;
         fprintf ff "[";
         print_exp ff idx;
@@ -46,21 +33,22 @@ let rec print_lhs ff e =
 
 and print_exps ff e_list = print_list_r print_exp "" "," "" ff e_list
 
-and print_exp ff = function
-  | Lhs lhs -> print_lhs ff lhs
-  | Const c         -> print_c ff c
-  | Op(op, e_list) -> print_op ff op e_list
-  | Struct_lit(_,f_e_list) ->
-      fprintf ff "@[<v 1>";
-      print_list_r
-        (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
-           print_exp ff e)
-        "{" ";" "}" ff f_e_list;
-      fprintf ff "@]"
-  | Array_lit e_list ->
-      fprintf ff "@[";
-      print_list_r print_exp "[" ";" "]" ff e_list;
-      fprintf ff "@]"
+and print_exp ff e =
+  match e.e_desc with
+    | Elhs lhs -> print_lhs ff lhs
+    | Econst c -> print_static_exp ff c
+    | Eop(op, e_list) -> print_op ff op e_list
+    | Estruct(_,f_e_list) ->
+        fprintf ff "@[<v 1>";
+        print_list_r
+          (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
+             print_exp ff e)
+          "{" ";" "}" ff f_e_list;
+        fprintf ff "@]"
+    | Earray e_list ->
+        fprintf ff "@[";
+        print_list_r print_exp "[" ";" "]" ff e_list;
+        fprintf ff "@]"
 
 and print_op ff op e_list =
   print_longname ff op;
@@ -72,38 +60,40 @@ let print_asgn ff pref x e =
   fprintf ff "@]"
 
 let print_obj_call ff = function
-  | Context o -> print_name ff o
-  | Array_context (o, i) ->
+  | Oobj o -> print_name ff o
+  | Oarray (o, i) ->
       fprintf ff "%a[%a]"
         print_name o
         print_lhs i
 
+let print_method_name ff = function
+  | Mstep -> fprintf ff "step"
+  | Mreset -> fprintf ff "reset"
+  | Mmethod n -> fprintf ff "%s" n
+
 let rec print_act ff a =
   match a with
-    | Assgn (x, e) -> print_asgn ff "" x e
-    | Comp (a1, a2) ->
-        fprintf ff "@[<v>";
-        print_act ff a1;
-        fprintf ff ";@,";
-        print_act ff a2;
-        fprintf ff "@]"
-    | Case(e, tag_act_list) ->
+    | Aassgn (x, e) -> print_asgn ff "" x e
+    | Acase(e, tag_act_list) ->
         fprintf ff "@[<v>@[<v 2>switch (";
         print_exp ff e; fprintf ff ") {@,";
         print_tag_act_list ff tag_act_list;
         fprintf ff "@]@,}@]"
-    | For(x, i1, i2, act) ->
-        fprintf ff "@[<v>@[<v 2>for %s=%d to %d : {@, %a @]@,}@]"
-          (name x) i1 i2
-          print_act act
-    | Step_ap (var_list, o, es) ->
+    | Afor(x, i1, i2, act_list) ->
+        fprintf ff "@[<v>@[<v 2>for %s=%a to %a : {@, %a @]@,}@]"
+          (name x)
+          print_static_exp i1
+          print_static_exp i2
+          print_act_list act_list
+    | Acall (var_list, o, meth, es) ->
         print_list print_lhs "(" "," ")" ff var_list;
-        fprintf ff " = "; print_obj_call ff o; fprintf ff ".step(";
+        fprintf ff " = "; print_obj_call ff o;
+        fprintf ff ".%a("  print_method_name meth;
         fprintf ff "@["; print_exps ff es; fprintf ff "@]";
         fprintf ff ")"
-    | Reinit o ->
-        print_name ff o; fprintf ff ".reset()"
-    | Nothing -> fprintf ff "()"
+
+and print_act_list ff l =
+ print_list_r print_act "" ";" "" ff l
 
 and print_tag_act_list ff tag_act_list =
   print_list
@@ -111,32 +101,27 @@ and print_tag_act_list ff tag_act_list =
        fprintf ff "@[<hov 2>case@ ";
        print_longname ff tag;
        fprintf ff ":@ ";
-       print_act ff a;
+       print_act_list ff a;
        fprintf ff "@]") "" "" "" ff tag_act_list
 
-let print_step ff { inp = inp; out = out; local = nl; bd = bd } =
+let print_method ff md =
   fprintf ff "@[<v 2>";
-  fprintf ff "step(@[";
-  print_list_r print_vd "(" ";" ")" ff inp;
+  print_longname ff md.m_name;
+  fprintf ff "(@[";
+  print_list_r print_vd "(" ";" ")" ff md.m_inputs;
   fprintf ff "@]) returns ";
-  print_list_r print_vd "(" ";" ")" ff out;
+  print_list_r print_vd "(" ";" ")" ff md.m_outputs;
   fprintf ff "@]){@,";
-  if nl <> [] then begin
+  if md.m_locals <> [] then begin
     fprintf ff "@[<hov 4>var ";
-    print_list_r print_vd "" ";" "" ff nl;
+    print_list_r print_vd "" ";" "" ff md.m_locals;
     fprintf ff ";@]@,"
   end;
-  print_act ff bd;
-  fprintf ff "}@]"
-
-let print_reset ff act =
-  fprintf ff "@[<v 2>";
-  fprintf ff "reset() {@,";
-  print_act ff act;
+  print_act_list ff md.m_body;
   fprintf ff "}@]"
 
 let print_def ff
-    { cl_id = id; mem = mem; objs = objs; reset = reset; step = step } =
+    { cd_name = id; cd_mems = mem; cd_objs = objs; cd_methods = m_list } =
   fprintf ff "@[<v 2>machine "; print_name ff id; fprintf ff " =@,";
   if mem <> [] then begin
     fprintf ff "@[<hov 4>var ";
@@ -148,9 +133,7 @@ let print_def ff
     print_list print_obj "" ";" "" ff objs;
     fprintf ff ";@]@,"
   end;
-  print_reset ff reset;
-  fprintf ff "@,";
-  print_step ff step;
+  print_list_r print_method "" "\n" "" ff m_list;
   fprintf ff "@]"
 
 let print_type_def ff { t_name = name; t_desc = tdesc } =
@@ -175,9 +158,15 @@ let print_open_module ff name =
   print_name ff name;
   fprintf ff "@.@]"
 
-let print_prog ff { o_opened = modules; o_types = types; o_defs = defs } =
+let print_const_dec ff c =
+  fprintf ff "const %a = %a" print_name c.c_name
+    print_static_exp c.c_value
+
+let print_prog ff { p_opened = modules; p_types = types;
+                    p_consts = consts; p_defs = defs } =
   List.iter (print_open_module ff) modules;
   List.iter (print_type_def ff) types;
+  List.iter (print_const_dec ff) consts;
   List.iter (fun def -> (print_def ff def; fprintf ff "@ ")) defs
 
 let print oc p =

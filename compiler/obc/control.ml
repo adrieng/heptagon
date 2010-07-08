@@ -14,6 +14,7 @@
 open Minils
 open Ident
 open Misc
+open Obc
 
 let var_from_name map x =
   begin try
@@ -32,50 +33,36 @@ let rec control map ck s =
     | Cbase | Cvar { contents = Cindex _ } -> s
     | Cvar { contents = Clink ck } -> control map ck s
     | Con(ck, c, n)  ->
-        let e = var_from_name map n in
-        control map ck (Obc.Case(Obc.Lhs e, [(c, s)]))
+        let x = var_from_name map n in
+          control map ck [Acase(mk_exp (Elhs x), [(c, s)])]
 
-let rec simplify act =
-  match act with
-    | Obc.Assgn (lhs, e) ->
-        (match e with
-           | Obc.Lhs l when l = lhs -> Obc.Nothing
-           | _ -> act
+let is_deadcode = function
+    | Aassgn (lhs, e) ->
+        (match e.e_desc with
+           | Elhs l -> l = lhs
+           | _ -> false
         )
-    | Obc.Case(lhs, h) ->
-        (match simplify_handlers h with
-           | [] -> Obc.Nothing
-           | h -> Obc.Case(lhs, h)
-        )
-    | _ -> act
+    | Acase (e, []) -> true
+    | Afor(_, _, _, []) -> true
+    | _ -> false
 
-and simplify_handlers = function
-  | [] -> []
-  | (n,a)::h ->
-      let h = simplify_handlers h in
-      (match simplify a with
-         | Obc.Nothing -> h
-         | a -> (n,a)::h
-      )
-
-let rec join s1 s2 =
-  match simplify s1, simplify s2 with
-    | Obc.Case(Obc.Lhs(n), h1), Obc.Case(Obc.Lhs(m), h2) when n = m ->
-        Obc.Case(Obc.Lhs(n), joinhandlers h1 h2)
-    | s1, Obc.Nothing -> s1
-    | Obc.Nothing, s2 -> s2
-    | s1, Obc.Comp(s2, s3) -> Obc.Comp(join s1 s2, s3)
-    | s1, s2 -> Obc.Comp(s1, s2)
+let rec joinlist l =
+  let l = List.filter (fun a -> not (is_deadcode a)) l in
+    match l with
+      | [] -> []
+      | [s1] -> [s1]
+      | s1::s2::l ->
+          match s1, s2 with
+            | Acase(e1, h1),
+              Acase(e2, h2) when e1.e_desc = e2.e_desc ->
+                joinlist ((Acase(e1, joinhandlers h1 h2))::l)
+            | s1, s2 -> s1::(joinlist (s2::l))
 
 and joinhandlers h1 h2 =
   match h1 with
     | [] -> h2
     | (c1, s1) :: h1' ->
         let s1', h2' =
-          try let s2, h2'' = find c1 h2 in join s1 s2, h2''
-          with Not_found -> simplify s1, h2 in
-        (c1, s1') :: joinhandlers h1' h2'
-
-let rec joinlist = function
-  | []      -> Obc.Nothing
-  | s :: l  -> join s (joinlist l)
+          try let s2, h2'' = find c1 h2 in s1@s2, h2''
+          with Not_found -> s1, h2 in
+        (c1, joinlist s1') :: joinhandlers h1' h2'
