@@ -1,0 +1,39 @@
+const n:int = 42
+const m:int = 52
+
+node concatenate(a:int^n; b:int^m) returns (o1, o2: int^(n+m))
+let
+    o1 = a @ b;
+    o2 = b @ a;
+tel
+(*
+node slicing (a:int^n) returns (u1,u2 : int^3)
+let
+    u1 = a[0 .. 2];
+    u2 = a[3 .. 5];
+tel
+
+node elt (a:int^m) returns (o:int^m)
+var x : int;
+let
+   x = a[2] + 1;
+   o = [ a with [1] = x ];
+tel
+
+node elt_dyn (a:int^m; i:int) returns (o:int^m)
+var x : int;
+let
+  x = a.[i] default 3;
+  o = [ a with [1] = x ];
+tel
+
+node ten (i: int) returns (o:int^m)
+let
+  o = i^m;
+tel
+
+node constant(a,b:int) returns (o:int^4)
+let
+  o = [a,b,a,b];
+tel
+*)

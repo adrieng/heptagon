@@ -1,0 +1,30 @@
+const n:int = 42
+const l:int = 2
+const z:int = n + 3
+
+node f(a:int^z) returns (m:int)
+let
+  m = a[1]
+tel
+
+node g<<m:int>>(a:int^m) returns (o:int)
+let
+    o = a[12 - l] + m;
+tel
+
+node h(a:int^n; b:int^z) returns (o,m:int)
+let
+   o = g<<n>>(a);
+   m = g<<z>>(b);
+tel
+
+node l<<m:int>>(a:int^m) returns (o:int^m)
+let
+  o = [ a with [11] = 0 ];
+tel
+
+node p(a:int^n^n) returns (o:int^n^n)
+let
+  o = map (l<<n>>) <<n>>(a);
+tel
+
