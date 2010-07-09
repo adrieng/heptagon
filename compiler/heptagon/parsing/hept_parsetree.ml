@@ -176,7 +176,8 @@ let mk_call ?(params=[]) op exps =
   Eapp (mk_app op params, exps)
 
 let mk_op_call ?(params=[]) s exps =
-  mk_call ~params:params (Efun (Name s)) exps
+  mk_call ~params:params
+    (Efun (Modname { qual = "Pervasives"; id = s })) exps
 
 let mk_iterator_call it ln params n exps =
   Eiterator (it, mk_app (Enode ln) params, n, exps)

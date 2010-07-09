@@ -21,12 +21,12 @@ module Type =
 struct
   let sigtype { sig_name = name; sig_inputs = i_list; sig_statefull = statefull;
                 sig_outputs = o_list; sig_params = params } =
-    let const_env = build_node_params NamesEnv.empty params in
+    let typed_params, const_env = build_node_params NamesEnv.empty params in
     let check_arg a = { a with a_type = check_type const_env a.a_type } in
     name, { node_inputs = List.map check_arg i_list;
             node_outputs = List.map check_arg o_list;
             node_statefull = statefull;
-            node_params = params;
+            node_params = typed_params;
             node_params_constraints = []; }
 
   let read { interf_desc = desc; interf_loc = loc } =

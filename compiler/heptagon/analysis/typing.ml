@@ -545,11 +545,11 @@ and typing_static_args const_env expected_ty_list e_list =
     error (Earity_clash(List.length e_list, List.length expected_ty_list))
 
 and expect_static_exp const_env exp_ty se =
-    let se, ty = typing_static_exp const_env se in
-  try
-    unify ty exp_ty; se
-  with
-      Unify -> message se.se_loc (Etype_clash(ty, exp_ty))
+  let se, ty = typing_static_exp const_env se in
+    try
+      unify ty exp_ty; se
+    with
+      _ -> message se.se_loc (Etype_clash(ty, exp_ty))
 
 (** @return the type of the field with name [f] in the list
     [fields]. [t1] is the corresponding record type and [loc] is
@@ -1078,8 +1078,11 @@ let solve loc cl =
       Solve_failed c -> message loc (Econstraint_solve_failed c)
 
 let build_node_params const_env l =
-  List.fold_left (fun env p -> NamesEnv.add p.p_name p.p_type env)
-    const_env l
+  let check_param env p =
+    let ty = check_type const_env p.p_type in
+      { p with p_type = ty }, NamesEnv.add p.p_name ty env
+  in
+    mapfold check_param const_env l
 
 let node ({ n_name = f; n_statefull = statefull;
             n_input = i_list; n_output = o_list;
@@ -1087,9 +1090,10 @@ let node ({ n_name = f; n_statefull = statefull;
             n_local = l_list; n_equs = eq_list; n_loc = loc;
             n_params = node_params; } as n) =
   try
-    let const_env = build_node_params NamesEnv.empty node_params in
-
-    let typed_i_list, input_names, h = build const_env Env.empty Env.empty i_list in
+    let typed_params, const_env =
+      build_node_params NamesEnv.empty node_params in
+    let typed_i_list, input_names, h =
+      build const_env Env.empty Env.empty i_list in
     let typed_o_list, output_names, h = build const_env h h o_list in
 
     (* typing contract *)
@@ -1107,12 +1111,13 @@ let node ({ n_name = f; n_statefull = statefull;
 
     let cl = get_size_constraint () in
     let cl = solve loc cl in
-    add_value f (signature statefull i_list o_list node_params cl);
+    add_value f (signature statefull typed_i_list typed_o_list typed_params cl);
 
     { n with
         n_input = List.rev typed_i_list;
         n_output = List.rev typed_o_list;
         n_local = typed_l_list;
+        n_params = typed_params;
         n_contract = typed_contract;
         n_equs = typed_eq_list }
   with
@@ -1140,8 +1145,9 @@ let deftype { t_name = n; t_desc = tdesc; t_loc = loc } =
       TypingError(error) -> message loc error
 
 let typing_const_dec cd =
-  let se = expect_static_exp NamesEnv.empty cd.c_type cd.c_value in
-  let cd = { cd with c_value = se } in
+  let ty = check_type NamesEnv.empty cd.c_type in
+  let se = expect_static_exp NamesEnv.empty ty cd.c_value in
+  let cd = { cd with c_value = se; c_type = ty } in
     add_const cd.c_name (mk_const_def cd.c_name cd.c_type cd.c_value);
     cd
 

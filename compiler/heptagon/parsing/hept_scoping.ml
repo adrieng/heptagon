@@ -102,7 +102,7 @@ let translate_iterator_type = function
 
 let op_from_app loc app =
   match app.a_op with
-    | Efun op -> op_from_app_name op
+    | Efun op | Enode op -> op_from_app_name op
     | _ -> raise Not_static
 
 let rec static_exp_of_exp const_env e =
