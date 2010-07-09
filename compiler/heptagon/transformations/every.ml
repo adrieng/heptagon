@@ -82,10 +82,14 @@ and translate v acc_eq_list e =
         let re = { re with e_desc = Evar x } in
         v,acc_eq_list,
           { e with e_desc = Eiterator(it, op, n, e_list, Some re) }
-    | Eapp(op, e_list, None) ->
+    | Eapp(op, e_list, r) ->
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
         v, acc_eq_list,
-        { e with e_desc = Eapp(op, e_list, None) }
+        { e with e_desc = Eapp(op, e_list, r) }
+    | Eiterator(it, op, n, e_list, r)  ->
+        let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
+        v, acc_eq_list,
+        { e with e_desc = Eiterator(it, op, n, e_list, r) }
     | Efield(e', field) ->
         let v, acc_eq_list, e' = translate v acc_eq_list e' in
         v,acc_eq_list,

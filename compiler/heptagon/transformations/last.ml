@@ -65,6 +65,9 @@ and translate env e =
     | Estruct(e_f_list) ->
         { e with e_desc =
             Estruct(List.map (fun (f, e) -> (f, translate env e)) e_f_list) }
+    | Eiterator(it, app, n, e_list, r) ->
+        { e with e_desc = Eiterator(it, app, n,
+                                    List.map (translate env) e_list, r) }
 
 let translate_contract env contract =
   match contract with
