@@ -103,7 +103,7 @@ let translate_iterator_type = function
 let op_from_app loc app =
   match app.a_op with
     | Efun op -> op_from_app_name op
-    | _ -> Error.message loc Error.Estatic_exp_expected
+    | _ -> raise Not_static
 
 let rec static_exp_of_exp const_env e =
   let desc = match e.e_desc with
@@ -146,7 +146,7 @@ let rec translate_type const_env = function
 and translate_exp const_env env e =
   let desc =
     try (* try to see if the exp is a constant *)
-      Heptagon.Econst (expect_static_exp const_env e)
+      Heptagon.Econst (static_exp_of_exp const_env e)
     with
         Not_static -> translate_desc e.e_loc const_env env e.e_desc in
   { Heptagon.e_desc = desc;
