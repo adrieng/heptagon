@@ -207,3 +207,31 @@ let mapfold f acc l =
                      ([],acc) l in
   List.rev l, acc
 
+let mapi f l =
+  let rec aux i = function
+    | [] -> []
+    | v::l -> (f i v)::(aux (i+1) l)
+  in
+    aux 0 l
+
+let mapi2 f l1 l2 =
+  let rec aux i l1 l2 =
+    match l1, l2 with
+      | [], [] -> []
+      | [], _ -> invalid_arg ""
+      | _, [] -> invalid_arg ""
+      | v1::l1, v2::l2 -> (f i v1 v2)::(aux (i+1) l1 l2)
+  in
+    aux 0 l1 l2
+
+let mapi3 f l1 l2 l3 =
+  let rec aux i l1 l2 l3 =
+    match l1, l2, l3 with
+      | [], [], [] -> []
+      | [], _, _ -> invalid_arg ""
+      | _, [], _ -> invalid_arg ""
+      | _, _, [] -> invalid_arg ""
+      | v1::l1, v2::l2, v3::l3 ->
+          (f i v1 v2 v3)::(aux (i+1) l1 l2 l3)
+  in
+    aux 0 l1 l2 l3
