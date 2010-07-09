@@ -80,7 +80,7 @@ type obj_dec =
       o_loc : location }
 
 type method_def =
-    { m_name : fun_name;
+    { m_name : method_name;
       m_inputs : var_dec list;
       m_outputs : var_dec list;
       m_locals : var_dec list;
@@ -131,3 +131,8 @@ let rec vd_find n = function
 let lhs_of_exp = function
   | Elhs l -> l
   | _ -> assert false
+
+let find_step_method cd =
+  List.find (fun m -> m.m_name = Mstep) cd.cd_methods
+let find_reset_method cd =
+  List.find (fun m -> m.m_name = Mreset) cd.cd_methods

@@ -48,8 +48,8 @@ and subst_exp_list map =
 and subst_block map b =
   { b with block_body = subst_stm_list map b.block_body }
 
-let assoc_map_for_fun sf =
-  match sf.Obc.out with
+let assoc_map_for_fun md =
+  match md.Obc.m_outputs with
     | [] -> NamesEnv.empty
     | out ->
         let fill_field map vd =
