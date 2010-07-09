@@ -77,3 +77,11 @@ let global_funs_default = {
   field = field;
   param = param;
 }
+
+(** [it_gather gather f] will create a function to iterate
+    over a type using [f] and then use [gather] to combine
+    the value of the local accumulator with the one
+    given as argument. *)
+let it_gather gather f funs acc e =
+  let e, local_acc = f funs acc e in
+    e, gather acc local_acc

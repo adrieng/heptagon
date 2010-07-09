@@ -10,7 +10,7 @@ let is_var = function
 
 let block funs acc b =
   let b, (v, acc_eq_list) = Hept_mapfold.block funs ([], []) b in
-    { b with b_local = v @ b.b_local; b_equs = acc_eq_list }, acc
+    { b with b_local = v @ b.b_local; b_equs = acc_eq_list@b.b_equs }, acc
 
 let edesc funs (v,acc_eq_list) ed =
   let ed, (v, acc_eq_list) = Hept_mapfold.edesc funs (v,acc_eq_list) ed in
