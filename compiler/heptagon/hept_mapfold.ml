@@ -15,9 +15,8 @@
 
 
 open Misc
-open Types
+open Global_mapfold
 open Heptagon
-
 
 type 'a hept_it_funs = {
   app: 'a hept_it_funs -> 'a -> Heptagon.app -> Heptagon.app * 'a;
@@ -50,7 +49,7 @@ type 'a hept_it_funs = {
     'a hept_it_funs -> 'a -> Heptagon.const_dec -> Heptagon.const_dec * 'a;
   program:
     'a hept_it_funs -> 'a -> Heptagon.program -> Heptagon.program * 'a;
-  ty_funs: 'a Types.types_it_funs }
+  global_funs: 'a Global_mapfold.global_it_funs }
 
 
 let rec exp_it funs acc e = funs.exp funs acc e
@@ -64,17 +63,13 @@ and edesc_it funs acc ed =
   with Fallback -> edesc funs acc ed
 and edesc funs acc ed = match ed with
   | Econst se ->
-      let se, acc = static_exp_it funs.ty_funs acc se in
+      let se, acc = static_exp_it funs.global_funs acc se in
       Econst se, acc
   | Evar _ | Elast _ -> ed, acc
   | Epre (se, e) ->
-      let se, acc = optional_wacc (static_exp_it funs.ty_funs) acc se in
+      let se, acc = optional_wacc (static_exp_it funs.global_funs) acc se in
       let e, acc = exp_it funs acc e in
       Epre (se, e), acc
-  | Epre (Some se, e) ->
-      let se, acc = static_exp_it funs.ty_funs acc se in
-      let e, acc = exp_it funs acc e in
-      Epre (Some se, e), acc
   | Efby (e1, e2) ->
       let e1, acc = exp_it funs acc e1 in
       let e2, acc = exp_it funs acc e2 in
@@ -95,7 +90,7 @@ and edesc funs acc ed = match ed with
       Eapp (app, args, reset), acc
   | Eiterator (i, app, param, args, reset) ->
       let app, acc = app_it funs acc app in
-      let param, acc = static_exp_it funs.ty_funs acc param in
+      let param, acc = static_exp_it funs.global_funs acc param in
       let args, acc = mapfold (exp_it funs) acc args in
       let reset, acc = optional_wacc (exp_it funs) acc reset in
       Eiterator (i, app, param, args, reset), acc
@@ -103,7 +98,7 @@ and edesc funs acc ed = match ed with
 
 and app_it funs acc a = funs.app funs acc a
 and app funs acc a =
-  let p, acc = mapfold (static_exp_it funs.ty_funs) acc a.a_params in
+  let p, acc = mapfold (static_exp_it funs.global_funs) acc a.a_params in
   { a with a_params = p }, acc
 
 
@@ -197,7 +192,7 @@ and last_it funs acc l =
 and last funs acc l = match l with
   | Var -> l, acc
   | Last sto ->
-      let sto, acc = optional_wacc (static_exp_it funs.ty_funs) acc sto in
+      let sto, acc = optional_wacc (static_exp_it funs.global_funs) acc sto in
       Last sto, acc
 
 
@@ -211,29 +206,38 @@ and contract funs acc c =
     c_assume = c_assume; c_enforce = c_enforce; c_local = c_local; c_eq = c_eq }
   , acc
 
+and param_it funs acc vd = funs.param funs acc vd
+and param funs acc vd =
+  let v_last, acc = last_it funs acc vd.v_last in
+  { vd with v_last = v_last }, acc
 
 and node_dec_it funs acc nd = funs.node_dec funs acc nd
 and node_dec funs acc nd =
   let n_input, acc = mapfold (var_dec_it funs) acc nd.n_input in
   let n_output, acc = mapfold (var_dec_it funs) acc nd.n_output in
   let n_local, acc = mapfold (var_dec_it funs) acc nd.n_local in
+  let n_params, acc = mapfold (param_it funs.global_funs) acc nd.n_params in
+  let n_contract, acc =  optional_wacc (contract_it funs) acc nd.n_contract in
   let n_equs, acc = mapfold (eq_it funs) acc nd.n_equs in
   { nd with
-    n_input = n_input; n_output = n_output; n_local = n_local; n_equs = n_equs }
+      n_input = n_input; n_output = n_output;
+      n_local = n_local; n_params = n_params;
+      n_contract = n_contract; n_equs = n_equs; }
   , acc
-
 
 
 and const_dec_it funs acc c = funs.const_dec funs acc c
 and const_dec funs acc c =
-  let se, acc = static_exp_it funs.ty_funs acc c.c_value in
+  let se, acc = static_exp_it funs.global_funs acc c.c_value in
   { c with c_value = se }, acc
+
 
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
   let cd_list, acc = mapfold (const_dec_it funs) acc p.p_consts in
   let nd_list, acc = mapfold (node_dec_it funs) acc p.p_nodes in
   { p with p_consts = cd_list; p_nodes = nd_list }, acc
+
 
 let hept_funs_default = {
   app = app;
@@ -254,7 +258,7 @@ let hept_funs_default = {
   node_dec = node_dec;
   const_dec = const_dec;
   program = program;
-  ty_funs = Types.types_funs_default }
+  global_funs = Global_mapfold.global_funs_default }
 
 
 

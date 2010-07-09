@@ -119,6 +119,7 @@ type node_dec = {
 
 type const_dec = {
   c_name : name;
+  c_type : ty;
   c_value : static_exp;
   c_loc : location }
 
