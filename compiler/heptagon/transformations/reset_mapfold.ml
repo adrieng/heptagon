@@ -46,46 +46,29 @@ let mk_bool_var n =
 let mk_bool_param n =
   mk_var_dec n (Tid Initial.pbool)
 
-let or_op_call = mk_op (Efun Initial.por)
+let or_op_call e_list = mk_op_app (Efun Initial.por) e_list
 
 let pre_true e =
   { e with e_desc = Epre (Some (mk_static_exp ~ty:(Tid Initial.pbool)
                               (Sconstructor Initial.ptrue)), e) }
 let init e = pre_true { dfalse with e_loc = e.e_loc }
 
-(* the boolean condition for a structural reset *)
-type reset =
-  | Rfalse
-  | Rorthen of reset * ident
-
-let rfalse = Rfalse
-let rvar n = Rorthen(Rfalse, n)
-
-let true_reset = function
-  | Rfalse -> false
-  | _ -> true
-
-let rec or_op res e =
-  match res with
-    | Rfalse -> e
-    | Rorthen(res, n) ->
-        or_op res { e with e_desc = Eapp(or_op_call, [mk_bool_var n; e], None) }
+let add_resets res e =
+  match res, e with
+    | None, _ -> e
+    | _, None -> res
+    | Some re, Some e -> Some { e with e_desc = or_op_call [re; e] }
 
 let default e =
   match e.e_desc with
     | Econst c -> Some c
     | _ -> None
 
-let exp_of_res res =
-  match res with
-    | Rfalse -> dfalse
-    | Rorthen(res, n) -> or_op res (mk_bool_var n)
-
 let ifres res e2 e3 =
   match res with
-    | Rfalse -> mk_op_app Eifthenelse [init e3; e2; e3]
-    | _ -> (* a reset occurs *)
-        mk_op_app Eifthenelse [exp_of_res res; e2; e3]
+    | None -> mk_op_app Eifthenelse [init e3; e2; e3]
+    | Some re -> (* a reset occurs *)
+        mk_op_app Eifthenelse [re; e2; e3]
 
 (* add an equation *)
 let equation v acc_eq_list e =
@@ -96,10 +79,10 @@ let equation v acc_eq_list e =
 
 let orthen v acc_eq_list res e =
   match e.e_desc with
-    | Evar(n) -> v, acc_eq_list, Rorthen(res, n)
+    | Evar n -> add_resets res (Some e), v, acc_eq_list
     | _ ->
         let n, v, acc_eq_list = equation v acc_eq_list e in
-        v, acc_eq_list, Rorthen(res, n)
+          add_resets res (Some { e with e_desc = Evar n }), v, acc_eq_list
 
 let mk_local_equation i k m lm =
   (* m_i = false; m_j = l_mj *)
@@ -113,7 +96,7 @@ let mk_global_equation res m lm =
      l_mn = if res then true else true fby mn ] *)
   let e =
     (match res with
-       | Rfalse -> pre_true (mk_bool_var m)
+       | None -> pre_true (mk_bool_var m)
        | _ -> mk_exp (ifres res dtrue (pre_true (mk_bool_var m)))
            (Tid Initial.pbool)
     ) in
@@ -127,7 +110,7 @@ let edesc funs (res, v, acc_eq_list) ed =
   let ed = match ed with
     | Efby (e1, e2) ->
         (match res, e1 with
-           | Rfalse, { e_desc = Econst c } ->
+           | None, { e_desc = Econst c } ->
                (* no reset *)
                Epre(Some c, e2)
            | _ ->
@@ -138,23 +121,11 @@ let edesc funs (res, v, acc_eq_list) ed =
         ifres res e1 e2
 
     (* add reset to the current reset exp. *)
-    | Eapp({ a_op = Enode _ } as op, e_list, Some re) ->
-        Eapp(op, e_list, Some (or_op res re))
-    (* create a new reset exp if necessary *)
-    | Eapp({ a_op = Enode _ } as op, e_list, None) ->
-        if true_reset res then
-          Eapp(op, e_list, Some (exp_of_res res))
-        else
-          Eapp(op, e_list, None)
+    | Eapp({ a_op = Enode _ } as op, e_list, re) ->
+        Eapp(op, e_list, add_resets res re)
     (* add reset to the current reset exp. *)
-    | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, Some re) ->
-        Eiterator(it, op, n, e_list, Some (or_op res re))
-    (* create a new reset exp if necessary *)
-    | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, None) ->
-        if true_reset res then
-          Eiterator(it, op, n, e_list, Some (exp_of_res res))
-        else
-          Eiterator(it, op, n, e_list, None)
+    | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, re) ->
+        Eiterator(it, op, n, e_list, add_resets res re)
     | _ -> ed
   in
     ed, (res, v, acc_eq_list)
@@ -168,7 +139,7 @@ let switch_handlers funs (res, v, acc_eq_list) switch_handlers =
     let defnames = List.fold_left (fun acc m ->
            Env.add m (Tid Initial.pbool) acc) b.b_defnames m_list in
     let _, (_, v, acc_eq_list) =
-      mapfold (eq_it funs) (rvar lm, b.b_local, []) b.b_equs in
+      mapfold (eq_it funs) (Some (mk_bool_var lm), b.b_local, []) b.b_equs in
     let added_eqs = mapi2 (mk_local_equation i) m_list lm_list in
       { sh with w_block = { b with b_local = v; b_defnames = defnames;
                     b_equs = added_eqs @ acc_eq_list } } in
@@ -190,12 +161,12 @@ let eq funs (res, v, acc_eq_list) equ =
 
     | Ereset(eq_list, e) ->
         let e, _ = exp_it funs (res, v, acc_eq_list) e in
-        let v, acc_eq_list, res =
-          if statefull eq_list then
+        let res, v, acc_eq_list =
+         (* if statefull eq_list then*)
             orthen v acc_eq_list res e
-          else
+         (* else
             let _, v, acc_eq_list = equation v acc_eq_list e in
-              v, acc_eq_list, res
+              res, v, acc_eq_list*)
         in
         let _, (res, v, acc_eq_list) =
           mapfold (eq_it funs) (res, v, acc_eq_list) eq_list in
@@ -207,12 +178,11 @@ let eq funs (res, v, acc_eq_list) equ =
 
 
 let node funs _ n =
-  let n, (_, v, eq_list) = Hept_mapfold.node_dec funs (rfalse, [], []) n in
-    { n with n_local = v @ n.n_local; n_equs = eq_list; }, (rfalse, [], [])
+  let n, (_, v, eq_list) = Hept_mapfold.node_dec funs (None, [], []) n in
+    { n with n_local = v @ n.n_local; n_equs = eq_list; }, (None, [], [])
 
 let program p =
   let funs = { Hept_mapfold.hept_funs_default with
                  eq = eq; node_dec = node; edesc = edesc } in
-  let p, _ = program_it funs (rfalse, [], []) p in
+  let p, _ = program_it funs (None, [], []) p in
     p
-
