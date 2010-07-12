@@ -1094,7 +1094,9 @@ let node ({ n_name = f; n_statefull = statefull;
       build_node_params NamesEnv.empty node_params in
     let typed_i_list, input_names, h =
       build const_env Env.empty Env.empty i_list in
+    let typed_i_list = List.rev typed_i_list in
     let typed_o_list, output_names, h = build const_env h h o_list in
+    let typed_o_list = List.rev typed_o_list in
 
     (* typing contract *)
     let typed_contract, h =
@@ -1114,8 +1116,8 @@ let node ({ n_name = f; n_statefull = statefull;
     add_value f (signature statefull typed_i_list typed_o_list typed_params cl);
 
     { n with
-        n_input = List.rev typed_i_list;
-        n_output = List.rev typed_o_list;
+        n_input = typed_i_list;
+        n_output = typed_o_list;
         n_local = typed_l_list;
         n_params = typed_params;
         n_contract = typed_contract;
