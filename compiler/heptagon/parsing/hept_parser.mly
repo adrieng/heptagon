@@ -341,9 +341,13 @@ escapes:
 ;
 
 switch_handler:
-  | constructor loc_vars DO equs
+  | constructor_or_bool loc_vars DO equs
       { { w_name = $1; w_block = mk_block $2 $4 } }
 ;
+
+constructor_or_bool:
+  | BOOL { Name(if $1 then "true" else "false") }
+  | constructor { $1 }
 
 switch_handlers:
   | switch_handler
