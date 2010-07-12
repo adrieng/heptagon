@@ -124,10 +124,10 @@ and print_op ff op params e_list =
         fprintf ff " = ";
         print_exp ff e2;
         fprintf ff ")@]"
-    | Earray_fill, _, [e1; e2] ->
-        print_exp ff e1;
+    | Earray_fill, [se], [e] ->
+        print_exp ff e;
         fprintf ff "^";
-        print_exp ff e2
+        print_static_exp ff se
     | Eselect, idx_list, [e] ->
         print_exp ff e;
         print_list_r print_static_exp "[" "][" "]" ff idx_list
@@ -145,12 +145,12 @@ and print_op ff op params e_list =
         fprintf ff " = ";
         print_exp ff e2;
         fprintf ff ")@]"
-    | Eselect_slice, _, [e; idx1; idx2] ->
+    | Eselect_slice, [idx1;idx2], [e] ->
         print_exp ff e;
         fprintf ff "[";
-        print_exp ff idx1;
+        print_static_exp ff idx1;
         fprintf ff "..";
-        print_exp ff idx2;
+        print_static_exp ff idx2;
         fprintf ff "]"
     | Econcat, _, [e1;e2] ->
         fprintf ff "@[";
