@@ -135,13 +135,7 @@ and occur_check index i =
 
 module Printer = struct
   open Format
-
-  let rec print_list_r print po sep pf ff = function
-    | [] -> ()
-    | x :: l ->
-        fprintf ff "@[%s%a" po print x;
-        List.iter (fprintf ff "%s@]@ @[%a" sep print) l;
-        fprintf ff "%s@]" pf
+  open Pp_tools
 
   let rec fprint_init ff i = match i.i_desc with
     | Izero -> fprintf ff "0"
@@ -235,7 +229,11 @@ and apply h op e_list =
         let i2 = itype (typing h e2) in
         let i3 = itype (typing h e3) in
         max i1 (max i2 i3)
-    (** TODO: init of safe/unsafe nodes *)
+    | Etuple, _ -> assert false
+    (** TODO: init of safe/unsafe nodes
+        This is a tmp fix so that pre x + 1 works.*)
+    | Efun (Modname { qual = "Pervasives" }), e_list ->
+        List.fold_left (fun acc e -> itype (typing h e)) izero e_list
     | _ , e_list ->
         List.iter (fun e -> initialized_exp h e) e_list; izero
 
