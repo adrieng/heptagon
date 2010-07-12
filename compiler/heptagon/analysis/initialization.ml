@@ -94,6 +94,11 @@ let rec skeleton i ty =
     | Tprod(ty_list) -> product (List.map (skeleton i) ty_list)
     | _ -> leaf i
 
+let rec const_skeleton i se =
+  match se.se_desc with
+    | Stuple l -> product (List.map (const_skeleton i) l)
+    | _ -> leaf i
+
 (* sub-typing *)
 let rec less left_ty right_ty =
   if left_ty == right_ty then ()
@@ -186,7 +191,7 @@ let less_exp e actual_ty expected_ty =
 (** Main typing function *)
 let rec typing h e =
   match e.e_desc with
-    | Econst _ -> leaf izero
+    | Econst c -> const_skeleton izero c
     | Evar(x) | Elast(x) -> let { i_typ = i } = Env.find x h in leaf i
     | Epre(None, e) ->
         initialized_exp h e;
