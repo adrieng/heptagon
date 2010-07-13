@@ -12,7 +12,7 @@ open Types
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
-let interface_format_version = "9"
+let interface_format_version = "10"
 
 (** Node argument *)
 type arg = { a_name : name option; a_type : ty }
@@ -57,10 +57,8 @@ let mk_const_def name ty value =
 let rec field_assoc f = function
   | [] -> raise Not_found
   | { f_name = n; f_type = ty }::l ->
-      if shortname f = n then
-        ty
-      else
-        field_assoc f l
+      if shortname f = n then ty
+      else field_assoc f l
 
 
 open Format
