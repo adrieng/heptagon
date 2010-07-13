@@ -47,13 +47,12 @@ let gather (acc, collect) (local_acc, collect) =
   Env.union local_acc acc, collect
 
 let program p =
-  let funs = Hept_mapfold.hept_funs_default in
-  let funs = { funs with
-                 eqdesc = eqdesc; block = block;
-                 switch_handler = it_gather gather funs.switch_handler;
-                 present_handler = it_gather gather funs.present_handler;
-                 state_handler = it_gather gather funs.state_handler;
-             } in
+  let funs =
+    { Hept_mapfold.defaults
+      with eqdesc = eqdesc; block = block;
+           switch_handler = it_gather gather Hept_mapfold.switch_handler;
+           present_handler = it_gather gather Hept_mapfold.present_handler;
+           state_handler = it_gather gather Hept_mapfold.state_handler; } in
   let p, _ = program_it funs (Env.empty, false) p in
     p
 

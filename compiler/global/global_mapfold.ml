@@ -3,16 +3,20 @@ open Types
 open Signature
 
 type 'a global_it_funs = {
-  static_exp : 'a global_it_funs -> 'a -> static_exp -> static_exp * 'a;
+  static_exp :
+    'a global_it_funs -> 'a -> static_exp -> static_exp * 'a;
   static_exp_desc :
     'a global_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
-  ty : 'a global_it_funs -> 'a -> ty -> ty * 'a;
-  param: 'a global_it_funs -> 'a -> param -> param * 'a;
-  structure: 'a global_it_funs -> 'a -> structure -> structure * 'a;
-  field: 'a global_it_funs -> 'a -> field -> field * 'a;
+  ty :
+    'a global_it_funs -> 'a -> ty -> ty * 'a;
+  param:
+    'a global_it_funs -> 'a -> param -> param * 'a;
   arg: 'a global_it_funs -> 'a -> arg -> arg * 'a;
   node : 'a global_it_funs -> 'a -> node -> node * 'a;
-}
+  structure:
+    'a global_it_funs -> 'a -> structure -> structure * 'a;
+  field:
+    'a global_it_funs -> 'a -> field -> field * 'a; }
 
 let rec static_exp_it funs acc se = funs.static_exp funs acc se
 and static_exp funs acc se =
@@ -86,7 +90,7 @@ and node funs acc n =
         node_outputs = node_outputs }, acc
 
 
-let global_funs_default = {
+let defaults = {
   static_exp = static_exp;
   static_exp_desc = static_exp_desc;
   ty = ty;
@@ -97,10 +101,27 @@ let global_funs_default = {
   node = node;
 }
 
+
+(* Used to stop the pass at this level *)
+let stop funs acc x = x, acc
+
+let defaults_stop = {
+  static_exp = stop;
+  static_exp_desc = stop;
+  ty = stop;
+  structure = stop;
+  field = stop;
+  param = stop;
+  arg = stop;
+  node = stop;
+}
+
+
+
 (** [it_gather gather f] will create a function to iterate
     over a type using [f] and then use [gather] to combine
     the value of the local accumulator with the one
     given as argument. *)
 let it_gather gather f funs acc e =
-  let e, local_acc = f funs acc e in
-    e, gather acc local_acc
+  let e, new_acc = f funs acc e in
+    e, gather acc new_acc

@@ -205,9 +205,11 @@ exception Fallback
 
 (** Mapfold *)
 let mapfold f acc l =
-  let l,acc = List.fold_left (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)
-                     ([],acc) l in
+  let l,acc = List.fold_left
+                (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)
+                ([],acc) l in
   List.rev l, acc
+
 
 let mapi f l =
   let rec aux i = function

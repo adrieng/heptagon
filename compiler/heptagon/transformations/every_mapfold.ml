@@ -32,7 +32,7 @@ let node funs _ n =
     { n with n_local = v @ n.n_local; n_equs = eq_list @ n.n_equs; }, ([],[])
 
 let program p =
-  let funs = { Hept_mapfold.hept_funs_default with edesc = edesc; block = block;
-                 node_dec = node } in
+  let funs = { Hept_mapfold.defaults
+               with edesc = edesc; block = block; node_dec = node } in
   let p, _ = program_it funs ([],[]) p in
     p
