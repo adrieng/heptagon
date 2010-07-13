@@ -178,7 +178,7 @@ struct
     let node_sig, _ = Global_mapfold.node_it global_funs m node_sig in
     let ln = node_for_params_call ln params in
       Modules.add_value_by_longname ln node_sig;
-      n
+      { n with n_name = shortname ln }
 
   let node_dec modname n =
     let ln = Modname { qual = modname; id = n.n_name } in

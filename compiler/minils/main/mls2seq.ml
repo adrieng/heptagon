@@ -55,7 +55,7 @@ let generate_target p s =
           let p_list = Callgraph_mapfold.program p in
             List.iter convert_fun p_list
       | Obc_no_params, Obc_fun convert_fun ->
-          let p_list =  Callgraph_mapfold.program p in
+          let p_list = Callgraph_mapfold.program p in
           let o_list = List.map Mls2obc.program p_list in
             List.iter convert_fun o_list
 
