@@ -140,6 +140,14 @@ let add_const f n =
   if NamesEnv.mem f current.consts then raise Already_defined;
   current.consts <- NamesEnv.add f n current.consts
 
+let add_value_by_longname ln signature =
+  match ln with
+    | Modname { qual = modname; id = f } ->
+        let m = NamesEnv.find modname modules.modules in
+          if NamesEnv.mem f m.values then raise Already_defined;
+          m.values <- NamesEnv.add f signature m.values
+    | Name _ -> raise Not_found
+
 let find_value = find (fun ident m -> NamesEnv.find ident m.values)
 let find_type = find (fun ident m -> NamesEnv.find ident m.types)
 let find_constr = find (fun ident m -> NamesEnv.find ident m.constr)

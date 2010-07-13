@@ -330,11 +330,6 @@ and clhs_of_exp var_env exp = match exp.e_desc with
   (** We were passed an expression that is not translatable to a valid C lhs?!*)
   | _ -> invalid_arg "clhs_of_exp: argument not a Var, Mem or Field"
 
-let obj_call_name o =
-  match o with
-    | Oobj obj
-    | Oarray (obj, _) -> obj
-
 let rec assoc_obj instance obj_env =
   match obj_env with
     | [] -> raise Not_found
@@ -644,7 +639,8 @@ let decls_of_type_decl otd =
                          Cty_ptr Cty_char,
                          [("x", Cty_id name); ("buf", Cty_ptr Cty_char)])]
     | Type_struct fl ->
-        let decls = List.map (fun (n,ty) -> n, ctype_of_otype ty) fl in
+        let decls = List.map (fun f -> f.Signature.f_name,
+                                ctype_of_otype f.Signature.f_type) fl in
         [Cdecl_struct (otd.t_name, decls)];;
 
 (** Translates an Obc type declaration to its C counterpart. *)
@@ -686,7 +682,8 @@ let cdefs_and_cdecls_of_type_decl otd =
          [Cdecl_enum (otd.t_name, nl); cdecl_of_cfundef of_string_fun;
           cdecl_of_cfundef to_string_fun])
     | Type_struct fl ->
-        let decls = List.map (fun (n,ty) -> n, ctype_of_otype ty) fl in
+        let decls = List.map (fun f -> f.Signature.f_name,
+                                ctype_of_otype f.Signature.f_type) fl in
         let decl = Cdecl_struct (otd.t_name, decls) in
         ([], [decl])
 

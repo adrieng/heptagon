@@ -55,6 +55,8 @@ let set_simulation_node s =
   simulation := true;
   simulation_node := Some s
 
+let create_object_file = ref false
+
 (* Target languages list for code generation *)
 let target_languages : string list ref = ref []
 

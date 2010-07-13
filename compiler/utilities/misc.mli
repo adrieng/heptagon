@@ -52,6 +52,9 @@ val simulation_node : string option ref
 (* Set the simulation mode on *)
 val set_simulation_node : string -> unit
 
+(* If it is true, the compiler will only generate an object file (.epo).
+   Otherwise, it will generate obc code and possibily other targets.*)
+val create_object_file : bool ref
 (* List of target languages *)
 val target_languages : string list ref
 (* Add target language to the list *)

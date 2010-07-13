@@ -8,6 +8,7 @@
 (**************************************************************************)
 open Misc
 open Location
+open Minils
 
 let lexical_error err loc =
   Printf.eprintf "%aIllegal character.\n" output_location loc;
@@ -49,6 +50,9 @@ let build_path suf =
     | None -> suf
     | Some path -> Filename.concat path suf
 
+let filename_of_name n =
+  n
+
 let clean_dir dir =
   if Sys.file_exists dir && Sys.is_directory dir
   then begin
@@ -67,6 +71,7 @@ and doc_version = "\t\tThe version of the compiler"
 and doc_print_types = "\t\t\tPrint types"
 and doc_include = "<dir>\t\tAdd <dir> to the list of include directories"
 and doc_stdlib = "<dir>\t\tDirectory for the standard library"
+and doc_object_file = "\t\tOnly generate a .epo object file"
 and doc_sim = "<node>\t\tCreate simulation for node <node>"
 and doc_locate_stdlib = "\t\tLocate standard libray"
 and doc_no_pervasives = "\tDo not load the pervasives module"

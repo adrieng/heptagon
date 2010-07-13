@@ -317,7 +317,8 @@ let translate_const_dec const_env cd =
 
 let translate_program p =
   let const_env = build_cd_list NamesEnv.empty p.p_consts in
-  { Heptagon.p_opened = p.p_opened;
+  { Heptagon.p_modname = p.p_modname;
+    Heptagon.p_opened = p.p_opened;
     Heptagon.p_types = List.map (translate_typedec const_env) p.p_types;
     Heptagon.p_nodes =
       List.map (translate_node const_env Rename.empty) p.p_nodes;

@@ -34,7 +34,7 @@ let rec control map ck s =
     | Cvar { contents = Clink ck } -> control map ck s
     | Con(ck, c, n)  ->
         let x = var_from_name map n in
-          control map ck [Acase(mk_exp (Elhs x), [(c, s)])]
+          control map ck (Acase(mk_exp (Elhs x), [(c, [s])]))
 
 let is_deadcode = function
     | Aassgn (lhs, e) ->

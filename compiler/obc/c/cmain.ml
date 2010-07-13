@@ -13,12 +13,14 @@ open Misc
 open Names
 open Ident
 open Obc
+open Types
 open Modules
 open Signature
 open C
 open Cgen
 open Location
 open Printf
+open Compiler_utils
 
 (** {1 Main C function generation} *)
 
@@ -27,23 +29,24 @@ let step_counter = Ident.fresh "step_c"
 and max_step = Ident.fresh "step_max"
 
 let assert_node_res cd =
-  if List.length cd.step.inp > 0 then
+  let stepm = find_step_method cd in
+  if List.length stepm.m_inputs > 0 then
     (Printf.eprintf "Cannot generate run-time check for node %s with inputs.\n"
-       cd.cl_id;
+       cd.cd_name;
      exit 1);
-  if (match cd.step.out with
-        | [{ v_type = Tbool; }] -> false
+  if (match stepm.m_outputs with
+        | [{ v_type = Tid nbool; }] when nbool = Initial.pbool -> false
         | _ -> true) then
     (Printf.eprintf
        "Cannot generate run-time check for node %s with non-boolean output.\n"
-       cd.cl_id;
+       cd.cd_name;
      exit 1);
   let mem =
-    (name (Ident.fresh ("mem_for_" ^ cd.cl_id)), Cty_id (cd.cl_id ^ "_mem"))
+    (name (Ident.fresh ("mem_for_" ^ cd.cd_name)), Cty_id (cd.cd_name ^ "_mem"))
   and out =
-    (name (Ident.fresh ("out_for_" ^ cd.cl_id)), Cty_id (cd.cl_id ^ "_out")) in
+    (name (Ident.fresh ("out_for_" ^ cd.cd_name)), Cty_id (cd.cd_name ^ "_out")) in
   let reset_i =
-    Cfun_call (cd.cl_id ^ "_reset", [Caddrof (Cvar (fst mem))]) in
+    Cfun_call (cd.cd_name ^ "_reset", [Caddrof (Cvar (fst mem))]) in
   let step_i =
     (*
       step(&out, &mem);
@@ -52,17 +55,17 @@ let assert_node_res cd =
         return 1;
       }
     *)
-    let outn = Ident.name ((List.hd cd.step.out).v_ident) in
+    let outn = Ident.name ((List.hd stepm.m_outputs).v_ident) in
     Csblock
       { var_decls = [];
         block_body =
           [
-            Csexpr (Cfun_call (cd.cl_id ^ "_step",
+            Csexpr (Cfun_call (cd.cd_name ^ "_step",
                                [Caddrof (Cvar (fst out));
                                 Caddrof (Cvar (fst mem))]));
             Cif (Cuop ("!", Clhs (Cfield (Cvar (fst out), outn))),
                  [Csexpr (Cfun_call ("printf",
-                                     [Cconst (Cstrlit ("Node \\\"" ^ cd.cl_id
+                                     [Cconst (Cstrlit ("Node \\\"" ^ cd.cd_name
                                                        ^ "\\\" failed at step" ^
                                                        " %d.\\n"));
                                       Clhs (Cvar (name step_counter))]));
@@ -79,15 +82,18 @@ let assert_node_res cd =
 let main_def_of_class_def cd =
   let format_for_type ty = match ty with
     | Tarray _ -> assert false
-    | Tint | Tbool -> "%d"
-    | Tfloat -> "%f"
+    | Types.Tid id when id = Initial.pfloat -> "%f"
+    | Types.Tid id when id = Initial.pint -> "%d"
+    | Types.Tid id when id = Initial.pbool -> "%d"
     | Tid ((Name sid) | Modname { id = sid }) -> "%s" in
 
   (** Does reading type [ty] need a buffer? When it is the case,
       [need_buf_for_ty] also returns the type's name. *)
   let need_buf_for_ty ty = match ty with
     | Tarray _ -> assert false
-    | Tint | Tfloat | Tbool -> None
+    | Types.Tid id when id = Initial.pfloat -> None
+    | Types.Tid id when id = Initial.pint -> None
+    | Types.Tid id when id = Initial.pbool -> None
     | Tid (Name sid | Modname { id = sid; }) -> Some sid in
 
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
@@ -98,7 +104,7 @@ let main_def_of_class_def cd =
         let iter_var = Ident.name (Ident.fresh "i") in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = read_lhs_of_ty lhs ty in
-        ([Cfor (iter_var, 0, n, reads)], bufs)
+        ([Cfor (iter_var, 0, int_of_static_exp n, reads)], bufs)
     | _ ->
         let rec mk_prompt lhs = match lhs with
           | Cvar vn -> (vn, [])
@@ -134,8 +140,9 @@ let main_def_of_class_def cd =
         let iter_var = Ident.name (Ident.fresh "i") in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = write_lhs_of_ty lhs ty in
-        ([cprint_string "[ "; Cfor (iter_var, 0, n, reads); cprint_string "]"],
-          bufs)
+        ([cprint_string "[ ";
+          Cfor (iter_var, 0, int_of_static_exp n, reads);
+          cprint_string "]"], bufs)
     | _ ->
         let varn = Ident.name (Ident.fresh "buf") in
         let format_s = format_for_type ty in
@@ -152,24 +159,25 @@ let main_def_of_class_def cd =
            | None -> []
            | Some id -> [(varn, Cty_arr (20, Cty_char))]) in
 
+  let stepm = find_step_method cd in
   let (scanf_calls, scanf_decls) =
     let read_lhs_of_ty_for_vd vd =
       read_lhs_of_ty (Cvar (Ident.name vd.v_ident)) vd.v_type in
-    split (map read_lhs_of_ty_for_vd cd.step.inp) in
+    split (map read_lhs_of_ty_for_vd stepm.m_inputs) in
 
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
       let (stm, vars) =
         write_lhs_of_ty (Cfield (Cvar "res", name vd.v_ident)) vd.v_type in
       (cprint_string "=> " :: stm, vars) in
-    split (map write_lhs_of_ty_for_vd cd.step.out) in
+    split (map write_lhs_of_ty_for_vd stepm.m_outputs) in
   let printf_calls = List.concat printf_calls in
 
-  let cinp = cvarlist_of_ovarlist cd.step.inp in
-  let cout = ["res", (Cty_id (cd.cl_id ^ "_out"))] in
+  let cinp = cvarlist_of_ovarlist stepm.m_inputs in
+  let cout = ["res", (Cty_id (cd.cd_name ^ "_out"))] in
 
   let varlist =
-    ("mem", Cty_id (cd.cl_id ^ "_mem"))
+    ("mem", Cty_id (cd.cd_name ^ "_mem"))
     :: cinp
     @ cout
     @ concat scanf_decls
@@ -180,9 +188,9 @@ let main_def_of_class_def cd =
   let step_l =
     let funcall =
       let args =
-        map (fun vd -> Clhs (Cvar (name vd.v_ident))) cd.step.inp
+        map (fun vd -> Clhs (Cvar (name vd.v_ident))) stepm.m_inputs
         @ [Caddrof (Cvar "res"); Caddrof (Cvar "mem")] in
-      Cfun_call (cd.cl_id ^ "_step", args) in
+      Cfun_call (cd.cd_name ^ "_step", args) in
     concat scanf_calls
     @ [Csexpr funcall]
     @ printf_calls
@@ -191,7 +199,7 @@ let main_def_of_class_def cd =
 
   (** Do not forget to initialize memory via reset. *)
   let rst_i =
-    Csexpr (Cfun_call (cd.cl_id ^ "_reset", [Caddrof (Cvar "mem")])) in
+    Csexpr (Cfun_call (cd.cd_name ^ "_reset", [Caddrof (Cvar "mem")])) in
 
   (varlist, rst_i, step_l)
 
@@ -244,7 +252,7 @@ let mk_main p = match (!Misc.simulation_node, !Misc.assert_nodes) with
   | (None, []) -> []
   | (_, n_names) ->
       let find_class n =
-        try List.find (fun cd -> cd.cl_id = n) p.o_defs
+        try List.find (fun cd -> cd.cd_name = n) p.p_defs
         with Not_found ->
           Printf.eprintf "Unknown node %s.\n" n;
           exit 1 in
@@ -278,3 +286,10 @@ let translate name prog =
   global_name := String.capitalize modname;
   (global_file_header modname prog) :: (mk_main prog)
   @ (cfile_list_of_oprog modname prog)
+
+let program p =
+  let filename = filename_of_name p.p_modname in
+  let dirname = build_path (filename ^ "_c") in
+  let dir = clean_dir dirname in
+  let c_ast = translate filename p in
+    C.output dir c_ast

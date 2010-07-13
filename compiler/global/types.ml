@@ -32,6 +32,8 @@ let invalid_type = Tprod []
 let mk_static_exp ?(loc = no_location) ?(ty = invalid_type) desc =
   { se_desc = desc; se_ty = ty; se_loc = loc }
 
+let static_exp_of_int i =
+  mk_static_exp (Sint i)
 
 open Pp_tools
 open Format

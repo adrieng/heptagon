@@ -340,6 +340,10 @@ let simplify_type loc ty =
   with
       Instanciation_failed -> message loc (Etype_should_be_static ty)
 
+let build_subst names values =
+  List.fold_left2 (fun m { p_name = n } v -> NamesEnv.add n v m)
+    NamesEnv.empty names values
+
 let rec subst_type_vars m = function
   | Tarray(ty, e) -> Tarray(subst_type_vars m ty, static_exp_subst m e)
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
@@ -621,8 +625,7 @@ let rec typing statefull const_env h e =
           let { qualid = q; info = ty_desc } = find_value f in
           let op, expected_ty_list, result_ty_list =
             kind f statefull ty_desc in
-          let m = List.combine
-            (List.map (fun p -> p.p_name) ty_desc.node_params) params in
+          let m = build_subst ty_desc.node_params params in
           let expected_ty_list =
             List.map (subst_type_vars m) expected_ty_list in
           let result_ty_list = List.map (subst_type_vars m) result_ty_list in
@@ -678,8 +681,7 @@ and typing_app statefull const_env h op e_list =
         let { qualid = q; info = ty_desc } = find_value f in
         let op, expected_ty_list, result_ty_list =
           kind (Modname q) statefull ty_desc in
-        let m = List.combine (List.map (fun p -> p.p_name) ty_desc.node_params)
-          params in
+        let m = build_subst ty_desc.node_params params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args statefull const_env h
           expected_ty_list e_list in

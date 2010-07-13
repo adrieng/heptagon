@@ -8,51 +8,67 @@
 (**************************************************************************)
 
 open Compiler_utils
+open Obc
+open Minils
+open Misc
 
-(** Generation of a dataflow target *)
-let dataflow_target filename p target_languages =
-  let rec one_target = function
- (*   | "z3z" :: others ->
-        let dirname = build_path (filename ^ "_z3z") in
-        let dir = clean_dir dirname in
-        let p = Dynamic_system.program p in
-        if !verbose then
-          comment "Translation into dynamic system (Z/3Z equations)";
-        Sigali.Printer.print dir p;
-        one_target others
-    | ("vhdl_df" | "vhdl") :: others ->
-        let dirname = build_path (filename ^ "_vhdl") in
-        let dir = clean_dir dirname in
-        let vhdl = Mls2vhdl.translate (Filename.basename filename) p in
-        Vhdl.print dir vhdl;
-        one_target others *)
-    | unknown_lg :: others -> unknown_lg :: one_target others
-    | [] -> [] in
-  one_target target_languages
+type target_source =
+  | Obc
+  | Obc_no_params
+  | Minils
+  | Minils_no_params
 
-(** Generation of a sequential target *)
-let sequential_target filename o target_languages =
-  let rec one_target = function
-    | "java" :: others ->
-        let dirname = build_path filename in
-        let dir = clean_dir dirname in
-        Java.print dir o;
-        one_target others
-    | "c" :: others ->
-        let dirname = build_path (filename ^ "_c") in
-        let dir = clean_dir dirname in
-        let c_ast = Cmain.translate filename o in
-        C.output dir c_ast;
-        one_target others
-    | unknown_lg :: others -> unknown_lg :: one_target others
-    | [] -> [] in
-  one_target target_languages
+type convert_fun =
+  | Obc_fun of (Obc.program -> unit)
+  | Mls_fun of (Minils.program -> unit)
 
-(** Whole translation. *)
-let targets filename df obc target_languages =
-  let target_languages = dataflow_target filename df target_languages in
-  let target_languages = sequential_target filename obc target_languages in
-  match target_languages with
-    | [] -> ()
-    | target :: _ -> language_error target
+let write_object_file p =
+  let filename = (filename_of_name p.Minils.p_modname)^".epo" in
+  let epoc = open_out_bin filename in
+    comment "Generating of object file";
+    output_value epoc p;
+    close_out epoc
 
+let write_obc_file p =
+  let obc_name = (filename_of_name p.Obc.p_modname)^".obc" in
+  let obc = open_out obc_name in
+    comment "Generation of Obc code";
+    Obc_printer.print obc p;
+    close_out obc
+
+let targets = [ ("obc", (Obc, Obc_fun write_obc_file));
+                ("epo", (Minils, Mls_fun write_object_file));
+                ("c", (Obc_no_params, Obc_fun Cmain.program));
+               (* ("java", (Obc, Javamain.program));
+                ("vhdl", (Minils_no_params, Vhdl.program)) *)]
+
+let generate_target p s =
+  try
+    let source, convert_fun = List.assoc s targets in
+      match source, convert_fun with
+        | Minils, Mls_fun convert_fun ->
+            convert_fun p
+        | Obc, Obc_fun convert_fun ->
+            let o = Mls2obc.program p in
+              convert_fun o
+        | Minils_no_params, Mls_fun convert_fun ->
+            let p_list = Callgraph_mapfold.program p in
+              List.iter convert_fun p_list
+        | Obc_no_params, Obc_fun convert_fun ->
+            let p_list =  Callgraph_mapfold.program p in
+            let o_list = List.map Mls2obc.program p_list in
+              List.iter convert_fun o_list
+  with
+    | Not_found -> language_error s
+
+let program p =
+  (* Translation into dataflow and sequential languages *)
+  let targets =
+    if !create_object_file then
+      ["epo"]
+    else
+      match !target_languages with
+        | [] -> ["obc"];
+        | l -> l
+  in
+    List.iter (generate_target p) targets;

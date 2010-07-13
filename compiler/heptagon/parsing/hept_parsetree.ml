@@ -138,7 +138,8 @@ type const_dec =
       c_loc  : location; }
 
 type program =
-    { p_pragmas: (name * string) list;
+    { p_modname : name;
+      p_pragmas: (name * string) list;
       p_opened : name list;
       p_types  : type_dec list;
       p_nodes  : node_dec list;

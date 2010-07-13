@@ -152,7 +152,7 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
         fprintf ff "@[type %s = " name;
         fprintf ff "@[<v 1>";
         print_list
-          (fun ff (field, ty) ->
+          (fun ff { Signature.f_name = field; Signature.f_type = ty } ->
              print_name ff field;
              fprintf ff ": ";
              print_type ff ty) "{" ";" "}" ff f_ty_list;

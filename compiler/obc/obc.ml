@@ -12,6 +12,7 @@ open Misc
 open Names
 open Ident
 open Types
+open Signature
 open Location
 
 type class_name = name
@@ -27,11 +28,12 @@ type type_dec =
 and tdesc =
   | Type_abs
   | Type_enum of name list
-  | Type_struct of (name * ty) list
+  | Type_struct of structure
 
 type const_dec = {
   c_name : name;
   c_value : static_exp;
+  c_type : ty;
   c_loc : location }
 
 type lhs = { l_desc : lhs_desc; l_ty : ty; l_loc : location }
@@ -94,7 +96,8 @@ type class_def =
       cd_loc : location }
 
 type program =
-    { p_opened : name list;
+    { p_modname : name;
+      p_opened : name list;
       p_types : type_dec list;
       p_consts : const_dec list;
       p_defs  : class_def list }
@@ -107,6 +110,13 @@ let mk_exp ?(ty=invalid_type) ?(loc=no_location) desc =
 
 let mk_lhs ?(ty=invalid_type) ?(loc=no_location) desc =
   { l_desc = desc; l_ty = ty; l_loc = loc }
+
+let mk_lhs_exp ?(ty=invalid_type) desc =
+  let lhs = mk_lhs ~ty:ty desc in
+    mk_exp ~ty:ty (Elhs lhs)
+
+let mk_evar id =
+  mk_exp (Elhs (mk_lhs (Lvar id)))
 
 let rec var_name x =
   match x.l_desc with
@@ -128,7 +138,7 @@ let rec vd_find n = function
   | vd::l ->
       if vd.v_ident = n then vd else vd_find n l
 
-let lhs_of_exp = function
+let lhs_of_exp e = match e.e_desc with
   | Elhs l -> l
   | _ -> assert false
 
@@ -136,3 +146,9 @@ let find_step_method cd =
   List.find (fun m -> m.m_name = Mstep) cd.cd_methods
 let find_reset_method cd =
   List.find (fun m -> m.m_name = Mreset) cd.cd_methods
+
+let obj_call_name o =
+  match o with
+    | Oobj obj
+    | Oarray (obj, _) -> obj
+

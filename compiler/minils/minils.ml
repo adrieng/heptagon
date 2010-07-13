@@ -16,6 +16,10 @@ open Signature
 open Static
 open Types
 
+(** Warning: Whenever Minils ast is modified,
+    minils_format_version should be incremented. *)
+let minils_format_version = "1"
+
 type iterator_type =
   | Imap
   | Ifold
@@ -65,7 +69,7 @@ and op =
   | Efield             (** arg1.a_param1 *)
   | Efield_update      (** { arg1 with a_param1 = arg2 } *)
   | Earray             (** [ args ] *)
-  | Earray_fill        (** [arg1^arg2] *)
+  | Earray_fill        (** [arg1^a_param1] *)
   | Eselect            (** arg1[a_params] *)
   | Eselect_slice      (** arg1[a_param1..a_param2] *)
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
@@ -124,6 +128,8 @@ type const_dec = {
   c_loc : location }
 
 type program = {
+  p_modname : name;
+  p_format_version : string;
   p_opened : name list;
   p_types  : type_dec list;
   p_nodes  : node_dec list;

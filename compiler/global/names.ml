@@ -34,6 +34,11 @@ struct
     fold (fun key v env -> add key v env) env0 env
 end
 
+module LongNameEnv = Map.Make (struct
+                                 type t = longname
+                                 let compare = compare
+                               end)
+
 module S = Set.Make (struct type t = string let compare = compare end)
 
 

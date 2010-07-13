@@ -205,26 +205,27 @@ let rec translate_op env = function
   | Heptagon.Econcat -> Econcat
   | Heptagon.Earray -> Earray
   | Heptagon.Etuple -> Etuple
-  | Heptagon.Earrow -> Earrow
+  | Heptagon.Earrow ->
+      Error.message no_location Error.Eunsupported_language_construct
 
 let translate_app env app =
-  mk_app ~params:app.a_params
-    ~unsafe:app.a_unsafe (translate_op env app.a_op)
+  mk_app ~params:app.Heptagon.a_params
+    ~unsafe:app.Heptagon.a_unsafe (translate_op env app.Heptagon.a_op)
 
 let rec translate env
     { Heptagon.e_desc = desc; Heptagon.e_ty = ty;
       Heptagon.e_loc = loc } =
   match desc with
     | Heptagon.Econst c ->
-        Env.const env (mk_exp ~loc:loc ~exp_ty:ty (Econst (const c)))
+        Env.const env (mk_exp ~loc:loc ~exp_ty:ty (Econst c))
     | Heptagon.Evar x ->
         Env.con env x (mk_exp ~loc:loc ~exp_ty:ty (Evar x))
-    | Heptagon.Epre(None), [e] ->
-        mk_exp ~loc:loc ~exp_ty:ty (Efby(None, e))
+    | Heptagon.Epre(None, e) ->
+        mk_exp ~loc:loc ~exp_ty:ty (Efby(None, translate env e))
     | Heptagon.Epre(Some c, e) ->
-        mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, e))
-    | Heptagon.Efby ({ e_desc = Econst c }, e) ->
-        mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, e))
+        mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, translate env e))
+    | Heptagon.Efby ({ Heptagon.e_desc = Heptagon.Econst c }, e) ->
+        mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, translate env e))
     | Heptagon.Efield(e, field) ->
         assert false (**TODO *)
     | Heptagon.Estruct f_e_list ->
@@ -232,14 +233,15 @@ let rec translate env
           (fun (f, e) -> (f, translate env e)) f_e_list in
         mk_exp ~loc:loc ~exp_ty:ty (Estruct f_e_list)
     | Heptagon.Eapp(app, e_list, reset) ->
-        mk_exp ~loc:loc ~exp_ty:ty (translate_app env app,
-                                    List.map (translate env) e_list,
-                                    translate_reset env reset)
+        mk_exp ~loc:loc ~exp_ty:ty (Eapp (translate_app env app,
+                                          List.map (translate env) e_list,
+                                          translate_reset reset))
     | Heptagon.Eiterator(it, app, n, e_list, reset) ->
-        mk_exp ~loc:loc ~exp_ty:ty Eiterator(translate_iterator_type it,
-                  translate_app env app, n,
-                  List.map (translate env) e_list,
-                  translate_reset reset)
+        mk_exp ~loc:loc ~exp_ty:ty
+          (Eiterator (translate_iterator_type it,
+                    translate_app env app, n,
+                    List.map (translate env) e_list,
+                    translate_reset reset))
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
 
@@ -341,7 +343,6 @@ let translate_contract env contract =
              Heptagon.c_eq = eq_list;
              Heptagon.c_assume = e_a;
              Heptagon.c_enforce = e_g} ->
-        let env = Env.add cl env in
         let env' = Env.add v env in
         let locals = translate_locals [] v in
         let locals, l_eqs, s_eqs =
@@ -392,17 +393,19 @@ let typedec
   { t_name = n; t_desc = onetype tdesc; t_loc = loc }
 
 let const_dec cd =
-  { c_name = cd.Heptagon.c_name;
-    c_value = cd.Heptagon.c_value;
-    c_loc = cd.Heptagon.c_loc; }
+  { Minils.c_name = cd.Heptagon.c_name;
+    Minils.c_value = cd.Heptagon.c_value;
+    Minils.c_type = cd.Heptagon.c_type;
+    Minils.c_loc = cd.Heptagon.c_loc; }
 
 let program
-    { Heptagon.p_pragmas = pragmas;
+    { Heptagon.p_modname = modname;
       Heptagon.p_opened = modules;
       Heptagon.p_types = pt_list;
       Heptagon.p_nodes = n_list;
       Heptagon.p_consts = c_list; } =
-  { p_pragmas = pragmas;
+  { p_modname = modname;
+    p_format_version = minils_format_version;
     p_opened = modules;
     p_types = List.map typedec pt_list;
     p_nodes = List.map node n_list;

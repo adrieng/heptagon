@@ -87,11 +87,12 @@ let mk_static_exp = mk_static_exp ~loc:(current_loc())
 
 program:
   | pragma_headers open_modules const_decs type_decs node_decs EOF
-      {{ p_pragmas = $1;
-	 p_opened = List.rev $2;
+      {{ p_modname = "";
+         p_pragmas = $1;
+	       p_opened = List.rev $2;
          p_types = $4;
          p_nodes = $5;
-	 p_consts = $3; }}
+	       p_consts = $3; }}
 ;
 
 pragma_headers:

@@ -132,7 +132,7 @@ let rec static_exp_subst m se =
   match se.se_desc with
     | Svar ln ->
         (match ln with
-           | Name n -> (try List.assoc n m with | Not_found -> se)
+           | Name n -> (try NamesEnv.find n m with | Not_found -> se)
            | Modname _ -> se)
     | Sop (op, se_list) ->
         { se with se_desc = Sop (op, List.map (static_exp_subst m) se_list) }

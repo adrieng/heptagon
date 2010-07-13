@@ -1,4 +1,3 @@
-open Minils
 open Names
 open Ident
 open Types
@@ -6,6 +5,7 @@ open Static
 open Format
 open Signature
 open Pp_tools
+open Minils
 
 (** Every print_ function is boxed, that is it doesn't export break points,
     Exceptions are print_list* print_type_desc *)
@@ -75,57 +75,60 @@ and print_every ff reset =
 
 and print_exp_desc ff = function
   | Evar x -> print_ident ff x
-  | Econstvar x -> print_name ff x
-  | Econst c -> print_c ff c
-  | Efby ((Some c), e) -> fprintf ff "@[<2>%a fby@ %a@]" print_c c print_exp e
+  | Econst c -> print_static_exp ff c
+  | Efby ((Some c), e) ->
+      fprintf ff "@[<2>%a fby@ %a@]" print_static_exp c print_exp e
   | Efby (None, e) -> fprintf ff "pre %a" print_exp e
-  | Ecall (op, args, reset) ->
-      fprintf ff "@[<2>%a@,%a%a@]"
-        print_op op print_exp_tuple args print_every reset
+  | Eapp (app, args, reset) ->
+      fprintf ff "@[<2>%a%a@]"
+        print_app (app, args)  print_every reset
   | Ewhen (e, c, n) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"
         print_exp e print_longname c print_ident n
-  | Eifthenelse (e1, e2, e3) ->
-      fprintf ff "@[<hv>if %a@ then %a@ else %a@]"
-        print_exp e1 print_exp e2 print_exp e3
   | Emerge (x, tag_e_list) ->
       fprintf ff "@[<2>merge %a@ %a@]"
         print_ident x print_tag_e_list tag_e_list
-  | Etuple e_list ->
-      print_exp_tuple ff e_list
-  | Efield (e, field) ->
-      fprintf ff "%a.%a" print_exp e print_longname field
-  | Efield_update (f, e1, e2) ->
-      fprintf ff "@[<2>{%a with .%a =@ %a}@]"
-        print_exp e1  print_longname f  print_exp e2
   | Estruct f_e_list ->
       print_record (print_couple print_longname print_exp """ = """) ff f_e_list
-  | Earray e_list ->
-      fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") e_list
-  | Earray_op(array_op) -> print_array_op ff array_op
-
-
-
-and print_array_op ff = function
-  | Erepeat (n, e) -> fprintf ff "%a^%a" print_exp e  print_static_exp n
-  | Eselect (idx, e) -> fprintf ff "%a%a" print_exp e  print_index idx
-  | Eselect_dyn (idx, e1, e2) ->
-      fprintf ff "%a%a default %a"
-        print_exp e1  print_dyn_index idx  print_exp e2
-  | Eupdate (idx, e1, e2) ->
-      fprintf ff "@[<2>(%a with %a =@ %a)@]"
-        print_exp e1 print_index idx print_exp e2
-  | Eselect_slice (idx1, idx2, e) ->
-      fprintf ff "%a[%a..%a]"
-        print_exp e  print_static_exp idx1  print_static_exp idx2
-  | Econcat (e1, e2) -> fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
   | Eiterator (it, f, n, e_list, r) ->
       fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
         (iterator_to_string it)
-        print_op f
+        print_app (f, [])
         print_static_exp n
         print_exp_tuple e_list
         print_every r
+
+and print_app ff (op, e_list) =
+  match op, e_list with
+    | { a_op = Eifthenelse }, [e1; e2; e3] ->
+        fprintf ff "@[<hv>if %a@ then %a@ else %a@]"
+          print_exp e1 print_exp e2  print_exp e3
+    | { a_op = Earray }, e_list ->
+        fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") e_list
+    | { a_op = Earray_fill; a_params = [n] }, [e] ->
+        fprintf ff "%a^%a" print_exp e  print_static_exp n
+    | { a_op = Eselect; a_params = idx }, [e] ->
+        fprintf ff "%a%a" print_exp e  print_index idx
+    | { a_op = Eselect_dyn }, e1::e2::idx ->
+        fprintf ff "%a%a default %a"
+          print_exp e1  print_dyn_index idx  print_exp e2
+    | { a_op = Eupdate; a_params = idx }, [e1; e2] ->
+        fprintf ff "@[<2>(%a with %a =@ %a)@]"
+          print_exp e1 print_index idx print_exp e2
+    | { a_op = Eselect_slice; a_params = [idx1; idx2] }, [e] ->
+        fprintf ff "%a[%a..%a]"
+          print_exp e  print_static_exp idx1  print_static_exp idx2
+    | { a_op = Econcat }, [e1; e2] ->
+        fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
+    | { a_op = Efun f | Enode f; a_params = params }, e_list ->
+        print_longname ff f;
+        print_params ff params;
+        print_exp_tuple ff e_list
+    | { a_op = Efield; a_params = [field] }, [e] ->
+        fprintf ff "%a.%a" print_exp e print_static_exp field
+    | { a_op = Efield_update; a_params = [f] }, [e1; e2] ->
+        fprintf ff "@[<2>{%a with .%a =@ %a}@]"
+          print_exp e1  print_static_exp f  print_exp e2
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_longname print_exp "("" -> "")") c
@@ -170,13 +173,12 @@ let print_const_dec ff c =
 
 let print_contract ff
     { c_local = l; c_eq = eqs;
-      c_assume = e_a; c_enforce = e_g; c_controllables = cl } =
-  fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@ with %a@]"
+      c_assume = e_a; c_enforce = e_g } =
+  fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@@]"
     print_local_vars l
     print_eqs eqs
     print_exp e_a
     print_exp e_g
-    print_vd_tuple cl
 
 
 let print_node ff
