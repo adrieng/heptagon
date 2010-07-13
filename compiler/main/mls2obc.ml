@@ -156,15 +156,25 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         m, si, j, s
 
     | Minils.Etuplepat p_list,
-   Minils.Eapp({ Minils.a_op = Minils.Etuple }, act_list, _) ->
+        Minils.Eapp({ Minils.a_op = Minils.Etuple }, act_list, _) ->
         List.fold_right2
           (fun pat e ->
              translate_eq map
                (Minils.mk_equation pat e))
           p_list act_list (m, si, j, s)
 
+    | pat, Minils.Eapp({ Minils.a_op = Minils.Eifthenelse }, [e1;e2;e3], _) ->
+        let cond = translate map (m, si, j, s) e1 in
+        let m, si, j, true_act = translate_eq map
+          (Minils.mk_equation pat e2) (m, si, j, s) in
+        let m, si, j, false_act = translate_eq map
+          (Minils.mk_equation pat e3) (m, si, j, s) in
+        let action = Acase (cond, [Name "true", true_act;
+                                   Name "false", false_act]) in
+          m, si, j, (control map ck action) :: s
+
     | Minils.Evarpat x,
-     Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
+          Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
                    Minils.a_params = [{ se_desc = Sconstructor f }] },
                   [e1; e2], _) ->
         let x = var_from_name map x in
