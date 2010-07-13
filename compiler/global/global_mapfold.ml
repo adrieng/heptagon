@@ -10,6 +10,8 @@ type 'a global_it_funs = {
   param: 'a global_it_funs -> 'a -> param -> param * 'a;
   structure: 'a global_it_funs -> 'a -> structure -> structure * 'a;
   field: 'a global_it_funs -> 'a -> field -> field * 'a;
+  arg: 'a global_it_funs -> 'a -> arg -> arg * 'a;
+  node : 'a global_it_funs -> 'a -> node -> node * 'a;
 }
 
 let rec static_exp_it funs acc se = funs.static_exp funs acc se
@@ -68,6 +70,21 @@ and param funs acc p =
   let p_type, acc = ty_it funs acc p.p_type in
     { p with p_type = p_type }, acc
 
+and arg_it funs acc a = funs.arg funs acc a
+and arg funs acc a =
+  let a_type, acc = ty_it funs acc a.a_type in
+    { a with a_type = a_type }, acc
+
+
+and node_it funs acc n = funs.node funs acc n
+and node funs acc n =
+  let node_params, acc = mapfold (param_it funs) acc n.node_params in
+  let node_inputs, acc = mapfold (arg_it funs) acc n.node_inputs in
+  let node_outputs, acc = mapfold (arg_it funs) acc n.node_outputs in
+    { n with node_params = node_params;
+        node_inputs = node_inputs;
+        node_outputs = node_outputs }, acc
+
 
 let global_funs_default = {
   static_exp = static_exp;
@@ -76,6 +93,8 @@ let global_funs_default = {
   structure = structure;
   field = field;
   param = param;
+  arg = arg;
+  node = node;
 }
 
 (** [it_gather gather f] will create a function to iterate
