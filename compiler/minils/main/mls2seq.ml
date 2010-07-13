@@ -36,30 +36,28 @@ let write_obc_file p =
     Obc_printer.print obc p;
     close_out obc
 
-let targets = [ ("obc", (Obc, Obc_fun write_obc_file));
-                ("epo", (Minils, Mls_fun write_object_file));
-                ("c", (Obc_no_params, Obc_fun Cmain.program));
-               (* ("java", (Obc, Javamain.program));
-                ("vhdl", (Minils_no_params, Vhdl.program)) *)]
+let targets = [ "c", (Obc_no_params, Obc_fun Cmain.program);
+                "obc", (Obc, Obc_fun write_obc_file);
+                "obc_np", (Obc_no_params, Obc_fun write_obc_file);
+                "epo", (Minils, Mls_fun write_object_file) ]
 
 let generate_target p s =
-  try
-    let source, convert_fun = List.assoc s targets in
-      match source, convert_fun with
-        | Minils, Mls_fun convert_fun ->
-            convert_fun p
-        | Obc, Obc_fun convert_fun ->
-            let o = Mls2obc.program p in
-              convert_fun o
-        | Minils_no_params, Mls_fun convert_fun ->
-            let p_list = Callgraph_mapfold.program p in
-              List.iter convert_fun p_list
-        | Obc_no_params, Obc_fun convert_fun ->
-            let p_list =  Callgraph_mapfold.program p in
-            let o_list = List.map Mls2obc.program p_list in
-              List.iter convert_fun o_list
-  with
-    | Not_found -> language_error s
+  let source, convert_fun =
+    (try List.assoc s targets
+    with Not_found -> language_error s; raise Error) in
+    match source, convert_fun with
+      | Minils, Mls_fun convert_fun ->
+          convert_fun p
+      | Obc, Obc_fun convert_fun ->
+          let o = Mls2obc.program p in
+            convert_fun o
+      | Minils_no_params, Mls_fun convert_fun ->
+          let p_list = Callgraph_mapfold.program p in
+            List.iter convert_fun p_list
+      | Obc_no_params, Obc_fun convert_fun ->
+          let p_list =  Callgraph_mapfold.program p in
+          let o_list = List.map Mls2obc.program p_list in
+            List.iter convert_fun o_list
 
 let program p =
   (* Translation into dataflow and sequential languages *)

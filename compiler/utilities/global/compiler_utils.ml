@@ -19,7 +19,7 @@ let syntax_error loc =
   raise Error
 
 let language_error lang =
-  Printf.eprintf "Unknown language: %s.\n" lang
+  Printf.eprintf "Unknown language: '%s'.\n" lang
 
 let comment s =
   if !verbose then Printf.printf "** %s done **\n" s; flush stdout
@@ -51,7 +51,7 @@ let build_path suf =
     | Some path -> Filename.concat path suf
 
 let filename_of_name n =
-  n
+  String.uncapitalize n
 
 let clean_dir dir =
   if Sys.file_exists dir && Sys.is_directory dir

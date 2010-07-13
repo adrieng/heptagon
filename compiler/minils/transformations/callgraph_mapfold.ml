@@ -42,6 +42,7 @@ let info =
     nodes_names = Hashtbl.create 100 }
 
 let load_object_file modname =
+  Modules.open_module modname;
   let name = String.uncapitalize modname in
     try
       let filename = Modules.findfile (name ^ ".epo") in
@@ -83,7 +84,9 @@ let node_by_longname ln =
 let collect_node_calls ln =
   let edesc funs acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
-        ed, (ln, params)::acc
+        (match ln with
+           | Modname { qual = "Pervasives" } -> ed, acc
+           | _ -> ed, (ln, params)::acc)
     | _ -> raise Misc.Fallback
   in
   let funs = { Mls_mapfold.mls_funs_default with
@@ -133,15 +136,17 @@ struct
                       Error.message no_location (Error.Evar_unbound n))
            | Modname _ -> se) in
           se, m
-    | _ -> raise Misc.Fallback
+    | _ -> Global_mapfold.static_exp funs m se
 
   let edesc funs m ed =
     let ed, _ = Mls_mapfold.edesc funs m ed in
     let ed = match ed with
         | Eapp ({ a_op = Efun ln; a_params = params } as app, e_list, r) ->
+            let params = List.map (simplify m) params in
             Eapp ({ app with a_op = Efun (node_for_params_call ln params);
                       a_params = [] }, e_list, r)
         | Eapp ({ a_op = Enode ln; a_params = params } as app, e_list, r) ->
+            let params = List.map (simplify m) params in
             Eapp ({ app with a_op = Enode (node_for_params_call ln params);
                       a_params = [] }, e_list, r)
         | _ -> ed
@@ -149,15 +154,14 @@ struct
 
   let generate_new_name ln params =
     match params with
-      | [] -> ln
+      | [] -> Hashtbl.add info.nodes_names (ln, params) ln
       | _ ->
           (match ln with
              | Modname { qual = q; id = id } ->
                  let new_ln =
                    Modname { qual = q;
                              id = id ^ (Ident.name (Ident.fresh "")) } in
-                   Hashtbl.add info.nodes_names (ln, params) new_ln;
-                   new_ln
+                      Hashtbl.add info.nodes_names (ln, params) new_ln
              | _ -> assert false)
 
   let node_dec_instance modname n params =
@@ -172,7 +176,7 @@ struct
     let ln = Modname { qual = modname; id = n.n_name } in
     let { info = node_sig } = find_value ln in
     let node_sig, _ = Global_mapfold.node_it global_funs m node_sig in
-    let ln = generate_new_name ln params in
+    let ln = node_for_params_call ln params in
       Modules.add_value_by_longname ln node_sig;
       n
 
@@ -200,10 +204,11 @@ let rec call_node (ln, params) =
   let params = List.map (simplify m) params in
     List.iter check_no_static_var params;
     add_node_instance ln params;
+    Instantiate.generate_new_name ln params;
 
     let call_list = called_nodes ln in
     let call_list = List.map
-      (fun (ln, p) -> ln, List.map (static_exp_subst m) p) call_list in
+      (fun (ln, p) -> ln, List.map (simplify m) p) call_list in
       List.iter call_node call_list
 
 let program p =

@@ -143,9 +143,13 @@ let add_const f n =
 let add_value_by_longname ln signature =
   match ln with
     | Modname { qual = modname; id = f } ->
-        let m = NamesEnv.find modname modules.modules in
-          if NamesEnv.mem f m.values then raise Already_defined;
-          m.values <- NamesEnv.add f signature m.values
+        let m =
+          if modname = current.name then
+            current
+          else
+            NamesEnv.find modname modules.modules in
+          if not (NamesEnv.mem f m.values) then
+            m.values <- NamesEnv.add f signature m.values
     | Name _ -> raise Not_found
 
 let find_value = find (fun ident m -> NamesEnv.find ident m.values)
