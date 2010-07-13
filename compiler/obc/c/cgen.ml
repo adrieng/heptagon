@@ -247,6 +247,22 @@ let address_of e =
   with _ ->
     e
 
+let rec cexpr_of_static_exp se =
+  match se.se_desc with
+    | Sint i -> Cconst (Ccint i)
+    | Sfloat f -> Cconst (Ccfloat f)
+    | Sbool b -> Cconst (Ctag (if b then "TRUE" else "FALSE"))
+    | Sconstructor c -> Cconst (Ctag (shortname c))
+    | Sarray_power(n,c) ->
+        let cc = cexpr_of_static_exp c in
+          Carraylit (repeat_list cc (int_of_static_exp n))
+    | Svar ln ->
+        (try
+          let { info = cd } = find_const ln in
+            cexpr_of_static_exp (Static.simplify NamesEnv.empty cd.c_value)
+        with Not_found -> assert false)
+    | Sop _ -> cexpr_of_static_exp (Static.simplify NamesEnv.empty se)
+
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
 let rec cexpr_of_exp var_env exp =
   match exp.e_desc with
@@ -255,15 +271,7 @@ let rec cexpr_of_exp var_env exp =
         Clhs (clhs_of_exp var_env exp)
           (** Constants, the easiest translation. *)
     | Econst lit ->
-        (match lit.se_desc with
-          | Sint i -> Cconst (Ccint i)
-          | Sfloat f -> Cconst (Ccfloat f)
-          | Sbool b -> Cconst (Ctag (if b then "TRUE" else "FALSE"))
-          | Sconstructor c -> Cconst (Ctag (shortname c))
-          | Sarray_power(n,c) ->
-              let cc = cexpr_of_exp var_env (mk_exp (Econst c)) in
-                Carraylit (repeat_list cc (int_of_static_exp n))
-        )
+        cexpr_of_static_exp lit
           (** Operators *)
     | Eop(op, exps) ->
         cop_of_op var_env op exps
@@ -495,11 +503,11 @@ let global_name = ref "";;
 
 
 (** Builds the argument list of step function*)
-let step_fun_args n md =
+let step_fun_args n mems md =
   let args = cvarlist_of_ovarlist md.m_inputs in
   let out_arg = [("out", Cty_ptr (Cty_id (n ^ "_out")))] in
   let context_arg =
-    if is_statefull (longname n) then
+    if not (is_empty mems) then
       [("self", Cty_ptr (Cty_id (n ^ "_mem")))]
     else
       []
@@ -517,7 +525,7 @@ let fun_def_of_step_fun name obj_env mem objs md =
   let fun_name = name ^ "_step" in
   (** Its arguments, translating Obc types to C types and adding our internal
       memory structure. *)
-  let args = step_fun_args name md in
+  let args = step_fun_args name mem md in
   (** Its normal local variables. *)
   let local_vars = List.map cvar_of_vd md.m_locals in
 
@@ -564,7 +572,7 @@ let mem_decl_of_class_def cd =
     else
       l
   in
-    if is_statefull (longname cd.cd_name) then (
+    if not (is_empty cd.cd_mems) then (
       (** Fields corresponding to normal memory variables. *)
       let mem_fields = List.map cvar_of_vd cd.cd_mems in
       (** Fields corresponding to object variables. *)
@@ -614,7 +622,7 @@ let cdefs_and_cdecls_of_class_def cd =
   let res_fun_decl = cdecl_of_cfundef reset_fun_def in
   let step_fun_decl = cdecl_of_cfundef step_fun_def in
   let fun_defs =
-    if is_statefull (longname cd.cd_name) then
+    if not (is_empty cd.cd_mems) then
       ([res_fun_decl; step_fun_decl], [reset_fun_def; step_fun_def])
     else
       ([step_fun_decl], [step_fun_def]) in
