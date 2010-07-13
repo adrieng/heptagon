@@ -104,9 +104,14 @@ and print_tag_act_list ff tag_act_list =
        print_act_list ff a;
        fprintf ff "@]") "" "" "" ff tag_act_list
 
+let print_method_name ff = function
+  | Mreset -> fprintf ff "reset"
+  | Mstep -> fprintf ff "step"
+  | Mmethod n -> fprintf ff "%s" n
+
 let print_method ff md =
   fprintf ff "@[<v 2>";
-  print_longname ff md.m_name;
+  print_method_name ff md.m_name;
   fprintf ff "(@[";
   print_list_r print_vd "(" ";" ")" ff md.m_inputs;
   fprintf ff "@]) returns ";
