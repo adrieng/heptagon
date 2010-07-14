@@ -7,7 +7,7 @@
 (*                                                                        *)
 (**************************************************************************)
 (* graph manipulation *)
-(* $Id$ *)
+
 type 'a graph =
     { g_top: 'a node list;
       g_bot: 'a node list }

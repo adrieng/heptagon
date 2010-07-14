@@ -27,6 +27,7 @@ let join ck1 ck2 =
 
 let join eq1 eq2 = join (Vars.clock eq1) (Vars.clock eq2)
 
+(* TODO *)
 (* possible overlapping between nodes *)
 (*let head e =
   match e with
@@ -72,14 +73,10 @@ let schedule eq_list =
   let node_list = List.rev node_list in
   List.map containt node_list
 
-let schedule_contract ({ c_eq = eqs } as c) =
-  let eqs = schedule eqs in
-  { c with c_eq = eqs }
+(* We suppose here that we don't have nested eqs.
+  Otherwise schedule should be 'recursive' *)
+let eqs funs () eq_list = schedule eq_list, ()
 
-let node ({ n_contract = contract; n_equs = eq_list } as node) =
-  let contract = optional schedule_contract contract in
-  let eq_list = schedule eq_list in
-  { node with n_equs = eq_list; n_contract = contract }
-
-let program ({ p_nodes = p_node_list } as p) =
-  { p with p_nodes = List.map node p_node_list }
+let program p =
+  let p, () = Mls_mapfold.program_it
+                { Mls_mapfold.defaults with Mls_mapfold.eqs = eqs } () p in p

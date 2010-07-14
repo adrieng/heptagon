@@ -56,7 +56,7 @@ let compile_impl modname filename =
     Mls_printer.print mlsc p;
 
     (* Process the MiniLS AST *)
-   (* let p = Mls_compiler.compile pp p in *)
+    let p = Mls_compiler.compile pp p in
 
       (* Generate the sequential code *)
       Mls2seq.program p;

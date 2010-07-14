@@ -19,9 +19,12 @@ type 'a mls_it_funs = {
   app:        'a mls_it_funs -> 'a -> Minils.app -> Minils.app * 'a;
   edesc:      'a mls_it_funs -> 'a -> Minils.edesc -> Minils.edesc * 'a;
   eq:         'a mls_it_funs -> 'a -> Minils.eq -> Minils.eq * 'a;
+  eqs:        'a mls_it_funs -> 'a -> Minils.eq list -> Minils.eq list * 'a;
   exp:        'a mls_it_funs -> 'a -> Minils.exp -> Minils.exp * 'a;
   pat:        'a mls_it_funs -> 'a -> Minils.pat -> Minils.pat * 'a;
   var_dec:    'a mls_it_funs -> 'a -> Minils.var_dec -> Minils.var_dec * 'a;
+  var_decs:   'a mls_it_funs -> 'a -> Minils.var_dec list
+                                   -> Minils.var_dec list * 'a;
   contract:   'a mls_it_funs -> 'a -> Minils.contract -> Minils.contract * 'a;
   node_dec:   'a mls_it_funs -> 'a -> Minils.node_dec -> Minils.node_dec * 'a;
   const_dec:  'a mls_it_funs -> 'a -> Minils.const_dec -> Minils.const_dec * 'a;
@@ -97,19 +100,25 @@ and eq funs acc eq =
   let eq_rhs, acc = exp_it funs acc eq.eq_rhs in
     { eq with eq_lhs = eq_lhs; eq_rhs = eq_rhs }, acc
 
+and eqs_it funs acc eqs = funs.eqs funs acc eqs
+and eqs funs acc eqs = mapfold (eq_it funs) acc eqs
+
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
   let v_type, acc = ty_it funs.global_funs acc vd.v_type in
   { vd with v_type = v_type }, acc
 
+and var_decs_it funs acc vds = funs.var_decs funs acc vds
+and var_decs funs acc vds = mapfold (var_dec_it funs) acc vds
+
 
 and contract_it funs acc c = funs.contract funs acc c
 and contract funs acc c =
   let c_assume, acc = exp_it funs acc c.c_assume in
   let c_enforce, acc = exp_it funs acc c.c_enforce in
-  let c_local, acc = mapfold (var_dec_it funs) acc c.c_local in
-  let c_eq, acc = mapfold (eq_it funs) acc c.c_eq in
+  let c_local, acc = var_decs_it funs acc c.c_local in
+  let c_eq, acc = eqs_it funs acc c.c_eq in
   { c with
     c_assume = c_assume; c_enforce = c_enforce; c_local = c_local; c_eq = c_eq }
   , acc
@@ -117,12 +126,12 @@ and contract funs acc c =
 
 and node_dec_it funs acc nd = funs.node_dec funs acc nd
 and node_dec funs acc nd =
-  let n_input, acc = mapfold (var_dec_it funs) acc nd.n_input in
-  let n_output, acc = mapfold (var_dec_it funs) acc nd.n_output in
-  let n_local, acc = mapfold (var_dec_it funs) acc nd.n_local in
+  let n_input, acc = var_decs_it funs acc nd.n_input in
+  let n_output, acc = var_decs_it funs acc nd.n_output in
+  let n_local, acc = var_decs_it funs acc nd.n_local in
   let n_params, acc = mapfold (param_it funs.global_funs) acc nd.n_params in
   let n_contract, acc =  optional_wacc (contract_it funs) acc nd.n_contract in
-  let n_equs, acc = mapfold (eq_it funs) acc nd.n_equs in
+  let n_equs, acc = eqs_it funs acc nd.n_equs in
   { nd with
       n_input = n_input; n_output = n_output;
       n_local = n_local; n_params = n_params;
@@ -164,9 +173,11 @@ let defaults = {
   app = app;
   edesc = edesc;
   eq = eq;
+  eqs = eqs;
   exp = exp;
   pat = pat;
   var_dec = var_dec;
+  var_decs = var_decs;
   contract = contract;
   node_dec = node_dec;
   const_dec = const_dec;
