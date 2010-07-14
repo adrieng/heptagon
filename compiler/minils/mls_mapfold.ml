@@ -16,24 +16,19 @@ open Minils
   either yours either the _default version *)
 
 type 'a mls_it_funs = {
-  app: 'a mls_it_funs -> 'a -> Minils.app -> Minils.app * 'a;
-  edesc: 'a mls_it_funs -> 'a -> Minils.edesc -> Minils.edesc * 'a;
-  eq: 'a mls_it_funs -> 'a -> Minils.eq -> Minils.eq * 'a;
-  exp: 'a mls_it_funs -> 'a -> Minils.exp -> Minils.exp * 'a;
-  pat: 'a mls_it_funs -> 'a -> Minils.pat -> Minils.pat * 'a;
-  var_dec: 'a mls_it_funs -> 'a -> Minils.var_dec -> Minils.var_dec * 'a;
-  contract:
-    'a mls_it_funs -> 'a -> Minils.contract -> Minils.contract * 'a;
-  node_dec:
-    'a mls_it_funs -> 'a -> Minils.node_dec -> Minils.node_dec * 'a;
-  const_dec:
-    'a mls_it_funs -> 'a -> Minils.const_dec -> Minils.const_dec * 'a;
-  type_dec:
-    'a mls_it_funs -> 'a -> Minils.type_dec -> Minils.type_dec * 'a;
-  tdesc: 'a mls_it_funs -> 'a -> Minils.tdesc -> Minils.tdesc * 'a;
-  program:
-    'a mls_it_funs -> 'a -> Minils.program -> Minils.program * 'a;
-  global_funs: 'a Global_mapfold.global_it_funs }
+  app:        'a mls_it_funs -> 'a -> Minils.app -> Minils.app * 'a;
+  edesc:      'a mls_it_funs -> 'a -> Minils.edesc -> Minils.edesc * 'a;
+  eq:         'a mls_it_funs -> 'a -> Minils.eq -> Minils.eq * 'a;
+  exp:        'a mls_it_funs -> 'a -> Minils.exp -> Minils.exp * 'a;
+  pat:        'a mls_it_funs -> 'a -> Minils.pat -> Minils.pat * 'a;
+  var_dec:    'a mls_it_funs -> 'a -> Minils.var_dec -> Minils.var_dec * 'a;
+  contract:   'a mls_it_funs -> 'a -> Minils.contract -> Minils.contract * 'a;
+  node_dec:   'a mls_it_funs -> 'a -> Minils.node_dec -> Minils.node_dec * 'a;
+  const_dec:  'a mls_it_funs -> 'a -> Minils.const_dec -> Minils.const_dec * 'a;
+  type_dec:   'a mls_it_funs -> 'a -> Minils.type_dec -> Minils.type_dec * 'a;
+  tdesc:      'a mls_it_funs -> 'a -> Minils.tdesc -> Minils.tdesc * 'a;
+  program:    'a mls_it_funs -> 'a -> Minils.program -> Minils.program * 'a;
+  global_funs:'a Global_mapfold.global_it_funs }
 
 
 let rec exp_it funs acc e = funs.exp funs acc e
@@ -165,7 +160,7 @@ and program funs acc p =
   let nd_list, acc = mapfold (node_dec_it funs) acc p.p_nodes in
   { p with p_types = td_list; p_consts = cd_list; p_nodes = nd_list }, acc
 
-let mls_funs_default = {
+let defaults = {
   app = app;
   edesc = edesc;
   eq = eq;
@@ -178,4 +173,4 @@ let mls_funs_default = {
   type_dec = type_dec;
   tdesc = tdesc;
   program = program;
-  global_funs = Global_mapfold.global_funs_default }
+  global_funs = Global_mapfold.defaults }

@@ -55,8 +55,7 @@ let is_op = function
 
 module Vars =
 struct
-  let add x acc =
-    if List.mem x acc then acc else x :: acc
+  let add x acc = if List.mem x acc then acc else x :: acc
 
   let rec vars_pat acc = function
     | Evarpat x -> x :: acc
@@ -67,54 +66,26 @@ struct
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
-  let rec read is_left acc e =
-    let acc =
-      match e.e_desc with
-        | Evar n -> add n acc
-        | Emerge(x, c_e_list) ->
-            let acc = add x acc in
-            List.fold_left (fun acc (_, e) -> read is_left acc e) acc c_e_list
-        | Eifthenelse(e1, e2, e3) ->
-            read is_left (read is_left (read is_left acc e1) e2) e3
-        | Ewhen(e, c, x) ->
-            let acc = add x acc in
-            read is_left acc e
-        | Etuple(e_list) -> List.fold_left (read is_left) acc e_list
-        | Ecall(_, e_list, None) ->
-            List.fold_left (read is_left) acc e_list
-        | Ecall(_, e_list, Some x) ->
-            let acc = add x acc in
-            List.fold_left (read is_left) acc e_list
-        | Efby(_, e) ->
-            if is_left then vars_ck acc e.e_ck else read is_left acc e
-        | Efield(e, _) -> read is_left acc e
-        | Estruct(f_e_list) ->
-            List.fold_left (fun acc (_, e) -> read is_left acc e) acc f_e_list
-        | Econst _ | Econstvar _ -> acc
-        | Efield_update (_, e1, e2) ->
-            read is_left (read is_left acc e1) e2
-              (*Array operators*)
-        | Earray e_list -> List.fold_left (read is_left) acc e_list
-        | Earray_op op -> read_array_op is_left acc op
+  let read_exp read_funs (is_left, acc) e =
+    (* recursive call *)
+    let _,(_, acc) = Mls_mapfold.exp read_funs (is_left, acc) e in
+    (* special cases *)
+    let acc = match e.e_desc with
+      | Evar x | Emerge(x,_) | Ewhen(_, _, x)
+      | Eapp(_, _, Some x) | Eiterator (_, _, _, _, Some x) ->
+          add x acc
+      | Efby(_, e) ->
+          if is_left then vars_ck acc e.e_ck else acc
+      | _ -> acc
     in
-    vars_ck acc e.e_ck
+    e, (is_left, vars_ck acc e.e_ck)
 
-  and read_array_op is_left acc = function
-    | Erepeat (_,e) -> read is_left acc e
-    | Eselect (_,e) -> read is_left acc e
-    | Eselect_dyn (e_list, e1, e2) ->
-        let acc = List.fold_left (read is_left) acc e_list in
-        read is_left (read is_left acc e1) e2
-    | Eupdate (_, e1, e2) ->
-        read is_left (read is_left acc e1) e2
-    | Eselect_slice (_ , _, e) -> read is_left acc e
-    | Econcat (e1, e2) ->
-        read is_left (read is_left acc e1) e2
-    | Eiterator (_, _, _, e_list, None) ->
-        List.fold_left (read is_left) acc e_list
-    | Eiterator (_, _, _, e_list, Some x) ->
-        let acc = add x acc in
-        List.fold_left (read is_left) acc e_list
+  let read_exp is_left acc e =
+    let _, (_, acc) =
+      Mls_mapfold.exp_it
+        { Mls_mapfold.defaults with Mls_mapfold.exp = read_exp }
+        (is_left, acc) e in
+    acc
 
   let rec remove x = function
     | [] -> []
@@ -122,21 +93,19 @@ struct
 
   let def acc { eq_lhs = pat } = vars_pat acc pat
 
-  let read is_left { eq_lhs = pat; eq_rhs = e } =
-    match pat, e.e_desc with
-      |  Evarpat(n), Efby(_, e1) ->
-           if is_left
-           then remove n (read is_left [] e1)
-           else read is_left [] e1
-      | _ -> read is_left [] e
+  let read is_left { eq_lhs = pat; eq_rhs = e } = match pat, e.e_desc with
+    |  Evarpat(n), Efby(_, e1) ->
+         if is_left
+         then remove n (read_exp is_left [] e1)
+         else read_exp is_left [] e1
+    | _ -> read_exp is_left [] e
 
   let antidep { eq_rhs = e } =
     match e.e_desc with Efby _ -> true | _ -> false
 
-  let clock { eq_rhs = e } =
-    match e.e_desc with
-      | Emerge(_, (_, e) :: _) -> e.e_ck
-      | _ -> e.e_ck
+  let clock { eq_rhs = e } = match e.e_desc with
+    | Emerge(_, (_, e) :: _) -> e.e_ck
+    | _ -> e.e_ck
 
   let head ck =
     let rec headrec ck l =
@@ -149,10 +118,9 @@ struct
 
   (** Returns a list of memory vars (x in x = v fby e)
       appearing in an equation. *)
-  let memory_vars ({ eq_lhs = _; eq_rhs = e } as eq)  =
-    match e.e_desc with
-      |  Efby(_, _) -> def [] eq
-      | _ -> []
+  let memory_vars ({ eq_lhs = _; eq_rhs = e } as eq) = match e.e_desc with
+    | Efby(_, _) -> def [] eq
+    | _ -> []
 end
 
 

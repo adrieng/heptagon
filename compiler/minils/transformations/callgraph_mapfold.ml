@@ -89,7 +89,7 @@ let collect_node_calls ln =
            | _ -> ed, (ln, params)::acc)
     | _ -> raise Misc.Fallback
   in
-  let funs = { Mls_mapfold.mls_funs_default with
+  let funs = { Mls_mapfold.defaults with
                  edesc = edesc } in
   let n = node_by_longname ln in
   let _, acc = Mls_mapfold.node_dec funs [] n in
@@ -165,9 +165,9 @@ struct
              | _ -> assert false)
 
   let node_dec_instance modname n params =
-    let global_funs = { global_funs_default with
+    let global_funs = { Global_mapfold.defaults with
                           static_exp = static_exp } in
-    let funs = { Mls_mapfold.mls_funs_default with
+    let funs = { Mls_mapfold.defaults with
                    edesc = edesc;
                    global_funs = global_funs } in
     let m = build NamesEnv.empty n.n_params params in
@@ -185,7 +185,8 @@ struct
     List.map (node_dec_instance modname n) (get_node_instances ln)
 
   let program p =
-    { p with p_nodes = List.flatten (List.map (node_dec p.p_modname) p.p_nodes) }
+    { p
+      with p_nodes = List.flatten (List.map (node_dec p.p_modname) p.p_nodes) }
 end
 
 let check_no_static_var se =
@@ -193,7 +194,7 @@ let check_no_static_var se =
     | Svar (Name n) -> Error.message se.se_loc (Error.Evar_unbound n)
     | _ -> raise Misc.Fallback
   in
-  let funs = { Global_mapfold.global_funs_default with
+  let funs = { Global_mapfold.defaults with
                  static_exp_desc = static_exp_desc } in
   ignore (Global_mapfold.static_exp_it funs false se)
 
