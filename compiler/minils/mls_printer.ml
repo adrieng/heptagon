@@ -1,3 +1,4 @@
+
 open Names
 open Ident
 open Types
@@ -47,6 +48,15 @@ let print_local_vars ff = function
   | [] -> ()
   | l -> fprintf ff "@[<4>%a@]@\n" (print_list_r print_vd "var "";"";") l
 
+let print_const_dec ff c =
+  if !Misc.full_type_info then
+    fprintf ff "const %a : %a = %a"
+      print_name c.c_name print_type c.c_type print_static_exp c.c_value
+  else
+    fprintf ff "const %a = %a"
+      print_name c.c_name print_static_exp c.c_value
+
+
 let rec print_params ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") l
 
@@ -74,14 +84,14 @@ and print_every ff reset =
   print_opt (fun ff id -> fprintf ff " every %a" print_ident id) ff reset
 
 and print_exp_desc ff = function
-  | Evar x -> print_ident ff x
   | Econst c -> print_static_exp ff c
+  | Evar x -> print_ident ff x
   | Efby ((Some c), e) ->
       fprintf ff "@[<2>%a fby@ %a@]" print_static_exp c print_exp e
   | Efby (None, e) -> fprintf ff "pre %a" print_exp e
   | Eapp (app, args, reset) ->
-      fprintf ff "@[<2>%a%a@]"
-        print_app (app, args)  print_every reset
+      fprintf ff "@[<2>%a@,%a@]"
+        print_app (app, args) print_every reset
   | Ewhen (e, c, n) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"
         print_exp e print_longname c print_ident n
@@ -90,45 +100,41 @@ and print_exp_desc ff = function
         print_ident x print_tag_e_list tag_e_list
   | Estruct f_e_list ->
       print_record (print_couple print_longname print_exp """ = """) ff f_e_list
-  | Eiterator (it, f, n, e_list, r) ->
+  | Eiterator (it, f, param, args, reset) ->
       fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
         (iterator_to_string it)
         print_app (f, [])
-        print_static_exp n
-        print_exp_tuple e_list
-        print_every r
+        print_static_exp param
+        print_exp_tuple args
+        print_every reset
 
-and print_app ff (op, e_list) =
-  match op, e_list with
-    | { a_op = Eifthenelse }, [e1; e2; e3] ->
-        fprintf ff "@[<hv>if %a@ then %a@ else %a@]"
-          print_exp e1 print_exp e2  print_exp e3
-    | { a_op = Earray }, e_list ->
-        fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") e_list
-    | { a_op = Earray_fill; a_params = [n] }, [e] ->
-        fprintf ff "%a^%a" print_exp e  print_static_exp n
-    | { a_op = Eselect; a_params = idx }, [e] ->
-        fprintf ff "%a%a" print_exp e  print_index idx
-    | { a_op = Eselect_dyn }, e1::e2::idx ->
-        fprintf ff "%a%a default %a"
-          print_exp e1  print_dyn_index idx  print_exp e2
-    | { a_op = Eupdate; a_params = idx }, [e1; e2] ->
+and print_app ff (app, args) = match app.a_op, app.a_params, args with
+  | Etuple, _, a -> print_exp_tuple ff a
+  | (Efun(f)|Enode(f)), p, a ->
+      fprintf ff "@[%a@,%a@,%a@]"
+        print_longname f print_params p print_exp_tuple a
+  | Eifthenelse, _, [e1; e2; e3] ->
+      fprintf ff "@[<hv>if %a@ then %a@ else %a@]"
+        print_exp e1 print_exp e2 print_exp e3
+  | Efield, [f], [r] -> fprintf ff "%a.%a" print_exp r print_static_exp f
+  | Efield_update, [f], [r; e] ->
+      fprintf ff "@[<2>{%a with .%a =@ %a}@]"
+        print_exp r print_static_exp f print_exp e
+  | Earray, _, a  -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") a
+  | Earray_fill, [n], [e] -> fprintf ff "%a^%a" print_exp e print_static_exp n
+  | Eselect, idx, [e] -> fprintf ff "%a%a" print_exp e print_index idx
+  | Eselect_slice, [idx1; idx2], [e]  ->
+      fprintf ff "%a[%a..%a]"
+        print_exp e  print_static_exp idx1  print_static_exp idx2
+  | Eselect_dyn, _, r::d::e ->
+      fprintf ff "%a%a default %a"
+        print_exp r  print_dyn_index e  print_exp d
+  | Eupdate, idx, [e1; e2] ->
         fprintf ff "@[<2>(%a with %a =@ %a)@]"
           print_exp e1 print_index idx print_exp e2
-    | { a_op = Eselect_slice; a_params = [idx1; idx2] }, [e] ->
-        fprintf ff "%a[%a..%a]"
-          print_exp e  print_static_exp idx1  print_static_exp idx2
-    | { a_op = Econcat }, [e1; e2] ->
-        fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
-    | { a_op = Efun f | Enode f; a_params = params }, e_list ->
-        print_longname ff f;
-        print_params ff params;
-        print_exp_tuple ff e_list
-    | { a_op = Efield; a_params = [field] }, [e] ->
-        fprintf ff "%a.%a" print_exp e print_static_exp field
-    | { a_op = Efield_update; a_params = [f] }, [e1; e2] ->
-        fprintf ff "@[<2>{%a with .%a =@ %a}@]"
-          print_exp e1  print_static_exp f  print_exp e2
+  | Econcat, _,[e1; e2] ->
+      fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
+
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_longname print_exp "("" -> "")") c
@@ -151,7 +157,7 @@ let print_eqs ff = function
 
 let print_open_module ff name = fprintf ff "open %a@." print_name name
 
-let rec print_type_def ff { t_name = name; t_desc = tdesc } =
+let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
   fprintf ff "@[<2>type %s%a@]@." name print_type_desc tdesc
 
 (** Small exception to the rule,
@@ -167,14 +173,10 @@ and print_type_desc ff = function
 and print_field ff field =
   fprintf ff "@[%a: %a@]" print_name field.f_name  print_type field.f_type
 
-let print_const_dec ff c =
-  fprintf ff "const %a = %a" print_name c.c_name
-    print_static_exp c.c_value
 
 let print_contract ff
-    { c_local = l; c_eq = eqs;
-      c_assume = e_a; c_enforce = e_g } =
-  fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@@]"
+    { c_local = l; c_eq = eqs; c_assume = e_a; c_enforce = e_g; } =
+  fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@]"
     print_local_vars l
     print_eqs eqs
     print_exp e_a
