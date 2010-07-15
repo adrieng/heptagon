@@ -6,7 +6,6 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-(* $Id$ *)
 
 open Misc
 open Names
@@ -81,11 +80,6 @@ let rec merge e x ci_a_list =
     | [e] -> e
     | l -> { e with e_desc = Eapp(mk_app Etuple, l, None) }
 
-let ifthenelse context e1 e2 e3 =
-  let context, n = intro context e1 in
-  let context, e2 = whenc context e2 ctrue n in
-  let context, e3 = whenc context e3 cfalse n in
-    context, merge e1 n [ctrue, e2; cfalse, e3]
 
 let const e c =
   let rec const = function
@@ -155,11 +149,6 @@ let rec translate kind context e =
                context, ((field, e) :: field_desc_list))
             l (context, []) in
         context, { e with e_desc = Estruct l }
-    | Eapp({ a_op = Eifthenelse }, [e1; e2; e3], _) ->
-        let context, e1 = translate Any context e1 in
-        let context, e2 = translate Act context e2 in
-        let context, e3 = translate Act context e3 in
-          ifthenelse context e1 e2 e3
     | Eapp(app, e_list, r) ->
         let context, e_list = translate_app kind context app.a_op e_list in
           context, { e with e_desc = Eapp(app, e_list, r) }
@@ -178,6 +167,14 @@ and translate_app kind context op e_list =
     | Etuple, e_list ->
         let context, e_list = translate_list kind context e_list in
           context, e_list
+    | Eifthenelse, [e1; e2; e3] ->
+        let context, e1 = translate Any context e1 in
+        let context, e2 = translate Act context e2 in
+        let context, e3 = translate Act context e3 in
+        let context, n = intro context e1 in
+        let context, e2 = whenc context e2 ctrue n in
+        let context, e3 = whenc context e3 cfalse n in
+          context, [merge e1 n [ctrue, e2; cfalse, e3]]
     | Efield, [e'] ->
         let context, e' = translate Exp context e' in
           context, [e']
