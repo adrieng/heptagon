@@ -182,7 +182,7 @@ let node funs _ n =
     { n with n_local = v @ n.n_local; n_equs = eq_list; }, (None, [], [])
 
 let program p =
-  let funs = { Hept_mapfold.hept_funs_default with
+  let funs = { Hept_mapfold.defaults with
                  eq = eq; node_dec = node; edesc = edesc } in
   let p, _ = program_it funs (None, [], []) p in
     p
