@@ -102,6 +102,11 @@ and translate_act map ((m, _, _, _) as context) pat
     | Minils.Etuplepat p_list,
       Minils.Eapp ({ Minils.a_op = Minils.Etuple }, act_list, _) ->
         List.flatten (List.map2 (translate_act map context) p_list act_list)
+    | Minils.Etuplepat p_list,
+        Minils.Econst { se_desc = Stuple se_list } ->
+        let const_list = List.map
+          (fun se -> Minils.mk_exp (Minils.Econst se)) se_list in
+          List.flatten (List.map2 (translate_act map context) p_list const_list)
     | pat, Minils.Ewhen (e, _, _) ->
         translate_act map context pat e
     | pat, Minils.Emerge (x, c_act_list) ->
