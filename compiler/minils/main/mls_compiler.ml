@@ -17,13 +17,9 @@ let compile pp p =
   (*let p = do_silent_pass Init.program "Initialization check" p !init in *)
 
   (* Normalization to maximize opportunities *)
-  (*let p = do_pass Normalize.program "Normalization" p pp true in*)
+  let p = do_pass Normalize.program "Normalization" p pp true in
 
   (* Scheduling *)
   let p = do_pass Schedule.program "Scheduling" p pp true in
-
-  (* Parametrized functions instantiation *)
-  (*let p = do_pass Callgraph_mapfold.program
-    "Parametrized functions instantiation" p pp true in *)
 
   p
