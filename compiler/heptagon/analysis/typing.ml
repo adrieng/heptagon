@@ -617,7 +617,7 @@ let rec typing statefull const_env h e =
                    n, e_list, reset) ->
           let { qualid = q; info = ty_desc } = find_value f in
           let op, expected_ty_list, result_ty_list =
-            kind f statefull ty_desc in
+            kind (Modname q) statefull ty_desc in
           let m = build_subst ty_desc.node_params params in
           let expected_ty_list =
             List.map (subst_type_vars m) expected_ty_list in
