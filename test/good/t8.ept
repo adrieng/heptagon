@@ -19,6 +19,6 @@ node f(x: t1; z1:t2) returns (o:t2)
     o = z1;
     m = { z = { y = 2; x = 1 }; u = 3 };
     z = { x = 4; y = 2 };
-    r = m.z.x;
+    r = (m.z).x;
   tel
 
