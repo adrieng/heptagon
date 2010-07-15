@@ -53,6 +53,13 @@ let is_record_type ty = match ty with
 let is_op = function
   | Modname { qual = "Pervasives"; id = _ } -> true | _ -> false
 
+
+let exp_list_of_static_exp_list se_list =
+  let mk_one_const se =
+    Minils.mk_exp ~exp_ty:se.se_ty (Minils.Econst se)
+  in
+    List.map mk_one_const se_list
+
 module Vars =
 struct
   let add x acc = if List.mem x acc then acc else x :: acc

@@ -1,0 +1,35 @@
+fun g(a:int) returns (u,v:int)
+let
+  u = a+1;
+  v = a-1;
+tel
+
+node f(a:int; c:bool) returns (o:int)
+var x,y:int;
+let
+  (x, y) = (0, 0) fby g(a);
+  o = a + x;
+tel
+
+node h(a:int; c:bool) returns (o:int)
+var x,y:int;
+let
+  (x, y) = if c then (1, 2) else (0, 0) fby g(a);
+  o = a + x;
+tel
+
+
+node p(a:int; c:bool) returns (o:int)
+var x,y:int;
+let
+  (x, y) = (1, 2) fby (0, 0) fby g(a);
+  o = a + x;
+tel
+
+(*
+(v1, v2, ...) fby (e1, e2, ...)
+---->
+(v1 fby e1, v2 fby e2, ...)
+
+
+*)

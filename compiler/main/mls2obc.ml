@@ -104,8 +104,7 @@ and translate_act map ((m, _, _, _) as context) pat
         List.flatten (List.map2 (translate_act map context) p_list act_list)
     | Minils.Etuplepat p_list,
         Minils.Econst { se_desc = Stuple se_list } ->
-        let const_list = List.map
-          (fun se -> Minils.mk_exp (Minils.Econst se)) se_list in
+        let const_list = Mls_utils.exp_list_of_static_exp_list se_list in
           List.flatten (List.map2 (translate_act map context) p_list const_list)
     | pat, Minils.Ewhen (e, _, _) ->
         translate_act map context pat e

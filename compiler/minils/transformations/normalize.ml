@@ -6,26 +6,41 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-
 open Misc
 open Names
 open Ident
 open Signature
 open Minils
 open Mls_utils
+open Types
 
 let ctrue = Name "true"
 and cfalse = Name "false"
 
-let equation (d_list, eq_list) ({ e_ty = te; e_ck = ck } as e) =
-  let n = Ident.fresh "_v" in
-  let d_list = (mk_var_dec ~clock:ck n te) :: d_list in
-  let eq_list = (mk_equation (Evarpat n) e) :: eq_list in
-  (d_list, eq_list), n
+let equation (d_list, eq_list) e =
+  let add_one_var ty d_list =
+    let n = Ident.fresh "_v" in
+    let d_list = (mk_var_dec ~clock:e.e_ck n ty) :: d_list in
+      n, d_list
+  in
+    match e.e_ty with
+      | Tprod ty_list ->
+          let var_list, d_list =
+            mapfold (fun d_list ty -> add_one_var ty d_list) d_list ty_list in
+          let pat_list = List.map (fun n -> Evarpat n) var_list in
+          let eq_list = (mk_equation (Etuplepat pat_list) e) :: eq_list in
+          let e_list = List.map2
+            (fun n ty -> mk_exp ~exp_ty:ty (Evar n)) var_list ty_list in
+          let e = Eapp(mk_app Etuple, e_list, None) in
+            (d_list, eq_list), e
+      | _ ->
+          let n, d_list = add_one_var e.e_ty d_list in
+          let eq_list = (mk_equation (Evarpat n) e) :: eq_list in
+            (d_list, eq_list), Evar n
 
 let intro context e =
   match e.e_desc with
-    | Evar n -> context, n
+    | Evar n -> context, Evar n
     | _ -> equation context e
 
 (* distribution: [(e1,...,ek) when C(n) = (e1 when C(n),...,ek when C(n))] *)
@@ -42,6 +57,16 @@ let rec whenc context e c n =
             e_list (context, []) in
         context, { e with e_desc = Eapp (app, e_list, r);
                      e_ck = Con(e.e_ck, c, n) }
+    | Econst { se_desc = Stuple se_list } ->
+        let e_list = exp_list_of_static_exp_list se_list in
+        let context, e_list =
+          List.fold_right
+            (fun e (context, e_list) -> let context, e = whenc context e c n in
+               (context, e :: e_list))
+            e_list (context, []) in
+        context, { e with e_desc = Eapp (mk_app Etuple, e_list, None);
+                     e_ck = Con(e.e_ck, c, n) }
+
           (* | Emerge _ -> let context, x = equation context e in
              context, when_on_c c n { e with e_desc = Evar(x) } *)
     | _ -> context, when_on_c c n e
@@ -72,6 +97,9 @@ let rec merge e x ci_a_list =
       | [] -> []
       | (ci, { e_desc = Eapp({ a_op =  Etuple }, l, _) }) :: ci_a_list ->
           (ci, false, l) :: erasetuple ci_a_list
+      | (ci, { e_desc = Econst { se_desc = Stuple se_list } }) :: ci_a_list ->
+          let l = exp_list_of_static_exp_list se_list in
+            (ci, false, l) :: erasetuple ci_a_list
       | (ci, e) :: ci_a_list ->
           (ci, true, [e]) :: erasetuple ci_a_list in
   let ci_tas_list = erasetuple ci_a_list in
@@ -82,6 +110,7 @@ let rec merge e x ci_a_list =
 
 let ifthenelse context e1 e2 e3 =
   let context, n = intro context e1 in
+  let n = (match n with Evar n -> n | _ -> assert false) in
   let context, e2 = whenc context e2 ctrue n in
   let context, e3 = whenc context e3 cfalse n in
     context, merge e1 n [ctrue, e2; cfalse, e3]
@@ -121,7 +150,7 @@ let add context expected_kind ({ e_desc = de } as e) =
     | _ -> false in
   if up then
     let context, n = equation context e in
-    context, { e with e_desc = Evar n }
+    context, { e with e_desc = n }
   else context, e
 
 let rec translate kind context e =
@@ -138,12 +167,8 @@ let rec translate kind context e =
         let context, e1 = translate kind context e1 in
         whenc context e1 c n
     | Efby(v, e1) ->
-        let context, e1 = translate Exp context e1 in
-        let context, e1' =
-          if constant e1 then context, e1
-          else let context, n = equation context e1 in
-          context, { e1 with e_desc = Evar(n) } in
-        context, { e with e_desc = Efby(v, e1') }
+        let context, e1 = translate Act context e1 in
+          fby kind context e v e1
     | Evar _ -> context, e
     | Econst c -> context, { e with e_desc = const e (Econst c) }
     | Estruct(l) ->
@@ -218,6 +243,36 @@ and translate_list kind context e_list =
         let context, e_list = translate_list kind context e_list in
         context, e :: e_list
 
+and fby kind context e v e1 =
+  let mk_fby c e =
+    mk_exp ~exp_ty:e.e_ty ~loc:e.e_loc (Efby(Some c, e)) in
+  let mk_pre e =
+    mk_exp ~exp_ty:e.e_ty ~loc:e.e_loc (Efby(None, e)) in
+  match e1.e_desc, v with
+    | Eapp({ a_op = Etuple } as app, e_list, r),
+      Some { se_desc = Stuple se_list } ->
+        let e_list = List.map2 mk_fby se_list e_list in
+        let e = { e with e_desc = Eapp(app, e_list, r) } in
+          translate kind context e
+    | Econst { se_desc = Stuple se_list },
+      Some { se_desc = Stuple v_list } ->
+        let e_list = List.map2 mk_fby v_list
+          (exp_list_of_static_exp_list se_list) in
+        let e = { e with e_desc = Eapp(mk_app Etuple, e_list, None) } in
+          translate kind context e
+    | Eapp({ a_op = Etuple } as app, e_list, r), None ->
+        let e_list = List.map mk_pre e_list in
+        let e = { e with e_desc = Eapp(app, e_list, r) } in
+          translate kind context e
+    | Econst { se_desc = Stuple se_list }, None ->
+        context, e1
+    | _ ->
+        let context, e1' =
+          if constant e1 then context, e1
+          else let context, n = equation context e1 in
+          context, { e1 with e_desc = n } in
+        context, { e with e_desc = Efby(v, e1') }
+
 let rec translate_eq context eq =
   (* applies distribution rules *)
   (* [x = v fby e] should verifies that x is local *)
@@ -228,7 +283,7 @@ let rec translate_eq context eq =
       | Evarpat(x), Efby _ when not (vd_mem x d_list) ->
           let (d_list, eq_list), n = equation context e in
           d_list,
-          { eq with eq_rhs = { e with e_desc = Evar n } } :: eq_list
+          { eq with eq_rhs = { e with e_desc = n } } :: eq_list
       | Etuplepat(pat_list), Eapp({ a_op = Etuple }, e_list, _) ->
           let eqs = List.map2 mk_equation pat_list e_list in
           List.fold_left distribute context eqs
