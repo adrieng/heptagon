@@ -405,7 +405,7 @@ let translate_node
   let resetm = {
     m_name = Mreset; m_inputs = []; m_outputs = [];
     m_locals = []; m_body = si } in
-    { cd_name = f; cd_mems = m;
+    { cd_name = f; cd_mems = m; cd_params = params;
       cd_objs = j; cd_methods = [stepm; resetm];
       cd_loc = loc }
 

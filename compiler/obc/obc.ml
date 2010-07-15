@@ -92,6 +92,7 @@ type class_def =
     { cd_name : class_name;
       cd_mems : var_dec list;
       cd_objs  : obj_dec list;
+      cd_params : param list;
       cd_methods: method_def list;
       cd_loc : location }
 
