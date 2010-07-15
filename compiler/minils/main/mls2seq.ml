@@ -12,16 +12,16 @@ open Obc
 open Minils
 open Misc
 
-type target_source =
-  | Obc
-  | Obc_no_params
-  | Minils
-  | Minils_no_params
+(** Definition of a target. A target starts either from
+    dataflow code (ie Minils) or sequential code (ie Obc),
+    with or without static parameters*)
+type target =
+  | Obc of (Obc.program -> unit)
+  | Obc_no_params of (Obc.program -> unit)
+  | Minils of (Minils.program -> unit)
+  | Minils_no_params of (Minils.program -> unit)
 
-type convert_fun =
-  | Obc_fun of (Obc.program -> unit)
-  | Mls_fun of (Minils.program -> unit)
-
+(** Writes a .epo file for program [p]. *)
 let write_object_file p =
   let filename = (filename_of_name p.Minils.p_modname)^".epo" in
   let epoc = open_out_bin filename in
@@ -29,6 +29,7 @@ let write_object_file p =
     output_value epoc p;
     close_out epoc
 
+(** Writes a .epo file for program [p]. *)
 let write_obc_file p =
   let obc_name = (filename_of_name p.Obc.p_modname)^".obc" in
   let obc = open_out obc_name in
@@ -36,25 +37,25 @@ let write_obc_file p =
     Obc_printer.print obc p;
     close_out obc
 
-let targets = [ "c", (Obc_no_params, Obc_fun Cmain.program);
-                "obc", (Obc, Obc_fun write_obc_file);
-                "obc_np", (Obc_no_params, Obc_fun write_obc_file);
-                "epo", (Minils, Mls_fun write_object_file) ]
+let targets = [ "c", Obc_no_params Cmain.program;
+                "obc", Obc write_obc_file;
+                "obc_np", Obc_no_params write_obc_file;
+                "epo", Minils write_object_file ]
 
 let generate_target p s =
-  let source, convert_fun =
+  let target =
     (try List.assoc s targets
     with Not_found -> language_error s; raise Error) in
-    match source, convert_fun with
-      | Minils, Mls_fun convert_fun ->
+    match target with
+      | Minils convert_fun ->
           convert_fun p
-      | Obc, Obc_fun convert_fun ->
+      | Obc convert_fun ->
           let o = Mls2obc.program p in
             convert_fun o
-      | Minils_no_params, Mls_fun convert_fun ->
+      | Minils_no_params convert_fun ->
           let p_list = Callgraph_mapfold.program p in
             List.iter convert_fun p_list
-      | Obc_no_params, Obc_fun convert_fun ->
+      | Obc_no_params convert_fun ->
           let p_list = Callgraph_mapfold.program p in
           let o_list = List.map Mls2obc.program p_list in
             List.iter convert_fun o_list
@@ -66,7 +67,7 @@ let program p =
       ["epo"]
     else
       match !target_languages with
-        | [] -> ["obc"];
+        | [] -> ["obc"]; (* by default, generate obc file *)
         | l -> l
   in
-    List.iter (generate_target p) targets;
+    List.iter (generate_target p) targets
