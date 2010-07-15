@@ -158,7 +158,7 @@ let rec translate kind context e =
     | Eapp({ a_op = Eifthenelse }, [e1; e2; e3], _) ->
         let context, e1 = translate Any context e1 in
         let context, e2 = translate Act context e2 in
-        let context, e2 = translate Act context e3 in
+        let context, e3 = translate Act context e3 in
           ifthenelse context e1 e2 e3
     | Eapp(app, e_list, r) ->
         let context, e_list = translate_app kind context app.a_op e_list in
