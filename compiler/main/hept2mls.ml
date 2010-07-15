@@ -113,8 +113,9 @@ let add_locals ni l_eqs s_eqs s_handlers =
               s_eqs s_handlers in
   addrec l_eqs s_eqs s_handlers
 
-let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; } =
-  mk_var_dec n ty
+let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty;
+                    Heptagon.v_loc = loc } =
+  mk_var_dec ~loc:loc n ty
 
 let translate_locals locals l =
   List.fold_left (fun locals v -> translate_var v :: locals) locals l

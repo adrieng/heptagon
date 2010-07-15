@@ -101,7 +101,8 @@ type eq = {
 type var_dec = {
   v_ident : var_ident;
   v_type : ty;
-  v_clock : ck }
+  v_clock : ck;
+  v_loc : location }
 
 type contract = {
   c_assume : exp;
@@ -140,8 +141,8 @@ type program = {
 let mk_exp ?(exp_ty = Tprod []) ?(clock = Cbase) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = exp_ty; e_ck = clock; e_loc = loc }
 
-let mk_var_dec ?(clock = Cbase) ident ty =
-  { v_ident = ident; v_type = ty; v_clock = clock }
+let mk_var_dec ?(loc = no_location) ?(clock = Cbase) ident ty =
+  { v_ident = ident; v_type = ty; v_clock = clock; v_loc = loc }
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }

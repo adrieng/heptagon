@@ -343,8 +343,8 @@ let obj_decl l =
                 o_size = i; o_loc = Location.no_location (*TODO*) }) l
 
 let translate_var_dec map l =
-  let one_var { Minils.v_ident = x; Minils.v_type = t } =
-    mk_var_dec x t
+  let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
+    mk_var_dec ~loc:loc x t
   in
   List.map one_var l
 
