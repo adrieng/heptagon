@@ -90,10 +90,6 @@ and translate v acc_eq_list e =
         let v, acc_eq_list, e_list = translate_list v acc_eq_list e_list in
         v, acc_eq_list,
         { e with e_desc = Eiterator(it, op, n, e_list, r) }
-    | Efield(e', field) ->
-        let v, acc_eq_list, e' = translate v acc_eq_list e' in
-        v,acc_eq_list,
-        { e with e_desc = Efield(e', field) }
     | Estruct(e_f_list) ->
         let v,acc_eq_list,e_f_list =
           List.fold_left

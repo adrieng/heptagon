@@ -196,6 +196,7 @@ let rec translate_op env = function
   | Heptagon.Eifthenelse -> Eifthenelse
   | Heptagon.Efun f -> Efun f
   | Heptagon.Enode f -> Enode f
+  | Heptagon.Efield -> Efield
   | Heptagon.Efield_update -> Efield_update
   | Heptagon.Earray_fill -> Earray_fill
   | Heptagon.Eselect -> Eselect
@@ -226,8 +227,6 @@ let rec translate env
         mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, translate env e))
     | Heptagon.Efby ({ Heptagon.e_desc = Heptagon.Econst c }, e) ->
         mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, translate env e))
-    | Heptagon.Efield(e, field) ->
-        assert false (**TODO *)
     | Heptagon.Estruct f_e_list ->
         let f_e_list = List.map
           (fun (f, e) -> (f, translate env e)) f_e_list in

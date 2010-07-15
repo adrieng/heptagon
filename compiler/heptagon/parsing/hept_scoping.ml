@@ -169,7 +169,6 @@ and translate_desc loc const_env env = function
                     translate_exp const_env env e)
   | Efby (e1, e2) -> Heptagon.Efby (translate_exp const_env env e1,
                                     translate_exp const_env env e2)
-  | Efield (e, field) -> Heptagon.Efield (translate_exp const_env env e, field)
   | Estruct f_e_list ->
       let f_e_list =
         List.map (fun (f,e) -> f, translate_exp const_env env e) f_e_list in
@@ -190,6 +189,7 @@ and translate_desc loc const_env env = function
 and translate_op = function
   | Earrow -> Heptagon.Earrow
   | Eifthenelse -> Heptagon.Eifthenelse
+  | Efield -> Heptagon.Efield
   | Efield_update -> Heptagon.Efield_update
   | Etuple -> Heptagon.Etuple
   | Earray -> Heptagon.Earray

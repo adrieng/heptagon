@@ -105,7 +105,6 @@ let rec typing e =
         let t2 = pre (typing e2) in
           candlist [t1; t2]
     | Eapp({ a_op = op }, e_list, _) -> apply op e_list
-    | Efield(e1, _) -> typing e1
     | Estruct(l) ->
         let l = List.map (fun (_, e) -> typing e) l in
         candlist l
@@ -119,6 +118,7 @@ and apply op e_list =
         let t1 = typing e1 in
         let t2 = typing e2 in
         candlist [t1; t2]
+    | Efield, [e1] -> typing e1
     | Eifthenelse, [e1; e2; e3] ->
         let t1 = typing e1 in
         let i2 = typing e2 in

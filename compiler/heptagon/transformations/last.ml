@@ -60,8 +60,6 @@ and translate env e =
         { e with e_desc = Efby(translate env e1, translate env e2) }
     | Eapp(op, e_list, r) ->
         { e with e_desc = Eapp(op, List.map (translate env) e_list, r) }
-    | Efield(e', field) ->
-        { e with e_desc = Efield(translate env e', field) }
     | Estruct(e_f_list) ->
         { e with e_desc =
             Estruct(List.map (fun (f, e) -> (f, translate env e)) e_f_list) }

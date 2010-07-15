@@ -108,9 +108,6 @@ and edesc funs acc ed = match ed with
       let e1, acc = exp_it funs acc e1 in
       let e2, acc = exp_it funs acc e2 in
       Efby (e1,e2), acc
-  | Efield (e, n) ->
-      let e, acc = exp_it funs acc e in
-      Efield(e, n), acc
   | Estruct n_e_list ->
       let aux acc (n,e) =
         let e, acc = exp_it funs acc e in

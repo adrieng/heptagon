@@ -248,8 +248,6 @@ and translate res e =
 
     | Eapp(op, e_list, _) ->
         { e with e_desc = Eapp(op, List.map (translate res) e_list, None) }
-    | Efield(e', field) ->
-        { e with e_desc = Efield(translate res e', field) }
     | Estruct(e_f_list) ->
         { e with e_desc =
             Estruct(List.map (fun (f, e) -> (f, translate res e)) e_f_list) }

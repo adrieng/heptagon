@@ -30,7 +30,6 @@ and desc =
   | Elast of var_ident
   | Epre of static_exp option * exp
   | Efby of exp * exp
-  | Efield of exp * field_name
   | Estruct of (field_name * exp) list
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp * exp list * exp option
@@ -43,6 +42,7 @@ and op =
   | Enode of fun_name
   | Eifthenelse
   | Earrow
+  | Efield
   | Efield_update (* field name args would be [record ; value] *)
   | Earray
   | Earray_fill

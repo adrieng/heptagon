@@ -446,8 +446,6 @@ exp:
       { mk_exp (mk_call Earrow [$1; $3]) }
   | LAST IDENT
       { mk_exp (Elast $2) }
-  | simple_exp DOT longname
-      { mk_exp (Efield ($1, $3)) }
 /*Array operations*/
   | exp POWER simple_exp
       { mk_exp (mk_call ~params:[$3] Earray_fill [$1]) }
@@ -468,9 +466,11 @@ exp:
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_exp (mk_iterator_call $1 $3 $5 $9 $12) }
 /*Records operators */
-  | LBRACE e=simple_exp WITH DOT ln=longname EQUAL nv=exp RBRACE
-    { let fn = mk_exp (Econst (mk_static_exp (Sconstructor ln))) in
-        mk_exp (mk_call ~params:[fn] Efield_update [e; nv]) }
+  | simple_exp DOT longname
+      { mk_exp (mk_call ~params:[mk_constructor_exp $3] Efield [$1]) }
+  | LBRACE simple_exp WITH DOT longname EQUAL exp RBRACE
+      { mk_exp (mk_call ~params:[mk_constructor_exp $5]
+                  Efield_update [$2; $7]) }
 ;
 
 call_params:

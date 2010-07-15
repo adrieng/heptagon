@@ -207,9 +207,6 @@ let rec typing h e =
     | Eapp({ a_op = op }, e_list, _) ->
         let i = apply h op e_list in
         skeleton i e.e_ty
-    | Efield(e1, _) ->
-        let i = itype (typing h e1) in
-        skeleton i e.e_ty
     | Estruct(l) ->
         let i =
           List.fold_left
@@ -226,6 +223,8 @@ and apply h op e_list =
         let ty1 = typing h e1 in
         let _ = typing h e2 in
         itype ty1
+    | Efield, [e1] ->
+        itype (typing h e1)
     | Earray, e_list ->
         List.fold_left
           (fun acc e -> max acc (itype (typing h e))) izero e_list

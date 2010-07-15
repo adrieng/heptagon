@@ -33,7 +33,6 @@ and desc =
   | Elast of name
   | Epre of exp option * exp
   | Efby of exp * exp
-  | Efield of exp * longname
   | Estruct of (longname * exp) list
   | Eapp of app * exp list
   | Eiterator of iterator_type * app * exp * exp list
@@ -46,6 +45,7 @@ and op =
   | Efun of longname
   | Eifthenelse
   | Earrow
+  | Efield
   | Efield_update (* field name args would be [record ; value] *)
   | Earray
   | Earray_fill
@@ -182,6 +182,9 @@ let mk_op_call ?(params=[]) s exps =
 
 let mk_iterator_call it ln params n exps =
   Eiterator (it, mk_app (Enode ln) params, n, exps)
+
+let mk_constructor_exp f =
+  mk_exp (Econst (mk_static_exp (Sconstructor f)))
 
 let mk_type_dec name desc =
   { t_name = name; t_desc = desc; t_loc = Location.current_loc () }

@@ -64,9 +64,6 @@ and print_exp ff e =
            | None -> ()
            | Some r -> fprintf ff " every %a" print_exp r
         )
-    | Efield(e, field) ->
-        print_exp ff e; fprintf ff ".";
-        print_longname ff field
     | Estruct(f_e_list) ->
         print_list_r
           (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
@@ -116,6 +113,9 @@ and print_op ff op params e_list =
         print_longname ff f;
         print_call_params ff params;
         print_exps ff e_list
+    | Efield, [field], [e] ->
+        print_exp ff e; fprintf ff ".";
+        print_static_exp ff field
     | Efield_update, [se], [e1;e2] ->
         fprintf ff "(@[";
         print_exp ff e1;

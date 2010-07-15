@@ -240,7 +240,6 @@ let rec is_statefull_exp e =
     | Eiterator(_, { a_op = Enode _ }, _, _, _) -> true
     | Eiterator(_, _, _, e_list, _) ->
         List.exists is_statefull_exp e_list
-    | Efield(e, _) -> is_statefull_exp e
 
 let rec is_statefull_eq_desc = function
   | Eautomaton(handlers) ->
@@ -580,12 +579,6 @@ let rec typing statefull const_env h e =
             typing_app statefull const_env h op e_list in
             Eapp(op, typed_e_list, r), ty
 
-      | Efield(e, f) ->
-          let typed_e, t1 = typing statefull const_env h e in
-          let q, fields = struct_info e.e_loc t1 in
-          let t2 = field_type const_env f fields t1 e.e_loc in
-          Efield(typed_e, Modname { qual = q.qual; id = shortname f }), t2
-
       | Estruct(l) ->
           (* find the record type using the first field *)
           let q, fields =
@@ -707,6 +700,18 @@ and typing_app statefull const_env h op e_list =
         let n = mk_static_exp ~ty:(Tid Initial.pint)
           (Sint (List.length e_list + 1)) in
           Tarray(t1, n), op, typed_exp::typed_e_list
+
+    | { a_op = Efield; a_params = [f] }, [e] ->
+        let fn =
+          (match f.se_desc with
+             | Sconstructor fn -> fn
+             | _ -> assert false) in
+        let typed_e, t1 = typing statefull const_env h e in
+        let q, fields = struct_info e.e_loc t1 in
+        let t2 = field_type const_env fn fields t1 e.e_loc in
+        let fn = Modname { qual = q.qual; id = shortname fn } in
+        let f = { f with se_desc = Sconstructor fn } in
+          t2, { op with a_params = [f] }, [typed_e]
 
     | { a_op = Efield_update; a_params = [f] }, [e1; e2] ->
         let typed_e1, t1 = typing statefull const_env h e1 in
