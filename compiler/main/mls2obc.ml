@@ -119,7 +119,8 @@ and translate_c_act_list map context pat c_act_list =
 
 let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
     (m, si, j, s) =
-  let { Minils.e_desc = desc; Minils.e_ty = ty; Minils.e_ck = ck } = e in
+  let { Minils.e_desc = desc; Minils.e_ty = ty;
+        Minils.e_ck = ck; Minils.e_loc = loc } = e in
   match (pat, desc) with
     | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
         let x = var_from_name map n in
@@ -144,7 +145,7 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           (match app.Minils.a_op with
              | Minils.Enode _ -> (reinit o) :: si
              | Minils.Efun _ -> si) in
-        let j = (o, n, None) :: j in
+        let j = (o, n, None, loc) :: j in
         let action = Acall (name_list, o, Mstep, c_list) in
         let s = (match r, app.Minils.a_op with
                    | Some r, Minils.Enode _ ->
@@ -280,7 +281,7 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           (match app.Minils.a_op with
              | Minils.Efun _ -> si
              | Minils.Enode _ -> (reinit o) :: si) in
-        let j = (o, f, Some n) :: j in
+        let j = (o, f, Some n, loc) :: j in
         let action = translate_iterator map it x name_list o n c_list in
         let action = List.map (control map ck) action in
         let s =
@@ -338,9 +339,9 @@ let var_decl l =
   List.map (fun (x, t) -> mk_var_dec x t) l
 
 let obj_decl l =
-  List.map (fun (x, t, i) ->
+  List.map (fun (x, t, i, loc) ->
               { o_name = obj_call_name x; o_class = t;
-                o_size = i; o_loc = Location.no_location (*TODO*) }) l
+                o_size = i; o_loc = loc }) l
 
 let translate_var_dec map l =
   let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
