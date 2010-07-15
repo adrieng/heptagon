@@ -312,9 +312,9 @@ let typ_of_last h x =
       Not_found -> error (Eundefined(sourcename x))
 
 let desc_of_ty = function
+  | Tid n when n = pbool  -> Tenum ["true";"false"]
   | Tid ty_name ->
       let { info = tydesc } = find_type ty_name in tydesc
-  | Tid n when n = pbool  -> Tenum ["true";"false"]
   | _  -> Tabstract
 let set_of_constr = function
   | Tabstract | Tstruct _  -> assert false
@@ -800,44 +800,37 @@ and typing_app statefull const_env h op e_list =
         error (Earity_clash(List.length e_list, 2))
 
 and typing_iterator statefull const_env h
-    it n args_ty_list result_ty_list e_list =
-  match it with
-    | Imap ->
-        let args_ty_list = List.map (fun ty -> Tarray(ty, n)) args_ty_list in
-        let result_ty_list =
-          List.map (fun ty -> Tarray(ty, n)) result_ty_list in
-        let typed_e_list = typing_args statefull const_env h
-          args_ty_list e_list in
-        prod result_ty_list, typed_e_list
+    it n args_ty_list result_ty_list e_list = match it with
+  | Imap ->
+      let args_ty_list = List.map (fun ty -> Tarray(ty, n)) args_ty_list in
+      let result_ty_list =
+        List.map (fun ty -> Tarray(ty, n)) result_ty_list in
+      let typed_e_list = typing_args statefull const_env h
+        args_ty_list e_list in
+      prod result_ty_list, typed_e_list
 
-    | Ifold ->
-        let args_ty_list =
-          incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
-        let typed_e_list = typing_args statefull const_env h args_ty_list e_list in
-        (*check accumulator type matches in input and output*)
-        if List.length result_ty_list > 1 then
-          error (Etoo_many_outputs);
-        begin try
-          unify (last_element args_ty_list) (List.hd result_ty_list)
-        with
-            TypingError(kind) -> message (List.hd e_list).e_loc kind
-        end;
-        (List.hd result_ty_list), typed_e_list
+  | Ifold ->
+      let args_ty_list =
+        incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
+      let typed_e_list =
+        typing_args statefull const_env h args_ty_list e_list in
+      (*check accumulator type matches in input and output*)
+      if List.length result_ty_list > 1 then error Etoo_many_outputs;
+      ( try unify (last_element args_ty_list) (List.hd result_ty_list)
+        with TypingError(kind) -> message (List.hd e_list).e_loc kind );
+      (List.hd result_ty_list), typed_e_list
 
     | Imapfold ->
-        let args_ty_list =
-          incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
-        let result_ty_list =
-          incomplete_map (fun ty -> Tarray (ty, n)) result_ty_list in
-        let typed_e_list = typing_args statefull const_env h
-          args_ty_list e_list in
-        (*check accumulator type matches in input and output*)
-        begin try
-          unify (last_element args_ty_list) (last_element result_ty_list)
-        with
-            TypingError(kind) -> message (List.hd e_list).e_loc kind
-        end;
-        prod result_ty_list, typed_e_list
+      let args_ty_list =
+        incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
+      let result_ty_list =
+        incomplete_map (fun ty -> Tarray (ty, n)) result_ty_list in
+      let typed_e_list = typing_args statefull const_env h
+        args_ty_list e_list in
+      (*check accumulator type matches in input and output*)
+      ( try unify (last_element args_ty_list) (last_element result_ty_list)
+        with TypingError(kind) -> message (List.hd e_list).e_loc kind );
+      prod result_ty_list, typed_e_list
 
 and typing_array_subscript statefull const_env h idx_list ty  =
   match ty, idx_list with
