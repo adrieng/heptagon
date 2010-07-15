@@ -115,67 +115,62 @@ let prod =
 let typ_of_name h x = Env.find x h
 
 let rec typing h e =
-  let ct =
-    match e.e_desc with
-      | Econst _ | Econstvar _ -> Ck (new_var ())
-      | Evar x -> Ck (typ_of_name h x)
-      | Efby (c, e) -> typing h e
-      | Etuple e_list -> Cprod (List.map (typing h) e_list)
-      | Ecall(_, e_list, r) ->
-          let ck_r = match r with
-            | None -> new_var()
-            | Some(reset) -> typ_of_name h reset
-          in (List.iter (expect h (Ck ck_r)) e_list; skeleton ck_r e.e_ty)
-      | Ewhen (e, c, n) ->
-          let ck_n = typ_of_name h n
-          in (expect h (skeleton ck_n e.e_ty) e;
-              skeleton (Con (ck_n, c, n)) e.e_ty)
-      | Eifthenelse (e1, e2, e3) ->
-          let ck = new_var () in
-          let ct = skeleton ck e.e_ty
-          in (expect h (Ck ck) e1; expect h ct e2; expect h ct e3; ct)
-      | Emerge (n, c_e_list) ->
-          let ck_c = typ_of_name h n
-          in (typing_c_e_list h ck_c n c_e_list; skeleton ck_c e.e_ty)
-      | Efield (e1, n) ->
-          let ck = new_var () in
-          let ct = skeleton ck e1.e_ty in (expect h (Ck ck) e1; ct)
-      | Efield_update (_, e1, e2) ->
-          let ck = new_var () in
-          let ct = skeleton ck e.e_ty
-          in (expect h (Ck ck) e1; expect h ct e2; ct)
-      | Estruct l ->
-          let ck = new_var () in
-          (List.iter
-             (fun (n, e) -> let ct = skeleton ck e.e_ty in expect h ct e) l;
-           Ck ck)
-      | Earray e_list ->
-          let ck = new_var ()
-          in (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
-      | Earray_op(op) -> typing_array_op h e op
-  in (e.e_ck <- ckofct ct; ct)
-
-and typing_array_op h e = function
-  | Erepeat (_, e) -> typing h e
-  | Eselect (_, e) -> typing h e
-  | Eselect_dyn (e_list, e, defe) ->
-      let ck = new_var () in
-      let ct = skeleton ck e.e_ty
-      in (expect h ct e; List.iter (expect h ct) e_list; ct)
-  | Eupdate (_, e1, e2) ->
-      let ck = new_var () in
-      let ct = skeleton ck e.e_ty
-      in (expect h (Ck ck) e1; expect h ct e2; ct)
-  | Eselect_slice (_, _, e) -> typing h e
-  | Econcat (e1, e2) ->
-      let ck = new_var () in
-      let ct = skeleton ck e.e_ty
-      in (expect h (Ck ck) e1; expect h ct e2; ct)
-  | Eiterator (_, _, _, e_list, r) ->
-      let ck_r = match r with
+  let ct = match e.e_desc with
+    | Econst _ -> Ck (new_var ())
+    | Evar x -> Ck (typ_of_name h x)
+    | Efby (c, e) -> typing h e
+    | Eapp({a_op = op}, args, r) ->
+        let ck = match r with
+        | None -> new_var ()
+        | Some(reset) -> typ_of_name h reset
+        in typing_op op args h e ck
+     (* Typed exactly as a fun or a node... *)
+   | Eiterator (_, _, _, args, r) ->
+      let ck = match r with
         | None -> new_var()
         | Some(reset) -> typ_of_name h reset
-      in (List.iter (expect h (Ck ck_r)) e_list; skeleton ck_r e.e_ty)
+      in (List.iter (expect h (Ck ck)) args; skeleton ck e.e_ty)
+    | Ewhen (e, c, n) ->
+        let ck_n = typ_of_name h n
+        in (expect h (skeleton ck_n e.e_ty) e;
+            skeleton (Con (ck_n, c, n)) e.e_ty)
+    | Emerge (n, c_e_list) ->
+        let ck_c = typ_of_name h n
+        in (typing_c_e_list h ck_c n c_e_list; skeleton ck_c e.e_ty)
+    | Estruct l ->
+        let ck = new_var () in
+        (List.iter
+           (fun (n, e) -> let ct = skeleton ck e.e_ty in expect h ct e) l;
+         Ck ck)
+  in (e.e_ck <- ckofct ct; ct)
+
+and typing_op op args h e ck = match op, args with
+  | (Efun _ | Enode _), e_list ->
+      (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
+  | Etuple, e_list -> Cprod (List.map (typing h) e_list)
+  | Eifthenelse, [e1; e2; e3] ->
+      let ct = skeleton ck e.e_ty
+      in (expect h (Ck ck) e1; expect h ct e2; expect h ct e3; ct)
+  | Efield, [e1] ->
+      let ct = skeleton ck e1.e_ty in (expect h (Ck ck) e1; ct)
+  | Efield_update, [e1; e2] ->
+      let ct = skeleton ck e.e_ty
+      in (expect h (Ck ck) e1; expect h ct e2; ct)
+  | Earray, e_list ->
+      (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
+  | Earray_fill, [e] -> typing h e
+  | Eselect, [e] -> typing h e
+  | Eselect_dyn, e1::defe::idx -> (* TODO defe not treated ? *)
+      let ct = skeleton ck e1.e_ty
+      in (expect h ct e1; List.iter (expect h ct) idx; ct)
+  | Eupdate, [e1; e2] ->
+      let ct = skeleton ck e.e_ty
+      in (expect h (Ck ck) e1; expect h ct e2; ct)
+  | Eselect_slice, [e] -> typing h e
+  | Econcat, [e1; e2] ->
+      let ct = skeleton ck e.e_ty
+      in (expect h (Ck ck) e1; expect h ct e2; ct)
+
 
 
 and expect h expected_ty e =
@@ -220,9 +215,7 @@ let typing_contract h contract base =
     | Some { c_local = l_list;
              c_eq = eq_list;
              c_assume = e_a;
-             c_enforce = e_g;
-             c_controllables = c_list } ->
-        let h = sbuild h c_list base in
+             c_enforce = e_g; } ->
         let h' = build h l_list in
         (* assumption *)
         (* property *)
