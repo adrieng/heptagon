@@ -66,16 +66,20 @@ struct
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
-  let read_exp read_funs (is_left, acc) e =
+  let read_exp read_funs (is_left, acc_init) e =
     (* recursive call *)
-    let _,(_, acc) = Mls_mapfold.exp read_funs (is_left, acc) e in
+    let _,(_, acc) = Mls_mapfold.exp read_funs (is_left, acc_init) e in
     (* special cases *)
     let acc = match e.e_desc with
       | Evar x | Emerge(x,_) | Ewhen(_, _, x)
       | Eapp(_, _, Some x) | Eiterator (_, _, _, _, Some x) ->
           add x acc
       | Efby(_, e) ->
-          if is_left then vars_ck acc e.e_ck else acc
+          if is_left then
+            (* do not consider variables to the right
+               of the fby, only clocks*)
+            vars_ck acc_init e.e_ck
+          else acc
       | _ -> acc
     in
     e, (is_left, vars_ck acc e.e_ck)
