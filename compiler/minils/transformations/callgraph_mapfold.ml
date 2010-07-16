@@ -92,9 +92,12 @@ let node_by_longname ln =
     corresponding params (static parameters appear as free variables). *)
 let collect_node_calls ln =
   let add_called_node ln params acc =
-    match ln with
-      | Modname { qual = "Pervasives" } -> acc
-      | _ -> (ln, params)::acc
+    match params with
+      | [] -> acc
+      | _ ->
+          (match ln with
+            | Modname { qual = "Pervasives" } -> acc
+            | _ -> (ln, params)::acc)
   in
   let edesc funs acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
