@@ -190,6 +190,20 @@ struct
             let params = List.map (simplify m) params in
             Eapp ({ app with a_op = Enode (node_for_params_call ln params);
                       a_params = [] }, e_list, r)
+        | Eiterator(it, ({ a_op = Efun ln; a_params = params } as app),
+                   n, e_list, r) ->
+            let params = List.map (simplify m) params in
+              Eiterator(it,
+                        { app with a_op = Efun
+                            (node_for_params_call ln params);
+                            a_params = [] }, n, e_list, r)
+        | Eiterator(it, ({ a_op = Enode ln; a_params = params } as app),
+                   n, e_list, r) ->
+            let params = List.map (simplify m) params in
+              Eiterator(it,
+                        { app with a_op = Enode
+                            (node_for_params_call ln params);
+                            a_params = [] }, n, e_list, r)
         | _ -> ed
     in ed, m
 
