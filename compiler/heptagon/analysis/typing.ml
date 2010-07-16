@@ -20,6 +20,7 @@ open Initial
 open Static
 open Types
 open Heptagon
+open Hept_mapfold
 
 type value = { ty: ty; mutable last: bool }
 
@@ -238,7 +239,7 @@ let is_statefull_eq_desc eqd =
     | _ -> raise Misc.Fallback
   in
   let funs = { Hept_mapfold.defaults with edesc = edesc } in
-  let _, is_statefull = eq_desc_it funs false eqd in
+  let _, is_statefull = Hept_mapfold.eqdesc_it funs false eqd in
     is_statefull
 
 let kind f statefull
