@@ -231,47 +231,15 @@ let unify t1 t2 =
 
 let less_than statefull = if not statefull then error Estate_clash
 
-let rec is_statefull_exp e =
-  match e.e_desc with
-    | Econst _ | Evar _ | Estruct _ -> false
-    | Elast _ | Efby _ | Epre _ -> true
-    | Eapp({ a_op = (Enode _ | Earrow) }, _, _) -> true
-    | Eapp(_, e_list, _) -> List.exists is_statefull_exp e_list
-    | Eiterator(_, { a_op = Enode _ }, _, _, _) -> true
-    | Eiterator(_, _, _, e_list, _) ->
-        List.exists is_statefull_exp e_list
-
-let rec is_statefull_eq_desc = function
-  | Eautomaton(handlers) ->
-      (List.exists is_statefull_state_handler handlers)
-  | Eswitch(e, handlers) ->
-      (is_statefull_exp e) or
-        (List.exists is_statefull_switch_handler handlers)
-  | Epresent(handlers, b) ->
-      (is_statefull_block b) or
-        (List.exists is_statefull_present_handler handlers)
-  | Ereset(eq_list, e) ->
-      (is_statefull_exp e) or
-        (List.exists (fun eq -> eq.eq_statefull) eq_list)
-  | Eeq(_, e) -> is_statefull_exp e
-
-and is_statefull_block b =
-  b.b_statefull
-
-and is_statefull_present_handler ph =
-  (is_statefull_exp ph.p_cond) or
-    (is_statefull_block ph.p_block)
-
-and is_statefull_switch_handler sh =
-  is_statefull_block sh.w_block
-
-and is_statefull_state_handler sh =
-  (is_statefull_block sh.s_block) or
-    (List.exists is_statefull_escape sh.s_until) or
-    (List.exists is_statefull_escape sh.s_unless)
-
-and is_statefull_escape esc =
-  is_statefull_exp esc.e_cond
+let is_statefull_eq_desc eqd =
+  let edesc funs _ ed = match ed with
+    | Elast _ | Efby _ | Epre _ -> ed, true
+    | Eapp({ a_op = (Enode _ | Earrow) }, _, _) -> ed, true
+    | _ -> raise Misc.Fallback
+  in
+  let funs = { Hept_mapfold.defaults with edesc = edesc } in
+  let _, is_statefull = eq_desc_it funs false eqd in
+    is_statefull
 
 let kind f statefull
     { node_inputs = ty_list1;
