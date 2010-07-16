@@ -206,12 +206,11 @@ node_params:
 
 contract:
   | /* empty */ {None}
-  | CONTRACT loc_vars opt_equs opt_assume enforce opt_with
+  | CONTRACT loc_vars opt_equs opt_assume enforce
       {Some{c_local = $2;
 	    c_eq = $3;
 	    c_assume = $4;
-	    c_enforce = $5;
-	    c_controllables = $6 }}
+	    c_enforce = $5 }}
 ;
 
 opt_equs:
@@ -226,11 +225,6 @@ opt_assume:
 
 enforce:
   | ENFORCE exp { $2 }
-;
-
-opt_with:
-  | /* empty */ { [] }
-  | WITH LPAREN params RPAREN { $3 }
 ;
 
 loc_vars:
