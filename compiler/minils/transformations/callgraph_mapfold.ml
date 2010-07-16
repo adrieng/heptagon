@@ -91,11 +91,17 @@ let node_by_longname ln =
 (** @return the list of nodes called by the node named [ln], with the
     corresponding params (static parameters appear as free variables). *)
 let collect_node_calls ln =
+  let add_called_node ln params acc =
+    match ln with
+      | Modname { qual = "Pervasives" } -> acc
+      | _ -> (ln, params)::acc
+  in
   let edesc funs acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
-        (match ln with
-           | Modname { qual = "Pervasives" } -> ed, acc
-           | _ -> ed, (ln, params)::acc)
+        ed, add_called_node ln params acc
+    | Eiterator(_, { a_op = (Enode ln | Efun ln); a_params = params },
+                _, _, _) ->
+        ed, add_called_node ln params acc
     | _ -> raise Misc.Fallback
   in
   let funs = { Mls_mapfold.defaults with
