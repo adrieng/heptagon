@@ -74,7 +74,9 @@ and apply_op op se_list =
            | Modname { qual = "Pervasives"; id = "/" } ->
                let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
                  Sint n
-           | _ -> assert false (*TODO: add missing operators*)
+           | Modname { qual = "Pervasives"; id = "=" } ->
+               Sbool (n1 = n2)
+           | _ -> Format.printf "Unsupported op: %s\n" (fullname op); assert false (*TODO: add missing operators*)
         )
     | [{ se_desc = Sint n }] ->
         (match op with
