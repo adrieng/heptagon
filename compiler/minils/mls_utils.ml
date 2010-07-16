@@ -1,4 +1,5 @@
 open Minils
+open Mls_mapfold
 open Mls_printer
 open Location
 open Names
@@ -134,6 +135,15 @@ struct
     | _ -> []
 end
 
+let node_memory_vars n =
+  let eq funs acc ({ eq_lhs = pat; eq_rhs = e } as eq) =
+    match e.e_desc with
+    | Efby(_, _) -> eq, Vars.vars_pat acc pat
+    | _ -> eq, acc
+  in
+  let funs = { Mls_mapfold.defaults with eq = eq } in
+  let _, acc = node_dec_it funs [] n in
+    acc
 
 (* data-flow dependences. pre-dependences are discarded *)
 module DataFlowDep = Dep.Make

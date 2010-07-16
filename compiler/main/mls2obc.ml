@@ -58,15 +58,15 @@ let rec translate_pat map = function
         pat_list []
 
 (* [translate e = c] *)
-let rec translate map (m, si, j, s) e =
+let rec translate map (si, j, s) e =
   let desc = match e.Minils.e_desc with
     | Minils.Econst v -> Econst v
     | Minils.Evar n -> Elhs (var_from_name map n)
     | Minils.Eapp ({ Minils.a_op = Minils.Efun n },
                    e_list, _) when Mls_utils.is_op n ->
-        Eop (n, List.map (translate map (m, si, j, s)) e_list)
+        Eop (n, List.map (translate map (si, j, s)) e_list)
     | Minils.Ewhen (e, _, _) ->
-        let e = translate map (m, si, j, s) e in
+        let e = translate map (si, j, s) e in
           e.e_desc
     | Minils.Estruct f_e_list ->
         let type_name =
@@ -75,20 +75,20 @@ let rec translate map (m, si, j, s) e =
              | _ -> assert false) in
         let f_e_list =
           List.map
-            (fun (f, e) -> (f, (translate map (m, si, j, s) e)))
+            (fun (f, e) -> (f, (translate map (si, j, s) e)))
             f_e_list
         in Estruct (type_name, f_e_list)
     | Minils.Eapp ({ Minils.a_op = Minils.Efield;
                     Minils.a_params = [{ se_desc = Sconstructor f }] },
                    [e], _) ->
-        let e = translate map (m, si, j, s) e in
+        let e = translate map (si, j, s) e in
           Elhs (mk_lhs (Lfield (lhs_of_exp e, f)))
      (*Array operators*)
     | Minils.Eapp ({ Minils.a_op = Minils.Earray }, e_list, _) ->
-        Earray (List.map (translate map (m, si, j, s)) e_list)
+        Earray (List.map (translate map (si, j, s)) e_list)
     | Minils.Eapp ({ Minils.a_op = Minils.Eselect;
                      Minils.a_params = idx }, [e], _) ->
-        let e = translate map (m, si, j, s) e in
+        let e = translate map (si, j, s) e in
         let idx_list = List.map (fun idx -> mk_exp (Econst idx)) idx in
           Elhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
     | _ -> (*Minils_printer.print_exp stdout e; flush stdout;*) assert false
@@ -96,7 +96,7 @@ let rec translate map (m, si, j, s) e =
     mk_exp ~ty:e.Minils.e_ty desc
 
 (* [translate pat act = si, j, d, s] *)
-and translate_act map ((m, _, _, _) as context) pat
+and translate_act map context pat
     ({ Minils.e_desc = desc } as act) =
   match pat, desc with
     | Minils.Etuplepat p_list,
@@ -122,7 +122,7 @@ and translate_c_act_list map context pat c_act_list =
     c_act_list
 
 let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
-    (m, si, j, s) =
+    (si, j, s) =
   let { Minils.e_desc = desc; Minils.e_ty = ty;
         Minils.e_ck = ck; Minils.e_loc = loc } = e in
   match (pat, desc) with
@@ -133,17 +133,16 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                     | Some c ->
                         (Aassgn (x,
                                 mk_exp (Econst c))) :: si) in
-        let m = (n, ty) :: m in
         let action = Aassgn (var_from_name map n,
-                            translate map (m, si, j, s) e)
+                            translate map (si, j, s) e)
         in
-        m, si, j, (control map ck action) :: s
+          si, j, (control map ck action) :: s
 
     | pat, Minils.Eapp ({ Minils.a_op = Minils.Efun n | Minils.Enode n;
                           Minils.a_params = params } as app,
                          e_list, r) ->
         let name_list = translate_pat map pat in
-        let c_list = List.map (translate map (m, si, j, s)) e_list in
+        let c_list = List.map (translate map (si, j, s)) e_list in
         let o = Oobj (gen_obj_name n) in
         let si =
           (match app.Minils.a_op with
@@ -158,7 +157,7 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                            (reinit o) in
                        ra :: (control map ck action) :: s
                    | _, _ -> (control map ck action) :: s) in
-        m, si, j, s
+        si, j, s
 
     | Minils.Etuplepat p_list,
         Minils.Eapp({ Minils.a_op = Minils.Etuple }, act_list, _) ->
@@ -166,34 +165,34 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           (fun pat e ->
              translate_eq map
                (Minils.mk_equation pat e))
-          p_list act_list (m, si, j, s)
+          p_list act_list (si, j, s)
 
     | pat, Minils.Eapp({ Minils.a_op = Minils.Eifthenelse }, [e1;e2;e3], _) ->
-        let cond = translate map (m, si, j, s) e1 in
-        let m, si, j, true_act = translate_eq map
-          (Minils.mk_equation pat e2) (m, si, j, s) in
-        let m, si, j, false_act = translate_eq map
-          (Minils.mk_equation pat e3) (m, si, j, s) in
+        let cond = translate map (si, j, s) e1 in
+        let si, j, true_act = translate_eq map
+          (Minils.mk_equation pat e2) (si, j, s) in
+        let si, j, false_act = translate_eq map
+          (Minils.mk_equation pat e3) (si, j, s) in
         let action = Acase (cond, [Name "true", true_act;
                                    Name "false", false_act]) in
-          m, si, j, (control map ck action) :: s
+          si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
           Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
                    Minils.a_params = [{ se_desc = Sconstructor f }] },
                   [e1; e2], _) ->
         let x = var_from_name map x in
-        let copy = Aassgn (x, translate map (m, si, j, s) e1) in
+        let copy = Aassgn (x, translate map (si, j, s) e1) in
         let action =
-          Aassgn (mk_lhs (Lfield (x, f)), translate map (m, si, j, s) e2)
+          Aassgn (mk_lhs (Lfield (x, f)), translate map (si, j, s) e2)
         in
-        m, si, j, (control map ck copy) :: (control map ck action) :: s
+        si, j, (control map ck copy) :: (control map ck action) :: s
 
     | Minils.Evarpat x,
         Minils.Eapp ({ Minils.a_op = Minils.Eselect_slice;
                        Minils.a_params = [idx1; idx2] }, [e], _) ->
         let cpt = Ident.fresh "i" in
-        let e = translate map (m, si, j, s) e in
+        let e = translate map (si, j, s) e in
         let idx = mk_exp (Eop (op_from_string "+",
                                [mk_evar cpt;
                                 mk_exp (Econst idx1) ])) in
@@ -208,32 +207,32 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                [Aassgn (mk_lhs (Larray (var_from_name map x, mk_evar cpt)),
                       mk_lhs_exp (Larray (lhs_of_exp e, idx)))] )
         in
-        m, si, j, (control map ck action) :: s
+        si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
           Minils.Eapp ({ Minils.a_op = Minils.Eselect_dyn }, e1::e2::idx, _) ->
         let x = var_from_name map x in
         let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
-        let e1 = translate map (m, si, j, s) e1 in
-        let idx = List.map (translate map (m, si, j, s)) idx in
+        let e1 = translate map (si, j, s) e1 in
+        let idx = List.map (translate map (si, j, s)) idx in
         let true_act =
           Aassgn (x, mk_exp (Elhs (lhs_of_idx_list (lhs_of_exp e1) idx))) in
-        let false_act = Aassgn (x, translate map (m, si, j, s) e2) in
+        let false_act = Aassgn (x, translate map (si, j, s) e2) in
         let cond = bound_check_expr idx bounds in
         let action = Acase (cond, [ Name "true", [true_act];
                                     Name "false", [false_act] ]) in
-          m, si, j, (control map ck action) :: s
+          si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
             Minils.Eapp ({ Minils.a_op = Minils.Eupdate;
                            Minils.a_params = idx }, [e1; e2], _) ->
         let x = var_from_name map x in
-        let copy = Aassgn (x, translate map (m, si, j, s) e1) in
+        let copy = Aassgn (x, translate map (si, j, s) e1) in
         let idx = List.map (fun idx -> mk_exp (Econst idx)) idx in
         let action = Aassgn (lhs_of_idx_list x idx,
-                            translate map (m, si, j, s) e2)
+                            translate map (si, j, s) e2)
         in
-        m, si, j, (control map ck copy) :: (control map ck action) :: s
+        si, j, (control map ck copy) :: (control map ck action) :: s
 
     | Minils.Evarpat x,
               Minils.Eapp ({ Minils.a_op = Minils.Earray_fill;
@@ -243,9 +242,9 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           Afor (cpt, mk_static_exp (Sint 0), n,
                 [Aassgn (mk_lhs (Larray (var_from_name map x,
                                  mk_evar cpt)),
-                      translate map (m, si, j, s) e) ])
+                      translate map (si, j, s) e) ])
         in
-        m, si, j, (control map ck action) :: s
+        si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
                 Minils.Eapp ({ Minils.a_op = Minils.Econcat }, [e1; e2], _) ->
@@ -254,8 +253,8 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let x = var_from_name map x in
         (match e1.Minils.e_ty, e2.Minils.e_ty with
            | Tarray (_, n1), Tarray (_, n2) ->
-               let e1 = translate map (m, si, j, s) e1 in
-               let e2 = translate map (m, si, j, s) e2 in
+               let e1 = translate map (si, j, s) e1 in
+               let e2 = translate map (si, j, s) e2 in
                let a1 =
                  Afor (cpt1, mk_static_exp (Sint 0), n1,
                       [Aassgn (mk_lhs (Larray (x, mk_evar cpt1)),
@@ -269,7 +268,7 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                               mk_lhs_exp (Larray (lhs_of_exp e2,
                                                    mk_evar cpt2)))] )
                in
-               m, si, j, (control map ck a1) :: (control map ck a2) :: s
+               si, j, (control map ck a1) :: (control map ck a2) :: s
            | _ -> assert false )
 
     | pat, Minils.Eiterator (it,
@@ -278,7 +277,7 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                           n, e_list, reset) ->
         let name_list = translate_pat map pat in
         let c_list =
-          List.map (translate map (m, si, j, s)) e_list in
+          List.map (translate map (si, j, s)) e_list in
         let x = Ident.fresh "i" in
         let o = Oarray (gen_obj_name f, mk_lhs (Lvar x)) in
         let si =
@@ -294,12 +293,12 @@ let rec translate_eq map { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                  (control map (Minils.Con (ck, Name "true", r)) (reinit o)) ::
                   action @ s
              | _, _ -> action @ s)
-        in (m, si, j, s)
+        in (si, j, s)
 
     | (pat, _) ->
-        let action = translate_act map (m, si, j, s) pat e in
+        let action = translate_act map (si, j, s) pat e in
         let action = List.map (control map ck) action in
-          m, si, j, action @ s
+          si, j, action @ s
 
 and translate_iterator map it x name_list objn n c_list =
   let array_of_output name_list =
@@ -334,7 +333,7 @@ and translate_iterator map it x name_list objn n c_list =
                           c_list @ [ mk_exp (Elhs acc_out) ])]) ]
 
 let translate_eq_list map act_list =
-  List.fold_right (translate_eq map) act_list ([], [], [], [])
+  List.fold_right (translate_eq map) act_list ([], [], [])
 
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list
@@ -353,9 +352,9 @@ let translate_var_dec map l =
   in
   List.map one_var l
 
-let translate_contract map =
+let translate_contract map mem_vars =
   function
-    | None -> ([], [], [], [], [])
+    | None -> ([], [], [], [])
     | Some
         {
           Minils.c_eq = eq_list;
@@ -363,10 +362,11 @@ let translate_contract map =
           Minils.c_assume = e_a;
           Minils.c_enforce = e_c
         } ->
-        let (m, si, j, s_list) = translate_eq_list map eq_list in
-        let d_list = remove m d_list in
+        let (si, j, s_list) = translate_eq_list map eq_list in
         let d_list = translate_var_dec map d_list in
-         (m, si, j, s_list, d_list)
+        let d_list = List.filter
+          (fun vd -> not (List.mem vd.v_ident mem_vars)) d_list in
+         (si, j, s_list, d_list)
 
 (** Returns a map, mapping variables names to the variables
     where they will be stored. *)
@@ -380,7 +380,7 @@ let subst_map inputs outputs locals mems =
   List.fold_left (fun m x -> Env.add x (mk_lhs (Lmem x)) m) m mems
 
 let translate_node
-    {
+    ({
       Minils.n_name = f;
       Minils.n_input = i_list;
       Minils.n_output = o_list;
@@ -389,18 +389,18 @@ let translate_node
       Minils.n_contract = contract;
       Minils.n_params = params;
       Minils.n_loc = loc;
-    } =
-  let mem_vars = List.flatten (List.map Mls_utils.Vars.memory_vars eq_list) in
+    } as n) =
+  let mem_vars = Mls_utils.node_memory_vars n in
   let subst_map = subst_map i_list o_list d_list mem_vars in
-  let (m, si, j, s_list) = translate_eq_list subst_map eq_list in
-  let (m', si', j', s_list', d_list') =
-    translate_contract subst_map contract in
-  let d_list = remove m d_list in
+  let (si, j, s_list) = translate_eq_list subst_map eq_list in
+  let (si', j', s_list', d_list') =
+    translate_contract subst_map mem_vars contract in
   let i_list = translate_var_dec subst_map i_list in
   let o_list = translate_var_dec subst_map o_list in
   let d_list = translate_var_dec subst_map d_list in
+  let m, d_list = List.partition
+    (fun vd -> List.mem vd.v_ident mem_vars) d_list in
   let s = joinlist (s_list @ s_list') in
-  let m = var_decl (m @ m') in
   let j = obj_decl (j @ j') in
   let si = joinlist (si @ si') in
   let stepm = {
