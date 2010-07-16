@@ -57,10 +57,6 @@ let rec struct_name ty =
 let int_of_static_exp se =
   Static.int_of_static_exp NamesEnv.empty se
 
-let cname_of_name' name = match name with
-  | Name n -> Name (cname_of_name n)
-  | _ -> name
-
 (* Functions to deal with opened modules set. *)
 type world = { mutable opened_modules : S.t }
 let world = { opened_modules = S.empty }
@@ -91,17 +87,18 @@ let node_info classln =
                                         id = modname_name }))
         with Not_found ->
           (* name might be of the form Module.name, remove the module name*)
-          let ind_name = (String.length modname) + 1 in
+          (*let ind_name = (String.length modname) + 1 in
           let name = String.sub modname_name ind_name
             ((String.length modname_name)-ind_name) in
           begin try
             modname, find_value (Modname({qual = modname;
                                           id = name }))
-          with Not_found ->
-            Error.message no_location (Error.Enode name)
-          end
+          with Not_found ->*)
+            Error.message no_location (Error.Enode modname)
+          (*end *)
         end
     | Name n ->
+        assert false;
         Error.message no_location (Error.Enode n)
 
 let output_names_list sig_info =
@@ -544,7 +541,7 @@ let fun_def_of_step_fun name obj_env mem objs md =
   let out_vars =
     unique
       (List.map (fun obj -> out_var_name_of_objn (shortname obj.o_class),
-                   Cty_id ((cname_of_name (shortname obj.o_class)) ^ "_out"))
+                   Cty_id ((shortname obj.o_class) ^ "_out"))
          (List.filter (fun obj -> not (is_op obj.o_class)) objs)) in
 
   (** The body *)
@@ -575,7 +572,7 @@ let mem_decl_of_class_def cd =
   let struct_field_of_obj_dec l od =
     if is_statefull od.o_class then
       let clsname = shortname od.o_class in
-      let ty = Cty_id ((cname_of_name clsname) ^ "_mem") in
+      let ty = Cty_id (clsname ^ "_mem") in
       let ty = match od.o_size with
         | Some se -> Cty_arr (int_of_static_exp se, ty)
         | None -> ty in
@@ -623,11 +620,8 @@ let cdefs_and_cdecls_of_class_def cd =
   let step_m = find_step_method cd in
   let memory_struct_decl = mem_decl_of_class_def cd in
   let out_struct_decl = out_decl_of_class_def cd in
-  let obj_env =
-    List.map (fun od -> { od with o_class = cname_of_name' od.o_class })
-      cd.cd_objs in
   let step_fun_def
-    = fun_def_of_step_fun cd.cd_name obj_env cd.cd_mems cd.cd_objs step_m in
+    = fun_def_of_step_fun cd.cd_name cd.cd_objs cd.cd_mems cd.cd_objs step_m in
   (** C function for resetting our memory structure. *)
   let reset_fun_def = reset_fun_def_of_class_def cd in
   let res_fun_decl = cdecl_of_cfundef reset_fun_def in

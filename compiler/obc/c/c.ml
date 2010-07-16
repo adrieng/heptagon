@@ -21,6 +21,21 @@ let rec print_list ff print sep l =
         fprintf ff "%s@ " sep;
         print_list ff print sep l
 
+(** [cname_of_name name] translates the string [name] to a valid C identifier.
+    Copied verbatim from the old C backend. *)
+let cname_of_name name =
+  let buf = Buffer.create (String.length name) in
+  let rec convert c =
+    match c with
+      | 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' ->
+          Buffer.add_char buf c
+      | '\'' -> Buffer.add_string buf "_prime"
+      | _ ->
+          Buffer.add_string buf "lex";
+          Buffer.add_string buf (string_of_int (Char.code c));
+          Buffer.add_string buf "_" in
+  String.iter convert name;
+  Buffer.contents buf
 
 (******************************)
 
@@ -141,13 +156,14 @@ let rec pp_list f sep fmt l = match l with
   | [] -> fprintf fmt ""
   | h :: t -> fprintf fmt "@ %a%s%a" f h sep (pp_list f sep) t
 
-let pp_string fmt s = fprintf fmt "%s" s
+let pp_string fmt s =
+  fprintf fmt "%s" (cname_of_name s)
 
 let rec pp_cty fmt cty = match cty with
   | Cty_int -> fprintf fmt "int"
   | Cty_float -> fprintf fmt "float"
   | Cty_char -> fprintf fmt "char"
-  | Cty_id s -> fprintf fmt "%s" s
+  | Cty_id s -> pp_string fmt s
   | Cty_ptr cty' -> fprintf fmt "%a*" pp_cty cty'
   | Cty_arr (n, cty') -> fprintf fmt "%a[%d]" pp_cty cty' n
   | Cty_void -> fprintf fmt "void"
@@ -171,10 +187,10 @@ let rec pp_param_cty fmt = function
 let rec pp_vardecl fmt (s, cty) = match cty with
   | Cty_arr (n, cty') ->
       let ty, indices = pp_array_decl cty in
-      fprintf fmt "%a %s%s" pp_cty ty s indices
-  | _ -> fprintf fmt "%a %s" pp_cty cty s
+      fprintf fmt "%a %a%s" pp_cty ty  pp_string s indices
+  | _ -> fprintf fmt "%a %a" pp_cty cty  pp_string s
 and pp_paramdecl fmt (s, cty) = match cty with
-  | Cty_arr (n, cty') -> fprintf fmt "%a* %s" pp_param_cty cty' s
+  | Cty_arr (n, cty') -> fprintf fmt "%a* %a" pp_param_cty cty'  pp_string s
   | _ -> pp_vardecl fmt (s, cty)
 and pp_param_list fmt l = pp_list1 pp_paramdecl "," fmt l
 and pp_var_list fmt l = pp_list pp_vardecl ";" fmt l
@@ -200,8 +216,9 @@ and pp_cstm fmt stm = match stm with
       fprintf fmt "@[<v>@[<v 2>if (%a) {%a@]@ @[<v 2>} else {%a@]@ }@]"
         pp_cexpr c pp_cstm_list t pp_cstm_list e
   | Cfor(x, lower, upper, e) ->
-      fprintf fmt "@[<v>@[<v 2>for (int %s = %d; %s < %d; ++%s) {%a@]@ }@]"
-        x lower x upper x  pp_cstm_list e
+      fprintf fmt "@[<v>@[<v 2>for (int %a = %d; %a < %d; ++%a) {%a@]@ }@]"
+        pp_string x  lower  pp_string x
+        upper  pp_string x  pp_cstm_list e
   | Cwhile (e, b) ->
       fprintf fmt "@[<v>@[<v 2>while (%a) {%a@]@ }@]" pp_cexpr e pp_cstm_list b
   | Csblock cb -> pp_cblock fmt cb
@@ -210,23 +227,24 @@ and pp_cstm fmt stm = match stm with
 and pp_cexpr fmt ce = match ce with
   | Cuop (s, e) -> fprintf fmt "%s(%a)" s pp_cexpr e
   | Cbop (s, l, r) -> fprintf fmt "(%a%s%a)" pp_cexpr l s pp_cexpr r
-  | Cfun_call (s, el) -> fprintf fmt "%s(@[%a@])" s (pp_list1 pp_cexpr ",") el
+  | Cfun_call (s, el) ->
+      fprintf fmt "%a(@[%a@])"  pp_string s  (pp_list1 pp_cexpr ",") el
   | Cconst (Ccint i) -> fprintf fmt "%d" i
   | Cconst (Ccfloat f) -> fprintf fmt "%f" f
   | Cconst (Ctag "true") -> fprintf fmt "TRUE"
   | Cconst (Ctag "false") -> fprintf fmt "FALSE"
-  | Cconst (Ctag t) -> fprintf fmt "%s" t
+  | Cconst (Ctag t) -> pp_string fmt t
   | Cconst (Cstrlit t) -> fprintf fmt "\"%s\"" t
   | Clhs lhs -> fprintf fmt "%a" pp_clhs lhs
   | Caddrof lhs -> fprintf fmt "&%a" pp_clhs lhs
   | Cstructlit (s, el) ->
-      fprintf fmt "(%s){@[%a@]}" s (pp_list1 pp_cexpr ",") el
+      fprintf fmt "(%a){@[%a@]}" pp_string s (pp_list1 pp_cexpr ",") el
   | Carraylit el ->
       fprintf fmt "((int *){@[%a@]})" (pp_list1 pp_cexpr ",") el (* WRONG *)
 and pp_clhs fmt lhs = match lhs with
-  | Cvar s -> fprintf fmt "%s" s
+  | Cvar s -> pp_string fmt s
   | Cderef lhs' -> fprintf fmt "*%a" pp_clhs lhs'
-  | Cfield (Cderef lhs, f) -> fprintf fmt "%a->%s" pp_clhs lhs f
+  | Cfield (Cderef lhs, f) -> fprintf fmt "%a->%a" pp_clhs lhs  pp_string f
   | Cfield (lhs, f) -> fprintf fmt "%a.%s" pp_clhs lhs f
   | Carray (lhs, e) ->
       fprintf fmt "%a[%a]"
@@ -235,14 +253,14 @@ and pp_clhs fmt lhs = match lhs with
 
 let pp_cdecl fmt cdecl = match cdecl with
   | Cdecl_enum (s, sl) ->
-      fprintf fmt "@[<v>@[<v 2>typedef enum {@ %a@]@ } %s;@ @]@\n"
-        (pp_list1 pp_string ",") sl s
+      fprintf fmt "@[<v>@[<v 2>typedef enum {@ %a@]@ } %a;@ @]@\n"
+        (pp_list1 pp_string ",") sl  pp_string s
   | Cdecl_struct (s, fl) ->
       let pp_field fmt (s, cty) =
         fprintf fmt "@ %a;" pp_vardecl (s,cty) in
-      fprintf fmt "@[<v>@[<v 2>typedef struct %s {" s;
+      fprintf fmt "@[<v>@[<v 2>typedef struct %a {"  pp_string s;
       List.iter (pp_field fmt) fl;
-      fprintf fmt "@]@ } %s;@ @]@\n" s
+      fprintf fmt "@]@ } %a;@ @]@\n"  pp_string s
   | Cdecl_function (n, retty, args) ->
       fprintf fmt "@[<v>%a %s(@[<hov>%a@]);@ @]@\n"
         pp_cty retty n pp_param_list args
@@ -253,7 +271,7 @@ let pp_cdef fmt cdef = match cdef with
         "@[<v>@[<v 2>%a %s(@[<hov>%a@]) {%a@]@ }@ @]@\n"
         pp_cty cfd.f_retty cfd.f_name pp_param_list cfd.f_args
         pp_cblock cfd.f_body
-  | Cvardef (s, cty) -> fprintf fmt "%a %s;@\n" pp_cty cty s
+  | Cvardef (s, cty) -> fprintf fmt "%a %a;@\n" pp_cty cty  pp_string s
 
 let pp_cfile_desc fmt filen cfile =
   (** [filen_wo_ext] is the file's name without the extension. *)
@@ -296,22 +314,6 @@ let output dir cprog =
   List.iter (output_cfile dir) cprog
 
 (** { Lexical conversions to C's syntax } *)
-
-(** [cname_of_name name] translates the string [name] to a valid C identifier.
-    Copied verbatim from the old C backend. *)
-let cname_of_name name =
-  let buf = Buffer.create (String.length name) in
-  let rec convert c =
-    match c with
-      | 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' ->
-          Buffer.add_char buf c
-      | '\'' -> Buffer.add_string buf "_prime"
-      | _ ->
-          Buffer.add_string buf "lex";
-          Buffer.add_string buf (string_of_int (Char.code c));
-          Buffer.add_string buf "_" in
-  String.iter convert name;
-  Buffer.contents buf
 
 (** Converts an expression to a lhs. *)
 let lhs_of_exp e =
