@@ -6,7 +6,7 @@ check_file() {
   name=$1
   tmp=$2
 
-  if [ `wc -L $tmp | awk '{ print $1 }'` -gt 80 ]; then
+  if [  `awk ' { if ( length > x ) { x = length } } END { print x }' $tmp` -gt 80 ]; then
     echo "File \"$name\" has lines with more than 80 columns."
     bad=1
   fi
