@@ -500,14 +500,15 @@ let global_name = ref "";;
 
 (** {2 step() and reset() functions generation *)
 
-
+let mk_current_longname n =
+  Modname { qual = !global_name; id = n }
 
 (** Builds the argument list of step function*)
-let step_fun_args n mems md =
+let step_fun_args n md =
   let args = cvarlist_of_ovarlist md.m_inputs in
   let out_arg = [("out", Cty_ptr (Cty_id (n ^ "_out")))] in
   let context_arg =
-    if not (is_empty mems) then
+    if is_statefull (mk_current_longname n) then
       [("self", Cty_ptr (Cty_id (n ^ "_mem")))]
     else
       []
@@ -525,7 +526,7 @@ let fun_def_of_step_fun name obj_env mem objs md =
   let fun_name = name ^ "_step" in
   (** Its arguments, translating Obc types to C types and adding our internal
       memory structure. *)
-  let args = step_fun_args name mem md in
+  let args = step_fun_args name md in
   (** Its normal local variables. *)
   let local_vars = List.map cvar_of_vd md.m_locals in
 
@@ -572,7 +573,7 @@ let mem_decl_of_class_def cd =
     else
       l
   in
-    if not (is_empty cd.cd_mems) then (
+    if is_statefull (mk_current_longname cd.cd_name) then (
       (** Fields corresponding to normal memory variables. *)
       let mem_fields = List.map cvar_of_vd cd.cd_mems in
       (** Fields corresponding to object variables. *)
@@ -622,7 +623,7 @@ let cdefs_and_cdecls_of_class_def cd =
   let res_fun_decl = cdecl_of_cfundef reset_fun_def in
   let step_fun_decl = cdecl_of_cfundef step_fun_def in
   let fun_defs =
-    if not (is_empty cd.cd_mems) then
+    if is_statefull (mk_current_longname cd.cd_name) then
       ([res_fun_decl; step_fun_decl], [reset_fun_def; step_fun_def])
     else
       ([step_fun_decl], [step_fun_def]) in
