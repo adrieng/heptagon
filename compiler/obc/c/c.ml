@@ -161,6 +161,11 @@ let rec pp_array_decl cty =
         ty, sprintf "%s[%d]" s n
     | _ -> cty, ""
 
+let rec pp_param_cty fmt = function
+    | Cty_arr(n, cty') ->
+          fprintf fmt "%a*" pp_param_cty cty'
+    | cty -> pp_cty fmt cty
+
 (* pp_vardecl, featuring an ugly hack coping with C's inconsistent concrete
    syntax! *)
 let rec pp_vardecl fmt (s, cty) = match cty with
@@ -169,7 +174,7 @@ let rec pp_vardecl fmt (s, cty) = match cty with
       fprintf fmt "%a %s%s" pp_cty ty s indices
   | _ -> fprintf fmt "%a %s" pp_cty cty s
 and pp_paramdecl fmt (s, cty) = match cty with
-  | Cty_arr (n, cty') -> fprintf fmt "%a* %s" pp_cty cty' s
+  | Cty_arr (n, cty') -> fprintf fmt "%a* %s" pp_param_cty cty' s
   | _ -> pp_vardecl fmt (s, cty)
 and pp_param_list fmt l = pp_list1 pp_paramdecl "," fmt l
 and pp_var_list fmt l = pp_list pp_vardecl ";" fmt l
