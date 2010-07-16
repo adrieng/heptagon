@@ -225,7 +225,7 @@ and pp_cstm fmt stm = match stm with
   | Cskip -> fprintf fmt ""
   | Creturn e -> fprintf fmt "return %a" pp_cexpr e
 and pp_cexpr fmt ce = match ce with
-  | Cuop (s, e) -> fprintf fmt "%s(%a)" s pp_cexpr e
+  | Cuop (s, e) -> fprintf fmt "%s(%a)" s  pp_cexpr e
   | Cbop (s, l, r) -> fprintf fmt "(%a%s%a)" pp_cexpr l s pp_cexpr r
   | Cfun_call (s, el) ->
       fprintf fmt "%a(@[%a@])"  pp_string s  (pp_list1 pp_cexpr ",") el
@@ -262,14 +262,14 @@ let pp_cdecl fmt cdecl = match cdecl with
       List.iter (pp_field fmt) fl;
       fprintf fmt "@]@ } %a;@ @]@\n"  pp_string s
   | Cdecl_function (n, retty, args) ->
-      fprintf fmt "@[<v>%a %s(@[<hov>%a@]);@ @]@\n"
-        pp_cty retty n pp_param_list args
+      fprintf fmt "@[<v>%a %a(@[<hov>%a@]);@ @]@\n"
+        pp_cty retty  pp_string n  pp_param_list args
 
 let pp_cdef fmt cdef = match cdef with
   | Cfundef cfd ->
       fprintf fmt
-        "@[<v>@[<v 2>%a %s(@[<hov>%a@]) {%a@]@ }@ @]@\n"
-        pp_cty cfd.f_retty cfd.f_name pp_param_list cfd.f_args
+        "@[<v>@[<v 2>%a %a(@[<hov>%a@]) {%a@]@ }@ @]@\n"
+        pp_cty cfd.f_retty  pp_string cfd.f_name  pp_param_list cfd.f_args
         pp_cblock cfd.f_body
   | Cvardef (s, cty) -> fprintf fmt "%a %a;@\n" pp_cty cty  pp_string s
 

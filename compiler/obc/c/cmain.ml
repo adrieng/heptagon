@@ -288,7 +288,7 @@ let translate name prog =
   @ (cfile_list_of_oprog modname prog)
 
 let program p =
-  let filename = filename_of_name p.p_modname in
+  let filename = filename_of_name (cname_of_name p.p_modname) in
   let dirname = build_path (filename ^ "_c") in
   let dir = clean_dir dirname in
   let c_ast = translate filename p in

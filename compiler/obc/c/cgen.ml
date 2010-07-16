@@ -710,7 +710,7 @@ let cfile_list_of_oprog name oprog =
     List.iter add_opened_module opened_modules;
     List.iter add_opened_module deps;
 
-    let cfile_name = String.uncapitalize cd.cd_name in
+    let cfile_name = String.uncapitalize (cname_of_name cd.cd_name) in
     let struct_decl,(cdecls, cdefs) =
       cdefs_and_cdecls_of_class_def cd in
 
