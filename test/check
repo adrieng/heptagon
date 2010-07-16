@@ -32,7 +32,7 @@ for d in good bad; do
 done
 
 compile () {
-  arg_comp=""
+  args_comp=""
 
   assert_node=$(eval grep CHECK $1 | awk '{ print $3 }')
 
@@ -94,7 +94,7 @@ launch_check () {
     fi
     # Compil. minils ?
     if [[ ($echec == 0) && ($minils == 1) ]]; then
-      if $MLC good/${base_f}.mls > /dev/null 2>&1; then
+      if $MLC ${base_f}.mls > /dev/null 2>&1; then
         echec=0
       else
         echec=2
@@ -102,7 +102,7 @@ launch_check () {
     fi
     # Compil. java ?
     if [[ ($echec == 0) && ($java == 1) ]]; then
-      pushd "good/${base_f}" > /dev/null
+      pushd "${base_f}" > /dev/null
       for java_file in *.java ; do
         if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null
         then
@@ -115,7 +115,7 @@ launch_check () {
     fi
     # Compil. c ?
     if [[ ($echec == 0) && ($c == 1) ]]; then
-        pushd good/${base_f}_c >/dev/null
+        pushd ${base_f}_c >/dev/null
         for cf in *.c; do
             if $CC -c $cf >/dev/null 2>&1; then
                 echec=$echec
