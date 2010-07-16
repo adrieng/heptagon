@@ -21,7 +21,7 @@ let compile_impl modname filename =
   and obj_interf_name = filename ^ ".epci"
   and mls_name = filename ^ ".mls" in
 
-  let ic = open_in source_name
+  let ic, lexbuf = lexbuf_from_file source_name
   and itc = open_out_bin obj_interf_name
   and mlsc = open_out mls_name in
 
@@ -31,10 +31,9 @@ let compile_impl modname filename =
     close_out mlsc in
 
   try
-    init_compiler modname source_name ic;
+    init_compiler modname;
 
     (* Parsing of the file *)
-    let lexbuf = Lexing.from_channel ic in
     let p = parse_implementation lexbuf in
     let p = { p with Hept_parsetree.p_modname = modname } in
 

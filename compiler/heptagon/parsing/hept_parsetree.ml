@@ -164,8 +164,8 @@ and interface_desc =
   | Isignature of signature
 
 (* Helper functions to create AST. *)
-let mk_exp desc =
-  { e_desc = desc; e_loc = Location.current_loc () }
+let mk_exp desc loc =
+  { e_desc = desc; e_loc = loc }
 
 let mk_app op params =
   { a_op = op; a_params = params }
@@ -180,29 +180,29 @@ let mk_op_call ?(params=[]) s exps =
 let mk_iterator_call it ln params n exps =
   Eiterator (it, mk_app (Enode ln) params, n, exps)
 
-let mk_constructor_exp f =
-  mk_exp (Econst (mk_static_exp (Sconstructor f)))
+let mk_constructor_exp f loc =
+  mk_exp (Econst (mk_static_exp (Sconstructor f))) loc
 
-let mk_type_dec name desc =
-  { t_name = name; t_desc = desc; t_loc = Location.current_loc () }
+let mk_type_dec name desc loc =
+  { t_name = name; t_desc = desc; t_loc = loc }
 
-let mk_equation desc =
-  { eq_desc = desc; eq_loc = Location.current_loc () }
+let mk_equation desc loc =
+  { eq_desc = desc; eq_loc = loc }
 
-let mk_interface_decl desc =
-  { interf_desc = desc; interf_loc = Location.current_loc () }
+let mk_interface_decl desc loc =
+  { interf_desc = desc; interf_loc = loc }
 
-let mk_var_dec name ty last =
+let mk_var_dec name ty last loc =
   { v_name = name; v_type = ty;
-    v_last = last; v_loc = Location.current_loc () }
+    v_last = last; v_loc = loc }
 
-let mk_block locals eqs =
+let mk_block locals eqs loc =
   { b_local = locals; b_equs = eqs;
-    b_loc = Location.current_loc () }
+    b_loc = loc }
 
-let mk_const_dec id ty e =
+let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e;
-    c_loc = Location.current_loc (); }
+    c_loc = loc }
 
 let mk_arg name ty =
   { a_type = ty; a_name = name }

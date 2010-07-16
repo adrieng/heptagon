@@ -4,7 +4,7 @@
 
 SCRIPT_DIR=`dirname $0`
 COMPILER_DIR=compiler #relative to the script_dir
-COMPILER=heptc.byte
+COMPILER=heptc.native
 HEPTC=$COMPILER_DIR/$COMPILER
 
 cd $SCRIPT_DIR

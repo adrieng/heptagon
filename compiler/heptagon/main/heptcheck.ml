@@ -19,16 +19,15 @@ let check_implementation modname filename =
   (* input and output files *)
   let source_name = filename ^ ".ept" in
 
-  let ic = open_in source_name in
+  let ic, lexbuf = lexbuf_from_file source_name in
   let close_all_files () =
     close_in ic
   in
 
   try
-    init_compiler modname source_name ic;
+    init_compiler modname;
 
     (* Parsing of the file *)
-    let lexbuf = Lexing.from_channel ic in
     let p = parse_implementation lexbuf in
 
     (* Convert the parse tree to Heptagon AST *)

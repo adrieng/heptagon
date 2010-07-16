@@ -6,7 +6,6 @@ open Names
 open Types
 open Hept_parsetree
 
-let mk_static_exp = mk_static_exp ~loc:(current_loc())
 
 %}
 
@@ -111,7 +110,7 @@ const_decs:
 
 const_dec:
   | CONST IDENT COLON ty_ident EQUAL exp
-      { mk_const_dec $2 $4 $6 }
+      { mk_const_dec $2 $4 $6 (Loc($startpos,$endpos)) }
 ;
 
 type_decs:
@@ -120,9 +119,12 @@ type_decs:
 ;
 
 type_dec:
-  | TYPE IDENT                      { mk_type_dec $2 Type_abs }
-  | TYPE IDENT EQUAL enum_ty_desc   { mk_type_dec $2 (Type_enum ($4)) }
-  | TYPE IDENT EQUAL struct_ty_desc { mk_type_dec $2 (Type_struct ($4)) }
+  | TYPE IDENT                      
+      { mk_type_dec $2 Type_abs (Loc($startpos,$endpos)) }
+  | TYPE IDENT EQUAL enum_ty_desc   
+      { mk_type_dec $2 (Type_enum ($4)) (Loc($startpos,$endpos)) }
+  | TYPE IDENT EQUAL struct_ty_desc 
+      { mk_type_dec $2 (Type_struct ($4)) (Loc($startpos,$endpos)) }
 ;
 
 enum_ty_desc:
@@ -153,15 +155,15 @@ node_decs:
 node_dec:
   | node_or_fun ident node_params LPAREN in_params RPAREN
     RETURNS LPAREN out_params RPAREN
-    contract loc_vars LET equs TEL
+    contract b=block(LET) TEL
       {{ n_name   = $2;
    n_statefull = $1;
    n_input  = $5;
    n_output = $9;
    n_contract = $11;
-   n_block   = mk_block $12 $14;
+   n_block = b;
    n_params = $3;
-   n_loc = Location.current_loc () }}
+   n_loc = (Loc($startpos,$endpos)) }}
 ;
 
 node_or_fun:
@@ -185,7 +187,7 @@ nonmt_params:
 
 param:
   | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var) $1 }
+      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
 ;
 
 out_params:
@@ -205,19 +207,14 @@ node_params:
 
 contract:
   | /* empty */ {None}
-  | CONTRACT loc_vars opt_equs opt_assume enforce
-      { Some{ c_block = mk_block $2 $3;
+  | CONTRACT b=block(LET) TEL? opt_assume enforce
+      { Some{ c_block = b;
 	            c_assume = $4;
 	            c_enforce = $5 } }
 ;
 
-opt_equs:
-  | /* empty */ { [] }
-  | LET equs TEL { $2 }
-;
-
 opt_assume:
-  | /* empty */ {  mk_exp (Econst (mk_static_exp (Sconstructor Initial.ptrue))) }
+  | /* empty */ { mk_constructor_exp Initial.ptrue (Loc($startpos,$endpos)) }
   | ASSUME exp { $2 }
 ;
 
@@ -235,13 +232,14 @@ loc_params:
   | var_last SEMICOL loc_params { $1 @ $3 }
 ;
 
+ 
 var_last:
   | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var) $1 }
+      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
   | LAST IDENT COLON ty_ident EQUAL exp
-      { [ mk_var_dec $2 $4 (Last(Some($6))) ] }
+      { [ mk_var_dec $2 $4 (Last(Some($6))) (Loc($startpos,$endpos)) ] }
   | LAST IDENT COLON ty_ident
-      { [ mk_var_dec $2 $4 (Last(None)) ] }
+      { [ mk_var_dec $2 $4 (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
 ident_list:
@@ -276,28 +274,32 @@ opt_bar:
   | BAR {}
 ;
 
-equ:
-  | pat EQUAL exp { mk_equation (Eeq($1, $3)) }
+block(S):
+  | l=loc_vars S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
+  | l=loc_vars { mk_block l [] (Loc($startpos,$endpos)) }
+
+equ: eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
+_equ:
+  | pat EQUAL exp { Eeq($1, $3) }
   | AUTOMATON automaton_handlers END
-      { mk_equation (Eautomaton(List.rev $2)) }
+      { Eautomaton(List.rev $2) }
   | SWITCH exp opt_bar switch_handlers END
-      { mk_equation (Eswitch($2, List.rev $4)) }
+      { Eswitch($2, List.rev $4) }
   | PRESENT opt_bar present_handlers END
-      { mk_equation (Epresent(List.rev $3, mk_block [] [])) }
-  | PRESENT opt_bar present_handlers DEFAULT loc_vars DO equs END
-      { mk_equation (Epresent(List.rev $3, mk_block $5 $7)) }
-  | IF exp THEN loc_vars DO equs ELSE loc_vars DO equs END
-      { mk_equation (Eswitch($2,
-           [{ w_name = Name("true"); w_block = mk_block $4 $6};
-      { w_name = Name("false"); w_block = mk_block $8 $10 }])) }
+      { Epresent(List.rev $3, mk_block [] [] (Loc($startpos,$endpos))) }
+  | PRESENT opt_bar present_handlers DEFAULT b=block(DO) END
+      { Epresent(List.rev $3, b) }
+  | IF exp THEN tb=block(DO) ELSE fb=block(DO) END
+      { Eswitch($2,
+                   [{ w_name = Name("true"); w_block = tb };
+                    { w_name = Name("false"); w_block = fb }]) }
   | RESET equs EVERY exp
-      { mk_equation (Ereset($2, $4)) }
+      { Ereset($2, $4) }
 ;
 
 automaton_handler:
-  | STATE Constructor loc_vars DO equs opt_until_escapes opt_unless_escapes
-      { { s_state = $2; s_block = mk_block $3 $5;
-    s_until = $6; s_unless = $7 } }
+  | STATE Constructor b=block(DO) ut=opt_until_escapes ul=opt_unless_escapes
+      { { s_state = $2; s_block = b; s_until = ut; s_unless = ul } }
 ;
 
 automaton_handlers:
@@ -334,8 +336,8 @@ escapes:
 ;
 
 switch_handler:
-  | constructor_or_bool loc_vars DO equs
-      { { w_name = $1; w_block = mk_block $2 $4 } }
+  | constructor_or_bool b=block(DO)
+      { { w_name = $1; w_block = b } }
 ;
 
 constructor_or_bool:
@@ -350,8 +352,8 @@ switch_handlers:
 ;
 
 present_handler:
-  | exp loc_vars DO equs
-      { { p_cond = $1; p_block = mk_block $2 $4 } }
+  | exp b=block(DO)
+      { { p_cond = $1; p_block = b } }
 ;
 
 present_handlers:
@@ -381,88 +383,88 @@ exps:
   | nonmtexps      {$1}
 ;
 
-simple_exp:
-  | IDENT                   { mk_exp (Evar $1) }
-  | const                   { mk_exp (Econst $1) }
-  | LBRACE field_exp_list RBRACE
-      { mk_exp (Estruct $2) }
-  | LBRACKET array_exp_list RBRACKET
-      { mk_exp (mk_call Earray $2) }
-  | LPAREN tuple_exp RPAREN
-      { mk_exp (mk_call Etuple $2) }
-  | LPAREN exp RPAREN
-      { $2 }
+simple_exp: e=_simple_exp { mk_exp e (Loc($startpos,$endpos)) }
+_simple_exp:
+  | IDENT                            { Evar $1 }
+  | const                            { Econst $1 }
+  | LBRACE field_exp_list RBRACE     { Estruct $2 }
+  | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
+  | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
+  | LPAREN _exp RPAREN               { $2 }
 ;
 
 node_name:
-  | longname call_params
-      { mk_app (Enode $1) $2 }
+  | longname call_params { mk_app (Enode $1) $2 }
+
 
 exp:
-  | simple_exp { $1 }
+  | e=simple_exp { e }
+  | e=_exp { mk_exp e (Loc($startpos,$endpos)) }
+_exp:
   | simple_exp FBY exp
-      { mk_exp (Efby ($1, $3)) }
+      { Efby ($1, $3) }
   | PRE exp
-      { mk_exp (Epre (None, $2)) }
+      { Epre (None, $2) }
   | node_name LPAREN exps RPAREN
-      { mk_exp (Eapp($1, $3)) }
+      { Eapp($1, $3) }
   | NOT exp
-      { mk_exp (mk_op_call "not" [$2]) }
+      { mk_op_call "not" [$2] }
   | exp INFIX4 exp
-      { mk_exp (mk_op_call $2 [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX3 exp
-      { mk_exp (mk_op_call $2 [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX2 exp
-      { mk_exp (mk_op_call $2 [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX1 exp
-      { mk_exp (mk_op_call $2 [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX0 exp
-      { mk_exp (mk_op_call $2 [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp EQUAL exp
-      { mk_exp (mk_op_call "=" [$1; $3]) }
+      { mk_op_call "=" [$1; $3] }
   | exp OR exp
-      { mk_exp (mk_op_call "or" [$1; $3]) }
+      { mk_op_call "or" [$1; $3] }
   | exp STAR exp
-      { mk_exp (mk_op_call "*" [$1; $3]) }
+      { mk_op_call "*" [$1; $3] }
   | exp AMPERSAND exp
-      { mk_exp (mk_op_call "&" [$1; $3]) }
+      { mk_op_call "&" [$1; $3] }
   | exp SUBTRACTIVE exp
-      { mk_exp (mk_op_call $2 [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | PREFIX exp
-      { mk_exp (mk_op_call $1 [$2]) }
+      { mk_op_call $1 [$2] }
   | SUBTRACTIVE exp %prec prec_uminus
-      { mk_exp (mk_op_call ("~"^$1) [$2]) }
+      { mk_op_call ("~"^$1) [$2] }
   | IF exp THEN exp ELSE exp
-      { mk_exp (mk_call Eifthenelse [$2; $4; $6]) }
+      { mk_call Eifthenelse [$2; $4; $6] }
   | simple_exp ARROW exp
-      { mk_exp (mk_call Earrow [$1; $3]) }
+      { mk_call Earrow [$1; $3] }
   | LAST IDENT
-      { mk_exp (Elast $2) }
+      { Elast $2 }
 /*Array operations*/
   | exp POWER simple_exp
-      { mk_exp (mk_call ~params:[$3] Earray_fill [$1]) }
+      { mk_call ~params:[$3] Earray_fill [$1] }
   | simple_exp indexes
-      { mk_exp (mk_call ~params:$2 Eselect [$1]) }
+      { mk_call ~params:$2 Eselect [$1] }
   | simple_exp DOT indexes DEFAULT exp
-      { mk_exp (mk_call Eselect_dyn ([$1; $5]@$3)) }
+      { mk_call Eselect_dyn ([$1; $5]@$3) }
   | LBRACKET exp WITH indexes EQUAL exp RBRACKET
-      { mk_exp (mk_call ~params:$4 Eupdate [$2; $6]) }
+      { mk_call ~params:$4 Eupdate [$2; $6] }
   | simple_exp LBRACKET exp DOUBLE_DOT exp RBRACKET
-      { mk_exp (mk_call ~params:[$3; $5] Eselect_slice [$1]) }
+      { mk_call ~params:[$3; $5] Eselect_slice [$1] }
   | exp AROBASE exp
-      { mk_exp (mk_call Econcat [$1; $3]) }
+      { mk_call Econcat [$1; $3] }
 /*Iterators*/
   | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_exp (mk_iterator_call $1 $2 [] $4 $7) }
+      { mk_iterator_call $1 $2 [] $4 $7 }
   | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_exp (mk_iterator_call $1 $3 $5 $9 $12) }
+      { mk_iterator_call $1 $3 $5 $9 $12 }
 /*Records operators */
-  | simple_exp DOT longname
-      { mk_exp (mk_call ~params:[mk_constructor_exp $3] Efield [$1]) }
-  | LBRACE simple_exp WITH DOT longname EQUAL exp RBRACE
-      { mk_exp (mk_call ~params:[mk_constructor_exp $5]
-                  Efield_update [$2; $7]) }
+  | simple_exp DOT c=longname
+      { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
+                Efield [$1] }
+  | LBRACE simple_exp WITH DOT c=longname EQUAL exp RBRACE
+      { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
+                Efield_update [$2; $7] }
 ;
 
 call_params:
@@ -491,11 +493,13 @@ longname:
   | Constructor DOT ident { Modname({qual = $1; id = $3}) }
 ;
 
-const:
-  | INT { mk_static_exp (Sint $1) }
-  | FLOAT {  mk_static_exp (Sfloat $1) }
-  | BOOL {  mk_static_exp (Sbool $1) }
-  | constructor {  mk_static_exp (Sconstructor $1) }
+
+const: c=_const { mk_static_exp c ~loc:(Loc($startpos,$endpos)) }
+_const:
+  | INT         { Sint $1 }
+  | FLOAT       { Sfloat $1 }
+  | BOOL        { Sbool $1 }
+  | constructor { Sconstructor $1 }
 ;
 
 tuple_exp:
@@ -548,16 +552,18 @@ interface_decls:
 ;
 
 interface_decl:
-  | type_dec         { mk_interface_decl (Itypedef $1) }
-  | const_dec        { mk_interface_decl (Iconstdef $1) }
-  | OPEN Constructor { mk_interface_decl (Iopen $2) }
+  | id=_interface_decl { mk_interface_decl id (Loc($startpos,$endpos)) }
+_interface_decl:
+  | type_dec         { Itypedef $1 }
+  | const_dec        { Iconstdef $1 }
+  | OPEN Constructor { Iopen $2 }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
-    { mk_interface_decl (Isignature({ sig_name = $3;
+    { Isignature({ sig_name = $3;
                                       sig_inputs = $6;
                                       sig_statefull = $2;
                                       sig_outputs = $10;
-                                      sig_params = $4; })) }
+                                      sig_params = $4; }) }
 ;
 
 params_signature:

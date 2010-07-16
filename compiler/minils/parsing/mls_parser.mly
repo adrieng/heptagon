@@ -8,12 +8,6 @@ open Location
 open Minils
 open Mls_utils
 
-let mk_exp = mk_exp ~loc:(current_loc())
-let mk_node = mk_node ~loc:(current_loc()) 
-let mk_equation p e = mk_equation ~loc:(current_loc()) p e  
-let mk_type name desc = mk_type_dec ~loc:(current_loc()) ~type_desc: desc name
-let mk_var name ty = mk_var_dec name ty
-
 
 %}
 
@@ -84,6 +78,8 @@ qualified(x) :
   | m=CONSTRUCTOR DOT n=x { Modname({ qual = m; id = n }) }
  
 structure(field): LBRACE s=snlist(SEMICOL,field) RBRACE {s}
+
+localize(x): y=x { y, (Loc($startpos(y),$endpos(y))) }
  
 
 program:
@@ -108,15 +104,19 @@ type_ident: NAME { Tid(Name($1)) }
 
 type_decs: t=list(type_dec) {t}
 type_dec:
-  | TYPE n=NAME                               { mk_type n Type_abs }
-  | TYPE n=NAME EQUAL e=snlist(BAR,NAME)       { mk_type n (Type_enum e) }
-  | TYPE n=NAME EQUAL s=structure(field_type) { mk_type n (Type_struct s) }
+  | TYPE n=NAME
+    { mk_type_dec ~loc:(Loc ($startpos,$endpos)) ~type_desc:Type_abs n }
+  | TYPE n=NAME EQUAL e=snlist(BAR,NAME)
+    { mk_type_dec ~loc:(Loc ($startpos,$endpos)) ~type_desc:(Type_enum e) n }
+  | TYPE n=NAME EQUAL s=structure(field_type)
+    { mk_type_dec ~loc:(Loc ($startpos,$endpos)) ~type_desc:(Type_struct s) n }
 
 node_decs: ns=list(node_dec) {ns}
 node_dec:
   NODE n=name p=params(n_param) LPAREN args=args RPAREN
   RETURNS LPAREN out=args RPAREN vars=loc_vars eqs=equs
-      { mk_node ~input:args ~output:out ~local:vars ~eq:eqs n }
+      { mk_node ~input:args ~output:out ~local:vars
+                ~eq:eqs ~loc:(Loc ($startpos,$endpos)) n }
         
 
 args_t: SEMICOL p=args {p}
@@ -130,10 +130,10 @@ loc_vars: l=loption(loc_vars_h) {l}
 
 var:
   | ns=snlist(COMMA, NAME) COLON t=type_ident
-      { List.map (fun id -> mk_var (ident_of_name id) t) ns }
+      { List.map (fun id -> mk_var_dec (ident_of_name id) t) ns }
 
 equs: LET e=slist(SEMICOL, equ) TEL { e }
-equ: p=pat EQUAL e=exp { mk_equation p e }
+equ: p=pat EQUAL e=exp { mk_equation ~loc:(Loc ($startpos,$endpos)) p e }
 
 pat:
   | n=NAME                             {Evarpat (ident_of_name n)}
@@ -155,30 +155,36 @@ exps: LPAREN e=slist(COMMA, exp) RPAREN {e}
 field_exp: longname EQUAL exp { ($1, $3) }
 
 simple_exp:
-  | NAME                               { mk_exp (Evar (ident_of_name $1)) }
-  | s=structure(field_exp)             { mk_exp (Estruct s) }
-  | t=tuple(exp)                       { mk_exp (Etuple t) }
-  | LPAREN e=exp RPAREN                { e }
+  | e=_simple_exp {mk_exp e ~loc:(Loc ($startpos,$endpos)) }
+_simple_exp:
+  | NAME                               { Evar (ident_of_name $1) }
+  | s=structure(field_exp)             { Estruct s }
+  | t=tuple(exp)                       { Eapp(mk_op ~op_kind:Etuple, t, None) }
+  | LPAREN e=_exp RPAREN                { e }
+
 
 exp:
+  | e=simple_exp { e }
+  | e=_exp { mk_exp e ~loc:(Loc ($startpos,$endpos)) }
+_exp:
   | e=simple_exp                           { e }
-  | c=const                                { mk_exp (Econst c) }
-  | const FBY exp                          { mk_exp (Efby(Some($1),$3)) }
-  | PRE exp                                { mk_exp (Efby(None,$2)) }
-  | op=funop a=exps r=reset                { mk_exp (Ecall(op, a, r)) }
+  | c=const                                { Econst c }
+  | const FBY exp                          { Efby(Some($1),$3) }
+  | PRE exp                                { Efby(None,$2) }
+  | op=funop a=exps r=reset                { Ecall(op, a, r) }
   | e1=exp i_op=infix e2=exp
-        { mk_exp (Ecall(mk_op ~op_kind:Efun i_op, [e1; e2], None)) }
+        { Eapp(mk_op ~op_kind:Efun i_op, [e1; e2], None) }
   | p_op=prefix e=exp %prec prefixs
-        { mk_exp (Ecall(mk_op ~op_kind:Efun p_op, [e], None)) }
-  | IF e1=exp THEN e2=exp ELSE e3=exp     { mk_exp (Eifthenelse(e1, e2, e3)) }
-  | e=simple_exp DOT m=longname           { mk_exp (Efield(e, m)) }
+        { Eapp(mk_op ~op_kind:Efun p_op, [e], None) }
+  | IF e1=exp THEN e2=exp ELSE e3=exp      { Eifthenelse(e1, e2, e3) }
+  | e=simple_exp DOT m=longname            { Efield(e, m) }
   | e=exp WHEN c=constructor LPAREN n=ident RPAREN
-                                           { mk_exp (Ewhen(e, c, n)) }
-  | MERGE n=ident h=handlers               { mk_exp (Emerge(n, h)) }
-  | LPAREN r=exp WITH DOT ln=longname EQUAL nv=exp /*ordre louche...*/
-        { mk_exp (Efield_update(ln, r, nv)) }
-  | op=array_op                            { mk_exp (Earray_op op) }
-  | LBRACKET es=slist(COMMA, exp) RBRACKET { mk_exp (Earray es) }
+                                           { Ewhen(e, c, n) }
+  | MERGE n=ident h=handlers               { Emerge(n, h) }
+  | LPAREN r=exp WITH DOT ln=longname EQUAL nv=exp
+        { Efield_update(ln, r, nv) }
+  | op=array_op                            { Earray_op op }
+  | LBRACKET es=slist(COMMA, exp) RBRACKET { Earray es }
 
 array_op:
   | e=exp POWER p=e_param                 { Erepeat(p, e) }
@@ -186,7 +192,7 @@ array_op:
   | e=exp i=indexes(exp) DEFAULT d=exp    { Eselect_dyn(i, e ,d) }
   | LPAREN e=exp WITH i=indexes(e_param) EQUAL nv=exp  { Eupdate(i, e, nv) }
   | e=simple_exp LBRACKET i1=e_param DOTDOT i2=e_param RBRACKET
-      { Eselect_slice(i1, i2, e) }
+                                          { Eselect_slice(i1, i2, e) }
   | e1=exp AROBASE e2=exp                 { Econcat(e1,e2) }
   | LPAREN f=iterator LPAREN op=funop RPAREN
       DOUBLE_LESS p=e_param DOUBLE_GREATER

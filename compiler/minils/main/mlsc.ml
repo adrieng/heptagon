@@ -38,7 +38,7 @@ let compile_impl modname filename =
   and mls_norm_name = filename ^ "_norm.mls"
   and obc_name = filename ^ ".obc" in
 
-  let ic = open_in source_name
+  let ic, lexbuf = lexbuf_from_file source_name in
   and mlsnc = open_out mls_norm_name
   and obc = open_out obc_name in
 
@@ -49,10 +49,9 @@ let compile_impl modname filename =
   in
 
   try
-    init_compiler modname source_name ic;
+    init_compiler modname;
 
     (* Parsing of the file *)
-    let lexbuf = Lexing.from_channel ic in
     let p = parse_implementation lexbuf in
     if !verbose
     then begin

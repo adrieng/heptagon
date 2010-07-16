@@ -61,10 +61,18 @@ let clean_dir dir =
   end else Unix.mkdir dir 0o740;
   dir
 
-let init_compiler modname source_name ic =
-  Location.initialize source_name ic;
+let init_compiler modname =
   Modules.initialize modname;
   Initial.initialize ()
+
+let lexbuf_from_file file_name =
+  let ic = open_in file_name in
+  let lexbuf = Lexing.from_channel ic in
+  lexbuf.Lexing.lex_curr_p <-
+      { lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = file_name };
+  ic, lexbuf
+
+
 
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"

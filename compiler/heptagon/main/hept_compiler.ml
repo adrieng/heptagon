@@ -18,11 +18,11 @@ let parse parsing_fun lexing_fun lexbuf =
   try
     parsing_fun lexing_fun lexbuf
   with
-    | Hept_lexer.Lexical_error(err, pos1, pos2) ->
-        lexical_error err (Loc(pos1, pos2))
+    | Hept_lexer.Lexical_error(err, l) ->
+        lexical_error err l
     | Hept_parser.Error ->
-        let pos1 = Lexing.lexeme_start lexbuf
-        and pos2 = Lexing.lexeme_end lexbuf in
+        let pos1 = Lexing.lexeme_start_p lexbuf
+        and pos2 = Lexing.lexeme_end_p lexbuf in
         let l = Loc(pos1,pos2) in
         syntax_error l
 
@@ -76,17 +76,16 @@ let compile_interface modname filename =
   let source_name = filename ^ ".epi" in
   let obj_interf_name = filename ^ ".epci" in
 
-  let ic = open_in source_name in
+  let ic, lexbuf = lexbuf_from_file source_name in
   let itc = open_out_bin obj_interf_name in
   let close_all_files () =
     close_in ic;
     close_out itc in
 
   try
-    init_compiler modname source_name ic;
+    init_compiler modname;
 
     (* Parsing of the file *)
-    let lexbuf = Lexing.from_channel ic in
     let l = parse_interface lexbuf in
 
     (* Convert the parse tree to Heptagon AST *)

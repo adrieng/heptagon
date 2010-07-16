@@ -8,7 +8,7 @@ shopt -s nullglob
 
 # script de test
 
-compilo=../compiler/heptc.native
+compilo=../heptc
 coption=
 
 # compilateurs utilises pour les tests de gen. de code
