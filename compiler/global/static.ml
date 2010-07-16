@@ -31,19 +31,6 @@ let op_from_app_name ln =
     | Modname { qual = "Pervasives" } -> ln
     | _ -> raise Not_static
 
-(** Applies the operator [op] to the two integers [n1] and [n2]
-    and returns the reslt as a static exp. *)
-let apply_int_op op n1 n2 =
-  match op with
-    | Modname { qual = "Pervasives"; id = "+" } -> Sint (n1 + n2)
-    | Modname { qual = "Pervasives"; id = "-" } -> Sint (n1 - n2)
-    | Modname { qual = "Pervasives"; id = "*" } -> Sint (n1 * n2)
-    | Modname { qual = "Pervasives"; id = "/" } ->
-        let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
-          Sint n
-    | _ -> (* unknown operator, reconstrcut the op *)
-        Sop (op, [mk_static_exp (Sint n1); mk_static_exp (Sint n2)]) (*TODO CP*)
-
 (** [simplify env e] returns e simplified with the
     variables values taken from env (mapping vars to integers).
     Variables are replaced with their values and every operator
@@ -61,15 +48,9 @@ let rec simplify env se =
                   | Name n -> (try simplify env (NamesEnv.find n env) with | _ -> se)
                   | Modname _ -> se)
         )
-    | Sop (op, [e1; e2]) ->
-        let e1 = simplify env e1 in
-        let e2 = simplify env e2 in
-        (match e1.se_desc, e2.se_desc with
-           | Sint n1, Sint n2 -> { se with se_desc = apply_int_op op n1 n2 }
-           | _, _ -> { se with se_desc = Sop (op, [e1; e2]) }
-        )
     | Sop (op, se_list) ->
-        { se with se_desc = Sop (op, List.map (simplify env) se_list) }
+        let se_list = List.map (simplify env) se_list in
+          { se with se_desc = apply_op op se_list }
     | Sarray se_list ->
         { se with se_desc = Sarray (List.map (simplify env) se_list) }
     | Sarray_power (se, n) ->
@@ -79,6 +60,28 @@ let rec simplify env se =
     | Srecord f_se_list ->
         { se with se_desc = Srecord
             (List.map (fun (f,se) -> f, simplify env se) f_se_list) }
+
+and apply_op op se_list =
+  match se_list with
+    | [{ se_desc = Sint n1 }; { se_desc = Sint n2 }] ->
+        (match op with
+           | Modname { qual = "Pervasives"; id = "+" } ->
+               Sint (n1 + n2)
+           | Modname { qual = "Pervasives"; id = "-" } ->
+               Sint (n1 - n2)
+           | Modname { qual = "Pervasives"; id = "*" } ->
+               Sint (n1 * n2)
+           | Modname { qual = "Pervasives"; id = "/" } ->
+               let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
+                 Sint n
+           | _ -> assert false (*TODO: add missing operators*)
+        )
+    | [{ se_desc = Sint n }] ->
+        (match op with
+           | Modname { qual = "Pervasives"; id = "~-" } -> Sint (-n)
+           | _ -> assert false (*TODO: add missing operators*)
+        )
+    | _ -> Sop(op, se_list)
 
 (** [int_of_static_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises

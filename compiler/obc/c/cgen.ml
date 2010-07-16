@@ -27,6 +27,7 @@ struct
     | Enode of string
     | Eno_unnamed_output
     | Ederef_not_pointer
+    | Estatic_exp_compute_failed
 
   let message loc kind = (match kind with
     | Evar name ->
@@ -40,7 +41,11 @@ struct
           output_location loc
     | Ederef_not_pointer ->
         eprintf "%aCode generation : Trying to deference a non pointer type.\n"
-          output_location loc );
+          output_location loc
+    | Estatic_exp_compute_failed ->
+        eprintf "%aCode generation : Computation of the value of the static \
+                 expression failed.\n"
+          output_location loc);
     raise Misc.Error
 end
 
@@ -261,7 +266,12 @@ let rec cexpr_of_static_exp se =
           let { info = cd } = find_const ln in
             cexpr_of_static_exp (Static.simplify NamesEnv.empty cd.c_value)
         with Not_found -> assert false)
-    | Sop _ -> cexpr_of_static_exp (Static.simplify NamesEnv.empty se)
+    | Sop _ ->
+        let se' = Static.simplify NamesEnv.empty se in
+          if se = se' then
+            Error.message se.se_loc Error.Estatic_exp_compute_failed
+          else
+            cexpr_of_static_exp se'
 
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
 let rec cexpr_of_exp var_env exp =
