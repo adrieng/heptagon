@@ -76,7 +76,7 @@ and apply_op op se_list =
                  Sint n
            | Modname { qual = "Pervasives"; id = "=" } ->
                Sbool (n1 = n2)
-           | _ -> Format.printf "Unsupported op: %s\n" (fullname op); assert false (*TODO: add missing operators*)
+           | _ -> assert false (*TODO: add missing operators*)
         )
     | [{ se_desc = Sint n }] ->
         (match op with
