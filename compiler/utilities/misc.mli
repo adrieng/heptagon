@@ -173,6 +173,10 @@ exception Fallback
 (** Mapfold *)
 val mapfold: ('a -> 'b -> 'c * 'a) -> 'a -> 'b list -> 'c list * 'a
 
+(** Mapfold, right version. *)
+val mapfold_right
+  : ('a -> 'acc -> 'acc * 'b) -> 'a list -> 'acc -> 'acc * 'b list
+
 (** Mapi *)
 val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
 val mapi2: (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list

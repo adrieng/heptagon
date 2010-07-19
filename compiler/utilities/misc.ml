@@ -216,6 +216,9 @@ let mapfold f acc l =
                 ([],acc) l in
   List.rev l, acc
 
+let mapfold_right f l acc =
+  List.fold_right (fun e (acc, l) -> let acc, e = f e acc in (acc, e :: l))
+    l (acc, [])
 
 let mapi f l =
   let rec aux i = function
