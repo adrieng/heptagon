@@ -53,6 +53,8 @@ let fullname = function
 let mk_longname s =
   try
     let ind = String.index s '.' in
+    if ind = 0 || ind = String.length s - 1
+    then invalid_arg "mk_longname: ill-formed identifier";
     let id = String.sub s (ind + 1) (String.length s - ind - 1) in
     Modname { qual = String.sub s 0 ind; id = id; }
   with Not_found -> Name s
