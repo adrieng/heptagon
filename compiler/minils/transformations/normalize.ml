@@ -190,13 +190,12 @@ let rec translate kind context e =
     | Eiterator (it, app, n, e_list, reset) ->
         (* Add an intermediate equation for each array lit argument. *)
         let translate_iterator_arg_list context e_list =
-          let add e (context, e_list) = match e.e_desc with
-            | Econst { se_desc = Sarray _; } ->
-                let (context, e) = translate VRef context e in
-                (context, e :: e_list)
-            | _ ->
-                let (context, e) = translate function_args_kind context e in
-                (context, e :: e_list) in
+          let add e (context, e_list) =
+            let kind = match e.e_desc with
+              | Econst { se_desc = Sarray _; } -> VRef
+              | _ -> function_args_kind in
+            let (context, e) = translate kind context e in
+            (context, e :: e_list) in
           List.fold_right add e_list (context, []) in
 
         let context, e_list =
