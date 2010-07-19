@@ -75,6 +75,7 @@ and doc_object_file = "\t\tOnly generate a .epo object file"
 and doc_sim = "<node>\t\tCreate simulation for node <node>"
 and doc_locate_stdlib = "\t\tLocate standard libray"
 and doc_no_pervasives = "\tDo not load the pervasives module"
+and doc_flatten = "\t\tInline everything."
 and doc_target =
   "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
   ^ " java or z3z)"

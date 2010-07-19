@@ -15,7 +15,7 @@ open Names
 open Heptagon
 open Hept_mapfold
 
-let to_be_inlined s = List.mem s !Misc.inline
+let to_be_inlined s = !Misc.flatten || (List.mem s !Misc.inline)
 
 let mk_unique_node nd =
   let mk_bind vd =

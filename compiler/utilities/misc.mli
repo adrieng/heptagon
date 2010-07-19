@@ -85,9 +85,10 @@ val tomato : bool ref
 
 (* List of nodes to inline *)
 val inline : Names.longname list ref
-
 (* Add a new node name to the list of nodes to inline. *)
 val add_inlined_node : string -> unit
+(* Inline every node. *)
+val flatten : bool ref
 
 (* Z/3Z back-end mode *)
 val set_sigali : unit -> unit
