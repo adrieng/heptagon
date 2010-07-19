@@ -81,6 +81,10 @@ let cse = ref false
 
 let tomato = ref false
 
+let inline = ref []
+
+let add_inlined_node s = inline := Names.mk_longname s :: !inline
+
 (* Backward compatibility *)
 let set_sigali () = add_target_language "z3z";;
 

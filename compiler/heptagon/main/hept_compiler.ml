@@ -49,6 +49,8 @@ let compile_impl pp p =
   (* Completion of partial definitions *)
   let p = do_pass Completion.program "Completion" p pp true in
 
+  let p = do_pass Inline.program "Inlining" p pp (List.length !inline > 0) in
+
   (* Automata *)
   let p = do_pass Automata.program "Automata" p pp true in
 

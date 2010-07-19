@@ -84,6 +84,7 @@ and doc_target_path =
   ^ " cleaned)"
 and doc_noinit = "\t\tDisable initialization analysis"
 and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
+and doc_inline = "<node>\t\tInline node <node>"
 
 let errmsg = "Options are:"
 

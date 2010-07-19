@@ -64,7 +64,7 @@ struct
   let con env x e =
     let rec conrec env =
       match env with
-        | Eempty -> Format.printf "%s\n" (name x); assert false
+        | Eempty -> Printf.eprintf "%s\n" (name x); assert false
         | Eon(env, tag, name) ->
             let e, ck = conrec env in
             let ck_tag_name = Con(ck, tag, name) in

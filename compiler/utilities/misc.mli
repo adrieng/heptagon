@@ -83,6 +83,12 @@ val cse : bool ref
 (* Automata minimization *)
 val tomato : bool ref
 
+(* List of nodes to inline *)
+val inline : Names.longname list ref
+
+(* Add a new node name to the list of nodes to inline. *)
+val add_inlined_node : string -> unit
+
 (* Z/3Z back-end mode *)
 val set_sigali : unit -> unit
 
