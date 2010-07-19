@@ -6,38 +6,47 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-(* Generic mapred over Heptagon Ast *)
+(* Generic mapred over Heptagon AST *)
 
-(* The basic idea is to provide a bottom up pass over an Heptagon Ast.
-  If you call [program_it] [hept_funs_default] [acc] [p],
-  with [p] an heptagon program, [acc] the accumulator of your choice,
-  it will go through the whole Ast, passing the accumulator without touching it,
-  and applying the identity to the Ast.
-  It'll return [p, acc].
+(* The basic idea is to provide a top-down pass over an Heptagon AST. If you
+   call [program_it hept_funs_default acc p], with [p] an heptagon program and
+   [acc] the accumulator of your choice, it will go through the whole AST,
+   passing the accumulator without touching it, and applying the identity
+   function on the AST. It'll return [p, acc].
 
-  To customize your pass, you need to redefine some functions of the
-  [hept_funs_default] structure. These, so provided, functions will be called
-  when the pass hit on a node of type corresponding to the [hept_it_funs] field.
+   To customize your pass, you need to redefine some functions of the
+   [hept_funs_default] record. Each field in the record handles one node type,
+   and the function held in the field will be called when the iterator
+   encounters the corresponding node type.
 
-  You can immitate the default functions defined here, and named corresponding
-  to the [hep_it_funs] field (corresponding to the Heptagon Ast type).
-  There are two types of functions, the ones corresponding to a record type,
-  and the more special ones corresponding to a sum type.
-  If you don't want to deal with every constructors,
-  you can simply finish your matching with [| _ -> raise Misc.Fallback]
-  It will so fallback to the generic treatement for theses construtors,
-  defined in this file.
+   You can imitate the default functions defined here, and named corresponding
+   to the [hep_it_funs] field (corresponding to the Heptagon AST type).  There
+   are two types of functions, the ones handling record types, and the more
+   special ones handling sum types. If you don't want to deal with every
+   constructor, you can simply finish your matching with [| _ -> raise
+   Misc.Fallback]: it will then fall back to the generic handling for these
+   construtors, defined in this file.
 
-  The structure provided and the functions to iterate on any type ([type_it])
-  enables lots of different ways to deal with the Ast, discover by yourself ! *)
+   Note that the iterator is a top-down one. If you want to use it in a
+   bottom-up manner (e.g. visiting expressions before visiting an equation), you
+   need to manually call the proper recursive function (defined here) in the
+   beginning of your handler. For example:
 
+   [
+   let eq funs acc eq =
+     let (eq, acc) = Hept_mapfold.eq funs acc eq in
+     ...
+     (eq, acc)
+   ]
 
+   The record provided here and the functions to iterate over any type
+   ([type_it]) enable lots of different ways to deal with the AST.
 
-(* /!\ do never, never put in your funs record one
-   """" of the generic iterator function [type_it].
-  You should always put a custom version
-  or the default version provided in this file. *)
+   Discover it by yourself !*)
 
+(* /!\ Do not EVER put in your funs record one of the generic iterator function
+   [type_it]. You should always put a custom version or the default version
+   provided in this file. Trespassers will loop infinitely! /!\ *)
 
 open Misc
 open Global_mapfold
