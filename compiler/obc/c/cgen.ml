@@ -255,6 +255,7 @@ let rec cexpr_of_static_exp se =
     | Sfloat f -> Cconst (Ccfloat f)
     | Sbool b -> Cconst (Ctag (if b then "TRUE" else "FALSE"))
     | Sconstructor c -> Cconst (Ctag (shortname c))
+    | Sarray sl -> Carraylit (List.map cexpr_of_static_exp sl)
     | Sarray_power(n,c) ->
         let cc = cexpr_of_static_exp c in
           Carraylit (repeat_list cc (int_of_static_exp n))
@@ -423,8 +424,13 @@ let rec create_affect_const var_env dest c =
   match c.se_desc with
     | Sarray_power(c, n) ->
         let x = gen_symbol () in
-        [ Cfor(x, 0, int_of_static_exp n,
-               create_affect_const var_env (Carray (dest, Clhs (Cvar x))) c) ]
+        [Cfor(x, 0, int_of_static_exp n,
+              create_affect_const var_env (Carray (dest, Clhs (Cvar x))) c)]
+    | Sarray cl ->
+        let create_affect_idx c (i, affl) =
+          let dest = Carray (dest, Cconst (Ccint i)) in
+          (i - 1, create_affect_const var_env dest c @ affl) in
+        snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
     | _ -> [Caffect (dest, cexpr_of_exp var_env (mk_exp (Econst c)))]
 
 (** [cstm_of_act obj_env mods act] translates the Obj action [act] to a list of

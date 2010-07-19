@@ -188,6 +188,17 @@ let rec translate kind context e =
         let context, e_list = translate_app kind context app.a_op e_list in
           context, { e with e_desc = Eapp(app, e_list, r) }
     | Eiterator (it, app, n, e_list, reset) ->
+        (* Add an intermediate equation for each array lit argument. *)
+        let add_eq_for_array exp (context, e_list) = match exp.e_desc with
+          | Econst { se_desc = Sarray _; } ->
+              let id = Ident.fresh "arr" in
+              let eq = mk_equation (Evarpat id) exp in
+              let exp = { exp with e_desc = (Evar id); } in
+              let var = mk_var_dec ~clock:exp.e_ck id exp.e_ty in
+              ((var :: fst context, eq :: snd context), exp :: e_list)
+          | _ -> (context, exp :: e_list) in
+        let context, e_list =
+          List.fold_right add_eq_for_array e_list (context, []) in
         let context, e_list =
           translate_list function_args_kind context e_list in
         context, { e with e_desc = Eiterator(it, app, n, e_list, reset) }
