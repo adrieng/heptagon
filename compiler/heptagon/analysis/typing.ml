@@ -32,6 +32,7 @@ type error =
   | Eshould_be_last of name
   | Etype_clash of ty * ty
   | Earity_clash of int * int
+  | Estatic_arity_clash of int * int
   | Ealready_defined of name
   | Eshould_be_a_node of longname
   | Enon_exaustive
@@ -85,6 +86,11 @@ let message loc kind =
     | Earity_clash(actual_arit, expected_arit) ->
         Printf.eprintf "%aType Clash: this expression expects %d arguments,\n\
             but is expected to have %d.\n"
+          output_location loc
+          expected_arit actual_arit
+    | Estatic_arity_clash(actual_arit, expected_arit) ->
+        Printf.eprintf "%aType Clash: this node expects %d static parameters,\n\
+            but was given %d.\n"
           output_location loc
           expected_arit actual_arit
     | Ealready_defined(s) ->
@@ -309,6 +315,9 @@ let simplify_type loc ty =
       Instanciation_failed -> message loc (Etype_should_be_static ty)
 
 let build_subst names values =
+  if List.length names <> List.length values then
+    error (Estatic_arity_clash (List.length values, List.length names));
+
   List.fold_left2 (fun m { p_name = n } v -> NamesEnv.add n v m)
     NamesEnv.empty names values
 
