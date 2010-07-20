@@ -25,7 +25,9 @@ open Types
      | case C2 do ...
      | case C3 do ...
      end
-   every r
+   every res
+
+   ---->
 
    switch e with
      case C1 do ... (* l_m1 *)
@@ -35,8 +37,9 @@ open Types
    | case C3 do ... (* l_m3 *)
                 m1 = l_m1; m2 = l_m2; m3 = false
    end;
-   l_m1 = if res then true else true fby m1;...;
-   l_m3 = if res then true else true fby m3
+   l_m1 = if res then true else (true fby m1);
+   l_m2 = if res then true else (true fby m2);
+   l_m3 = if res then true else (true fby m3);
 
    e1 -> e2 is translated into if (true fby false) then e1 else e2
 *)
