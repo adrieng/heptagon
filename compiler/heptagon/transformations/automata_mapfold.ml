@@ -170,3 +170,4 @@ let program p =
                with eq = eq; block = block; node_dec = node_dec } in
   let p, _ = Hept_mapfold.program_it funs ([],[]) p in
     p
+    { p with p_types = !state_type_dec_list @ p.p_types }
