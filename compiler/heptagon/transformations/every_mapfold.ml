@@ -1,6 +1,6 @@
 open Heptagon
 open Hept_mapfold
-open Reset
+open Reset_mapfold
 
 let statefull eq_list = List.exists (fun eq -> eq.eq_statefull) eq_list
 
@@ -27,12 +27,8 @@ let edesc funs (v,acc_eq_list) ed =
 
     | _ -> ed, (v, acc_eq_list)
 
-let node funs _ n =
-  let n, (v, eq_list) = Hept_mapfold.node_dec funs ([],[]) n in
-    { n with n_local = v @ n.n_local; n_equs = eq_list @ n.n_equs; }, ([],[])
-
 let program p =
   let funs = { Hept_mapfold.defaults
-               with edesc = edesc; block = block; node_dec = node } in
+               with edesc = edesc; block = block } in
   let p, _ = program_it funs ([],[]) p in
     p

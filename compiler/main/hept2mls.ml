@@ -339,8 +339,8 @@ and translate_switch_handlers env ni (locals, l_eqs, s_eqs) e handlers =
 let translate_contract env contract =
   match contract with
     | None -> None, env
-    | Some { Heptagon.c_local = v;
-             Heptagon.c_eq = eq_list;
+    | Some { Heptagon.c_block = { Heptagon.b_local = v;
+                                  Heptagon.b_equs = eq_list };
              Heptagon.c_assume = e_a;
              Heptagon.c_enforce = e_g} ->
         let env' = Env.add v env in
@@ -360,14 +360,14 @@ let translate_contract env contract =
 let node
     { Heptagon.n_name = n; Heptagon.n_input = i; Heptagon.n_output = o;
       Heptagon.n_contract = contract;
-      Heptagon.n_local = l; Heptagon.n_equs = eq_list;
+      Heptagon.n_block = { Heptagon.b_local = v; Heptagon.b_equs = eq_list };
       Heptagon.n_loc = loc;
       Heptagon.n_params =  params;
       Heptagon.n_params_constraints = params_constr } =
   let env = Env.add o (Env.add i Env.empty) in
   let contract, env = translate_contract env contract in
-  let env = Env.add l env in
-  let locals = translate_locals [] l in
+  let env = Env.add v env in
+  let locals = translate_locals [] v in
   let locals, l_eqs, s_eqs =
     translate_eqs env IdentSet.empty (locals, [], []) eq_list in
   let l_eqs, _ = add_locals IdentSet.empty l_eqs [] s_eqs in

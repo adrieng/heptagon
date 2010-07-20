@@ -68,8 +68,8 @@ and eqdesc =
 and block = {
   b_local : var_dec list;
   b_equs : eq list;
-  mutable b_defnames : ty Env.t;
-  mutable b_statefull : bool;
+  b_defnames : ty Env.t;
+  b_statefull : bool;
   b_loc : location }
 
 and state_handler = {
@@ -102,17 +102,16 @@ and type_dec_desc = Type_abs | Type_enum of name list | Type_struct of structure
 type contract = {
   c_assume : exp;
   c_enforce : exp;
-  c_local : var_dec list;
-  c_eq : eq list }
+  c_block : block }
 
 type node_dec = {
   n_name : name;
   n_statefull : bool;
   n_input : var_dec list;
   n_output : var_dec list;
-  n_local : var_dec list;
   n_contract : contract option;
-  n_equs : eq list; n_loc : location;
+  n_block : block;
+  n_loc : location;
   n_params : param list;
   n_params_constraints : size_constraint list }
 

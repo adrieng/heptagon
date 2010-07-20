@@ -273,25 +273,25 @@ and translate_last const_env env = function
   | Last (Some e) -> Heptagon.Last (Some (expect_static_exp const_env e))
 
 let translate_contract const_env env ct =
+  let b, _ = translate_block const_env env ct.c_block in
   { Heptagon.c_assume = translate_exp const_env env ct.c_assume;
     Heptagon.c_enforce = translate_exp const_env env ct.c_enforce;
-    Heptagon.c_local = translate_vd_list const_env env ct.c_local;
-    Heptagon.c_eq = List.map (translate_eq const_env env) ct.c_eq }
+    Heptagon.c_block = b }
 
 let param_of_var_dec const_env vd =
   Signature.mk_param vd.v_name (translate_type const_env vd.v_type)
 
 let translate_node const_env env node =
   let const_env = build_id_list node.n_loc const_env node.n_params in
-  let env = build_vd_list env (node.n_input @ node.n_output @ node.n_local) in
+  let env = build_vd_list env (node.n_input @ node.n_output) in
+  let b, env = translate_block const_env env node.n_block in
   { Heptagon.n_name = node.n_name;
     Heptagon.n_statefull = node.n_statefull;
     Heptagon.n_input = translate_vd_list const_env env node.n_input;
     Heptagon.n_output = translate_vd_list const_env env node.n_output;
-    Heptagon.n_local = translate_vd_list const_env env node.n_local;
     Heptagon.n_contract = Misc.optional
       (translate_contract const_env env) node.n_contract;
-    Heptagon.n_equs = List.map (translate_eq const_env env) node.n_equs;
+    Heptagon.n_block = b;
     Heptagon.n_loc = node.n_loc;
     Heptagon.n_params = List.map (param_of_var_dec const_env) node.n_params;
     Heptagon.n_params_constraints = []; }
@@ -338,7 +338,8 @@ let translate_signature s =
 let translate_interface_desc const_env = function
   | Iopen n -> Heptagon.Iopen n
   | Itypedef tydec -> Heptagon.Itypedef (translate_typedec const_env tydec)
-  | Iconstdef const_dec -> Heptagon.Iconstdef (translate_const_dec const_env const_dec)
+  | Iconstdef const_dec ->
+      Heptagon.Iconstdef (translate_const_dec const_env const_dec)
   | Isignature s -> Heptagon.Isignature (translate_signature s)
 
 let translate_interface_decl const_env idecl =

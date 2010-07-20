@@ -176,13 +176,12 @@ let eq funs (res, v, acc_eq_list) equ =
         let equ, (res, v, acc_eq_list) = eq funs (res, v, acc_eq_list) equ in
           equ, (res, v, equ::acc_eq_list)
 
-
-let node funs _ n =
-  let n, (_, v, eq_list) = Hept_mapfold.node_dec funs (None, [], []) n in
-    { n with n_local = v @ n.n_local; n_equs = eq_list; }, (None, [], [])
+let block funs _ b =
+  let n, (_, v, eq_list) = Hept_mapfold.block funs (None, [], []) b in
+    { b with b_local = v @ b.b_local; b_equs = eq_list; }, (None, [], [])
 
 let program p =
   let funs = { Hept_mapfold.defaults with
-                 eq = eq; node_dec = node; edesc = edesc } in
+                 eq = eq; block = block; edesc = edesc } in
   let p, _ = program_it funs (None, [], []) p in
     p

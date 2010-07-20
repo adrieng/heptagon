@@ -157,17 +157,12 @@ let rec eq funs (v, eq_list) eq =
           eq, translate_automaton v eq_list state_handlers
       | _ -> eq, (v, eq::eq_list)
 
-let node_dec funs acc n =
-  let n, (v, eq_list) = Hept_mapfold.node_dec funs ([],[]) n in
-    { n with n_local = v @ n.n_local; n_equs = eq_list @ n.n_equs; }, acc
-
 let block funs acc b =
   let b, (v, acc_eq_list) = Hept_mapfold.block funs ([], []) b in
-    { b with b_local = v @ b.b_local; b_equs = acc_eq_list@b.b_equs }, acc
+    { b with b_local = v @ b.b_local; b_equs = acc_eq_list }, acc
 
 let program p =
   let funs = { Hept_mapfold.defaults
-               with eq = eq; block = block; node_dec = node_dec } in
+               with eq = eq; block = block } in
   let p, _ = Hept_mapfold.program_it funs ([],[]) p in
-    p
     { p with p_types = !state_type_dec_list @ p.p_types }

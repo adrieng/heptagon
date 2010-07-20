@@ -242,10 +242,9 @@ and contract_it funs acc c = funs.contract funs acc c
 and contract funs acc c =
   let c_assume, acc = exp_it funs acc c.c_assume in
   let c_enforce, acc = exp_it funs acc c.c_enforce in
-  let c_local, acc = mapfold (var_dec_it funs) acc c.c_local in
-  let c_eq, acc = mapfold (eq_it funs) acc c.c_eq in
+  let c_block, acc = block_it funs acc c.c_block in
   { c with
-    c_assume = c_assume; c_enforce = c_enforce; c_local = c_local; c_eq = c_eq }
+    c_assume = c_assume; c_enforce = c_enforce; c_block = c_block }
   , acc
 
 and param_it funs acc vd = funs.param funs acc vd
@@ -257,17 +256,15 @@ and node_dec_it funs acc nd = funs.node_dec funs acc nd
 and node_dec funs acc nd =
   let n_input, acc = mapfold (var_dec_it funs) acc nd.n_input in
   let n_output, acc = mapfold (var_dec_it funs) acc nd.n_output in
-  let n_local, acc = mapfold (var_dec_it funs) acc nd.n_local in
   let n_params, acc = mapfold (param_it funs.global_funs) acc nd.n_params in
   let n_contract, acc =  optional_wacc (contract_it funs) acc nd.n_contract in
-  let n_equs, acc = mapfold (eq_it funs) acc nd.n_equs in
+  let n_block, acc = block_it funs acc nd.n_block in
   { nd with
       n_input = n_input;
       n_output = n_output;
-      n_local = n_local;
+      n_block = n_block;
       n_params = n_params;
-      n_contract = n_contract;
-      n_equs = n_equs; }
+      n_contract = n_contract }
   , acc
 
 

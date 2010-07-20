@@ -38,23 +38,16 @@ let block funs env b =
     { b with b_local = b.b_local @ last_v;
         b_equs = eq_lastn_n_list @ b.b_equs }, env
 
-let contract funs env contract =
-  let eq_lastn_n_list, env', last_v = extend_env env contract.c_local in
-  let contract, _ = Hept_mapfold.contract funs env contract in
-    { contract with c_local = contract.c_local @ last_v;
-        c_eq = eq_lastn_n_list @ contract.c_eq }, env
-
 let node_dec funs env n =
   let _, env, _ = extend_env Env.empty n.n_input in
   let eq_lasto_list, env, last_o = extend_env env n.n_output in
-  let eq_lastn_n_list, env, last_v = extend_env env n.n_local in
   let n, _  = Hept_mapfold.node_dec funs env n in
-    { n with n_local = n.n_local @ last_o @ last_v;
-        n_equs = eq_lasto_list @ eq_lastn_n_list @ n.n_equs }, env
+    { n with n_block =
+        { n.n_block with b_local = n.n_block.b_local @ last_o;
+            b_equs = eq_lasto_list @ n.n_block.b_equs } }, env
 
 let program p =
   let funs = { Hept_mapfold.defaults with
-                 node_dec = node_dec; block = block;
-                 contract = contract; edesc = edesc } in
+                 node_dec = node_dec; block = block; edesc = edesc } in
   let p, _ = Hept_mapfold.program_it funs Env.empty p in
     p

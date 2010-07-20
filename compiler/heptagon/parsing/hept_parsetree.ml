@@ -115,8 +115,7 @@ and type_desc =
 type contract =
     { c_assume : exp;
       c_enforce : exp;
-      c_local : var_dec list;
-      c_eq : eq list;
+      c_block : block
     }
 
 type node_dec =
@@ -124,9 +123,8 @@ type node_dec =
       n_statefull : bool;
       n_input     : var_dec list;
       n_output    : var_dec list;
-      n_local     : var_dec list;
       n_contract  : contract option;
-      n_equs      : eq list;
+      n_block     : block;
       n_loc       : location;
       n_params : var_dec list; }
 

@@ -185,20 +185,19 @@ and typing_block { b_local = dec; b_equs = eq_list; b_loc = loc } =
 let typing_contract loc contract =
   match contract with
     | None -> cempty
-    | Some { c_local = l_list; c_eq = eq_list; c_assume = e_a;
+    | Some { c_block = b; c_assume = e_a;
              c_enforce = e_g } ->
-        let teq = typing_eqs eq_list in
+        let teq = typing_eqs b.b_equs in
         let t_contract = cseq (typing e_a) (cseq teq (typing e_g)) in
         Causal.check loc t_contract;
-        let t_contract = clear (build l_list) t_contract in
+        let t_contract = clear (build b.b_local) t_contract in
         t_contract
 
 let typing_node { n_name = f; n_input = i_list; n_output = o_list;
                   n_contract = contract;
-                  n_local = l_list; n_equs = eq_list; n_loc = loc } =
+                  n_block = b; n_loc = loc } =
   let _ = typing_contract loc contract in
-  let teq = typing_eqs eq_list in
-  Causal.check loc teq
+    ignore (typing_block b)
 
 let program ({ p_nodes = p_node_list } as p) =
   List.iter typing_node p_node_list;

@@ -159,8 +159,7 @@ node_dec:
    n_input  = $5;
    n_output = $9;
    n_contract = $11;
-   n_local  = $12;
-   n_equs   = $14;
+   n_block   = mk_block $12 $14;
    n_params = $3;
    n_loc = Location.current_loc () }}
 ;
@@ -207,10 +206,9 @@ node_params:
 contract:
   | /* empty */ {None}
   | CONTRACT loc_vars opt_equs opt_assume enforce
-      {Some{c_local = $2;
-	    c_eq = $3;
-	    c_assume = $4;
-	    c_enforce = $5 }}
+      { Some{ c_block = mk_block $2 $3;
+	            c_assume = $4;
+	            c_enforce = $5 } }
 ;
 
 opt_equs:

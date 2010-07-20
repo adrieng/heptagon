@@ -56,7 +56,8 @@ and print_exp ff e =
     | Elast x -> fprintf ff "last "; print_ident ff x
     | Econst c -> print_static_exp ff c
     | Epre(None, e) -> fprintf ff "pre "; print_exp ff e
-    | Epre(Some c, e) -> print_static_exp ff c; fprintf ff " fby "; print_exp ff e
+    | Epre(Some c, e) ->
+        print_static_exp ff c; fprintf ff " fby "; print_exp ff e
     | Efby(e1, e2) -> print_exp ff e1; fprintf ff " fby "; print_exp ff e2
     | Eapp({ a_op = op; a_params = params }, e_list, r) ->
         print_op ff op params e_list;
@@ -283,19 +284,18 @@ let print_const_dec ff c =
   print_static_exp ff c.c_value;
   fprintf ff "@.@]"
 
-let print_contract ff {c_local = l;
-                       c_eq = eqs;
+let print_contract ff {c_block = b;
                        c_assume = e_a;
                        c_enforce = e_g } =
-  if l <> [] then begin
+  if b.b_local <> [] then begin
     fprintf ff "@[<v 2>contract@\n";
     fprintf ff "@[<hov 4>var ";
-    print_list_r print_vd "" ";" "" ff l;
+    print_list_r print_vd "" ";" "" ff b.b_local;
     fprintf ff ";@]@\n"
   end;
-  if eqs <> [] then begin
+  if b.b_equs <> [] then begin
     fprintf ff "@[<v 2>let @,";
-    print_eq_list ff eqs;
+    print_eq_list ff b.b_equs;
     fprintf ff "@]"; fprintf ff "tel@\n"
   end;
   fprintf ff "assume %a@;enforce %a@;with (@[<hov>"
@@ -309,7 +309,7 @@ let print_node_params ff = function
 
 let print_node ff
     { n_name = n; n_input = ni;
-      n_local = nl; n_output = no; n_contract = contract; n_equs = ne;
+      n_block = nb; n_output = no; n_contract = contract;
       n_params = params; } =
   fprintf ff "@[<v 2>node ";
   print_name ff n;
@@ -319,13 +319,13 @@ let print_node ff
   fprintf ff "@[%a@]" (print_list_r print_vd "(" ";" ")") no;
   fprintf ff "@,";
   optunit (print_contract ff) contract;
-  if nl <> [] then begin
+  if nb.b_local <> [] then begin
     fprintf ff "@[<hov 4>var ";
-    print_list_r print_vd "" ";" "" ff nl;
+    print_list_r print_vd "" ";" "" ff nb.b_local;
     fprintf ff ";@]@,"
   end;
   fprintf ff "@[<v 2>let @,";
-  print_eq_list ff ne;
+  print_eq_list ff nb.b_equs;
   fprintf ff "@]@;"; fprintf ff "tel";fprintf ff "@.@]"
 
 let print_open_module ff name =

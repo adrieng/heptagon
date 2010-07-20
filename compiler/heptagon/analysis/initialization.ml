@@ -338,10 +338,10 @@ let sbuild h dec =
 let typing_contract h contract =
   match contract with
     | None -> h
-    | Some { c_local = l_list; c_eq = eq_list; c_assume = e_a;
+    | Some { c_block = b; c_assume = e_a;
              c_enforce = e_g } ->
-        let h' = build h l_list in
-        typing_eqs h' eq_list;
+        let h' = build h b.b_local in
+        typing_eqs h' b.b_equs;
         (* assumption *)
         expect h' e_a (skeleton izero e_a.e_ty);
         (* property *)
@@ -349,14 +349,11 @@ let typing_contract h contract =
         h
 
 let typing_node { n_name = f; n_input = i_list; n_output = o_list;
-                  n_contract = contract;
-                  n_local = l_list; n_equs = eq_list } =
+                  n_contract = contract; n_block = b } =
   let h = sbuild Env.empty i_list in
   let h = sbuild h o_list in
   let h = typing_contract h contract in
-
-  let h = build h l_list in
-  typing_eqs h eq_list
+    ignore (typing_block h b)
 
 let program ({ p_nodes = p_node_list } as p) =
   List.iter typing_node p_node_list;

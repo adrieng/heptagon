@@ -21,7 +21,8 @@ let mk_unique_node nd =
   let mk_bind vd =
     let id = Ident.fresh (Ident.sourcename vd.v_ident) in
     (vd.v_ident, { vd with v_ident = id; }) in
-  let subst = List.map mk_bind (nd.n_local @ nd.n_input @ nd.n_output) in
+  let subst = List.map mk_bind (nd.n_block.b_local
+                                @ nd.n_input @ nd.n_output) in
 
   let subst_var_dec funs () vd =
     ({ vd with v_ident = (List.assoc vd.v_ident subst).v_ident; }, ()) in
@@ -81,10 +82,10 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
         mk_equation ~statefull:false (Eeq (Evarpat vd.v_ident, e)) in
       let mk_output_exp vd = mk_exp (Evar vd.v_ident) vd.v_type in
 
-      let newvars = ni.n_input @ ni.n_local @ ni.n_output @ newvars
+      let newvars = ni.n_input @ ni.n_block.b_local @ ni.n_output @ newvars
       and newequs =
         List.map2 mk_input_equ ni.n_input argl
-        @ List.map add_reset ni.n_equs
+        @ List.map add_reset ni.n_block.b_equs
         @ newequs in
 
       (* For clocking reason we cannot create 1-tuples. *)
@@ -105,7 +106,9 @@ let block funs (env, newvars, newequs) blk =
 let node_dec funs (env, newvars, newequs) nd =
   let nd, (env, newvars, newequs) =
     Hept_mapfold.node_dec funs (env, newvars, newequs) nd in
-  ({ nd with n_local = newvars @ nd.n_local; n_equs = newequs @ nd.n_equs; },
+  ({ nd with n_block =
+       { nd.n_block with b_local = newvars @ nd.n_block.b_local;
+           b_equs = newequs @ nd.n_block.b_equs } },
    (env, [], []))
 
 let program p =

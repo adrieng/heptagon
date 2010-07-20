@@ -1008,27 +1008,21 @@ let typing_contract statefull const_env h contract =
 
   match contract with
     | None -> None,h
-    | Some ({ c_local = l_list;
-              c_eq = eq;
+    | Some ({ c_block = b;
               c_assume = e_a;
               c_enforce = e_g }) ->
-        let typed_l_list, local_names, h' = build const_env h h l_list in
-
-        let typed_eq, defined_names =
-          typing_eq_list statefull const_env h' Env.empty eq in
+        let typed_b, defined_names, _ = typing_block statefull const_env h b in
+          (* check that the equations do not define other unexpected names *)
+          included_env defined_names Env.empty;
 
         (* assumption *)
-        let typed_e_a = expect statefull const_env h' (Tid Initial.pbool) e_a in
+        let typed_e_a = expect statefull const_env h (Tid Initial.pbool) e_a in
         (* property *)
-        let typed_e_g = expect statefull const_env h' (Tid Initial.pbool) e_g in
+        let typed_e_g = expect statefull const_env h (Tid Initial.pbool) e_g in
 
-        included_env local_names defined_names;
-        included_env defined_names local_names;
-
-        Some { c_local = typed_l_list;
-               c_eq = typed_eq;
-               c_assume = typed_e_a;
-               c_enforce = typed_e_g }, h
+          Some { c_block = typed_b;
+                 c_assume = typed_e_a;
+                 c_enforce = typed_e_g }, h
 
 let signature statefull inputs returns params constraints =
   let arg_dec_of_var_dec vd =
@@ -1056,7 +1050,7 @@ let build_node_params const_env l =
 let node ({ n_name = f; n_statefull = statefull;
             n_input = i_list; n_output = o_list;
             n_contract = contract;
-            n_local = l_list; n_equs = eq_list; n_loc = loc;
+            n_block = b; n_loc = loc;
             n_params = node_params; } as n) =
   try
     let typed_params, const_env =
@@ -1071,14 +1065,13 @@ let node ({ n_name = f; n_statefull = statefull;
     let typed_contract, h =
       typing_contract statefull const_env h contract in
 
-    let typed_l_list, local_names, h = build const_env h h l_list in
-    let typed_eq_list, defined_names =
-      typing_eq_list statefull const_env h Env.empty eq_list in
+    let typed_b, defined_names, _ = typing_block statefull const_env h b in
+      (* check that the defined names match exactly the outputs and locals *)
+      included_env defined_names output_names;
+      included_env output_names defined_names;
+
     (* if not (statefull) & (List.length o_list <> 1)
        then error (Etoo_many_outputs);*)
-    let expected_names = add local_names output_names in
-    included_env expected_names defined_names;
-    included_env defined_names expected_names;
 
     let cl = get_size_constraint () in
     let cl = solve loc cl in
@@ -1087,10 +1080,9 @@ let node ({ n_name = f; n_statefull = statefull;
     { n with
         n_input = typed_i_list;
         n_output = typed_o_list;
-        n_local = typed_l_list;
         n_params = typed_params;
         n_contract = typed_contract;
-        n_equs = typed_eq_list }
+        n_block = typed_b }
   with
     | TypingError(error) -> message loc error
 
