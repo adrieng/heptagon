@@ -138,7 +138,7 @@ type program = {
 
 (*Helper functions to build the AST*)
 
-let mk_exp ?(exp_ty = Tprod []) ?(clock = Cbase) ?(loc = no_location) desc =
+let mk_exp ?(exp_ty = invalid_type) ?(clock = Cbase) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = exp_ty; e_ck = clock; e_loc = loc }
 
 let mk_var_dec ?(loc = no_location) ?(clock = Cbase) ident ty =
