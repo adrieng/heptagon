@@ -29,6 +29,11 @@ and ty = | Tprod of ty list | Tid of type_name | Tarray of ty * static_exp
 
 let invalid_type = Tprod []
 
+let prod = function
+  | []      -> assert false
+  | [ty]    -> ty
+  | ty_list -> Tprod ty_list
+
 let mk_static_exp ?(loc = no_location) ?(ty = invalid_type) desc =
   { se_desc = desc; se_ty = ty; se_loc = loc }
 

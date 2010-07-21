@@ -257,11 +257,6 @@ let kind f statefull
     if n & not(statefull) then error (Eshould_be_a_node f)
     else op, List.map ty_of_arg ty_list1, List.map ty_of_arg ty_list2
 
-let prod = function
-  | []      -> assert false
-  | [ty]    -> ty
-  | ty_list -> Tprod ty_list
-
 let typ_of_name h x =
   try
     let { ty = ty } = Env.find x h in ty
