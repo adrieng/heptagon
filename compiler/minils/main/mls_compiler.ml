@@ -11,7 +11,7 @@ open Compiler_utils
 
 let compile pp p =
   (* Clocking *)
-  let p = do_silent_pass Clocking.program "Clocking" p true in
+  (*let p = do_silent_pass Clocking.program "Clocking" p true in*)
 
   (* Check that the dataflow code is well initialized *)
   (*let p = do_silent_pass Init.program "Initialization check" p !init in *)
