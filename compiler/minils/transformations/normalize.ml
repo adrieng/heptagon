@@ -145,8 +145,9 @@ let add context expected_kind ({ e_desc = de } as e) =
     | _ , VRef -> true
     | Eapp ({ a_op = Efun n }, _, _),
         (Exp|Act) when is_op n -> false
-    | ( Emerge _ | Eapp _ | Efby _ ), Exp -> true
-    | ( Eapp({ a_op = Efun _ | Enode _ }, _, _) | Efby _ ), Act -> true
+    | ( Emerge _ | Eapp _ | Eiterator | Efby _ ), Exp -> true
+    | ( Eapp({ a_op = Efun _ | Enode _ }, _, _)
+      | Eiterator | Efby _ ), Act -> true
     | _ -> false in
   if up then
     let context, n = equation context e in
