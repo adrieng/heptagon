@@ -53,12 +53,13 @@ let compile_impl modname filename =
     let pp = Mls_printer.print stdout in
     comment "Translation into MiniLs";
     Mls_printer.print mlsc p;
+    if !Misc.verbose then pp p;
 
     (* Process the MiniLS AST *)
     let p = Mls_compiler.compile pp p in
 
-      (* Generate the sequential code *)
-      Mls2seq.program p;
+    (* Generate the sequential code *)
+    Mls2seq.program p;
 
     close_all_files ()
 
