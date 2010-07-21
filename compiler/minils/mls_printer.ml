@@ -134,7 +134,10 @@ and print_app ff (app, args) = match app.a_op, app.a_params, args with
           print_exp e1 print_index idx print_exp e2
   | Econcat, _,[e1; e2] ->
       fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
-
+  | Elambda(inp, outp, _, eq_list), _, e_list ->
+      fprintf ff "(%a -> %a with %a)@,%a"
+        print_vd_tuple inp  print_vd_tuple outp
+        print_eqs eq_list  print_exp_tuple e_list
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_longname print_exp "("" -> "")") c
@@ -144,14 +147,14 @@ and print_tag_e_list ff tag_e_list =
     (print_list print_handler """""") tag_e_list
 
 
-let print_eq ff { eq_lhs = p; eq_rhs = e } =
+and print_eq ff { eq_lhs = p; eq_rhs = e } =
   if !Misc.full_type_info
   then fprintf ff "@[<2>%a :: %a =@ %a@]"
     print_pat p  print_ck e.e_ck  print_exp e
   else fprintf ff "@[<2>%a =@ %a@]" print_pat p  print_exp e
 
 
-let print_eqs ff = function
+and print_eqs ff = function
   | [] -> ()
   | l -> fprintf ff "@[<v2>let@ %a@]@\ntel" (print_list_r print_eq """;""") l
 

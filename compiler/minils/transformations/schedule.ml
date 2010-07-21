@@ -73,10 +73,19 @@ let schedule eq_list =
   let node_list = List.rev node_list in
   List.map containt node_list
 
-(* We suppose here that we don't have nested eqs.
-  Otherwise schedule should be 'recursive' *)
-let eqs funs () eq_list = schedule eq_list, ()
+let eqs funs () eq_list =
+  let eqs, () = Mls_mapfold.eqs funs () eq_list in
+    schedule eqs, ()
+
+let edesc funs () = function
+  | Eiterator(it, ({ a_op = Elambda(inp, outp, locals, eq_list) } as app),
+              n, e_list, r) ->
+      let app = { app with a_op =  Elambda(inp, outp,
+                                           locals, schedule eq_list) } in
+        Eiterator(it, app, n, e_list, r), ()
+  | _ -> raise Fallback
 
 let program p =
   let p, () = Mls_mapfold.program_it
-                { Mls_mapfold.defaults with Mls_mapfold.eqs = eqs } () p in p
+                { Mls_mapfold.defaults with Mls_mapfold.eqs = eqs;
+                    Mls_mapfold.edesc = edesc } () p in p

@@ -75,6 +75,8 @@ and op =
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
   | Eupdate            (** [ arg1 with a_params = arg2 ] *)
   | Econcat            (** arg1@@arg2 *)
+  | Elambda of var_dec list * var_dec list * var_dec list * eq list
+      (* inputs, outputs, locals, body *)
 
 and ct =
   | Ck of ck
@@ -93,12 +95,12 @@ and pat =
   | Etuplepat of pat list
   | Evarpat of var_ident
 
-type eq = {
+and eq = {
   eq_lhs : pat;
   eq_rhs : exp;
   eq_loc : location }
 
-type var_dec = {
+and var_dec = {
   v_ident : var_ident;
   v_type : ty;
   v_clock : ck;

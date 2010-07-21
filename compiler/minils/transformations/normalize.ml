@@ -188,6 +188,13 @@ let rec translate kind context e =
         let context, e_list = translate_app kind context app.a_op e_list in
           context, { e with e_desc = Eapp(app, e_list, r) }
     | Eiterator (it, app, n, e_list, reset) ->
+        let app =
+          (match app.a_op with
+             | Elambda(inp, outp, [], eq_list) ->
+                let d_list, eq_list = translate_eq_list [] eq_list in
+                  { app with a_op = Elambda(inp, outp, d_list, eq_list) }
+             | _ -> app) in
+
         (* Add an intermediate equation for each array lit argument. *)
         let translate_iterator_arg_list context e_list =
           let add e context =
@@ -282,7 +289,7 @@ and fby kind context e v e1 =
           context, { e1 with e_desc = n } in
         context, { e with e_desc = Efby(v, e1') }
 
-let rec translate_eq context eq =
+and translate_eq context eq =
   (* applies distribution rules *)
   (* [x = v fby e] should verifies that x is local *)
   (* [(p1,...,pn) = (e1,...,en)] into [p1 = e1;...;pn = en] *)
@@ -301,7 +308,7 @@ let rec translate_eq context eq =
   let context, e = translate Any context eq.eq_rhs in
   distribute context { eq with eq_rhs = e }
 
-let translate_eq_list d_list eq_list =
+and translate_eq_list d_list eq_list =
   List.fold_left
     (fun context eq -> translate_eq context eq)
     (d_list, []) eq_list
