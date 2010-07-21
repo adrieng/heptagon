@@ -86,7 +86,7 @@ type method_def =
       m_inputs : var_dec list;
       m_outputs : var_dec list;
       m_locals : var_dec list;
-      m_body : act list; }
+      m_body : block; }
 
 type class_def =
     { cd_name : class_name;
