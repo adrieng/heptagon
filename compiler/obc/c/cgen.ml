@@ -570,7 +570,7 @@ let fun_def_of_step_fun name obj_env mem objs md =
     f_retty = Cty_void;
     f_args = args;
     f_body = {
-      var_decls = local_vars @ out_vars;
+      var_decls = out_vars;
       block_body = body
     }
   }
