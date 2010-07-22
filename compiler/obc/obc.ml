@@ -80,6 +80,7 @@ and var_dec =
 type obj_dec =
     { o_name : obj_name;
       o_class : instance_name;
+      o_params : static_exp list;
       o_size : static_exp option;
       o_loc : location }
 

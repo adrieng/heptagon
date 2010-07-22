@@ -15,8 +15,9 @@ let print_vd ff vd =
 let print_obj ff o =
   fprintf ff "@[<v>"; print_name ff o.o_name;
   fprintf ff " : "; print_longname ff o.o_class;
+  fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") o.o_params;
   (match o.o_size with
-     | Some se -> print_static_exp ff se;
+     | Some se -> fprintf ff "[%a]" print_static_exp se
      | None -> ());
   fprintf ff ";@]"
 

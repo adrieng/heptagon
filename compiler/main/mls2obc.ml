@@ -313,7 +313,8 @@ and mk_node_call map call_context app loc name_list args =
   match app.Minils.a_op with
     | Minils.Enode f | Minils.Efun f ->
         let o = mk_obj_call_from_context call_context (gen_obj_name f) in
-        let j = [(o, f, size_from_call_context call_context, loc)] in
+        let j = [(o, f, app.Minils.a_params,
+                  size_from_call_context call_context, loc)] in
         let si =
           (match app.Minils.a_op with
              | Minils.Efun _ -> []
@@ -395,8 +396,8 @@ let var_decl l =
   List.map (fun (x, t) -> mk_var_dec x t) l
 
 let obj_decl l =
-  List.map (fun (x, t, i, loc) ->
-              { o_name = obj_call_name x; o_class = t;
+  List.map (fun (x, t, p, i, loc) ->
+              { o_name = obj_call_name x; o_class = t; o_params = p;
                 o_size = i; o_loc = loc }) l
 
 let translate_contract map mem_vars =
