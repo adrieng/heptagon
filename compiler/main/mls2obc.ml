@@ -313,13 +313,15 @@ and mk_node_call map call_context app loc name_list args =
   match app.Minils.a_op with
     | Minils.Enode f | Minils.Efun f ->
         let o = mk_obj_call_from_context call_context (gen_obj_name f) in
-        let j = [(o, f, app.Minils.a_params,
-                  size_from_call_context call_context, loc)] in
+        let obj =
+          { o_name = obj_call_name o; o_class = f;
+            o_params = app.Minils.a_params;
+            o_size = size_from_call_context call_context; o_loc = loc } in
         let si =
           (match app.Minils.a_op with
              | Minils.Efun _ -> []
              | Minils.Enode _ -> [reinit o]) in
-          [], si, j, [Acall (name_list, o, Mstep, args)]
+          [], si, [obj], [Acall (name_list, o, Mstep, args)]
 
     | Minils.Elambda(inp, outp, locals, eq_list) ->
         let add_input env vd =
@@ -392,14 +394,6 @@ and translate_iterator map call_context it name_list app loc n x c_list =
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list
 
-let var_decl l =
-  List.map (fun (x, t) -> mk_var_dec x t) l
-
-let obj_decl l =
-  List.map (fun (x, t, p, i, loc) ->
-              { o_name = obj_call_name x; o_class = t; o_params = p;
-                o_size = i; o_loc = loc }) l
-
 let translate_contract map mem_vars =
   function
     | None -> ([], [], [], [])
@@ -451,7 +445,7 @@ let translate_node
   let m, d_list = List.partition
     (fun vd -> List.mem vd.v_ident mem_vars) d_list in
   let s = joinlist (s_list @ s_list') in
-  let j = obj_decl (j @ j') in
+  let j = j' @ j in
   let si = joinlist (si @ si') in
   let stepm = {
     m_name = Mstep; m_inputs = i_list; m_outputs = o_list;
