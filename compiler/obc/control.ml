@@ -23,6 +23,10 @@ let var_from_name map x =
       _ -> assert false
   end
 
+let fuse_blocks b1 b2 =
+  { b1 with b_locals = b1.b_locals @ b2.b_locals;
+      b_body = b1.b_body @ b2.b_body }
+
 let rec find c = function
   | []    -> raise Not_found
   | (c1, s1) :: h  ->
@@ -34,7 +38,7 @@ let rec control map ck s =
     | Cvar { contents = Clink ck } -> control map ck s
     | Con(ck, c, n)  ->
         let x = var_from_name map n in
-          control map ck (Acase(mk_exp (Elhs x), [(c, [s])]))
+          control map ck (Acase(mk_exp (Elhs x), [(c, mk_block [s])]))
 
 let is_deadcode = function
     | Aassgn (lhs, e) ->
@@ -43,7 +47,7 @@ let is_deadcode = function
            | _ -> false
         )
     | Acase (e, []) -> true
-    | Afor(_, _, _, []) -> true
+    | Afor(_, _, _, { b_body = [] }) -> true
     | _ -> false
 
 let rec joinlist l =
@@ -58,11 +62,14 @@ let rec joinlist l =
                 joinlist ((Acase(e1, joinhandlers h1 h2))::l)
             | s1, s2 -> s1::(joinlist (s2::l))
 
+and join_block b =
+  { b with b_body = joinlist b.b_body }
+
 and joinhandlers h1 h2 =
   match h1 with
     | [] -> h2
     | (c1, s1) :: h1' ->
         let s1', h2' =
-          try let s2, h2'' = find c1 h2 in s1@s2, h2''
+          try let s2, h2'' = find c1 h2 in fuse_blocks s1 s2, h2''
           with Not_found -> s1, h2 in
-        (c1, joinlist s1') :: joinhandlers h1' h2'
+        (c1, join_block s1') :: joinhandlers h1' h2'

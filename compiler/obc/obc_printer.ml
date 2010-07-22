@@ -92,8 +92,13 @@ let rec print_act ff a =
         fprintf ff "@["; print_exps ff es; fprintf ff "@]";
         fprintf ff ")"
 
-and print_act_list ff l =
- print_list_r print_act "" ";" "" ff l
+and print_act_list ff b =
+  if b.b_locals <> [] then begin
+    fprintf ff "@[<hov 4>var ";
+    print_list_r print_vd "" ";" "" ff b.b_locals;
+    fprintf ff ";@]@,"
+  end;
+  print_list_r print_act "" ";" "" ff b.b_body
 
 and print_tag_act_list ff tag_act_list =
   print_list
@@ -117,11 +122,6 @@ let print_method ff md =
   fprintf ff "@]) returns ";
   print_list_r print_vd "(" ";" ")" ff md.m_outputs;
   fprintf ff "@]){@,";
-  if md.m_locals <> [] then begin
-    fprintf ff "@[<hov 4>var ";
-    print_list_r print_vd "" ";" "" ff md.m_locals;
-    fprintf ff ";@]@,"
-  end;
   print_act_list ff md.m_body;
   fprintf ff "}@]"
 

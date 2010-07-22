@@ -462,8 +462,7 @@ let rec cstm_of_act var_env obj_env act =
         translation function on sub-statements. *)
     | Afor (x, i1, i2, act) ->
         [Cfor(name x, int_of_static_exp i1,
-              int_of_static_exp i2,
-              cstm_of_act_list var_env obj_env act)]
+              int_of_static_exp i2, cstm_of_act_list var_env obj_env act)]
 
     (** Reinitialization of an object variable, extracting the reset
         function's name from our environment [obj_env]. *)
@@ -503,8 +502,14 @@ let rec cstm_of_act var_env obj_env act =
         let outvl = clhss_of_lhss var_env outvl in
         generate_function_call var_env obj_env outvl objn args
 
-and cstm_of_act_list var_env obj_env act_list =
-  List.flatten (List.map (cstm_of_act var_env obj_env) act_list)
+and cstm_of_act_list var_env obj_env b =
+  let l = List.map cvar_of_vd b.b_locals in
+  let var_env = l @ var_env in
+  let cstm = List.flatten (List.map (cstm_of_act var_env obj_env) b.b_body) in
+    match l with
+      | [] -> cstm
+      | _ ->
+            [Csblock { var_decls = l; block_body = cstm }]
 
 (* TODO needed only because of renaming phase *)
 let global_name = ref "";;
@@ -541,7 +546,7 @@ let fun_def_of_step_fun name obj_env mem objs md =
       memory structure. *)
   let args = step_fun_args name md in
   (** Its normal local variables. *)
-  let local_vars = List.map cvar_of_vd md.m_locals in
+  let local_vars = List.map cvar_of_vd md.m_body.b_locals in
 
   (** Out vars for function calls *)
   let out_vars =

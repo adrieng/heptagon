@@ -58,6 +58,12 @@ let rec translate_pat map = function
       List.fold_right (fun pat acc -> (translate_pat map pat) @ acc)
         pat_list []
 
+let translate_var_dec map l =
+  let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
+    mk_var_dec ~loc:loc x t
+  in
+  List.map one_var l
+
 (* [translate e = c] *)
 let rec translate map (si, j, s) e =
   let desc = match e.Minils.e_desc with
@@ -119,7 +125,7 @@ and translate_act map context pat
 
 and translate_c_act_list map context pat c_act_list =
   List.map
-    (fun (c, act) -> (c, (translate_act map context pat act)))
+    (fun (c, act) -> (c, mk_block (translate_act map context pat act)))
     c_act_list
 
 let mk_obj_call_from_context (o, _) n =
@@ -132,7 +138,7 @@ let size_from_call_context (_, n) = n
 let empty_call_context = Oobj "n", None
 
 let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
-    (si, j, s) =
+    (v, si, j, s) =
   let { Minils.e_desc = desc; Minils.e_ty = ty;
         Minils.e_ck = ck; Minils.e_loc = loc } = e in
   match (pat, desc) with
@@ -146,7 +152,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let action = Aassgn (var_from_name map n,
                             translate map (si, j, s) e)
         in
-          si, j, (control map ck action) :: s
+          v, si, j, (control map ck action) :: s
 
     | Minils.Etuplepat p_list,
         Minils.Eapp({ Minils.a_op = Minils.Etuple }, act_list, _) ->
@@ -154,17 +160,20 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           (fun pat e ->
              translate_eq map call_context
                (Minils.mk_equation pat e))
-          p_list act_list (si, j, s)
+          p_list act_list (v, si, j, s)
 
     | pat, Minils.Eapp({ Minils.a_op = Minils.Eifthenelse }, [e1;e2;e3], _) ->
         let cond = translate map (si, j, s) e1 in
-        let si, j, true_act = translate_eq map call_context
-          (Minils.mk_equation pat e2) (si, j, s) in
-        let si, j, false_act = translate_eq map call_context
-          (Minils.mk_equation pat e3) (si, j, s) in
-        let action = Acase (cond, [Name "true", true_act;
-                                   Name "false", false_act]) in
-          si, j, (control map ck action) :: s
+        let vt, si, j, true_act = translate_eq map call_context
+          (Minils.mk_equation pat e2) (v, si, j, s) in
+        let vf, si, j, false_act = translate_eq map call_context
+          (Minils.mk_equation pat e3) (v, si, j, s) in
+        let vf = translate_var_dec map vf in
+        let vt = translate_var_dec map vt in
+        let action =
+          Acase (cond, [Name "true", mk_block ~locals:vt true_act;
+                        Name "false", mk_block ~locals:vf false_act]) in
+          v, si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
           Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
@@ -175,7 +184,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let action =
           Aassgn (mk_lhs (Lfield (x, f)), translate map (si, j, s) e2)
         in
-        si, j, (control map ck copy) :: (control map ck action) :: s
+        v, si, j, (control map ck copy) :: (control map ck action) :: s
 
     | Minils.Evarpat x,
         Minils.Eapp ({ Minils.a_op = Minils.Eselect_slice;
@@ -193,10 +202,11 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                                                 [idx2;idx1])) ])) in
         let action =
           Afor (cpt, mk_static_exp (Sint 0), bound,
-               [Aassgn (mk_lhs (Larray (var_from_name map x, mk_evar cpt)),
+                mk_block [Aassgn (mk_lhs (Larray (var_from_name map x,
+                                                  mk_evar cpt)),
                       mk_lhs_exp (Larray (lhs_of_exp e, idx)))] )
         in
-        si, j, (control map ck action) :: s
+        v, si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
           Minils.Eapp ({ Minils.a_op = Minils.Eselect_dyn }, e1::e2::idx, _) ->
@@ -208,9 +218,9 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           Aassgn (x, mk_exp (Elhs (lhs_of_idx_list (lhs_of_exp e1) idx))) in
         let false_act = Aassgn (x, translate map (si, j, s) e2) in
         let cond = bound_check_expr idx bounds in
-        let action = Acase (cond, [ Name "true", [true_act];
-                                    Name "false", [false_act] ]) in
-          si, j, (control map ck action) :: s
+        let action = Acase (cond, [ Name "true", mk_block [true_act];
+                                    Name "false", mk_block [false_act] ]) in
+          v, si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
             Minils.Eapp ({ Minils.a_op = Minils.Eupdate;
@@ -221,7 +231,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let action = Aassgn (lhs_of_idx_list x idx,
                             translate map (si, j, s) e2)
         in
-        si, j, (control map ck copy) :: (control map ck action) :: s
+        v, si, j, (control map ck copy) :: (control map ck action) :: s
 
     | Minils.Evarpat x,
               Minils.Eapp ({ Minils.a_op = Minils.Earray_fill;
@@ -229,11 +239,11 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let cpt = Ident.fresh "i" in
         let action =
           Afor (cpt, mk_static_exp (Sint 0), n,
-                [Aassgn (mk_lhs (Larray (var_from_name map x,
-                                 mk_evar cpt)),
-                      translate map (si, j, s) e) ])
+                mk_block [Aassgn (mk_lhs (Larray (var_from_name map x,
+                                                  mk_evar cpt)),
+                                  translate map (si, j, s) e) ])
         in
-        si, j, (control map ck action) :: s
+        v, si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
                 Minils.Eapp ({ Minils.a_op = Minils.Econcat }, [e1; e2], _) ->
@@ -246,25 +256,25 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                let e2 = translate map (si, j, s) e2 in
                let a1 =
                  Afor (cpt1, mk_static_exp (Sint 0), n1,
-                      [Aassgn (mk_lhs (Larray (x, mk_evar cpt1)),
-                               mk_lhs_exp (Larray (lhs_of_exp e1,
-                                                    mk_evar cpt1)))] ) in
+                       mk_block [Aassgn (mk_lhs (Larray (x, mk_evar cpt1)),
+                                         mk_lhs_exp (Larray (lhs_of_exp e1,
+                                                        mk_evar cpt1)))] ) in
                let idx = mk_exp (Eop (op_from_string "+",
                                       [ mk_exp (Econst n1); mk_evar cpt2])) in
                let a2 =
                  Afor (cpt2, static_exp_of_int 0, n2,
-                      [Aassgn (mk_lhs (Larray (x, idx)),
-                              mk_lhs_exp (Larray (lhs_of_exp e2,
-                                                   mk_evar cpt2)))] )
+                       mk_block [Aassgn (mk_lhs (Larray (x, idx)),
+                                         mk_lhs_exp (Larray (lhs_of_exp e2,
+                                                             mk_evar cpt2)))] )
                in
-               si, j, (control map ck a1) :: (control map ck a2) :: s
+               v, si, j, (control map ck a1) :: (control map ck a2) :: s
            | _ -> assert false )
 
     | pat, Minils.Eapp ({ Minils.a_op = Minils.Efun _ | Minils.Enode _ } as app,
                         e_list, r) ->
         let name_list = translate_pat map pat in
         let c_list = List.map (translate map (si, j, s)) e_list in
-        let si', j', action = mk_node_call map call_context
+        let v', si', j', action = mk_node_call map call_context
           app loc name_list c_list in
         let action = List.map (control map ck) action in
         let s = (match r, app.Minils.a_op with
@@ -272,7 +282,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                        let ra = List.map (control map ck) si' in
                        ra @ action @ s
                    | _, _ -> action @ s) in
-        si'@si, j'@j, s
+        v' @ v, si'@si, j'@j, s
 
     | pat, Minils.Eiterator (it, app, n, e_list, reset) ->
         let name_list = translate_pat map pat in
@@ -289,15 +299,15 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                  let ra = List.map (control map ck) si' in
                    ra @ action @ s
              | _, _ -> action @ s)
-        in (si' @ si, j' @ j, s)
+        in (v, si' @ si, j' @ j, s)
 
     | (pat, _) ->
         let action = translate_act map (si, j, s) pat e in
         let action = List.map (control map ck) action in
-          si, j, action @ s
+          v, si, j, action @ s
 
 and translate_eq_list map call_context act_list =
-  List.fold_right (translate_eq map call_context) act_list ([], [], [])
+  List.fold_right (translate_eq map call_context) act_list ([], [], [], [])
 
 and mk_node_call map call_context app loc name_list args =
   match app.Minils.a_op with
@@ -308,14 +318,14 @@ and mk_node_call map call_context app loc name_list args =
           (match app.Minils.a_op with
              | Minils.Efun _ -> []
              | Minils.Enode _ -> [reinit o]) in
-          si, j, [Acall (name_list, o, Mstep, args)]
+          [], si, j, [Acall (name_list, o, Mstep, args)]
 
     | Minils.Elambda(inp, outp, locals, eq_list) ->
         let add_input env vd =
           Env.add vd.Minils.v_ident (mk_lhs (Lvar vd.Minils.v_ident)) env in
         let build env vd a =
           Env.add vd.Minils.v_ident a env in
-        let subst_block env b =
+        let subst_act_list env act_list =
           let exp funs env e = match e.e_desc with
             | Elhs { l_desc = Lvar x } ->
                 let e =
@@ -325,16 +335,16 @@ and mk_node_call map call_context app loc name_list args =
             | _ -> Obc_mapfold.exp funs env e
           in
           let funs = { Obc_mapfold.defaults with exp = exp } in
-          let b, _ = Obc_mapfold.block_it funs env b in
-            b
+          let act_list, _ = mapfold (Obc_mapfold.act_it funs) env act_list in
+            act_list
         in
 
         let map = List.fold_left add_input map inp in
         let map = List.fold_left2 build map outp name_list in
         let map = List.fold_left add_input map locals in
-        let si, j, s = translate_eq_list map call_context eq_list in
+        let v, si, j, s = translate_eq_list map call_context eq_list in
         let env = List.fold_left2 build Env.empty inp args in
-          si, j, subst_block env s
+          v @ locals, si, j, subst_act_list env s
 
     | _ -> assert false
 
@@ -348,29 +358,35 @@ and translate_iterator map call_context it name_list app loc n x c_list =
     | Minils.Imap ->
         let c_list = array_of_input c_list in
         let name_list = array_of_output name_list in
-        let si, j, action = mk_node_call map call_context
+        let v, si, j, action = mk_node_call map call_context
           app loc name_list c_list in
-          si, j, [ Afor (x, static_exp_of_int 0, n, action) ]
+        let v = translate_var_dec map v in
+        let b = mk_block ~locals:v action in
+          si, j, [ Afor (x, static_exp_of_int 0, n, b) ]
 
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
         let (name_list, acc_out) = split_last name_list in
         let name_list = array_of_output name_list in
-        let si, j, action = mk_node_call map call_context
+        let v, si, j, action = mk_node_call map call_context
           app loc (name_list @ [ acc_out ])
           (c_list @ [ mk_exp (Elhs acc_out) ]) in
+        let v = translate_var_dec map v in
+        let b = mk_block ~locals:v action in
           si, j, [Aassgn (acc_out, acc_in);
-                  Afor (x, static_exp_of_int 0, n, action)]
+                  Afor (x, static_exp_of_int 0, n, b)]
 
     | Minils.Ifold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
         let acc_out = last_element name_list in
-        let si, j, action = mk_node_call map call_context
+        let v, si, j, action = mk_node_call map call_context
           app loc name_list (c_list @ [ mk_exp (Elhs acc_out) ]) in
+        let v = translate_var_dec map v in
+        let b = mk_block ~locals:v action in
           si, j, [ Aassgn (acc_out, acc_in);
-                   Afor (x, static_exp_of_int 0, n, action) ]
+                   Afor (x, static_exp_of_int 0, n, b) ]
 
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list
@@ -383,12 +399,6 @@ let obj_decl l =
               { o_name = obj_call_name x; o_class = t;
                 o_size = i; o_loc = loc }) l
 
-let translate_var_dec map l =
-  let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
-    mk_var_dec ~loc:loc x t
-  in
-  List.map one_var l
-
 let translate_contract map mem_vars =
   function
     | None -> ([], [], [], [])
@@ -399,9 +409,9 @@ let translate_contract map mem_vars =
           Minils.c_assume = e_a;
           Minils.c_enforce = e_c
         } ->
-        let (si, j, s_list) = translate_eq_list map
+        let (v, si, j, s_list) = translate_eq_list map
           empty_call_context eq_list in
-        let d_list = translate_var_dec map d_list in
+        let d_list = translate_var_dec map (v @ d_list) in
         let d_list = List.filter
           (fun vd -> not (List.mem vd.v_ident mem_vars)) d_list in
          (si, j, s_list, d_list)
@@ -430,13 +440,13 @@ let translate_node
     } as n) =
   let mem_vars = Mls_utils.node_memory_vars n in
   let subst_map = subst_map i_list o_list d_list mem_vars in
-  let (si, j, s_list) = translate_eq_list subst_map
+  let (v, si, j, s_list) = translate_eq_list subst_map
     empty_call_context eq_list in
   let (si', j', s_list', d_list') =
     translate_contract subst_map mem_vars contract in
   let i_list = translate_var_dec subst_map i_list in
   let o_list = translate_var_dec subst_map o_list in
-  let d_list = translate_var_dec subst_map d_list in
+  let d_list = translate_var_dec subst_map (v @ d_list) in
   let m, d_list = List.partition
     (fun vd -> List.mem vd.v_ident mem_vars) d_list in
   let s = joinlist (s_list @ s_list') in
@@ -444,10 +454,10 @@ let translate_node
   let si = joinlist (si @ si') in
   let stepm = {
     m_name = Mstep; m_inputs = i_list; m_outputs = o_list;
-    m_locals = d_list @ d_list'; m_body = s } in
+    m_body = mk_block ~locals:(d_list' @ d_list) s } in
   let resetm = {
     m_name = Mreset; m_inputs = []; m_outputs = [];
-    m_locals = []; m_body = si } in
+    m_body = mk_block si } in
     { cd_name = f; cd_mems = m; cd_params = params;
       cd_objs = j; cd_methods = [stepm; resetm];
       cd_loc = loc }

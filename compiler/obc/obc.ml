@@ -68,9 +68,11 @@ type act =
   | Acase of exp * (constructor_name * block) list
   | Afor of var_ident * static_exp * static_exp * block
 
-and block = act list
+and block =
+    { b_locals : var_dec list;
+      b_body : act list }
 
-type var_dec =
+and var_dec =
     { v_ident : var_ident;
       v_type : ty; (* TODO should be here, v_controllable : bool*)
       v_loc : location }
@@ -85,7 +87,6 @@ type method_def =
     { m_name : method_name;
       m_inputs : var_dec list;
       m_outputs : var_dec list;
-      m_locals : var_dec list;
       m_body : block; }
 
 type class_def =
@@ -118,6 +119,10 @@ let mk_lhs_exp ?(ty=invalid_type) desc =
 
 let mk_evar id =
   mk_exp (Elhs (mk_lhs (Lvar id)))
+
+let mk_block ?(locals=[]) eq_list =
+  { b_locals = locals;
+    b_body = eq_list }
 
 let rec var_name x =
   match x.l_desc with
