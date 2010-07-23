@@ -14,6 +14,7 @@ open Minils
 open Idents
 open Misc
 open Obc
+open Clocks
 
 let var_from_name map x =
   begin try

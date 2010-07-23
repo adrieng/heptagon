@@ -2,6 +2,7 @@
 open Names
 open Idents
 open Types
+open Clocks
 open Static
 open Format
 open Signature

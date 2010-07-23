@@ -15,6 +15,7 @@ open Names
 open Idents
 open Static
 open Types
+open Clocks
 open Format
 open Printf
 

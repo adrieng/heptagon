@@ -13,6 +13,7 @@ open Signature
 open Minils
 open Mls_utils
 open Types
+open Clocks
 
 let ctrue = Name "true"
 and cfalse = Name "false"

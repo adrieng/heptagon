@@ -15,6 +15,7 @@ open Idents
 open Signature
 open Static
 open Types
+open Clocks
 
 (** Warning: Whenever Minils ast is modified,
     minils_format_version should be incremented. *)
@@ -77,19 +78,6 @@ and op =
   | Econcat            (** arg1@@arg2 *)
   | Elambda of var_dec list * var_dec list * var_dec list * eq list
       (* inputs, outputs, locals, body *)
-
-and ct =
-  | Ck of ck
-  | Cprod of ct list
-
-and ck =
-  | Cbase
-  | Cvar of link ref
-  | Con of ck * constructor_name * var_ident
-
-and link =
-  | Cindex of int
-  | Clink of ck
 
 and pat =
   | Etuplepat of pat list

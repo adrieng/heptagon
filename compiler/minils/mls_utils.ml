@@ -7,6 +7,7 @@ open Idents
 open Signature
 open Static
 open Types
+open Clocks
 open Misc
 
 (** Error Kind *)
