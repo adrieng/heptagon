@@ -149,8 +149,8 @@ and typing_eq eq =
         cseq (typing e) (typing_switch handlers)
     | Epresent(handlers, b) ->
         typing_present handlers b
-    | Ereset(eq_list, e) ->
-        cseq (typing e) (typing_eqs eq_list)
+    | Ereset(b, e) ->
+        cseq (typing e) (typing_block b)
     | Eeq(pat, e) ->
         cseq (typing e) (typing_pat pat)
 

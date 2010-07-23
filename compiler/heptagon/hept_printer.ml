@@ -190,10 +190,10 @@ let rec print_eq ff eq =
           fprintf ff "@]"
         end;
         fprintf ff "@,end@]"
-    | Ereset(eq_list, e) ->
+    | Ereset(b, e) ->
         fprintf ff "@[<v>reset@,";
         fprintf ff "  @[<v>";
-        print_eq_list ff eq_list;
+        print_block ff b;
         fprintf ff "@]";
         fprintf ff "@,every ";
         print_exp ff e;

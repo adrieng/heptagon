@@ -62,7 +62,7 @@ and eqdesc =
   | Eautomaton of state_handler list
   | Eswitch of exp * switch_handler list
   | Epresent of present_handler list * block
-  | Ereset of eq list * exp
+  | Ereset of block * exp
   | Eeq of pat * exp
 
 and block = {
@@ -165,7 +165,7 @@ let mk_var_dec ?(last = Var) name ty  =
   { v_ident = name; v_type = ty;
     v_last = last; v_loc = no_location }
 
-let mk_block ?(statefull = true) defnames eqs =
+let mk_block ?(statefull = true) ?(defnames = Env.empty) eqs =
   { b_local = []; b_equs = eqs; b_defnames = defnames;
     b_statefull = statefull; b_loc = no_location }
 

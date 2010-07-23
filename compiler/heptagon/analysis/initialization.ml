@@ -263,8 +263,8 @@ and typing_eq h eq =
         typing_switch h handlers
     | Epresent(handlers, b) ->
         typing_present h handlers b
-    | Ereset(eq_list, e) ->
-        initialized_exp h e; typing_eqs h eq_list
+    | Ereset(b, e) ->
+        initialized_exp h e; ignore (typing_block h b)
     | Eeq(pat, e) ->
         let ty_pat = typing_pat h pat in
         expect h e ty_pat

@@ -173,10 +173,10 @@ and eqdesc funs acc eqd = match eqd with
       let p_h_l, acc = mapfold (present_handler_it funs) acc p_h_l in
       let b, acc = block_it funs acc b in
       Epresent (p_h_l, b), acc
-  | Ereset (eq_l, e) ->
-      let eq_l, acc = mapfold (eq_it funs) acc eq_l in
+  | Ereset (b, e) ->
+      let b, acc = block_it funs acc b in
       let e, acc = exp_it funs acc e in
-      Ereset (eq_l, e), acc
+      Ereset (b, e), acc
   | Eeq (p, e) ->
       let p, acc = pat_it funs acc p in
       let e, acc = exp_it funs acc e in

@@ -56,7 +56,8 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
   | Eapp ({ a_op = Enode nn; } as op, argl, rso) when to_be_inlined nn ->
       let add_reset eq = match rso with
         | None -> eq
-        | Some x -> mk_equation ~statefull:false (Ereset ([eq], x)) in
+        | Some x -> mk_equation ~statefull:false
+            (Ereset (mk_block [eq], x)) in
 
       let ni = mk_unique_node (env nn) in
 

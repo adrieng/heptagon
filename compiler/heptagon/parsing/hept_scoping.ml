@@ -226,9 +226,9 @@ and translate_eq_desc loc const_env env = function
   | Eautomaton state_handlers ->
       Heptagon.Eautomaton (List.map (translate_state_handler const_env env)
                              state_handlers)
-  | Ereset (eq_list, e) ->
-      Heptagon.Ereset (List.map (translate_eq const_env env) eq_list,
-                       translate_exp const_env env e)
+  | Ereset (b, e) ->
+      let b, _ = translate_block const_env env b in
+      Heptagon.Ereset (b, translate_exp const_env env e)
 
 and translate_block const_env env b =
   let env = build_vd_list env b.b_local in

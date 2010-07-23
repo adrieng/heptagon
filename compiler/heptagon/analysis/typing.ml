@@ -878,11 +878,12 @@ let rec typing_eq statefull const_env h acc eq =
             acc def_names present_handlers in
         Epresent(typed_ph,typed_b),
         acc
-    | Ereset(eq_list, e) ->
+    | Ereset(b, e) ->
         let typed_e = expect statefull const_env h (Tid Initial.pbool) e in
         let typed_eq_list, acc = typing_eq_list statefull
-          const_env h acc eq_list in
-        Ereset(typed_eq_list,typed_e),
+          const_env h acc b.b_equs in
+        let typed_b = { b with b_equs = typed_eq_list } in
+        Ereset(typed_b, typed_e),
         acc
     | Eeq(pat, e) ->
         let acc, ty_pat = typing_pat h acc pat in

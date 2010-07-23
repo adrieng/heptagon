@@ -22,7 +22,7 @@ let mk_pair e1 e2 =
   mk_exp (mk_op_app Etuple [e1;e2]) (Tprod [e1.e_ty; e2.e_ty])
 
 let mk_reset_equation eq_list e =
-  mk_equation (Ereset (eq_list, e))
+  mk_equation (Ereset (mk_block eq_list, e))
 
 let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
@@ -89,8 +89,8 @@ let translate_automaton v eq_list handlers =
     let st_eq = mk_simple_equation
       (Etuplepat[Evarpat(statename); Evarpat(resetname)])
       (escapes n su (boolvar pre_next_resetname)) in
-    mk_block defnames [mk_reset_equation [st_eq]
-                         (boolvar pre_next_resetname)]
+    mk_block ~defnames:defnames [mk_reset_equation [st_eq]
+                                   (boolvar pre_next_resetname)]
   in
 
   let weak { s_state = n; s_block = b; s_until = su } =

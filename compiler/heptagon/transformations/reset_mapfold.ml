@@ -162,7 +162,7 @@ let eq funs (res, v, acc_eq_list) equ =
           switch_handlers funs (res, v, acc_eq_list) sh in
         equ, (res, v, { equ with eq_desc = Eswitch(e, sh) } :: acc_eq_list)
 
-    | Ereset(eq_list, e) ->
+    | Ereset(b, e) ->
         let e, _ = exp_it funs (res, v, acc_eq_list) e in
         let res, v, acc_eq_list =
          (* if statefull eq_list then*)
@@ -172,7 +172,7 @@ let eq funs (res, v, acc_eq_list) equ =
               res, v, acc_eq_list*)
         in
         let _, (res, v, acc_eq_list) =
-          mapfold (eq_it funs) (res, v, acc_eq_list) eq_list in
+          mapfold (eq_it funs) (res, v, acc_eq_list) b.b_equs in
           equ, (res, v, acc_eq_list)
 
     | _ ->

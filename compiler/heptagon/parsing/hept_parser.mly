@@ -119,11 +119,11 @@ type_decs:
 ;
 
 type_dec:
-  | TYPE IDENT                      
+  | TYPE IDENT
       { mk_type_dec $2 Type_abs (Loc($startpos,$endpos)) }
-  | TYPE IDENT EQUAL enum_ty_desc   
+  | TYPE IDENT EQUAL enum_ty_desc
       { mk_type_dec $2 (Type_enum ($4)) (Loc($startpos,$endpos)) }
-  | TYPE IDENT EQUAL struct_ty_desc 
+  | TYPE IDENT EQUAL struct_ty_desc
       { mk_type_dec $2 (Type_struct ($4)) (Loc($startpos,$endpos)) }
 ;
 
@@ -232,7 +232,7 @@ loc_params:
   | var_last SEMICOL loc_params { $1 @ $3 }
 ;
 
- 
+
 var_last:
   | ident_list COLON ty_ident
       { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
@@ -294,7 +294,7 @@ _equ:
                    [{ w_name = Name("true"); w_block = tb };
                     { w_name = Name("false"); w_block = fb }]) }
   | RESET equs EVERY exp
-      { Ereset($2, $4) }
+      { Ereset(mk_block [] $2 (Loc($startpos,$endpos)), $4) }
 ;
 
 automaton_handler:
