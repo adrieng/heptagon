@@ -14,7 +14,7 @@
 
 open Misc
 open Names
-open Ident
+open Idents
 open Heptagon
 open Types
 open Location

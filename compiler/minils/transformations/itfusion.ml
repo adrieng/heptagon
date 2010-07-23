@@ -23,7 +23,7 @@ let tuple_of_vd_list l =
 
 let vd_of_arg ad =
   let n = match ad.a_name with None -> "_v" | Some n -> n in
-    mk_var_dec (Ident.fresh n) ad.a_type
+    mk_var_dec (Idents.fresh n) ad.a_type
 
 (** @return the lists of inputs and outputs (as var_dec) of
     an app object. *)
@@ -74,7 +74,7 @@ let edesc funs acc ed =
               let new_inp, e, acc_eq_list = mk_call g acc_eq_list in
                 new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->
-              let vd = mk_var_dec (Ident.fresh "_x") e.e_ty in
+              let vd = mk_var_dec (Idents.fresh "_x") e.e_ty in
               let x = mk_exp (Evar vd.v_ident) in
               vd::inp, acc_eq_list, x::largs, e::args, b
         in

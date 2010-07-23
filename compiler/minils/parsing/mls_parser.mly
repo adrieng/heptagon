@@ -2,7 +2,7 @@
 
 open Signature
 open Names
-open Ident
+open Idents
 open Types
 open Location
 open Minils

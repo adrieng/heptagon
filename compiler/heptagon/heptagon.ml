@@ -10,7 +10,7 @@
 open Location
 open Misc
 open Names
-open Ident
+open Idents
 open Static
 open Signature
 open Types

@@ -9,11 +9,9 @@
 
 (* causality check of scheduling constraints *)
 
-(* $Id: causal.ml 615 2009-11-20 17:43:14Z pouzet $ *)
-
 open Misc
 open Names
-open Ident
+open Idents
 open Heptagon
 open Location
 open Graph

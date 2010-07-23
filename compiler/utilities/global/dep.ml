@@ -9,7 +9,7 @@
 (* dependences between equations *)
 
 open Graph
-open Ident
+open Idents
 
 module type READ =
 sig

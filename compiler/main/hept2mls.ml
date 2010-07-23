@@ -12,7 +12,7 @@
 open Location
 open Misc
 open Names
-open Ident
+open Idents
 open Static
 open Types
 open Format
@@ -90,7 +90,7 @@ end
 
 (* add an equation *)
 let equation locals l_eqs e =
-  let n = Ident.fresh "ck" in
+  let n = Idents.fresh "ck" in
   n,
   (mk_var_dec n e.e_ty) :: locals,
   (mk_equation (Evarpat n) e):: l_eqs
@@ -252,7 +252,7 @@ let rec translate_pat = function
 let rec rename_pat ni locals s_eqs = function
   | Heptagon.Evarpat(n), ty ->
       if IdentSet.mem n ni then (
-        let n_copy = Ident.fresh (sourcename n) in
+        let n_copy = Idents.fresh (sourcename n) in
         Evarpat n_copy,
         (mk_var_dec n_copy ty) :: locals,
         add n (mk_exp ~exp_ty:ty (Evar n_copy)) s_eqs
@@ -323,7 +323,7 @@ and translate_switch_handlers env ni (locals, l_eqs, s_eqs) e handlers =
       [] -> IdentSet.empty
     | { Heptagon.w_block = { Heptagon.b_defnames = env } } :: _ ->
         (* Create set from env *)
-        (Ident.Env.fold
+        (Idents.Env.fold
            (fun name _ set -> IdentSet.add name set)
            env
            IdentSet.empty) in

@@ -8,7 +8,7 @@
 (**************************************************************************)
 open Misc
 open Names
-open Ident
+open Idents
 open Signature
 open Minils
 open Mls_utils
@@ -19,7 +19,7 @@ and cfalse = Name "false"
 
 let equation (d_list, eq_list) e =
   let add_one_var ty d_list =
-    let n = Ident.fresh "_v" in
+    let n = Idents.fresh "_v" in
     let d_list = (mk_var_dec ~clock:e.e_ck n ty) :: d_list in
       n, d_list
   in

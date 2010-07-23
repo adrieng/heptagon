@@ -9,7 +9,7 @@
 (* clock checking *)
 
 open Misc
-open Ident
+open Idents
 open Minils
 open Mls_printer
 open Signature
@@ -39,10 +39,11 @@ let gen_index () = (incr index; !index)
 
 let new_var () = Cvar { contents = Cindex (gen_index ()); }
 
-let rec repr ck =
-  match ck with
-    | Cbase | Con _ | Cvar { contents = Cindex _ } -> ck
-    | Cvar (({ contents = Clink ck } as link)) ->
+
+(** return the canonic representant form of a [ck] *)
+let rec repr ck = match ck with
+  | Cbase | Con _ | Cvar { contents = Cindex _ } -> ck
+  | Cvar (({ contents = Clink ck } as link)) ->
         let ck = repr ck in (link.contents <- Clink ck; ck)
 
 let rec occur_check index ck =

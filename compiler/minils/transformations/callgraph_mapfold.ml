@@ -161,7 +161,7 @@ let generate_new_name ln params =
            | Modname { qual = q; id = id } ->
                let new_ln =
                  Modname { qual = q;
-                           id = id ^ (Ident.name (Ident.fresh "")) } in
+                           id = id ^ (Idents.name (Idents.fresh "")) } in
                  Hashtbl.add info.nodes_names (ln, params) new_ln
            | _ -> assert false)
 

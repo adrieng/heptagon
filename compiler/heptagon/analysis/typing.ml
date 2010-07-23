@@ -12,7 +12,7 @@
 
 open Misc
 open Names
-open Ident
+open Idents
 open Location
 open Signature
 open Modules

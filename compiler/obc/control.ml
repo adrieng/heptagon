@@ -9,10 +9,9 @@
 
 (* control optimisation *)
 
-(* $Id$ *)
 
 open Minils
-open Ident
+open Idents
 open Misc
 open Obc
 

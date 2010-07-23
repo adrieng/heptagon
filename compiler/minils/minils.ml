@@ -11,7 +11,7 @@
 
 open Location
 open Names
-open Ident
+open Idents
 open Signature
 open Static
 open Types

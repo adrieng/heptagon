@@ -10,7 +10,7 @@
 
 open Misc
 open Heptagon
-open Ident
+open Idents
 
 (* adds an equation [x = last(x)] for every partially defined variable *)
 (* in a control structure *)

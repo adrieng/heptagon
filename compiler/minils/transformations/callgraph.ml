@@ -1,7 +1,7 @@
 open Misc
 open Minils
 open Names
-open Ident
+open Idents
 open Format
 open Location
 open Printf

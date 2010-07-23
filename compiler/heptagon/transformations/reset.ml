@@ -10,7 +10,7 @@
 
 
 open Misc
-open Ident
+open Idents
 open Heptagon
 open Types
 
@@ -88,7 +88,7 @@ let ifres res e2 e3 =
 
 (* add an equation *)
 let equation v acc_eq_list e =
-  let n = Ident.fresh "r" in
+  let n = Idents.fresh "r" in
   n,
   (mk_bool_param n) :: v,
   (mk_equation (Eeq(Evarpat n, e))) ::acc_eq_list
@@ -170,7 +170,7 @@ and translate_eqs res v acc_eq_list eq_list =
 
 and translate_switch res locals acc_eq_list switch_handlers =
   (* introduce a reset bit for each branch *)
-  let tab_of_vars n = Array.init n (fun _ -> Ident.fresh "r") in
+  let tab_of_vars n = Array.init n (fun _ -> Idents.fresh "r") in
   let n = List.length switch_handlers in
   let m = tab_of_vars n in
   let lm = tab_of_vars n in
@@ -239,7 +239,8 @@ and translate res e =
     | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, None) ->
         let e_list = List.map (translate res) e_list in
         if true_reset res then
-          { e with e_desc = Eiterator(it, op, n, e_list, Some (exp_of_res res)) }
+          { e
+            with e_desc = Eiterator(it, op, n, e_list, Some (exp_of_res res)) }
         else
           { e with e_desc = Eiterator(it, op, n, e_list, None) }
     | Eiterator(it, op, n, e_list, r) ->

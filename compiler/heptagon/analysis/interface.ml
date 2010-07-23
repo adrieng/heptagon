@@ -8,7 +8,7 @@
 (**************************************************************************)
 (* Read an interface *)
 
-open Ident
+open Idents
 open Names
 open Heptagon
 open Signature
@@ -110,7 +110,7 @@ struct
 
   let print oc =
     let ff = formatter_of_out_channel oc in
-      NamesEnv.iter (fun key typdesc -> deftype ff key typdesc) current.types;
-      NamesEnv.iter (fun key constdec -> constdef ff key constdec) current.consts;
-      NamesEnv.iter (fun key sigtype -> signature ff key sigtype) current.values;
+    NamesEnv.iter (fun key typdesc -> deftype ff key typdesc) current.types;
+    NamesEnv.iter (fun key constdec -> constdef ff key constdec) current.consts;
+    NamesEnv.iter (fun key sigtype -> signature ff key sigtype) current.values;
 end

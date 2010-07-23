@@ -10,7 +10,7 @@
 
 open Misc
 open Heptagon
-open Ident
+open Idents
 
 (* introduce a fresh equation [last_x = pre(x)] for every *)
 (* variable declared with a last *)
@@ -18,7 +18,7 @@ let last (eq_list, env, v) { v_ident = n; v_type = t; v_last = last } =
   match last with
     | Var -> (eq_list, env, v)
     | Last(default) ->
-        let lastn = Ident.fresh ("last" ^ (sourcename n)) in
+        let lastn = Idents.fresh ("last" ^ (sourcename n)) in
         let eq = mk_equation (Eeq (Evarpat lastn,
                                    mk_exp (Epre (default,
                                                  mk_exp (Evar n) t)) t)) in

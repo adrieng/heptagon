@@ -1,6 +1,6 @@
 
 open Names
-open Ident
+open Idents
 open Types
 open Static
 open Format

@@ -10,7 +10,7 @@
 (* Translation from Minils to Obc. *)
 open Misc
 open Names
-open Ident
+open Idents
 open Signature
 open Obc
 open Types
@@ -189,7 +189,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
     | Minils.Evarpat x,
         Minils.Eapp ({ Minils.a_op = Minils.Eselect_slice;
                        Minils.a_params = [idx1; idx2] }, [e], _) ->
-        let cpt = Ident.fresh "i" in
+        let cpt = Idents.fresh "i" in
         let e = translate map (si, j, s) e in
         let idx = mk_exp (Eop (op_from_string "+",
                                [mk_evar cpt;
@@ -236,7 +236,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
     | Minils.Evarpat x,
               Minils.Eapp ({ Minils.a_op = Minils.Earray_fill;
                              Minils.a_params = [n] }, [e], _) ->
-        let cpt = Ident.fresh "i" in
+        let cpt = Idents.fresh "i" in
         let action =
           Afor (cpt, mk_static_exp (Sint 0), n,
                 mk_block [Aassgn (mk_lhs (Larray (var_from_name map x,
@@ -247,8 +247,8 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
 
     | Minils.Evarpat x,
                 Minils.Eapp ({ Minils.a_op = Minils.Econcat }, [e1; e2], _) ->
-        let cpt1 = Ident.fresh "i" in
-        let cpt2 = Ident.fresh "i" in
+        let cpt1 = Idents.fresh "i" in
+        let cpt2 = Idents.fresh "i" in
         let x = var_from_name map x in
         (match e1.Minils.e_ty, e2.Minils.e_ty with
            | Tarray (_, n1), Tarray (_, n2) ->
@@ -288,7 +288,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let name_list = translate_pat map pat in
         let c_list =
           List.map (translate map (si, j, s)) e_list in
-        let x = Ident.fresh "i" in
+        let x = Idents.fresh "i" in
         let call_context = Oarray ("n", mk_lhs (Lvar x)), Some n in
         let si', j', action = translate_iterator map call_context it
           name_list app loc n x c_list in

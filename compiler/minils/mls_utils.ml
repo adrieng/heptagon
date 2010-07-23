@@ -3,7 +3,7 @@ open Mls_mapfold
 open Mls_printer
 open Location
 open Names
-open Ident
+open Idents
 open Signature
 open Static
 open Types

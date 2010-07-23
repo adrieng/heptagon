@@ -5,7 +5,7 @@ open Location
 open Types
 open Hept_parsetree
 open Names
-open Ident
+open Idents
 open Format
 open Printf
 open Static

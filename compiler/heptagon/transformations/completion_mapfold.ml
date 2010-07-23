@@ -12,7 +12,7 @@ open Misc
 open Heptagon
 open Global_mapfold
 open Hept_mapfold
-open Ident
+open Idents
 
 (* adds an equation [x = last(x)] for every partially defined variable *)
 (* in a control structure *)

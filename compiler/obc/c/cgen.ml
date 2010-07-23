@@ -11,7 +11,7 @@ open Format
 open List
 open Misc
 open Names
-open Ident
+open Idents
 open Obc
 open Types
 open Modules

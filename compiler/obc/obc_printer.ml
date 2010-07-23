@@ -2,7 +2,7 @@ open Obc
 open Format
 open Pp_tools
 open Types
-open Ident
+open Idents
 open Names
 
 let print_vd ff vd =

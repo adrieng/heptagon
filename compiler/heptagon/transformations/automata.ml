@@ -12,7 +12,7 @@
 
 open Misc
 open Names
-open Ident
+open Idents
 open Heptagon
 open Types
 
@@ -100,11 +100,11 @@ and translate_automaton v eq_list handlers =
   let tstatetype = Tid statetype in
   let initial = Name(NamesEnv.find (List.hd handlers).s_state states) in
 
-  let statename = Ident.fresh "s" in
-  let next_statename = Ident.fresh "ns" in
-  let resetname = Ident.fresh "r" in
-  let next_resetname = Ident.fresh "nr" in
-  let pre_next_resetname = Ident.fresh "pnr" in
+  let statename = Idents.fresh "s" in
+  let next_statename = Idents.fresh "ns" in
+  let resetname = Idents.fresh "r" in
+  let next_resetname = Idents.fresh "nr" in
+  let pre_next_resetname = Idents.fresh "pnr" in
 
   let name n = Name(NamesEnv.find n states) in
   let state n = mk_exp (Econst (mk_static_exp

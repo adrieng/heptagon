@@ -1,5 +1,5 @@
 open C
-open Ident
+open Idents
 open Names
 
 let rec subst_stm map stm = match stm with

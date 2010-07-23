@@ -12,7 +12,7 @@ open Misc
 open Heptagon
 open Global_mapfold
 open Hept_mapfold
-open Ident
+open Idents
 
 
 (* We first define a shallow pass,

@@ -8,7 +8,7 @@
 (**************************************************************************)
 
 open Misc
-open Ident
+open Idents
 open Signature
 open Types
 open Names
@@ -19,7 +19,7 @@ let to_be_inlined s = !Misc.flatten || (List.mem s !Misc.inline)
 
 let mk_unique_node nd =
   let mk_bind vd =
-    let id = Ident.fresh (Ident.sourcename vd.v_ident) in
+    let id = Idents.fresh (Idents.sourcename vd.v_ident) in
     (vd.v_ident, { vd with v_ident = id; }) in
   let subst = List.map mk_bind (nd.n_block.b_local
                                 @ nd.n_input @ nd.n_output) in

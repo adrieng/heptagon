@@ -10,7 +10,7 @@
 
 
 open Misc
-open Ident
+open Idents
 open Heptagon
 open Hept_mapfold
 open Types
@@ -75,7 +75,7 @@ let ifres res e2 e3 =
 
 (* add an equation *)
 let equation v acc_eq_list e =
-  let n = Ident.fresh "r" in
+  let n = Idents.fresh "r" in
   n,
   (mk_bool_param n) :: v,
   (mk_equation (Eeq(Evarpat n, e))) ::acc_eq_list
@@ -135,8 +135,8 @@ let edesc funs (res, v, acc_eq_list) ed =
 
 let switch_handlers funs (res, v, acc_eq_list) switch_handlers =
   (* introduce a reset bit for each branch *)
-  let m_list = List.map (fun _ -> Ident.fresh "r") switch_handlers in
-  let lm_list = List.map (fun _ -> Ident.fresh "r") switch_handlers in
+  let m_list = List.map (fun _ -> Idents.fresh "r") switch_handlers in
+  let lm_list = List.map (fun _ -> Idents.fresh "r") switch_handlers in
 
   let body i ({ w_block = b } as sh) m lm =
     let defnames = List.fold_left (fun acc m ->

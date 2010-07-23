@@ -11,7 +11,7 @@ open Format
 open List
 open Misc
 open Names
-open Ident
+open Idents
 open Obc
 open Types
 open Modules
@@ -25,8 +25,8 @@ open Compiler_utils
 (** {1 Main C function generation} *)
 
 (* Unique names for C variables handling step counts. *)
-let step_counter = Ident.fresh "step_c"
-and max_step = Ident.fresh "step_max"
+let step_counter = Idents.fresh "step_c"
+and max_step = Idents.fresh "step_max"
 
 let assert_node_res cd =
   let stepm = find_step_method cd in
@@ -42,9 +42,11 @@ let assert_node_res cd =
        cd.cd_name;
      exit 1);
   let mem =
-    (name (Ident.fresh ("mem_for_" ^ cd.cd_name)), Cty_id (cd.cd_name ^ "_mem"))
+    (name (Idents.fresh ("mem_for_" ^ cd.cd_name)),
+      Cty_id (cd.cd_name ^ "_mem"))
   and out =
-    (name (Ident.fresh ("out_for_" ^ cd.cd_name)), Cty_id (cd.cd_name ^ "_out")) in
+    (name (Idents.fresh ("out_for_" ^ cd.cd_name)),
+      Cty_id (cd.cd_name ^ "_out")) in
   let reset_i =
     Cfun_call (cd.cd_name ^ "_reset", [Caddrof (Cvar (fst mem))]) in
   let step_i =
@@ -55,7 +57,7 @@ let assert_node_res cd =
         return 1;
       }
     *)
-    let outn = Ident.name ((List.hd stepm.m_outputs).v_ident) in
+    let outn = Idents.name ((List.hd stepm.m_outputs).v_ident) in
     Csblock
       { var_decls = [];
         block_body =
@@ -101,7 +103,7 @@ let main_def_of_class_def cd =
   (** Generates scanf statements. *)
   let rec read_lhs_of_ty lhs ty = match ty with
     | Tarray (ty, n) ->
-        let iter_var = Ident.name (Ident.fresh "i") in
+        let iter_var = Idents.name (Idents.fresh "i") in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = read_lhs_of_ty lhs ty in
         ([Cfor (iter_var, 0, int_of_static_exp n, reads)], bufs)
@@ -127,7 +129,7 @@ let main_def_of_class_def cd =
         match need_buf_for_ty ty with
           | None -> ([scan_exp], [])
           | Some tyn ->
-              let varn = Ident.name (Ident.fresh "buf") in
+              let varn = Idents.name (Idents.fresh "buf") in
               ([scan_exp;
                 Csexpr (Cfun_call (tyn ^ "_of_string",
                                    [Clhs (Cvar varn)]))],
@@ -137,14 +139,14 @@ let main_def_of_class_def cd =
       resulting values of enum types. *)
   let rec write_lhs_of_ty lhs ty = match ty with
     | Tarray (ty, n) ->
-        let iter_var = Ident.name (Ident.fresh "i") in
+        let iter_var = Idents.name (Idents.fresh "i") in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = write_lhs_of_ty lhs ty in
         ([cprint_string "[ ";
           Cfor (iter_var, 0, int_of_static_exp n, reads);
           cprint_string "]"], bufs)
     | _ ->
-        let varn = Ident.name (Ident.fresh "buf") in
+        let varn = Idents.name (Idents.fresh "buf") in
         let format_s = format_for_type ty in
         let nbuf_opt = need_buf_for_ty ty in
         let ep = match nbuf_opt with
@@ -162,7 +164,7 @@ let main_def_of_class_def cd =
   let stepm = find_step_method cd in
   let (scanf_calls, scanf_decls) =
     let read_lhs_of_ty_for_vd vd =
-      read_lhs_of_ty (Cvar (Ident.name vd.v_ident)) vd.v_type in
+      read_lhs_of_ty (Cvar (Idents.name vd.v_ident)) vd.v_type in
     split (map read_lhs_of_ty_for_vd stepm.m_inputs) in
 
   let (printf_calls, printf_decls) =

@@ -11,7 +11,7 @@
 open Location
 open Misc
 open Names
-open Ident
+open Idents
 open Modules
 open Static
 open Format

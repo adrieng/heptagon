@@ -13,7 +13,7 @@
 
 open Misc
 open Names
-open Ident
+open Idents
 open Heptagon
 open Location
 open Graph

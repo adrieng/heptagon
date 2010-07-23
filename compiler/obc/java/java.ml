@@ -14,7 +14,7 @@ open Format
 open Obc
 open Misc
 open Names
-open Ident
+open Idents
 open Pp_tools
 
 let jname_of_name name =
@@ -503,7 +503,7 @@ let print_step ff n s objs ts single =
     (List.map (fun vd -> vd.v_ident) s.out) ts single;
   fprintf ff "@ @ return ";
   if single
-  then fprintf ff "%s" (jname_of_name (Ident.name (List.hd s.out).v_ident))
+  then fprintf ff "%s" (jname_of_name (Idents.name (List.hd s.out).v_ident))
   else fprintf ff "step_ans";
   fprintf ff ";@]@ }@ @]"
 

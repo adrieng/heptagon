@@ -16,7 +16,7 @@
 *)
 
 open Misc
-open Ident
+open Idents
 open Heptagon
 open Reset
 

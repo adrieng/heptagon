@@ -16,7 +16,7 @@
 
 open Misc
 open Names
-open Ident
+open Idents
 open Minils
 open Location
 open Format
