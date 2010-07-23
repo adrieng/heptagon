@@ -719,6 +719,8 @@ let cfile_list_of_oprog name oprog =
     let struct_decl,use_ctrlr,(cdecls, cdefs) =
       cdefs_and_cdecls_of_class_def cd in
 
+    let l = get_opened_modules () in
+
     let cfile_mem = cfile_name ^ "_mem" in
     add_opened_module cfile_mem;
     if use_ctrlr then
@@ -726,7 +728,7 @@ let cfile_list_of_oprog name oprog =
     remove_opened_module name;
 
     let acc_cfiles = acc_cfiles @
-      [ (cfile_mem ^ ".h", Cheader (get_opened_modules (), struct_decl));
+      [ (cfile_mem ^ ".h", Cheader (l, struct_decl));
         (cfile_name ^ ".h", Cheader (get_opened_modules (), cdecls));
         (cfile_name ^ ".c", Csource cdefs)] in
     deps@[cfile_name],acc_cfiles in
