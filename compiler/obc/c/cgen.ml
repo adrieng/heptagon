@@ -725,12 +725,15 @@ let cfile_list_of_oprog name oprog =
     let struct_decl,(cdecls, cdefs) =
       cdefs_and_cdecls_of_class_def cd in
 
+    let opened_modules_without_memdecl = get_opened_modules () in
+
     let cfile_mem = cfile_name ^ "_mem" in
     add_opened_module cfile_mem;
     remove_opened_module name;
 
     let acc_cfiles = acc_cfiles @
-      [ (cfile_mem ^ ".h", Cheader (get_opened_modules (), struct_decl));
+      [ (cfile_mem ^ ".h", Cheader (opened_modules_without_memdecl,
+                                    struct_decl));
         (cfile_name ^ ".h", Cheader (get_opened_modules (), cdecls));
         (cfile_name ^ ".c", Csource cdefs)] in
     deps@[cfile_name],acc_cfiles in
