@@ -163,30 +163,28 @@ let message loc kind =
   end;
   raise Error
 
-let add_value f signature =
-  try add_value f signature with Already_defined -> error (Ealready_defined f)
-let add_type f type_def =
-  try add_type f type_def with Already_defined -> error (Ealready_defined f)
-let add_constr f ty_res =
-  try add_constr f ty_res with Already_defined -> error (Ealready_defined f)
-let add_struct f fields =
-  try add_struct f fields with Already_defined -> error (Ealready_defined f)
-let add_field f n =
-  try add_field f n with Already_defined -> error (Ealready_defined f)
-let add_const f n =
-  try add_const f n with Already_defined -> error (Ealready_defined f)
+(** Add wrappers around Modules function to raise errors
+    and display the correct location. *)
+let add_with_error add_fun f v =
+  try add_fun f v
+  with Already_defined -> error (Ealready_defined f)
+let find_with_error find_fun f =
+  try find_fun f
+  with Not_found -> error (Eundefined(fullname f))
 
-let find_value f =
-  try find_value f with Not_found -> error (Eundefined(fullname f))
-let find_type f =
-  try find_type f with Not_found -> error (Eundefined(fullname f))
-let find_constr c =
-  try find_constr c with Not_found -> error (Eundefined(fullname c))
-let find_field c =
-  try find_field c with Not_found -> error (Eundefined(fullname c))
-let find_struct c =
-  try find_struct c with Not_found -> error (Eundefined(fullname c))
+let add_value = add_with_error add_value
+let add_type = add_with_error add_type
+let add_constr = add_with_error add_constr
+let add_struct = add_with_error add_struct
+let add_field = add_with_error add_field
+let add_const = add_with_error add_const
 
+let find_value = find_with_error find_value
+let find_constr = find_with_error find_constr
+let find_field = find_with_error find_field
+let find_struct = find_with_error find_struct
+
+(** Constraints related functions *)
 let (curr_size_constr : size_constraint list ref) = ref []
 let add_size_constraint c =
   curr_size_constr := c::(!curr_size_constr)
@@ -195,6 +193,7 @@ let get_size_constraint () =
   curr_size_constr := [];
   l
 
+(** Helper functions to work with types *)
 let get_number_of_fields ty =
   let { info = tydesc } =
     match ty with
@@ -304,13 +303,21 @@ let equal expected_tag_list actual_tag_list =
             (fun tag -> List.mem tag actual_tag_list) expected_tag_list)
   then error Enon_exaustive
 
+let add_distinct_env id ty env =
+  if Env.mem id env then
+    error (Ealready_defined(name id))
+  else
+    Env.add id ty env
+
+let add_distinct_S n acc =
+  if S.mem n acc then
+    error (Ealready_defined n)
+  else
+    S.add n acc
+
 (** Add two sets of names provided they are distinct *)
 let add env1 env2 =
-  Env.fold
-    (fun elt ty env ->
-       if not (Env.mem elt env)
-       then Env.add elt ty env
-       else error (Ealready_defined(sourcename elt))) env1 env2
+  Env.fold add_distinct_env env1 env2
 
 (** Checks that constructors are included in constructor list from type
     def and returns the difference *)
@@ -833,10 +840,7 @@ and typing_node_params const_env params_sig params =
 let rec typing_pat h acc = function
   | Evarpat(x) ->
       let ty = typ_of_name h x in
-      let acc =
-        if Env.mem x acc
-        then error (Ealready_defined (sourcename x))
-        else Env.add x ty acc in
+      let acc = add_distinct_env x ty acc in
       acc, ty
   | Etuplepat(pat_list) ->
       let acc, ty_list =
@@ -886,7 +890,7 @@ and typing_eq_list const_env h acc eq_list =
 and typing_automaton_handlers const_env h acc state_handlers =
   (* checks unicity of states *)
   let addname acc { s_state = n } =
-    if S.mem n acc then error (Ealready_defined(n)) else S.add n acc in
+    add_distinct_S n acc in
   let states =  List.fold_left addname S.empty state_handlers in
 
   let escape h ({ e_cond = e; e_next_state = n } as esc) =
@@ -915,8 +919,7 @@ and typing_automaton_handlers const_env h acc state_handlers =
 and typing_switch_handlers const_env h acc ty switch_handlers =
   (* checks unicity of states *)
   let addname acc { w_name = n } =
-    let n = shortname(n) in
-    if S.mem n acc then error (Ealready_defined(n)) else S.add n acc in
+    add_distinct_S (shortname n) acc in
   let cases = List.fold_left addname S.empty switch_handlers in
   let d = diff_const (set_of_constr (desc_of_ty ty)) cases in
   if not (S.is_empty d) then error (Epartial_switch(S.choose d));
