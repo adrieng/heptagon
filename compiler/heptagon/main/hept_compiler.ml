@@ -48,26 +48,26 @@ let compile_impl pp p =
     do_silent_pass Initialization.program "Initialization check" p !init in
 
   (* Completion of partial definitions *)
-  let p = do_pass Completion_mapfold.program "Completion" p pp true in
+  let p = do_pass Completion.program "Completion" p pp true in
 
   let p =
     let call_inline_pass = (List.length !inline > 0) || !Misc.flatten in
     do_pass Inline.program "Inlining" p pp call_inline_pass in
 
   (* Automata *)
-  let p = do_pass Automata_mapfold.program "Automata" p pp true in
+  let p = do_pass Automata.program "Automata" p pp true in
 
   (* Present *)
-  let p = do_pass Present_mapfold.program "Present" p pp true in
+  let p = do_pass Present.program "Present" p pp true in
 
   (* Shared variables (last) *)
-  let p = do_pass Last_mapfold.program "Last" p pp true in
+  let p = do_pass Last.program "Last" p pp true in
 
   (* Reset *)
-  let p = do_pass Reset_mapfold.program "Reset" p pp true in
+  let p = do_pass Reset.program "Reset" p pp true in
 
   (* Every *)
-  let p = do_pass Every_mapfold.program "Every" p pp true in
+  let p = do_pass Every.program "Every" p pp true in
 
   (* Return the transformed AST *)
   p

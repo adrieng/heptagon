@@ -1,6 +1,6 @@
 open Heptagon
 open Hept_mapfold
-open Reset_mapfold
+open Reset
 
 let statefull eq_list = List.exists (fun eq -> eq.eq_statefull) eq_list
 
