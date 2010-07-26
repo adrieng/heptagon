@@ -230,9 +230,11 @@ let rec unify t1 t2 =
 let unify t1 t2 =
   try unify t1 t2 with Unify -> error (Etype_clash(t1, t2))
 
-let kind n =
+let kind f ty_desc =
   let ty_of_arg v = v.a_type in
-    List.map ty_of_arg n.node_inputs, List.map ty_of_arg n.node_outputs
+  let op = if ty_desc.node_statefull then Enode f else Efun f in
+    op, List.map ty_of_arg ty_desc.node_inputs,
+  List.map ty_of_arg ty_desc.node_outputs
 
 let typ_of_name h x =
   try
@@ -571,7 +573,7 @@ let rec typing const_env h e =
                           a_params = params } as app),
                    n, e_list, reset) ->
           let { qualid = q; info = ty_desc } = find_value f in
-          let expected_ty_list, result_ty_list = kind ty_desc in
+          let op, expected_ty_list, result_ty_list = kind (Modname q) ty_desc in
           let m = build_subst ty_desc.node_params params in
           let expected_ty_list =
             List.map (subst_type_vars m) expected_ty_list in
@@ -587,7 +589,7 @@ let rec typing const_env h e =
             add_size_constraint (Clequal (mk_static_exp (Sint  1), typed_n));
             List.iter add_size_constraint size_constrs;
             (* return the type *)
-            Eiterator(it, { app with a_params = typed_params }
+            Eiterator(it, { app with a_op = op; a_params = typed_params }
                         , typed_n, typed_e_list, reset), ty
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
@@ -625,7 +627,7 @@ and typing_app const_env h op e_list =
 
     | { a_op = (Efun f | Enode f); a_params = params } as app, e_list ->
         let { qualid = q; info = ty_desc } = find_value f in
-        let expected_ty_list, result_ty_list = kind ty_desc in
+        let op, expected_ty_list, result_ty_list = kind (Modname q) ty_desc in
         let m = build_subst ty_desc.node_params params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args const_env h
@@ -638,7 +640,7 @@ and typing_app const_env h op e_list =
           instanciate_constr m ty_desc.node_params_constraints in
         List.iter add_size_constraint size_constrs;
         prod result_ty_list,
-        { app with a_params = typed_params },
+        { app with a_op = op; a_params = typed_params },
          typed_e_list
 
     | { a_op = Etuple }, e_list ->
