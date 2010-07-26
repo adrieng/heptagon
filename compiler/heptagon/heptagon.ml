@@ -90,7 +90,7 @@ and present_handler = { p_cond : exp; p_block : block }
 
 and var_dec = {
   v_ident : var_ident;
-  mutable v_type : ty;
+  v_type : ty;
   v_last : last;
   v_loc : location }
 

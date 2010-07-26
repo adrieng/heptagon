@@ -954,7 +954,7 @@ and typing_present_handlers const_env h acc def_names
 and typing_block const_env h
     ({ b_local = l; b_equs = eq_list; b_loc = loc } as b) =
   try
-    let typed_l, local_names, h0 = build const_env h Env.empty l in
+    let typed_l, (local_names, h0) = build const_env h l in
     let typed_eq_list, defined_names =
       typing_eq_list const_env h0 Env.empty eq_list in
     let defnames = diff_env defined_names local_names in
@@ -966,23 +966,25 @@ and typing_block const_env h
   with
     | TypingError(kind) -> message loc kind
 
-and build const_env h h0 dec =
-  List.fold_left
-    (fun (acc_dec, acc_defined, h)
-       ({ v_ident = n; v_type = btype; v_last = l; v_loc = loc } as v) ->
-         try
-           let ty = check_type const_env btype in
-           (* update type longname with module name from check_type *)
-           v.v_type <- ty;
-           if (Env.mem n h0) or (Env.mem n h)
-           then error (Ealready_defined(sourcename n))
-           else
-             ({ v with v_type = ty }::acc_dec,
-              Env.add n ty acc_defined,
-              Env.add n { ty = ty; last = last l } h)
-         with
-           | TypingError(kind) -> message loc kind)
-    ([], Env.empty, h) dec
+(** Builds environments from a var_dec list.
+    [h] is the environment to start from.
+    @return the typed list of var_dec, an environment mapping
+    names to their types (aka defined names) and the environment
+    mapping names to types and last that will be used for typing (aka h).*)
+and build const_env h dec =
+  let var_dec (acc_defined, h) vd =
+    try
+      let ty = check_type const_env vd.v_type in
+        if Env.mem vd.v_ident h then
+          error (Ealready_defined(sourcename vd.v_ident));
+
+        let acc_defined = Env.add vd.v_ident ty acc_defined in
+        let h = Env.add vd.v_ident { ty = ty; last = last vd.v_last } h in
+          { vd with v_type = ty }, (acc_defined, h)
+    with
+        TypingError(kind) -> message vd.v_loc kind
+  in
+    mapfold var_dec (Env.empty, h) dec
 
 let typing_contract const_env h contract =
 
@@ -1035,11 +1037,9 @@ let node ({ n_name = f; n_statefull = statefull;
   try
     let typed_params, const_env =
       build_node_params NamesEnv.empty node_params in
-    let typed_i_list, input_names, h =
-      build const_env Env.empty Env.empty i_list in
-    let typed_i_list = List.rev typed_i_list in
-    let typed_o_list, output_names, h = build const_env h h o_list in
-    let typed_o_list = List.rev typed_o_list in
+    let typed_i_list, (input_names, h) =
+      build const_env Env.empty i_list in
+    let typed_o_list, (output_names, h) = build const_env h o_list in
 
     (* typing contract *)
     let typed_contract, h =
