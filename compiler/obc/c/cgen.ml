@@ -192,12 +192,25 @@ let rec assoc_type n var_env =
         else
           assoc_type n var_env
 
+(** @return the unaliased version of a type. *)
+let rec unalias_ctype = function
+  | Cty_id ty_name ->
+      (try
+        let { qualid = q; info = ty_desc } = find_type (longname ty_name) in
+          match ty_desc with
+            | Talias ty -> unalias_ctype (ctype_of_otype ty)
+            | _ -> Cty_id ty_name
+      with Not_found -> Cty_id ty_name)
+  | Cty_arr (n, cty) -> Cty_arr (n, unalias_ctype cty)
+  | Cty_ptr cty -> Cty_ptr (unalias_ctype cty)
+  | cty -> cty
+
 (** Returns the type associated with the lhs [lhs]
     in the environnement [var_env] (which is an association list
     mapping strings to cty).*)
 let rec assoc_type_lhs lhs var_env =
   match lhs with
-    | Cvar x -> assoc_type x var_env
+    | Cvar x -> unalias_ctype (assoc_type x var_env)
     | Carray (lhs, _) ->
         let ty = assoc_type_lhs lhs var_env in
         array_base_ctype ty [1]
@@ -545,8 +558,6 @@ let fun_def_of_step_fun name obj_env mem objs md =
   (** Its arguments, translating Obc types to C types and adding our internal
       memory structure. *)
   let args = step_fun_args name md in
-  (** Its normal local variables. *)
-  let local_vars = List.map cvar_of_vd md.m_body.b_locals in
 
   (** Out vars for function calls *)
   let out_vars =
@@ -557,7 +568,7 @@ let fun_def_of_step_fun name obj_env mem objs md =
 
   (** The body *)
   let mems = List.map cvar_of_vd (mem@md.m_outputs) in
-  let var_env = args @ mems @ local_vars @ out_vars in
+  let var_env = args @ mems @ out_vars in
   let body = cstm_of_act_list var_env obj_env md.m_body in
 
   (** Substitute the return value variables with the corresponding
@@ -653,6 +664,7 @@ let decls_of_type_decl otd =
   let name = otd.t_name in
   match otd.t_desc with
     | Type_abs -> [] (*assert false*)
+    | Type_alias ty -> [Cdecl_typedef (ctype_of_otype ty, name)]
     | Type_enum nl ->
         let name = !global_name ^ "_" ^ name in
         [Cdecl_enum (otd.t_name, nl);
@@ -672,6 +684,7 @@ let cdefs_and_cdecls_of_type_decl otd =
   let name = otd.t_name in
   match otd.t_desc with
     | Type_abs -> [], [] (*assert false*)
+    | Type_alias ty -> [], [Cdecl_typedef (ctype_of_otype ty, name)]
     | Type_enum nl ->
         let of_string_fun = Cfundef
           { f_name = name ^ "_of_string";

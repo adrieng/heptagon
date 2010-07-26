@@ -27,6 +27,7 @@ type type_dec =
 
 and tdesc =
   | Type_abs
+  | Type_alias of ty
   | Type_enum of name list
   | Type_struct of structure
 

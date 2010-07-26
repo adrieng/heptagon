@@ -74,6 +74,8 @@ and cstm =
 (** C type declarations ; will {b always} correspond to a typedef in emitted
     source code. *)
 type cdecl =
+  (** C typedef declaration (type, alias)*)
+  | Cdecl_typedef of cty * string
   (** C enum declaration, with associated value tags. *)
   | Cdecl_enum of string * string list
   (** C structure declaration, with each field's name and type. *)

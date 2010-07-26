@@ -37,7 +37,11 @@ type node =
 type field = { f_name : name; f_type : ty }
 type structure = field list
 
-type type_def = | Tabstract | Tenum of name list | Tstruct of structure
+type type_def =
+  | Tabstract
+  | Talias of ty
+  | Tenum of name list
+  | Tstruct of structure
 
 type const_def = { c_name : name; c_type : ty; c_value : static_exp }
 

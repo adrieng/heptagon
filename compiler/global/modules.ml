@@ -172,3 +172,15 @@ let currentname longname =
     | Modname{ qual = q; id = id} ->
         if current.name = q then Name(id) else longname
 
+exception Undefined_type of longname
+(** @return the unaliased version of a type. *)
+let rec unalias_type = function
+  | Tid ty_name ->
+      (try
+        let { qualid = q; info = ty_desc } = find_type ty_name in
+          match ty_desc with
+            | Talias ty -> unalias_type ty
+            | _ -> Tid (Modname q)
+      with Not_found -> raise (Undefined_type ty_name))
+  | Tarray (ty, n) -> Tarray(unalias_type ty, n)
+  | Tprod ty_list -> Tprod (List.map unalias_type ty_list)

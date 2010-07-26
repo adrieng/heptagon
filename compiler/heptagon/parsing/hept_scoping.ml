@@ -300,6 +300,7 @@ let translate_node const_env env node =
 let translate_typedec const_env ty =
   let onetype = function
     | Type_abs -> Heptagon.Type_abs
+    | Type_alias ty -> Heptagon.Type_alias (translate_type const_env ty)
     | Type_enum(tag_list) -> Heptagon.Type_enum(tag_list)
     | Type_struct(field_ty_list) ->
         let translate_field_type (f,ty) =

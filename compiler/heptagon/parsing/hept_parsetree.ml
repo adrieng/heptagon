@@ -110,6 +110,7 @@ type type_dec =
 
 and type_desc =
   | Type_abs
+  | Type_alias of ty
   | Type_enum of name list
   | Type_struct of (name * ty) list
 

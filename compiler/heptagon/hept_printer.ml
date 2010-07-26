@@ -263,6 +263,8 @@ and print_block ff { b_local = v_list; b_equs = eqs; b_defnames = defnames } =
 let print_type_def ff { t_name = name; t_desc = tdesc } =
   match tdesc with
     | Type_abs -> fprintf ff "@[type %s@\n@]" name
+    | Type_alias ty ->
+        fprintf ff  "@[type %s@ = %a\n@]" name  print_type ty
     | Type_enum(tag_name_list) ->
         fprintf ff "@[type %s = " name;
         print_list_r print_name "" "| " "" ff tag_name_list;

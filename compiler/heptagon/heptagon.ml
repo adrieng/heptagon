@@ -98,7 +98,11 @@ and last = Var | Last of static_exp option
 
 type type_dec = { t_name : name; t_desc : type_dec_desc; t_loc : location }
 
-and type_dec_desc = Type_abs | Type_enum of name list | Type_struct of structure
+and type_dec_desc =
+  | Type_abs
+  | Type_alias of ty
+  | Type_enum of name list
+  | Type_struct of structure
 
 type contract = {
   c_assume : exp;

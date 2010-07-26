@@ -213,6 +213,10 @@ let array_size ty =
     | Tarray (_, e) -> e
     | _ -> error (Esubscripted_value_not_an_array ty)
 
+let unalias_type ty =
+  try unalias_type ty
+  with Undefined_type ln -> error (Eundefined (fullname ln))
+
 let rec unify t1 t2 =
   match t1, t2 with
     | b1, b2 when b1 = b2 -> ()
@@ -228,7 +232,9 @@ let rec unify t1 t2 =
     | _ -> raise Unify
 
 let unify t1 t2 =
-  try unify t1 t2 with Unify -> error (Etype_clash(t1, t2))
+  let ut1 = unalias_type t1 in
+  let ut2 = unalias_type t2 in
+  try unify ut1 ut2 with Unify -> error (Etype_clash(t1, t2))
 
 let kind f ty_desc =
   let ty_of_arg v = v.a_type in
@@ -429,7 +435,7 @@ let rec check_type const_env = function
   | Tarray(ty, e) ->
       let typed_e = expect_static_exp const_env (Tid Initial.pint) e in
         Tarray(check_type const_env ty, typed_e)
-  | Tid(ty_name) ->
+  | Tid ty_name ->
       (try Tid(Modname((find_type ty_name).qualid))
        with Not_found -> error (Eundefined(fullname ty_name)))
   | Tprod l ->
@@ -1075,6 +1081,7 @@ let deftype { t_name = n; t_desc = tdesc; t_loc = loc } =
   try
     match tdesc with
       | Type_abs -> add_type n Tabstract
+      | Type_alias ln -> add_type n (Talias ln)
       | Type_enum(tag_name_list) ->
           add_type n (Tenum tag_name_list);
           List.iter (fun tag -> add_constr tag (Tid (longname n))) tag_name_list

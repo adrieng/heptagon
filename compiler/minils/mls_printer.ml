@@ -169,6 +169,8 @@ let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
     adding a heading space itself when needed and exporting a break*)
 and print_type_desc ff = function
   | Type_abs -> () (* that's the reason of the exception *)
+  | Type_alias ty ->
+      fprintf ff  " =@ %a" print_type ty
   | Type_enum tag_name_list ->
       fprintf ff " =@ %a" (print_list print_name """|""") tag_name_list
   | Type_struct f_ty_list ->

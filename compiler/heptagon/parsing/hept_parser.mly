@@ -121,6 +121,8 @@ type_decs:
 type_dec:
   | TYPE IDENT
       { mk_type_dec $2 Type_abs (Loc($startpos,$endpos)) }
+  | TYPE IDENT EQUAL ty_ident
+      { mk_type_dec $2 (Type_alias $4) (Loc($startpos,$endpos)) }
   | TYPE IDENT EQUAL enum_ty_desc
       { mk_type_dec $2 (Type_enum ($4)) (Loc($startpos,$endpos)) }
   | TYPE IDENT EQUAL struct_ty_desc
@@ -248,8 +250,8 @@ ident_list:
 ;
 
 ty_ident:
-  | IDENT
-      { Tid(Name($1)) }
+  | longname
+      { Tid $1 }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
 ;

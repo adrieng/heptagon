@@ -107,6 +107,8 @@ and cstm =
 (** C type declarations ; will {b always} correspond to a typedef in emitted
     source code. *)
 type cdecl =
+  (** C typedef declaration (alias, name)*)
+  | Cdecl_typedef of cty * string
     (** C enum declaration, with associated value tags. *)
   | Cdecl_enum of string * string list
     (** C structure declaration, with each field's name and type. *)
@@ -255,6 +257,9 @@ let pp_cdecl fmt cdecl = match cdecl with
   | Cdecl_enum (s, sl) ->
       fprintf fmt "@[<v>@[<v 2>typedef enum {@ %a@]@ } %a;@ @]@\n"
         (pp_list1 pp_string ",") sl  pp_string s
+  | Cdecl_typedef (cty, n) ->
+      fprintf fmt "@[<v>@[<v 2>typedef %a;@ @]@\n"
+        pp_vardecl (n, cty)
   | Cdecl_struct (s, fl) ->
       let pp_field fmt (s, cty) =
         fprintf fmt "@ %a;" pp_vardecl (s,cty) in
