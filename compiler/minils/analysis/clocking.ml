@@ -31,12 +31,11 @@ let err_message exp = function
       raise Error
 
 
-
 let typ_of_name h x = Env.find x h
 
 let rec typing h e =
   let ct = match e.e_desc with
-    | Econst se -> skeleton (new_var ()) se.se_ty
+    | Econst se -> const_skeleton se
     | Evar x -> Ck (typ_of_name h x)
     | Efby (c, e) -> typing h e
     | Eapp({a_op = op}, args, r) ->
