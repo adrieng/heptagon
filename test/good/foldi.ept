@@ -1,0 +1,11 @@
+const n:int=42
+
+fun f(a:bool; i:int; acc_in : bool) returns (acc_out : bool)
+let
+  acc_out = if i = 0 then false else (a & acc_in);
+tel
+
+fun g(a: bool^n) returns (o:bool)
+let
+  o = foldi f <<n>>(a, true);
+tel
