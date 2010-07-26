@@ -45,7 +45,7 @@ open Hept_parsetree
 %token DOUBLE_DOT
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
-%token MAP FOLD MAPFOLD
+%token MAP FOLD FOLDI MAPFOLD
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -475,6 +475,7 @@ call_params:
 iterator:
   | MAP { Imap }
   | FOLD { Ifold }
+  | FOLDI { Ifoldi }
   | MAPFOLD { Imapfold }
 ;
 

@@ -16,6 +16,7 @@ open Types
 type iterator_type =
   | Imap
   | Ifold
+  | Ifoldi
   | Imapfold
 
 type ty =

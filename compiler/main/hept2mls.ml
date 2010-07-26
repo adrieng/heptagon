@@ -192,6 +192,7 @@ let translate_reset = function
 let translate_iterator_type = function
   | Heptagon.Imap -> Imap
   | Heptagon.Ifold -> Ifold
+  | Heptagon.Ifoldi -> Ifoldi
   | Heptagon.Imapfold -> Imapfold
 
 let rec translate_op env = function

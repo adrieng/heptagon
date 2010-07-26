@@ -47,6 +47,7 @@ type error =
   | Eno_such_field of ty * longname
   | Eempty_record
   | Eempty_array
+  | Efoldi_bad_args of ty
 
 exception Unify
 exception TypingError of error
@@ -163,6 +164,12 @@ let message loc kind =
         Printf.eprintf
           "%aThe array is empty.\n"
           output_location loc
+    | Efoldi_bad_args  ty ->
+        Printf.eprintf
+          "%aThe function given to foldi should expect an integer \
+               as the last but one argument (found: %a).\n"
+          output_location loc
+          Hept_printer.ptype ty
   end;
   raise Error
 
@@ -783,6 +790,22 @@ and typing_iterator statefull const_env h
   | Ifold ->
       let args_ty_list =
         incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
+      let typed_e_list =
+        typing_args statefull const_env h args_ty_list e_list in
+      (*check accumulator type matches in input and output*)
+      if List.length result_ty_list > 1 then error Etoo_many_outputs;
+      ( try unify (last_element args_ty_list) (List.hd result_ty_list)
+        with TypingError(kind) -> message (List.hd e_list).e_loc kind );
+      (List.hd result_ty_list), typed_e_list
+
+  | Ifoldi ->
+      let args_ty_list, acc_ty = split_last args_ty_list in
+      let args_ty_list, idx_ty = split_last args_ty_list in
+        (* Last but one arg of the function should be integer *)
+        ( try unify idx_ty (Tid Initial.pint)
+          with TypingError _ -> raise (TypingError (Efoldi_bad_args idx_ty)));
+        let args_ty_list =
+        incomplete_map (fun ty -> Tarray (ty, n)) (args_ty_list@[acc_ty]) in
       let typed_e_list =
         typing_args statefull const_env h args_ty_list e_list in
       (*check accumulator type matches in input and output*)

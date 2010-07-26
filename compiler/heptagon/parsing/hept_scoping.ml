@@ -98,6 +98,7 @@ let build_id_list loc env l =
 let translate_iterator_type = function
   | Imap -> Heptagon.Imap
   | Ifold -> Heptagon.Ifold
+  | Ifoldi -> Heptagon.Ifoldi
   | Imapfold -> Heptagon.Imapfold
 
 let op_from_app loc app =

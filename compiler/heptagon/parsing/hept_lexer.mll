@@ -59,6 +59,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "with", WITH;
  "map", MAP;
  "fold", FOLD;
+ "foldi", FOLDI;
  "mapfold", MAPFOLD;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
@@ -115,7 +116,7 @@ let char_for_decimal_code lexbuf i =
 }
 
 
-let newline = '\n' | '\r' '\n' 
+let newline = '\n' | '\r' '\n'
 
 rule token = parse
   | newline         { new_line lexbuf; token lexbuf }
@@ -138,7 +139,7 @@ rule token = parse
   | "|"             {BAR}
   | "-"             {SUBTRACTIVE "-"}
   | "-."            {SUBTRACTIVE "-."}
-  | "^"             {POWER} 
+  | "^"             {POWER}
   | "["             {LBRACKET}
   | "]"             {RBRACKET}
   | "@"             {AROBASE}
@@ -151,9 +152,9 @@ rule token = parse
       { let s = Lexing.lexeme lexbuf in
           begin try
 	    Hashtbl.find keyword_table s
-          with 
+          with
 	      Not_found -> IDENT id
-	  end 
+	  end
       }
   | ['0'-'9']+
   | '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+

@@ -391,6 +391,17 @@ and translate_iterator map call_context it name_list app loc n x c_list =
           si, j, [ Aassgn (acc_out, acc_in);
                    Afor (x, static_exp_of_int 0, n, b) ]
 
+    | Minils.Ifoldi ->
+        let (c_list, acc_in) = split_last c_list in
+        let c_list = array_of_input c_list in
+        let acc_out = last_element name_list in
+        let v, si, j, action = mk_node_call map call_context
+          app loc name_list (c_list @ [ mk_evar x; mk_exp (Elhs acc_out) ]) in
+        let v = translate_var_dec map v in
+        let b = mk_block ~locals:v action in
+          si, j, [ Aassgn (acc_out, acc_in);
+                   Afor (x, static_exp_of_int 0, n, b) ]
+
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list
 

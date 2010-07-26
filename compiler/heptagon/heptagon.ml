@@ -20,6 +20,7 @@ type state_name = name
 type iterator_type =
   | Imap
   | Ifold
+  | Ifoldi
   | Imapfold
 
 type exp = { e_desc : desc; e_ty : ty; e_loc : location }

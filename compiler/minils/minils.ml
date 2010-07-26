@@ -24,6 +24,7 @@ let minils_format_version = "1"
 type iterator_type =
   | Imap
   | Ifold
+  | Ifoldi
   | Imapfold
 
 type type_dec = {

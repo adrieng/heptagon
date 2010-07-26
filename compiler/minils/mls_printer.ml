@@ -21,6 +21,7 @@ let iterator_to_string i =
   match i with
     | Imap -> "map"
     | Ifold -> "fold"
+    | Ifoldi -> "foldi"
     | Imapfold -> "mapfold"
 
 let rec print_pat ff = function

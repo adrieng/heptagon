@@ -24,6 +24,7 @@ let iterator_to_string i =
   match i with
     | Imap -> "map"
     | Ifold -> "fold"
+    | Ifoldi -> "foldi"
     | Imapfold -> "mapfold"
 
 let print_iterator ff it =
