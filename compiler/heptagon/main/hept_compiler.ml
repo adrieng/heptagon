@@ -36,6 +36,7 @@ let parse_interface lexbuf =
 let compile_impl pp p =
   (* Typing *)
   let p = do_pass Typing.program "Typing" p pp true in
+  let p = do_pass Statefull.program "Statefullness check" p pp true in
 
   if !print_types then Interface.Printer.print stdout;
 

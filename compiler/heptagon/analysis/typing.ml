@@ -32,9 +32,7 @@ type error =
   | Earity_clash of int * int
   | Estatic_arity_clash of int * int
   | Ealready_defined of name
-  | Eshould_be_a_node of longname
   | Enon_exaustive
-  | Estate_clash
   | Epartial_switch of name
   | Etoo_many_outputs
   | Esome_fields_are_missing
@@ -99,14 +97,6 @@ let message loc kind =
     | Enon_exaustive ->
         Printf.eprintf "%aSome constructors are missing in this \
                         pattern/matching.\n"
-          output_location loc
-    | Eshould_be_a_node(s) ->
-        Printf.eprintf "%a%s should be a combinatorial function.\n"
-          output_location loc
-          (fullname s)
-    | Estate_clash ->
-        Printf.eprintf
-          "%aOnly stateless expressions should appear in a function.\n"
           output_location loc
     | Epartial_switch(s) ->
         Printf.eprintf
@@ -241,26 +231,9 @@ let rec unify t1 t2 =
 let unify t1 t2 =
   try unify t1 t2 with Unify -> error (Etype_clash(t1, t2))
 
-let less_than statefull = if not statefull then error Estate_clash
-
-let is_statefull_eq_desc eqd =
-  let edesc funs _ ed = match ed with
-    | Elast _ | Efby _ | Epre _ -> ed, true
-    | Eapp({ a_op = (Enode _ | Earrow) }, _, _) -> ed, true
-    | _ -> raise Misc.Fallback
-  in
-  let funs = { Hept_mapfold.defaults with edesc = edesc } in
-  let _, is_statefull = Hept_mapfold.eqdesc_it funs false eqd in
-    is_statefull
-
-let kind f statefull
-    { node_inputs = ty_list1;
-      node_outputs = ty_list2;
-      node_statefull = n } =
+let kind n =
   let ty_of_arg v = v.a_type in
-  let op = if n then Enode f else Efun f in
-    if n & not(statefull) then error (Eshould_be_a_node f)
-    else op, List.map ty_of_arg ty_list1, List.map ty_of_arg ty_list2
+    List.map ty_of_arg n.node_inputs, List.map ty_of_arg n.node_outputs
 
 let typ_of_name h x =
   try
@@ -541,7 +514,7 @@ let field_type const_env f fields t1 loc =
   with
       Not_found -> message loc (Eno_such_field (t1, f))
 
-let rec typing statefull const_env h e =
+let rec typing const_env h e =
   try
     let typed_desc,ty = match e.e_desc with
       | Econst c ->
@@ -554,7 +527,7 @@ let rec typing statefull const_env h e =
 
       | Eapp(op, e_list, r) ->
           let ty, op, typed_e_list =
-            typing_app statefull const_env h op e_list in
+            typing_app const_env h op e_list in
             Eapp(op, typed_e_list, r), ty
 
       | Estruct(l) ->
@@ -569,39 +542,35 @@ let rec typing statefull const_env h e =
             message e.e_loc Esome_fields_are_missing;
           check_field_unicity l;
           let l =
-            List.map (typing_field statefull
+            List.map (typing_field
                         const_env h fields (Tid (Modname q)) q.qual) l in
           Estruct l, Tid (Modname q)
 
       | Epre (None, e) ->
-          less_than statefull;
-          let typed_e,ty = typing statefull const_env h e in
+          let typed_e,ty = typing const_env h e in
             Epre (None, typed_e), ty
 
       | Epre (Some c, e) ->
-          less_than statefull;
           let typed_c, t1 = typing_static_exp const_env c in
-          let typed_e = expect statefull const_env h t1 e in
+          let typed_e = expect const_env h t1 e in
             Epre(Some typed_c, typed_e), t1
 
       | Efby (e1, e2) ->
-          less_than statefull;
-          let typed_e1, t1 = typing statefull const_env h e1 in
-          let typed_e2 = expect statefull const_env h t1 e2 in
+          let typed_e1, t1 = typing const_env h e1 in
+          let typed_e2 = expect const_env h t1 e2 in
             Efby (typed_e1, typed_e2), t1
 
       | Eiterator (it, ({ a_op = (Enode f | Efun f);
                           a_params = params } as app),
                    n, e_list, reset) ->
           let { qualid = q; info = ty_desc } = find_value f in
-          let op, expected_ty_list, result_ty_list =
-            kind (Modname q) statefull ty_desc in
+          let expected_ty_list, result_ty_list = kind ty_desc in
           let m = build_subst ty_desc.node_params params in
           let expected_ty_list =
             List.map (subst_type_vars m) expected_ty_list in
           let result_ty_list = List.map (subst_type_vars m) result_ty_list in
           let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
-          let ty, typed_e_list = typing_iterator statefull const_env h it n
+          let ty, typed_e_list = typing_iterator const_env h it n
             expected_ty_list result_ty_list e_list in
           let typed_params = typing_node_params const_env
             ty_desc.node_params params in
@@ -611,50 +580,48 @@ let rec typing statefull const_env h e =
             add_size_constraint (Clequal (mk_static_exp (Sint  1), typed_n));
             List.iter add_size_constraint size_constrs;
             (* return the type *)
-            Eiterator(it, { app with a_op = op; a_params = typed_params }
+            Eiterator(it, { app with a_params = typed_params }
                         , typed_n, typed_e_list, reset), ty
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
   with
       TypingError(kind) -> message e.e_loc kind
 
-and typing_field statefull const_env h fields t1 modname (f, e) =
+and typing_field const_env h fields t1 modname (f, e) =
   try
     let ty = check_type const_env (field_assoc f fields) in
-    let typed_e = expect statefull const_env h ty e in
+    let typed_e = expect const_env h ty e in
     Modname { qual = modname; id = shortname f }, typed_e
   with
       Not_found -> message e.e_loc (Eno_such_field (t1, f))
 
-and expect statefull const_env h expected_ty e =
-  let typed_e, actual_ty = typing statefull const_env h e in
+and expect const_env h expected_ty e =
+  let typed_e, actual_ty = typing const_env h e in
   try
     unify actual_ty expected_ty;
     typed_e
   with TypingError(kind) -> message e.e_loc kind
 
-and typing_app statefull const_env h op e_list =
+and typing_app const_env h op e_list =
   match op, e_list with
     | { a_op = Earrow }, [e1;e2] ->
-        less_than statefull;
-        let typed_e1, t1 = typing statefull const_env h e1 in
-        let typed_e2 = expect statefull const_env h t1 e2 in
+        let typed_e1, t1 = typing const_env h e1 in
+        let typed_e2 = expect const_env h t1 e2 in
         t1, op, [typed_e1;typed_e2]
 
     | { a_op = Eifthenelse }, [e1;e2;e3] ->
-        let typed_e1 = expect statefull const_env h
+        let typed_e1 = expect const_env h
           (Tid Initial.pbool) e1 in
-        let typed_e2, t1 = typing statefull const_env h e2 in
-        let typed_e3 = expect statefull const_env h t1 e3 in
+        let typed_e2, t1 = typing const_env h e2 in
+        let typed_e3 = expect const_env h t1 e3 in
         t1, op, [typed_e1; typed_e2; typed_e3]
 
     | { a_op = (Efun f | Enode f); a_params = params } as app, e_list ->
         let { qualid = q; info = ty_desc } = find_value f in
-        let op, expected_ty_list, result_ty_list =
-          kind (Modname q) statefull ty_desc in
+        let expected_ty_list, result_ty_list = kind ty_desc in
         let m = build_subst ty_desc.node_params params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
-        let typed_e_list = typing_args statefull const_env h
+        let typed_e_list = typing_args const_env h
           expected_ty_list e_list in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         (* Type static parameters and generate constraints *)
@@ -664,17 +631,17 @@ and typing_app statefull const_env h op e_list =
           instanciate_constr m ty_desc.node_params_constraints in
         List.iter add_size_constraint size_constrs;
         prod result_ty_list,
-        { app with a_op = op; a_params = typed_params },
+        { app with a_params = typed_params },
          typed_e_list
 
     | { a_op = Etuple }, e_list ->
         let typed_e_list,ty_list =
-          List.split (List.map (typing statefull const_env h) e_list) in
+          List.split (List.map (typing const_env h) e_list) in
          prod ty_list, op, typed_e_list
 
     | { a_op = Earray }, exp::e_list ->
-        let typed_exp, t1 = typing statefull const_env h exp in
-        let typed_e_list = List.map (expect statefull const_env h t1) e_list in
+        let typed_exp, t1 = typing const_env h exp in
+        let typed_e_list = List.map (expect const_env h t1) e_list in
         let n = mk_static_exp ~ty:(Tid Initial.pint)
           (Sint (List.length e_list + 1)) in
           Tarray(t1, n), op, typed_exp::typed_e_list
@@ -684,7 +651,7 @@ and typing_app statefull const_env h op e_list =
           (match f.se_desc with
              | Sconstructor fn -> fn
              | _ -> assert false) in
-        let typed_e, t1 = typing statefull const_env h e in
+        let typed_e, t1 = typing const_env h e in
         let q, fields = struct_info e.e_loc t1 in
         let t2 = field_type const_env fn fields t1 e.e_loc in
         let fn = Modname { qual = q.qual; id = shortname fn } in
@@ -692,7 +659,7 @@ and typing_app statefull const_env h op e_list =
           t2, { op with a_params = [f] }, [typed_e]
 
     | { a_op = Efield_update; a_params = [f] }, [e1; e2] ->
-        let typed_e1, t1 = typing statefull const_env h e1 in
+        let typed_e1, t1 = typing const_env h e1 in
         let q, fields = struct_info e1.e_loc t1 in
         let fn =
           (match f.se_desc with
@@ -701,39 +668,39 @@ and typing_app statefull const_env h op e_list =
         let f = { f with se_desc =
             Sconstructor (Modname { qual = q.qual; id = shortname fn }) } in
         let t2 = field_type const_env fn fields t1 e1.e_loc in
-        let typed_e2 = expect statefull const_env h t2 e2 in
+        let typed_e2 = expect const_env h t2 e2 in
         t1, { op with a_params = [f] } , [typed_e1; typed_e2]
 
     | { a_op = Earray_fill; a_params = [n] }, [e1] ->
         let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
-        let typed_e1, t1 = typing statefull const_env h e1 in
+        let typed_e1, t1 = typing const_env h e1 in
           add_size_constraint (Clequal (mk_static_exp (Sint 1), typed_n));
           Tarray (t1, typed_n), { op with a_params = [typed_n] }, [typed_e1]
 
     | { a_op = Eselect; a_params = idx_list }, [e1] ->
-        let typed_e1, t1 = typing statefull const_env h e1 in
+        let typed_e1, t1 = typing const_env h e1 in
         let typed_idx_list, ty =
-          typing_array_subscript statefull const_env h idx_list t1 in
+          typing_array_subscript const_env h idx_list t1 in
           ty, { op with a_params = typed_idx_list }, [typed_e1]
 
     | { a_op = Eselect_dyn }, e1::defe::idx_list ->
-        let typed_e1, t1 = typing statefull const_env h e1 in
-        let typed_defe = expect statefull const_env h (element_type t1) defe in
+        let typed_e1, t1 = typing const_env h e1 in
+        let typed_defe = expect const_env h (element_type t1) defe in
         let ty, typed_idx_list =
-          typing_array_subscript_dyn statefull const_env h idx_list t1 in
+          typing_array_subscript_dyn const_env h idx_list t1 in
         ty, op, typed_e1::typed_defe::typed_idx_list
 
     | { a_op = Eupdate; a_params = idx_list }, [e1;e2] ->
-        let typed_e1, t1 = typing statefull const_env h e1 in
+        let typed_e1, t1 = typing const_env h e1 in
         let typed_idx_list, ty =
-          typing_array_subscript statefull const_env h idx_list t1 in
-        let typed_e2 = expect statefull const_env h ty e2 in
+          typing_array_subscript const_env h idx_list t1 in
+        let typed_e2 = expect const_env h ty e2 in
           t1, { op with a_params = typed_idx_list }, [typed_e1; typed_e2]
 
     | { a_op = Eselect_slice; a_params = [idx1; idx2] }, [e] ->
         let typed_idx1 = expect_static_exp const_env (Tid Initial.pint) idx1 in
         let typed_idx2 = expect_static_exp const_env (Tid Initial.pint) idx2 in
-        let typed_e, t1 = typing statefull const_env h e in
+        let typed_e, t1 = typing const_env h e in
         (*Create the expression to compute the size of the array *)
         let e1 = mk_static_exp (Sop (mk_pervasives "-",
                                      [typed_idx2; typed_idx1])) in
@@ -744,8 +711,8 @@ and typing_app statefull const_env h op e_list =
         { op with a_params = [typed_idx1; typed_idx2] }, [typed_e]
 
     | { a_op = Econcat }, [e1; e2] ->
-        let typed_e1, t1 = typing statefull const_env h e1 in
-        let typed_e2, t2 = typing statefull const_env h e2 in
+        let typed_e1, t1 = typing const_env h e1 in
+        let typed_e2, t2 = typing const_env h e2 in
         begin try
           unify (element_type t1) (element_type t2)
         with
@@ -777,13 +744,13 @@ and typing_app statefull const_env h op e_list =
     | { a_op = Earray_fill }, _ ->
         error (Earity_clash(List.length e_list, 2))
 
-and typing_iterator statefull const_env h
+and typing_iterator const_env h
     it n args_ty_list result_ty_list e_list = match it with
   | Imap ->
       let args_ty_list = List.map (fun ty -> Tarray(ty, n)) args_ty_list in
       let result_ty_list =
         List.map (fun ty -> Tarray(ty, n)) result_ty_list in
-      let typed_e_list = typing_args statefull const_env h
+      let typed_e_list = typing_args const_env h
         args_ty_list e_list in
       prod result_ty_list, typed_e_list
 
@@ -791,7 +758,7 @@ and typing_iterator statefull const_env h
       let args_ty_list =
         incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
       let typed_e_list =
-        typing_args statefull const_env h args_ty_list e_list in
+        typing_args const_env h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
       if List.length result_ty_list > 1 then error Etoo_many_outputs;
       ( try unify (last_element args_ty_list) (List.hd result_ty_list)
@@ -807,7 +774,7 @@ and typing_iterator statefull const_env h
         let args_ty_list =
         incomplete_map (fun ty -> Tarray (ty, n)) (args_ty_list@[acc_ty]) in
       let typed_e_list =
-        typing_args statefull const_env h args_ty_list e_list in
+        typing_args const_env h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
       if List.length result_ty_list > 1 then error Etoo_many_outputs;
       ( try unify (last_element args_ty_list) (List.hd result_ty_list)
@@ -819,14 +786,14 @@ and typing_iterator statefull const_env h
         incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
       let result_ty_list =
         incomplete_map (fun ty -> Tarray (ty, n)) result_ty_list in
-      let typed_e_list = typing_args statefull const_env h
+      let typed_e_list = typing_args const_env h
         args_ty_list e_list in
       (*check accumulator type matches in input and output*)
       ( try unify (last_element args_ty_list) (last_element result_ty_list)
         with TypingError(kind) -> message (List.hd e_list).e_loc kind );
       prod result_ty_list, typed_e_list
 
-and typing_array_subscript statefull const_env h idx_list ty  =
+and typing_array_subscript const_env h idx_list ty  =
   match ty, idx_list with
     | ty, [] -> [], ty
     | Tarray(ty, exp), idx::idx_list ->
@@ -837,25 +804,25 @@ and typing_array_subscript statefull const_env h idx_list ty  =
                                         [exp; mk_static_exp (Sint 1)])) in
           add_size_constraint (Clequal (idx,bound));
           let typed_idx_list, ty =
-            typing_array_subscript statefull const_env h idx_list ty in
+            typing_array_subscript const_env h idx_list ty in
           typed_idx::typed_idx_list, ty
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 
 (* This function checks that the array dimensions matches
    the subscript. It returns the base type wrt the nb of indices. *)
-and typing_array_subscript_dyn statefull const_env h idx_list ty =
+and typing_array_subscript_dyn const_env h idx_list ty =
   match ty, idx_list with
     | ty, [] -> ty, []
     | Tarray(ty, exp), idx::idx_list ->
-        let typed_idx = expect statefull const_env h (Tid Initial.pint) idx in
+        let typed_idx = expect const_env h (Tid Initial.pint) idx in
         let ty, typed_idx_list =
-          typing_array_subscript_dyn statefull const_env h idx_list ty in
+          typing_array_subscript_dyn const_env h idx_list ty in
         ty, typed_idx::typed_idx_list
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 
-and typing_args statefull const_env h expected_ty_list e_list =
+and typing_args const_env h expected_ty_list e_list =
   try
-    List.map2 (expect statefull const_env h) expected_ty_list e_list
+    List.map2 (expect const_env h) expected_ty_list e_list
   with Invalid_argument _ ->
     error (Earity_clash(List.length e_list, List.length expected_ty_list))
 
@@ -879,71 +846,59 @@ let rec typing_pat h acc = function
           pat_list (acc, []) in
       acc, Tprod(ty_list)
 
-let rec typing_eq statefull const_env h acc eq =
+let rec typing_eq const_env h acc eq =
   let typed_desc,acc = match eq.eq_desc with
     | Eautomaton(state_handlers) ->
         let typed_sh,acc =
-          typing_automaton_handlers statefull const_env h acc state_handlers in
+          typing_automaton_handlers const_env h acc state_handlers in
         Eautomaton(typed_sh),
         acc
     | Eswitch(e, switch_handlers) ->
-        let typed_e,ty = typing statefull const_env h e in
+        let typed_e,ty = typing const_env h e in
         let typed_sh,acc =
-          typing_switch_handlers statefull const_env h acc ty switch_handlers in
+          typing_switch_handlers const_env h acc ty switch_handlers in
         Eswitch(typed_e,typed_sh),
         acc
     | Epresent(present_handlers, b) ->
-        let typed_b, def_names, _ = typing_block statefull const_env h b in
+        let typed_b, def_names, _ = typing_block const_env h b in
         let typed_ph, acc =
-          typing_present_handlers statefull const_env h
+          typing_present_handlers const_env h
             acc def_names present_handlers in
         Epresent(typed_ph,typed_b),
         acc
     | Ereset(b, e) ->
-        let typed_e = expect statefull const_env h (Tid Initial.pbool) e in
-        let typed_eq_list, acc = typing_eq_list statefull
+        let typed_e = expect const_env h (Tid Initial.pbool) e in
+        let typed_eq_list, acc = typing_eq_list
           const_env h acc b.b_equs in
         let typed_b = { b with b_equs = typed_eq_list } in
         Ereset(typed_b, typed_e),
         acc
     | Eeq(pat, e) ->
         let acc, ty_pat = typing_pat h acc pat in
-        let typed_e = expect statefull const_env h ty_pat e in
+        let typed_e = expect const_env h ty_pat e in
         Eeq(pat, typed_e),
         acc in
-  { eq with
-      eq_statefull = is_statefull_eq_desc typed_desc;
-      eq_desc = typed_desc },
-  acc
+  { eq with eq_desc = typed_desc }, acc
 
-and typing_eq_list statefull const_env h acc eq_list =
-  let rev_typed_eq_list,acc =
-    List.fold_left
-      (fun (rev_eq_list,acc) eq ->
-         let typed_eq, acc = typing_eq statefull const_env h acc eq in
-         (typed_eq::rev_eq_list),acc
-      )
-      ([],acc)
-      eq_list in
-  ((List.rev rev_typed_eq_list),
-   acc)
+and typing_eq_list const_env h acc eq_list =
+  mapfold (typing_eq const_env h) acc eq_list
 
-and typing_automaton_handlers statefull const_env h acc state_handlers =
+and typing_automaton_handlers const_env h acc state_handlers =
   (* checks unicity of states *)
   let addname acc { s_state = n } =
     if S.mem n acc then error (Ealready_defined(n)) else S.add n acc in
   let states =  List.fold_left addname S.empty state_handlers in
 
-  let escape statefull h ({ e_cond = e; e_next_state = n } as esc) =
+  let escape h ({ e_cond = e; e_next_state = n } as esc) =
     if not (S.mem n states) then error (Eundefined(n));
-    let typed_e = expect statefull const_env h (Tid Initial.pbool) e in
+    let typed_e = expect const_env h (Tid Initial.pbool) e in
     { esc with e_cond = typed_e } in
 
   let handler ({ s_state = n; s_block = b; s_until = e_list1;
                  s_unless = e_list2 } as s) =
-    let typed_b, defined_names, h0 = typing_block statefull const_env h b in
-    let typed_e_list1 = List.map (escape statefull h0) e_list1 in
-    let typed_e_list2 = List.map (escape false h) e_list2 in
+    let typed_b, defined_names, h0 = typing_block const_env h b in
+    let typed_e_list1 = List.map (escape h0) e_list1 in
+    let typed_e_list2 = List.map (escape h) e_list2 in
     { s with
         s_block = typed_b;
         s_until = typed_e_list1;
@@ -957,7 +912,7 @@ and typing_automaton_handlers statefull const_env h acc state_handlers =
   typed_handlers,
       (add total (add partial acc))
 
-and typing_switch_handlers statefull const_env h acc ty switch_handlers =
+and typing_switch_handlers const_env h acc ty switch_handlers =
   (* checks unicity of states *)
   let addname acc { w_name = n } =
     let n = shortname(n) in
@@ -967,7 +922,7 @@ and typing_switch_handlers statefull const_env h acc ty switch_handlers =
   if not (S.is_empty d) then error (Epartial_switch(S.choose d));
 
   let handler ({ w_block = b; w_name = name }) =
-    let typed_b, defined_names, _ = typing_block statefull const_env h b in
+    let typed_b, defined_names, _ = typing_block const_env h b in
     { w_block = typed_b;
       (* Replace handler name with fully qualified name *)
       w_name = Modname((find_constr name).qualid)},
@@ -980,11 +935,11 @@ and typing_switch_handlers statefull const_env h acc ty switch_handlers =
   (typed_switch_handlers,
    add total (add partial acc))
 
-and typing_present_handlers statefull const_env h acc def_names
+and typing_present_handlers const_env h acc def_names
     present_handlers =
   let handler ({ p_cond = e; p_block = b }) =
-    let typed_e = expect false const_env h (Tid Initial.pbool) e in
-    let typed_b, defined_names, _ = typing_block statefull const_env h b in
+    let typed_e = expect const_env h (Tid Initial.pbool) e in
+    let typed_b, defined_names, _ = typing_block const_env h b in
     { p_cond = typed_e; p_block = typed_b },
     defined_names
   in
@@ -996,15 +951,14 @@ and typing_present_handlers statefull const_env h acc def_names
   (typed_present_handlers,
    (add total (add partial acc)))
 
-and typing_block statefull const_env h
+and typing_block const_env h
     ({ b_local = l; b_equs = eq_list; b_loc = loc } as b) =
   try
     let typed_l, local_names, h0 = build const_env h Env.empty l in
     let typed_eq_list, defined_names =
-      typing_eq_list statefull const_env h0 Env.empty eq_list in
+      typing_eq_list const_env h0 Env.empty eq_list in
     let defnames = diff_env defined_names local_names in
     { b with
-        b_statefull = List.exists (fun eq -> eq.eq_statefull) typed_eq_list;
         b_defnames = defnames;
         b_local = typed_l;
         b_equs = typed_eq_list },
@@ -1030,21 +984,21 @@ and build const_env h h0 dec =
            | TypingError(kind) -> message loc kind)
     ([], Env.empty, h) dec
 
-let typing_contract statefull const_env h contract =
+let typing_contract const_env h contract =
 
   match contract with
     | None -> None,h
     | Some ({ c_block = b;
               c_assume = e_a;
               c_enforce = e_g }) ->
-        let typed_b, defined_names, _ = typing_block statefull const_env h b in
+        let typed_b, defined_names, _ = typing_block const_env h b in
           (* check that the equations do not define other unexpected names *)
           included_env defined_names Env.empty;
 
         (* assumption *)
-        let typed_e_a = expect statefull const_env h (Tid Initial.pbool) e_a in
+        let typed_e_a = expect const_env h (Tid Initial.pbool) e_a in
         (* property *)
-        let typed_e_g = expect statefull const_env h (Tid Initial.pbool) e_g in
+        let typed_e_g = expect const_env h (Tid Initial.pbool) e_g in
 
           Some { c_block = typed_b;
                  c_assume = typed_e_a;
@@ -1089,9 +1043,9 @@ let node ({ n_name = f; n_statefull = statefull;
 
     (* typing contract *)
     let typed_contract, h =
-      typing_contract statefull const_env h contract in
+      typing_contract const_env h contract in
 
-    let typed_b, defined_names, _ = typing_block statefull const_env h b in
+    let typed_b, defined_names, _ = typing_block const_env h b in
       (* check that the defined names match exactly the outputs and locals *)
       included_env defined_names output_names;
       included_env output_names defined_names;
