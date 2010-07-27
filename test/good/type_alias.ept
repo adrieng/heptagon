@@ -1,0 +1,22 @@
+const n:int = 10
+
+type metres = int
+type tableau = int^n
+type matrice = metres^n^n
+
+fun f(a:metres) returns (o: metres)
+let
+  o = a + 1;
+tel
+
+fun g(a:tableau) returns (o:tableau)
+let
+  o = map f <<n>>(a);
+tel
+
+fun h(a:matrice) returns (o:matrice)
+var x : matrice;
+let
+  x = a;
+  o = map g <<n>>(x);
+tel
