@@ -4,3 +4,8 @@ fun f(a:float) returns (o:float)
 let
   o = mycos(a);
 tel
+
+node g(a:float) returns (o:float)
+let
+  o = st_cos(a);
+tel
