@@ -503,6 +503,8 @@ _const:
   | FLOAT       { Sfloat $1 }
   | BOOL        { Sbool $1 }
   | constructor { Sconstructor $1 }
+  | Constructor DOT ident
+      { Svar (Modname({qual = $1; id = $3})) }
 ;
 
 tuple_exp:
