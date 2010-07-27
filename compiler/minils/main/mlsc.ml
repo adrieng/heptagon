@@ -12,21 +12,17 @@ open Location
 open Compiler_utils
 open Mls2seq
 
-let pp = Mls_printer.print stdout
-
-
 let parse parsing_fun lexing_fun lexbuf =
   try
     parsing_fun lexing_fun lexbuf
   with
-    | Mls_lexer.Lexical_error(err, pos1, pos2) ->
-        lexical_error err (Loc(pos1, pos2))
+    | Mls_lexer.Lexical_error(err, loc) ->
+        lexical_error err loc
     | Mls_parser.Error ->
-        let pos1 = Lexing.lexeme_start lexbuf
-        and pos2 = Lexing.lexeme_end lexbuf in
+        let pos1 = Lexing.lexeme_start_p lexbuf
+        and pos2 = Lexing.lexeme_end_p lexbuf in
         let l = Loc(pos1,pos2) in
         syntax_error l
-
 
 let parse_implementation lexbuf =
   parse Mls_parser.program Mls_lexer.token lexbuf
@@ -38,7 +34,7 @@ let compile_impl modname filename =
   and mls_norm_name = filename ^ "_norm.mls"
   and obc_name = filename ^ ".obc" in
 
-  let ic, lexbuf = lexbuf_from_file source_name in
+  let ic, lexbuf = lexbuf_from_file source_name
   and mlsnc = open_out mls_norm_name
   and obc = open_out obc_name in
 
@@ -51,32 +47,20 @@ let compile_impl modname filename =
   try
     init_compiler modname;
 
-    (* Parsing of the file *)
-    let p = parse_implementation lexbuf in
-    if !verbose
-    then begin
-      comment "Parsing";
-      pp p
-    end;
+    (* Set pretty printer to the Minils one *)
+    let pp = Mls_compiler.pp in
 
-    (* Call the compiler*)
+    (* Parsing of the file *)
+    let p = Mls_compiler.parse_implementation lexbuf in
+    let p = { p with Minils.p_modname = modname } in
+    comment "Parsing";
+    pp p;
+
+    (* Process the MiniLS AST *)
     let p = Mls_compiler.compile pp p in
 
-    if !verbose
-    then begin
-      comment "Checking"
-    end;
-
-    (* Producing Object-based code *)
-    let o = Mls2obc.program p in
-    if !verbose then comment "Translation into Object-based code";
-    Obc_printer.print obc o;
-
-    let pp = Obc_printer.print stdout in
-    if !verbose then pp o;
-
-    (* Translation into dataflow and sequential languages *)
-    targets filename p o !target_languages;
+    (* Generate the sequential code *)
+    Mls2seq.program p;
 
     close_all_files ()
 
@@ -97,12 +81,12 @@ let main () =
     Arg.parse
       [
         "-v", Arg.Set verbose, doc_verbose;
-        "-assert", Arg.String add_assert, doc_assert;
         "-version", Arg.Unit show_version, doc_version;
         "-i", Arg.Set print_types, doc_print_types;
         "-I", Arg.String add_include, doc_include;
         "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
         "-stdlib", Arg.String set_stdlib, doc_stdlib;
+        "-c", Arg.Set create_object_file, doc_object_file;
         "-s", Arg.String set_simulation_node, doc_sim;
         "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
         "-target", Arg.String add_target_language, doc_target;

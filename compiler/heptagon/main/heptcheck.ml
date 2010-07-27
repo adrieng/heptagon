@@ -29,10 +29,11 @@ let check_implementation modname filename =
 
     (* Parsing of the file *)
     let p = parse_implementation lexbuf in
+    comment "Parsing";
 
     (* Convert the parse tree to Heptagon AST *)
     let p = Hept_scoping.translate_program p in
-    comment "Parsing";
+    comment "Scoping";
     pp p;
 
     (* Call the compiler*)

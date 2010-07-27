@@ -98,31 +98,33 @@ let output_location oc (Loc(p1,p2)) =
     else
       Printf.fprintf oc "File \"%s\", line %d, characters %d-%d:\n" f1 l1 n1 n2;
     (* Output source code *)
-    let ic = open_in f1 in
+    try
+      let ic = open_in f1 in
 
-    if l1 == l2 then (
-      (* Only one line : copy full line and underline *)
-      seek_in ic lp1;
-      copy_lines 1 ic oc ">";
-      underline_line ic oc '^' lp1 n1 n2 )
-    else (
-      underline_line ic oc '.' lp1 0 n1; (* dots until n1 *)
-      seek_in ic np1;
-      (* copy the end of the line l1 after the dots *)
-      copy_lines 1 ic oc "";
-      if l2 - l1 <= 8 then
-        (* copy the 6 or less middle lines *)
-        copy_lines (l2-l1-1) ic oc ">"
+      if l1 == l2 then (
+        (* Only one line : copy full line and underline *)
+        seek_in ic lp1;
+        copy_lines 1 ic oc ">";
+        underline_line ic oc '^' lp1 n1 n2 )
       else (
-        (* sum up the middle lines to 6 *)
-        copy_lines 3 ic oc ">";
-        output_string oc "..........\n";
-        skip_lines (l2-l1-7) ic; (* skip middle lines *)
-        copy_lines 3 ic oc ">"
-      );
-      output_string oc ">";
-      copy_chunk lp2 np2 ic oc; (* copy interesting begining of l2 *)
-    );
+        underline_line ic oc '.' lp1 0 n1; (* dots until n1 *)
+        seek_in ic np1;
+        (* copy the end of the line l1 after the dots *)
+        copy_lines 1 ic oc "";
+        if l2 - l1 <= 8 then
+          (* copy the 6 or less middle lines *)
+          copy_lines (l2-l1-1) ic oc ">"
+        else (
+          (* sum up the middle lines to 6 *)
+          copy_lines 3 ic oc ">";
+          output_string oc "..........\n";
+          skip_lines (l2-l1-7) ic; (* skip middle lines *)
+          copy_lines 3 ic oc ">"
+        );
+        output_string oc ">";
+        copy_chunk lp2 np2 ic oc; (* copy interesting begining of l2 *)
+      )
+    with Sys_error _ -> ();
     output_char oc '\n'
   end;
 

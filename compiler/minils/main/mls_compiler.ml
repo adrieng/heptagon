@@ -7,11 +7,14 @@
 (*                                                                        *)
 (**************************************************************************)
 open Misc
+open Location
 open Compiler_utils
+
+let pp p = if !verbose then Mls_printer.print stdout p
 
 let compile pp p =
   (* Clocking *)
-  let p = do_silent_pass Clocking.program "Clocking" p true in
+  let p = do_pass Clocking.program "Clocking" p pp false in
 
   (* Check that the dataflow code is well initialized *)
   (*let p = do_silent_pass Init.program "Initialization check" p !init in *)

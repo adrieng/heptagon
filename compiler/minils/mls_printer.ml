@@ -69,7 +69,7 @@ and print_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_exp "("","")") l
 
 and print_vd_tuple ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_vd "("","")") l
+  fprintf ff "@[<2>%a@]" (print_list_r print_vd "("";"")") l
 
 and print_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_static_exp "[""][""]") idx
@@ -79,7 +79,8 @@ and print_dyn_index ff idx =
 
 and print_exp ff e =
   if !Misc.full_type_info then
-    fprintf ff "%a : %a" print_exp_desc e.e_desc print_type e.e_ty
+    fprintf ff "(%a : %a :: %a)"
+      print_exp_desc e.e_desc print_type e.e_ty print_ck e.e_ck
   else fprintf ff "%a" print_exp_desc e.e_desc
 
 and print_every ff reset =

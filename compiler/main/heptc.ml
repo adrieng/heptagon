@@ -11,7 +11,7 @@
 open Misc
 open Location
 open Compiler_utils
-open Hept_compiler
+
 
 
 
@@ -35,27 +35,31 @@ let compile_impl modname filename =
     init_compiler modname;
     add_include (Filename.dirname filename);
 
+    (* Set pretty printer to the Heptagon one *)
+    let pp = Hept_compiler.pp in
+
     (* Parsing of the file *)
-    let p = parse_implementation lexbuf in
+    let p = Hept_compiler.parse_implementation lexbuf in
     let p = { p with Hept_parsetree.p_modname = modname } in
+    comment "Parsing";
 
     (* Convert the parse tree to Heptagon AST *)
     let p = Hept_scoping.translate_program p in
-    comment "Parsing";
-
+    comment "Scoping";
     pp p;
 
     (* Process the Heptagon AST *)
     let p = Hept_compiler.compile_impl pp p in
     Modules.write itc;
 
+    (* Set pretty printer to the Minils one *)
+    let pp = Mls_compiler.pp in
+
     (* Compile Heptagon to MiniLS *)
     let p = Hept2mls.program p in
-
-    let pp = Mls_printer.print stdout in
-    comment "Translation into MiniLs";
     Mls_printer.print mlsc p;
-    if !Misc.verbose then pp p;
+    comment "Translation into MiniLs";
+    pp p;
 
     (* Process the MiniLS AST *)
     let p = Mls_compiler.compile pp p in
@@ -91,7 +95,7 @@ let main () =
         "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
       ]
-      (compile compile_impl)
+      (Hept_compiler.compile compile_impl)
       errmsg;
   with
     | Misc.Error -> exit 2;;

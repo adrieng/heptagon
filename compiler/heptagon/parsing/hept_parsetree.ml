@@ -6,7 +6,7 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-(* the internal representation *)
+
 
 open Names
 open Location

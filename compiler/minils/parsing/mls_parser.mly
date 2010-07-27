@@ -12,13 +12,12 @@ open Mls_utils
 %}
 
 %token DOT LPAREN RPAREN LBRACE RBRACE COLON SEMICOL
-%token EQUAL EQUALEQUAL BARBAR COMMA BAR LET TEL
+%token EQUAL EQUALEQUAL BARBAR COMMA BAR LET TEL CONST
 %token <string> CONSTRUCTOR
 %token <string> NAME
 %token <int> INT
 %token <float> FLOAT
 %token <bool> BOOL
-%token <string * string> PRAGMA
 %token TYPE NODE RETURNS VAR OPEN
 %token FBY PRE WHEN
 %token OR STAR NOT
@@ -46,6 +45,7 @@ open Mls_utils
 %token EOF
 
 %right AROBASE
+%nonassoc DEFAULT
 %left ELSE
 %left OR
 %left AMPERSAND
@@ -83,17 +83,16 @@ localize(x): y=x { y, (Loc($startpos(y),$endpos(y))) }
  
 
 program:
-  | pragma_headers open_modules type_decs node_decs EOF /*TODO const decs */
-    {{ p_pragmas = List.rev $1;
-      p_opened = List.rev $2;
-      p_types = $3;
-      p_nodes = $4;
-      p_consts = []}} /*TODO consts dans program*/
-
-pragma_headers: l=list(PRAGMA) {l}
+  | o=open_modules c=const_decs t=type_decs n=node_decs EOF
+      { mk_program o t n c }
 
 open_modules: l=list(opens) {l}
 opens: OPEN c=CONSTRUCTOR {c}
+
+const_decs: c=list(const_dec) {c}
+const_dec:
+  | CONST n=NAME COLON t=type_ident EQUAL e=const
+      { mk_const_dec n t e (Loc($startpos,$endpos)) }
 
 name: n=NAME | LPAREN n=infix_ RPAREN | LPAREN n=prefix_ RPAREN { n }
 ident: n=name { ident_of_name n }
@@ -121,10 +120,13 @@ node_dec:
 
 args_t: SEMICOL p=args {p}
 args: 
-  | /* empty */ {[]}
+  | /* empty */ { [] }
   | h=var t=loption(args_t) {h@t}
 
-loc_vars_t: SEMICOL h=var t=loc_vars_t {h@t}
+loc_vars_t:
+  | /*empty */ { [] }
+  | SEMICOL    { [] }
+  | SEMICOL h=var t=loc_vars_t {h@t}
 loc_vars_h: VAR h=var t=loc_vars_t  {h@t}
 loc_vars: l=loption(loc_vars_h) {l}
 
@@ -142,13 +144,18 @@ pat:
 longname: l=qualified(name) {l} /* qualified var (not a constructor) */
   
 constructor: /* of type longname */
-  | ln=qualified(CONSTRUCTOR)       {ln}
+  | ln=qualified(CONSTRUCTOR)       { ln }
   | b=BOOL                          { Name(if b then "true" else "false") }
 
-const:
-  | INT { Cint($1) }
-  | FLOAT { Cfloat($1) }
-  | constructor { Cconstr($1) }
+field:
+  | ln=longname { mk_static_exp ~loc:(Loc($startpos,$endpos)) (Sconstructor ln)}
+
+const : c=_const { mk_static_exp ~loc:(Loc ($startpos,$endpos)) c }
+_const:
+  | i=INT { Sint i }
+  | f=FLOAT { Sfloat f }
+  | c=constructor { Sconstructor c }
+  | t=tuple(const) { Stuple t }
 
 exps: LPAREN e=slist(COMMA, exp) RPAREN {e}
 
@@ -157,49 +164,50 @@ field_exp: longname EQUAL exp { ($1, $3) }
 simple_exp:
   | e=_simple_exp {mk_exp e ~loc:(Loc ($startpos,$endpos)) }
 _simple_exp:
-  | NAME                               { Evar (ident_of_name $1) }
-  | s=structure(field_exp)             { Estruct s }
-  | t=tuple(exp)                       { Eapp(mk_op ~op_kind:Etuple, t, None) }
-  | LPAREN e=_exp RPAREN                { e }
+  | n=NAME                                 { Evar (ident_of_name n) }
+  | s=structure(field_exp)                 { Estruct s }
+  | t=tuple(exp)                           { Eapp(mk_app Etuple, t, None) }
+  | LBRACKET es=slist(COMMA, exp) RBRACKET { Eapp(mk_app Earray, es, None) }
+  | LPAREN e=_exp RPAREN                   { e }
 
 
 exp:
   | e=simple_exp { e }
   | e=_exp { mk_exp e ~loc:(Loc ($startpos,$endpos)) }
 _exp:
-  | e=simple_exp                           { e }
   | c=const                                { Econst c }
-  | const FBY exp                          { Efby(Some($1),$3) }
+  | v=const FBY e=exp                      { Efby(Some(v), e) }
   | PRE exp                                { Efby(None,$2) }
-  | op=funop a=exps r=reset                { Ecall(op, a, r) }
+  | op=funapp a=exps r=reset               { Eapp(op, a, r) }
   | e1=exp i_op=infix e2=exp
-        { Eapp(mk_op ~op_kind:Efun i_op, [e1; e2], None) }
+      { Eapp(mk_app (Efun i_op), [e1; e2], None) }
   | p_op=prefix e=exp %prec prefixs
-        { Eapp(mk_op ~op_kind:Efun p_op, [e], None) }
-  | IF e1=exp THEN e2=exp ELSE e3=exp      { Eifthenelse(e1, e2, e3) }
-  | e=simple_exp DOT m=longname            { Efield(e, m) }
-  | e=exp WHEN c=constructor LPAREN n=ident RPAREN
-                                           { Ewhen(e, c, n) }
-  | MERGE n=ident h=handlers               { Emerge(n, h) }
-  | LPAREN r=exp WITH DOT ln=longname EQUAL nv=exp
-        { Efield_update(ln, r, nv) }
-  | op=array_op                            { Earray_op op }
-  | LBRACKET es=slist(COMMA, exp) RBRACKET { Earray es }
-
-array_op:
-  | e=exp POWER p=e_param                 { Erepeat(p, e) }
-  | e=simple_exp i=indexes(e_param)       { Eselect(i, e) }
-  | e=exp i=indexes(exp) DEFAULT d=exp    { Eselect_dyn(i, e ,d) }
-  | LPAREN e=exp WITH i=indexes(e_param) EQUAL nv=exp  { Eupdate(i, e, nv) }
+      { Eapp(mk_app (Efun p_op), [e], None) }
+  | IF e1=exp THEN e2=exp ELSE e3=exp
+      { Eapp( mk_app Eifthenelse, [e1; e2; e3], None) }
+  | e=simple_exp DOT f=field
+      { Eapp( mk_app ~params:[f] Efield, [e], None) }
+  | e=exp WHEN c=constructor LPAREN n=ident RPAREN  { Ewhen(e, c, n) }
+  | MERGE n=ident h=handlers  { Emerge(n, h) }
+  | LPAREN r=exp WITH DOT f=field EQUAL nv=exp
+      { Eapp(mk_app ~params:[f] Efield_update, [r; nv], None) }
+  | e=exp POWER p=e_param
+      { Eapp(mk_app ~params:[p] Earray_fill, [e], None) }
+  | e=simple_exp i=indexes(exp) /* not e_params to solve conflicts */
+      { Eapp(mk_app ~params:(List.map static_exp_of_exp i) Eselect, [e], None) }
+  | e=simple_exp i=indexes(exp) DEFAULT d=exp
+      { Eapp(mk_app Eselect_dyn, [e; d]@i, None) }
+  | LPAREN e=exp WITH i=indexes(e_param) EQUAL nv=exp
+      { Eapp(mk_app ~params:i Eupdate, [e; nv], None) }
   | e=simple_exp LBRACKET i1=e_param DOTDOT i2=e_param RBRACKET
-                                          { Eselect_slice(i1, i2, e) }
-  | e1=exp AROBASE e2=exp                 { Econcat(e1,e2) }
-  | LPAREN f=iterator LPAREN op=funop RPAREN
+      { Eapp(mk_app ~params:[i1; i2] Eselect_slice, [e], None) }
+  | e1=exp AROBASE e2=exp  { Eapp(mk_app Econcat, [e1;e2], None) }
+  | LPAREN f=iterator LPAREN op=funapp RPAREN
       DOUBLE_LESS p=e_param DOUBLE_GREATER
-        RPAREN a=exps r=reset             { Eiterator(f,op,p,a,r) }
+        RPAREN a=exps r=reset  { Eiterator(f,op,p,a,r) }
 
 /* Static indexes [p1][p2]... */
-indexes(param): is=nonempty_list(index(param))       { is }
+indexes(param): is=nonempty_list(index(param))      { is }
 index(param): LBRACKET p=param RBRACKET             { p }
 
 
@@ -217,10 +225,11 @@ iterator:
 
 reset: r=option(RESET,ident) { r }
 
-funop: ln=longname p=params(e_param) { mk_op ~op_kind:Enode ~op_params:p ln }
+/* TODO : Scoping to deal with node and fun ! */
+funapp: ln=longname p=params(e_param) { mk_app ~params:p (Enode ln) }
 
-
-e_param: e=exp { static_exp_of_exp e }
+/* inline so that precendance of POWER is respected in exp */
+%inline e_param: e=exp { static_exp_of_exp e }
 n_param: n=NAME { mk_param n }
 params(param):
   | /*empty*/                                               { [] }
@@ -237,8 +246,8 @@ params(param):
   | AMPERSAND       { "&" }   | AMPERAMPER    { "&&" }
   | OR              { "or" }  | BARBAR        { "||" }
 
-prefix: op=prefix_ { Name(op) }
-prefix_: 
+%inline prefix: op=prefix_ { Name(op) }
+%inline prefix_:
   | op = PREFIX          { op }
   | NOT                  { "not" }
   | op = SUBTRACTIVE     { "~" ^ op } /*TODO test 3 * -2 and co */

@@ -19,13 +19,13 @@ open Location
 open Printf
 
 (** Error Kind *)
-type err_kind = | Etypeclash of ct * ct
+type error_kind = | Etypeclash of ct * ct
 
-let err_message exp = function
+let error_message loc = function
   | Etypeclash (actual_ct, expected_ct) ->
       Printf.eprintf "%aClock Clash: this expression has clock %a, \n\
                         but is expected to have clock %a.\n"
-        print_exp exp
+        output_location loc
         print_clock actual_ct
         print_clock expected_ct;
       raise Error
@@ -93,7 +93,9 @@ and typing_op op args h e ck = match op, args with
 and expect h expected_ty e =
   let actual_ty = typing h e in
   try unify actual_ty expected_ty
-  with | Unify -> err_message e (Etypeclash (actual_ty, expected_ty))
+  with
+  | Unify -> eprintf "e %a : " print_exp e;
+      error_message e.e_loc (Etypeclash (actual_ty, expected_ty))
 
 and typing_c_e_list h ck_c n c_e_list =
   let rec typrec =
@@ -109,15 +111,15 @@ let rec typing_pat h =
     | Etuplepat pat_list -> Cprod (List.map (typing_pat h) pat_list)
 
 let typing_eqs h eq_list = (*TODO FIXME*)
-  let typing_eq { eq_lhs = pat; eq_rhs = e } = match e.e_desc with
-    | _ -> let ty_pat = typing_pat h pat in
-      (try expect h ty_pat e with
-         | Error -> (* DEBUG *)
-             Printf.eprintf "Complete expression: %a\nClock pattern: %a\n"
-               Mls_printer.print_exp e
-               Mls_printer.print_clock ty_pat;
-             raise Error) in
-  List.iter typing_eq eq_list
+  let typing_eq { eq_lhs = pat; eq_rhs = e } =
+    let ty_pat = typing_pat h pat in
+    (try expect h ty_pat e with
+      | Error -> (* DEBUG *)
+          Printf.eprintf "Complete expression: %a\nClock pattern: %a\n"
+            Mls_printer.print_exp e
+            Mls_printer.print_clock ty_pat;
+          raise Error)
+  in List.iter typing_eq eq_list
 
 let build h dec =
   List.fold_left (fun h { v_ident = n } -> Env.add n (new_var ()) h) h dec

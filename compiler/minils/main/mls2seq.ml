@@ -25,17 +25,17 @@ type target =
 let write_object_file p =
   let filename = (filename_of_name p.Minils.p_modname)^".epo" in
   let epoc = open_out_bin filename in
-    comment "Generating of object file";
     output_value epoc p;
-    close_out epoc
+    close_out epoc;
+    comment "Generating of object file"
 
 (** Writes a .epo file for program [p]. *)
 let write_obc_file p =
   let obc_name = (filename_of_name p.Obc.p_modname)^".obc" in
   let obc = open_out obc_name in
-    comment "Generation of Obc code";
     Obc_printer.print obc p;
-    close_out obc
+    close_out obc;
+    comment "Generation of Obc code"
 
 let targets = [ "c", Obc_no_params Cmain.program;
                 "obc", Obc write_obc_file;
