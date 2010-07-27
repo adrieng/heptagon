@@ -455,8 +455,8 @@ and typing_static_exp const_env se =
            (match ln with
               | Name n ->
                   (try Svar ln, NamesEnv.find n const_env
-                  with Not_found -> message se.se_loc (Eundefined_const ln))
-              | Modname _ -> message se.se_loc (Eundefined_const ln))
+                  with Not_found -> error (Eundefined_const ln))
+              | Modname _ -> error (Eundefined_const ln))
         )
     | Sconstructor c ->
         let { qualid = q; info = ty } = find_constr c in
