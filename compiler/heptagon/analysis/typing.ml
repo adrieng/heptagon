@@ -404,31 +404,31 @@ let check_static_field_unicity l =
     the type with name [n].
     Prints an error message if the type is not a record type.
     [loc] is the location used for error reporting.*)
-let struct_info_from_name loc n =
+let struct_info_from_name n =
   try
     let { qualid = q;
           info = fields } = find_struct n in
     q, fields
   with
-      Not_found -> message loc (Erecord_type_expected (Tid n))
+      Not_found -> error (Erecord_type_expected (Tid n))
 
 (** @return the qualified name and list of fields of a record type.
     Prints an error message if the type is not a record type.
     [loc] is the location used for error reporting.*)
-let struct_info loc ty = match ty with
-  | Tid n -> struct_info_from_name loc n
-  | _ -> message loc (Erecord_type_expected ty)
+let struct_info ty = match ty with
+  | Tid n -> struct_info_from_name n
+  | _ -> error (Erecord_type_expected ty)
 
 (** @return the qualified name and list of fields of the
     record type corresponding to the field named [n].
     Prints an error message if the type is not a record type.
     [loc] is the location used for error reporting.*)
-let struct_info_from_field loc f =
+let struct_info_from_field f =
   try
     let { qualid = q; info = n } = find_field f in
-    struct_info_from_name loc (Modname { qual = q.qual; id = n })
+    struct_info_from_name (Modname { qual = q.qual; id = n })
   with
-      Not_found -> message loc (Eundefined (fullname f))
+      Not_found -> error (Eundefined (fullname f))
 
 (** [check_type t] checks that t exists *)
 let rec check_type const_env = function
@@ -442,6 +442,7 @@ let rec check_type const_env = function
       Tprod (List.map (check_type const_env) l)
 
 and typing_static_exp const_env se =
+  try
   let desc, ty = match se.se_desc with
     | Sint v -> Sint v, Tid Initial.pint
     | Sbool v-> Sbool v, Tid Initial.pbool
@@ -485,8 +486,8 @@ and typing_static_exp const_env se =
         (* find the record type using the first field *)
         let q, fields =
           (match f_se_list with
-             | [] -> message se.se_loc (Eempty_record)
-             | (f,_)::l -> struct_info_from_field se.se_loc f
+             | [] -> error (Eempty_record)
+             | (f,_)::l -> struct_info_from_field f
           ) in
 
           if List.length f_se_list <> List.length fields then
@@ -498,6 +499,9 @@ and typing_static_exp const_env se =
           Srecord f_se_list, Tid (Modname q)
   in
    { se with se_ty = ty; se_desc = desc }, ty
+
+  with
+      TypingError kind -> message se.se_loc kind
 
 and typing_static_field const_env fields t1 modname (f,se) =
   try
@@ -550,7 +554,7 @@ let rec typing const_env h e =
           let q, fields =
             (match l with
                | [] -> message e.e_loc (Eempty_record)
-               | (f,_)::l -> struct_info_from_field e.e_loc f
+               | (f,_)::l -> struct_info_from_field f
             ) in
 
           if List.length l <> List.length fields then
@@ -667,7 +671,7 @@ and typing_app const_env h op e_list =
              | Sconstructor fn -> fn
              | _ -> assert false) in
         let typed_e, t1 = typing const_env h e in
-        let q, fields = struct_info e.e_loc t1 in
+        let q, fields = struct_info t1 in
         let t2 = field_type const_env fn fields t1 e.e_loc in
         let fn = Modname { qual = q.qual; id = shortname fn } in
         let f = { f with se_desc = Sconstructor fn } in
@@ -675,7 +679,7 @@ and typing_app const_env h op e_list =
 
     | { a_op = Efield_update; a_params = [f] }, [e1; e2] ->
         let typed_e1, t1 = typing const_env h e1 in
-        let q, fields = struct_info e1.e_loc t1 in
+        let q, fields = struct_info t1 in
         let fn =
           (match f.se_desc with
              | Sconstructor fn -> fn
