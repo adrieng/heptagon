@@ -449,7 +449,7 @@ and typing_static_exp const_env se =
     | Sfloat v -> Sfloat v, Tid Initial.pfloat
     | Svar ln ->
         (try (* this can be a global const*)
-           let { qualid = q; info = cd } = find_const ln in
+           let { qualid = q; info = cd } = Modules.find_const ln in
              Svar (Modname q), cd.Signature.c_type
          with Not_found -> (* or a static parameter *)
            (match ln with
