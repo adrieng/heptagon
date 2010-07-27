@@ -111,7 +111,7 @@ let rec static_exp_of_exp const_env e =
         else
           raise Not_static
     | Econst se -> se.se_desc
-    | Eapp({ a_op = Earray_fill }, [e;n]) ->
+    | Eapp({ a_op = Earray_fill; a_params = [n] }, [e]) ->
         Sarray_power (static_exp_of_exp const_env e,
                       static_exp_of_exp const_env n)
     | Eapp({ a_op = Earray }, e_list) ->
