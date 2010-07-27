@@ -281,6 +281,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let action = List.map (control map ck) action in
         let s = (match r, app.Minils.a_op with
                    | Some r, Minils.Enode _ ->
+                       let ck = Clocks.Con (ck, Initial.ptrue, r) in
                        let ra = List.map (control map ck) si' in
                        ra @ action @ s
                    | _, _ -> action @ s) in
@@ -298,6 +299,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let s =
           (match reset, app.Minils.a_op with
              | Some r, Minils.Enode _ ->
+                 let ck = Clocks.Con (ck, Initial.ptrue, r) in
                  let ra = List.map (control map ck) si' in
                    ra @ action @ s
              | _, _ -> action @ s)
