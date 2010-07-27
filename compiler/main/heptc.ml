@@ -17,7 +17,8 @@ open Hept_compiler
 
 let compile_impl modname filename =
   (* input and output files *)
-  let source_name = filename ^ ".ept"
+  let source_name = filename ^ ".ept" in
+  let filename = String.uncapitalize filename
   and obj_interf_name = filename ^ ".epci"
   and mls_name = filename ^ ".mls" in
 
@@ -32,6 +33,7 @@ let compile_impl modname filename =
 
   try
     init_compiler modname;
+    add_include (Filename.dirname filename);
 
     (* Parsing of the file *)
     let p = parse_implementation lexbuf in
