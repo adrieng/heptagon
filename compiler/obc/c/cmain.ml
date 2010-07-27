@@ -250,7 +250,7 @@ let main_skel var_list prologue body =
     }
   }
 
-let mk_main p = match (!Misc.simulation_node, !Misc.assert_nodes) with
+let mk_main name p = match (!Misc.simulation_node, !Misc.assert_nodes) with
   | (None, []) -> []
   | (_, n_names) ->
       let find_class n =
@@ -277,7 +277,7 @@ let mk_main p = match (!Misc.simulation_node, !Misc.assert_nodes) with
                 res :: res_l, nstep_l @ step_l)) in
 
       [("_main.c", Csource [main_skel var_l res_l step_l]);
-       ("_main.h", Cheader (deps, []))];
+       ("_main.h", Cheader ([name], []))];
 ;;
 
 
@@ -286,8 +286,7 @@ let mk_main p = match (!Misc.simulation_node, !Misc.assert_nodes) with
 let translate name prog =
   let modname = (Filename.basename name) in
   global_name := String.capitalize modname;
-  (global_file_header modname prog) :: (mk_main prog)
-  @ (cfile_list_of_oprog modname prog)
+  (global_file_header modname prog) @ (mk_main name prog)
 
 let program p =
   let filename = filename_of_name (cname_of_name p.p_modname) in

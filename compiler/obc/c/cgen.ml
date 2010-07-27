@@ -14,6 +14,7 @@ open Names
 open Idents
 open Obc
 open Types
+
 open Modules
 open Signature
 open C
@@ -648,14 +649,14 @@ let cdefs_and_cdecls_of_class_def cd =
   let reset_fun_def = reset_fun_def_of_class_def cd in
   let res_fun_decl = cdecl_of_cfundef reset_fun_def in
   let step_fun_decl = cdecl_of_cfundef step_fun_def in
-  let fun_defs =
+  let (decls, defs) =
     if is_statefull (mk_current_longname cd.cd_name) then
       ([res_fun_decl; step_fun_decl], [reset_fun_def; step_fun_def])
     else
       ([step_fun_decl], [step_fun_def]) in
 
-  memory_struct_decl @ out_struct_decl,
-  fun_defs
+  memory_struct_decl @ out_struct_decl @ decls,
+  defs
 
 (** {2 Type translation} *)
 
@@ -726,71 +727,29 @@ let cdefs_and_cdecls_of_type_decl otd =
 
 (** [cfile_list_of_oprog oprog] translates the Obc program [oprog] to a list of
     C source and header files. *)
-let cfile_list_of_oprog name oprog =
-  let opened_modules = oprog.p_opened in
-
-  let header_and_source_of_class_def (deps,acc_cfiles) cd =
-    reset_opened_modules ();
-    List.iter add_opened_module opened_modules;
-    List.iter add_opened_module deps;
-
-    let cfile_name = String.uncapitalize (cname_of_name cd.cd_name) in
-    let struct_decl,(cdecls, cdefs) =
-      cdefs_and_cdecls_of_class_def cd in
-
-    let opened_modules_without_memdecl = get_opened_modules () in
-
-    let cfile_mem = cfile_name ^ "_mem" in
-    add_opened_module cfile_mem;
-    remove_opened_module name;
-
-    let acc_cfiles = acc_cfiles @
-      [ (cfile_mem ^ ".h", Cheader (opened_modules_without_memdecl,
-                                    struct_decl));
-        (cfile_name ^ ".h", Cheader (get_opened_modules (), cdecls));
-        (cfile_name ^ ".c", Csource cdefs)] in
-    deps@[cfile_name],acc_cfiles in
-
-  reset_opened_modules ();
-  List.iter add_opened_module opened_modules;
+let cfile_list_of_oprog_ty_decls name oprog =
   let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_type_decl oprog.p_types in
-  remove_opened_module name;
 
   let (cty_defs, cty_decls) = List.split (List.rev cdefs_and_cdecls) in
   let filename_types = name ^ "_types" in
   let types_h = (filename_types ^ ".h",
-                 Cheader (get_opened_modules (), concat cty_decls)) in
+                 Cheader ([], concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
-  let _,cfiles =
-    List.fold_left
-      header_and_source_of_class_def
-      ([filename_types],[types_h;types_c])
-      oprog.p_defs in
-  cfiles
+
+  filename_types, [types_h; types_c]
 
 let global_file_header name prog =
-  let step_fun_decl cd =
-    let step_m = find_step_method cd in
-    let s = fun_def_of_step_fun cd.cd_name cd.cd_objs
-      cd.cd_mems cd.cd_objs step_m in
-    cdecl_of_cfundef s
-  in
-  reset_opened_modules ();
-  List.iter add_opened_module prog.p_opened;
+  let dependencies = S.elements (Obc_utils.Deps.deps_program prog) in
 
-  let ty_decls = List.map decls_of_type_decl prog.p_types in
-  let ty_decls = List.concat ty_decls in
-  let mem_step_fun_decls = List.flatten (List.map mem_decl_of_class_def
-                                           prog.p_defs) in
-  let reset_fun_decls =
-    let cdecl_of_reset_fun cd =
-      cdecl_of_cfundef (reset_fun_def_of_class_def cd
-) in
-    List.map cdecl_of_reset_fun prog.p_defs in
-  let step_fun_decls = List.map step_fun_decl prog.p_defs in
+  let (decls, defs) =
+    List.split (List.map cdefs_and_cdecls_of_class_def prog.p_defs) in
+  let decls = List.concat decls
+  and defs = List.concat defs in
 
-  (name ^ ".h", Cheader (get_opened_modules (),
-                         ty_decls
-                         @ mem_step_fun_decls
-                         @ reset_fun_decls
-                         @ step_fun_decls))
+  let (ty_fname, ty_files) = cfile_list_of_oprog_ty_decls name prog in
+
+  let header =
+    (name ^ ".h", Cheader (ty_fname :: dependencies, decls))
+  and source =
+    (name ^ ".c", Csource defs) in
+  [header; source] @ ty_files
