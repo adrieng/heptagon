@@ -146,6 +146,7 @@ let add context expected_kind ({ e_desc = de } as e) =
     | _ , VRef -> true
     | Eapp ({ a_op = Efun n }, _, _),
         (Exp|Act) when is_op n -> false
+    | Eapp ({ a_op = Eequal }, _, _), (Exp|Act) -> false
     | ( Emerge _ | Eapp _ | Eiterator _ | Efby _ ), Exp -> true
     | ( Eapp({ a_op = Efun _ | Enode _ }, _, _)
       | Eiterator _ | Efby _ ), Act -> true
@@ -213,7 +214,7 @@ let rec translate kind context e =
 
 and translate_app kind context op e_list =
   match op, e_list with
-    | (Efun _ | Enode _), e_list ->
+    | (Eequal | Efun _ | Enode _), e_list ->
         let context, e_list =
           translate_list function_args_kind context e_list in
         context, e_list

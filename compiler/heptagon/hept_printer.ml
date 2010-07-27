@@ -102,6 +102,8 @@ and print_call_params ff = function
 
 and print_op ff op params e_list =
   match op, params, e_list with
+    | Eequal, _, [e1; e2] ->
+        fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
     | Earrow, _, [e1;e2] -> print_exp ff e1; fprintf ff " -> "; print_exp ff e2
     | Eifthenelse, _, [e1;e2;e3] ->
         fprintf ff "@["; fprintf ff "if "; print_exp ff e1;

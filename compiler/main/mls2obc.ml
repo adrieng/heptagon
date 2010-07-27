@@ -69,6 +69,8 @@ let rec translate map (si, j, s) e =
   let desc = match e.Minils.e_desc with
     | Minils.Econst v -> Econst v
     | Minils.Evar n -> Elhs (var_from_name map n)
+    | Minils.Eapp ({ Minils.a_op = Minils.Eequal }, e_list, _) ->
+        Eop (op_from_string "=", List.map (translate map (si, j, s)) e_list)
     | Minils.Eapp ({ Minils.a_op = Minils.Efun n },
                    e_list, _) when Mls_utils.is_op n ->
         Eop (n, List.map (translate map (si, j, s)) e_list)

@@ -185,6 +185,7 @@ and translate_desc loc const_env env = function
                           app, n, e_list, None)
 
 and translate_op = function
+  | Eequal -> Heptagon.Eequal
   | Earrow -> Heptagon.Earrow
   | Eifthenelse -> Heptagon.Eifthenelse
   | Efield -> Heptagon.Efield

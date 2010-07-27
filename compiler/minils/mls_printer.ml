@@ -111,6 +111,8 @@ and print_exp_desc ff = function
         print_every reset
 
 and print_app ff (app, args) = match app.a_op, app.a_params, args with
+  | Eequal, _, [e1; e2] ->
+      fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
   | Etuple, _, a -> print_exp_tuple ff a
   | (Efun(f)|Enode(f)), p, a ->
       fprintf ff "@[%a@,%a@,%a@]"

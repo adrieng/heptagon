@@ -131,6 +131,7 @@ rule token = parse
   | ";"             {SEMICOL}
   | "="             {EQUAL}
   | "=="            {EQUALEQUAL}
+  | "<>"            {LESS_GREATER}
   | "&"             {AMPERSAND}
   | "&&"            {AMPERAMPER}
   | "||"            {BARBAR}

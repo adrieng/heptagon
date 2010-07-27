@@ -623,6 +623,11 @@ and expect const_env h expected_ty e =
 
 and typing_app const_env h op e_list =
   match op, e_list with
+    | { a_op = Eequal }, [e1;e2] ->
+        let typed_e1, t1 = typing const_env h e1 in
+        let typed_e2 = expect const_env h t1 e2 in
+          Tid Initial.pbool, op, [typed_e1; typed_e2]
+
     | { a_op = Earrow }, [e1;e2] ->
         let typed_e1, t1 = typing const_env h e1 in
         let typed_e2 = expect const_env h t1 e2 in

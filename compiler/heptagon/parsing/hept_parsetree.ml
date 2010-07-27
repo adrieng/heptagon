@@ -41,6 +41,7 @@ and desc =
 and app = { a_op: op; a_params: exp list; }
 
 and op =
+  | Eequal
   | Etuple
   | Enode of longname
   | Efun of longname

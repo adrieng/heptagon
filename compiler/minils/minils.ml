@@ -65,6 +65,7 @@ and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
         and be delicate about optimizations, !be careful! *)
 
 and op =
+  | Eequal             (** arg1 = arg2 *)
   | Etuple             (** (args) *)
   | Efun of fun_name   (** "Stateless" longname <<a_params>> (args) reset r *)
   | Enode of fun_name  (** "Stateful" longname <<a_params>> (args) reset r *)

@@ -38,6 +38,7 @@ and desc =
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
 
 and op =
+  | Eequal
   | Etuple
   | Efun of fun_name
   | Enode of fun_name

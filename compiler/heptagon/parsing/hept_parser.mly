@@ -10,7 +10,7 @@ open Hept_parsetree
 %}
 
 %token DOT LPAREN RPAREN LBRACE RBRACE COLON SEMICOL
-%token EQUAL EQUALEQUAL BARBAR COMMA BAR ARROW LET TEL
+%token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
 %token <int> INT
@@ -63,7 +63,7 @@ open Hept_parsetree
 %right ARROW
 %left OR
 %left AMPERSAND
-%left INFIX0 EQUAL
+%left INFIX0 EQUAL LESS_GREATER
 %right INFIX1
 %left INFIX2 SUBTRACTIVE
 %left STAR INFIX3
@@ -425,7 +425,10 @@ _exp:
   | exp INFIX0 exp
       { mk_op_call $2 [$1; $3] }
   | exp EQUAL exp
-      { mk_op_call "=" [$1; $3] }
+      { mk_call Eequal [$1; $3] }
+  | exp LESS_GREATER exp
+      { let e = mk_exp (mk_call Eequal [$1; $3]) (Loc($startpos,$endpos)) in
+          mk_op_call "not" [e] }
   | exp OR exp
       { mk_op_call "or" [$1; $3] }
   | exp STAR exp

@@ -196,6 +196,7 @@ let translate_iterator_type = function
   | Heptagon.Imapfold -> Imapfold
 
 let rec translate_op env = function
+  | Heptagon.Eequal -> Eequal
   | Heptagon.Eifthenelse -> Eifthenelse
   | Heptagon.Efun f -> Efun f
   | Heptagon.Enode f -> Enode f

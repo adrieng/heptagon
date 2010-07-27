@@ -62,7 +62,7 @@ let rec typing h e =
   in (e.e_ck <- ckofct ct; ct)
 
 and typing_op op args h e ck = match op, args with
-  | (Efun _ | Enode _), e_list ->
+  | (Eequal | Efun _ | Enode _), e_list ->
       (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
   | Etuple, e_list ->
       Cprod (List.map (typing h) e_list)
