@@ -1,0 +1,1 @@
+val fun mycos(a:float) returns (o:float)

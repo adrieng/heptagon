@@ -1,0 +1,6 @@
+open Mathext
+
+fun f(a:float) returns (o:float)
+let
+  o = mycos(a);
+tel

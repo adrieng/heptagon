@@ -1,0 +1,6 @@
+This example show how to import an external function written in C in an Heptagon program.
+
+- The .epi file contains the signature of the function in Heptagon.
+- Only functions with no side effects can be safely imported.
+- The imported function must have the same calling convention as generated code (inputs given by value, outputs in a f_out structure).
+- The generated code will include "mathext.h", that should define the step function
