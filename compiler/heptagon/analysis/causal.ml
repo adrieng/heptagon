@@ -122,9 +122,10 @@ let rec ctuple l =
     | Clastread(n) -> Alastread(n)
     | Ctuple(l) -> Atuple (ctuple l)
     | Cand (c1, c2) -> Aand (conv c1, conv c2)
-    | Cseq _ -> Format.printf "Unexpected seq\n"; assert false
-    | Cor _ -> Format.printf "Unexpected or\n"; assert false
-    | _ -> assert false
+    | Cseq (c1, c2) -> Aseq (conv c1, conv c2)
+    | Cor (Cempty, c2) -> conv c2
+    | Cor (c1, Cempty) -> conv c1
+    | Cempty -> assert false
   in
   match l with
     | [] -> []
