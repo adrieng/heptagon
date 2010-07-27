@@ -82,11 +82,8 @@ let build_vd_list env l =
   in
   List.fold_left build_vd env l
 
-let build_cd_list env l =
-  let build_cd env cd =
-    add_const_var cd.c_loc cd.c_name env
-  in
-  List.fold_left build_cd env l
+let build_cd env cd =
+  add_const_var cd.c_loc cd.c_name env
 
 let build_id_list loc env l =
   let build_id env vd =
@@ -315,16 +312,17 @@ let translate_const_dec const_env cd =
   { Heptagon.c_name = cd.c_name;
     Heptagon.c_type = translate_type const_env cd.c_type;
     Heptagon.c_value = expect_static_exp const_env cd.c_value;
-    Heptagon.c_loc = cd.c_loc; }
+    Heptagon.c_loc = cd.c_loc; }, build_cd const_env cd
 
 let translate_program p =
-  let const_env = build_cd_list NamesEnv.empty p.p_consts in
+  let p_consts, const_env =
+    Misc.mapfold translate_const_dec NamesEnv.empty p.p_consts in
   { Heptagon.p_modname = p.p_modname;
     Heptagon.p_opened = p.p_opened;
     Heptagon.p_types = List.map (translate_typedec const_env) p.p_types;
     Heptagon.p_nodes =
       List.map (translate_node const_env Rename.empty) p.p_nodes;
-    Heptagon.p_consts = List.map (translate_const_dec const_env) p.p_consts; }
+    Heptagon.p_consts = p_consts; }
 
 let translate_arg const_env a =
   Signature.mk_arg a.a_name (translate_type const_env a.a_type)
@@ -338,16 +336,21 @@ let translate_signature s =
     Heptagon.sig_params = List.map (param_of_var_dec const_env) s.sig_params; }
 
 let translate_interface_desc const_env = function
-  | Iopen n -> Heptagon.Iopen n
-  | Itypedef tydec -> Heptagon.Itypedef (translate_typedec const_env tydec)
+  | Iopen n -> Heptagon.Iopen n, const_env
+  | Itypedef tydec ->
+      Heptagon.Itypedef (translate_typedec const_env tydec), const_env
   | Iconstdef const_dec ->
-      Heptagon.Iconstdef (translate_const_dec const_env const_dec)
-  | Isignature s -> Heptagon.Isignature (translate_signature s)
+      let const_dec, const_env = translate_const_dec const_env const_dec in
+        Heptagon.Iconstdef const_dec, const_env
+  | Isignature s -> Heptagon.Isignature (translate_signature s) , const_env
 
 let translate_interface_decl const_env idecl =
-  { Heptagon.interf_desc = translate_interface_desc const_env idecl.interf_desc;
-    Heptagon.interf_loc = idecl.interf_loc }
+  let desc, const_env =
+    translate_interface_desc const_env idecl.interf_desc in
+  { Heptagon.interf_desc = desc;
+    Heptagon.interf_loc = idecl.interf_loc }, const_env
 
-let translate_interface =
-  List.map (translate_interface_decl NamesEnv.empty)
+let translate_interface i =
+  let i, _ = Misc.mapfold translate_interface_decl NamesEnv.empty i in
+    i
 
