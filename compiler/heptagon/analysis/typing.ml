@@ -1113,8 +1113,8 @@ let typing_const_dec cd =
 let program
     ({ p_opened = opened; p_types = p_type_list;
        p_nodes = p_node_list; p_consts = p_consts_list } as p) =
-  let typed_cd_list = List.map typing_const_dec p_consts_list in
     List.iter open_module opened;
+  let typed_cd_list = List.map typing_const_dec p_consts_list in
     List.iter deftype p_type_list;
     let typed_node_list = List.map node p_node_list in
       { p with p_nodes = typed_node_list; p_consts = typed_cd_list }
