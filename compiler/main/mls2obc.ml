@@ -313,6 +313,10 @@ and translate_eq_list map call_context act_list =
 
 and mk_node_call map call_context app loc name_list args =
   match app.Minils.a_op with
+    | Minils.Efun f when Mls_utils.is_op f ->
+        let e = mk_exp (Eop(f, args)) in
+        [], [], [], [Aassgn(List.hd name_list, e) ]
+
     | Minils.Enode f | Minils.Efun f ->
         let o = mk_obj_call_from_context call_context (gen_obj_name f) in
         let obj =
