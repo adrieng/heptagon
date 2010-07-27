@@ -12,20 +12,6 @@ open Location
 open Compiler_utils
 open Mls2seq
 
-let parse parsing_fun lexing_fun lexbuf =
-  try
-    parsing_fun lexing_fun lexbuf
-  with
-    | Mls_lexer.Lexical_error(err, loc) ->
-        lexical_error err loc
-    | Mls_parser.Error ->
-        let pos1 = Lexing.lexeme_start_p lexbuf
-        and pos2 = Lexing.lexeme_end_p lexbuf in
-        let l = Loc(pos1,pos2) in
-        syntax_error l
-
-let parse_implementation lexbuf =
-  parse Mls_parser.program Mls_lexer.token lexbuf
 
 let compile_impl modname filename =
   (* input and output files *)
