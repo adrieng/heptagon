@@ -393,6 +393,9 @@ _simple_exp:
   | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
   | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
   | LPAREN _exp RPAREN               { $2 }
+  | simple_exp DOT c=longname
+      { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
+                Efield [$1] }
 ;
 
 node_name:
@@ -461,9 +464,6 @@ _exp:
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_iterator_call $1 $3 $5 $9 $12 }
 /*Records operators */
-  | simple_exp DOT c=longname
-      { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
-                Efield [$1] }
   | LBRACE simple_exp WITH DOT c=longname EQUAL exp RBRACE
       { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
                 Efield_update [$2; $7] }
