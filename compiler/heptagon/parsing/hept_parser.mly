@@ -385,14 +385,15 @@ exps:
   | nonmtexps      {$1}
 ;
 
-simple_exp: e=_simple_exp { mk_exp e (Loc($startpos,$endpos)) }
+simple_exp:
+  | e=_simple_exp { mk_exp e (Loc($startpos,$endpos)) }
+  | LPAREN exp RPAREN { $2 }
 _simple_exp:
   | IDENT                            { Evar $1 }
   | const                            { Econst $1 }
   | LBRACE field_exp_list RBRACE     { Estruct $2 }
   | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
   | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
-  | LPAREN _exp RPAREN               { $2 }
   | simple_exp DOT c=longname
       { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
                 Efield [$1] }
