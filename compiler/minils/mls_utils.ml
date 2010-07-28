@@ -26,7 +26,7 @@ let rec static_exp_of_exp e =
 
 (** @return the list of bounds of an array type*)
 let rec bounds_list ty =
-  match ty with
+  match Modules.unalias_type ty with
     | Tarray(ty, n) -> n::(bounds_list ty)
     | _ -> []
 

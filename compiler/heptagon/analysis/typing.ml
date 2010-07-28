@@ -204,12 +204,12 @@ let get_number_of_fields ty =
     | _ -> assert false
 
 let element_type ty =
-  match ty with
+  match unalias_type ty with
     | Tarray (ty, _) -> ty
     | _ -> error (Esubscripted_value_not_an_array ty)
 
 let array_size ty =
-  match ty with
+  match unalias_type ty with
     | Tarray (_, e) -> e
     | _ -> error (Esubscripted_value_not_an_array ty)
 
@@ -818,7 +818,7 @@ and typing_iterator const_env h
       prod result_ty_list, typed_e_list
 
 and typing_array_subscript const_env h idx_list ty  =
-  match ty, idx_list with
+  match unalias_type ty, idx_list with
     | ty, [] -> [], ty
     | Tarray(ty, exp), idx::idx_list ->
         ignore (expect_static_exp const_env (Tid Initial.pint) exp);
@@ -835,7 +835,7 @@ and typing_array_subscript const_env h idx_list ty  =
 (* This function checks that the array dimensions matches
    the subscript. It returns the base type wrt the nb of indices. *)
 and typing_array_subscript_dyn const_env h idx_list ty =
-  match ty, idx_list with
+  match unalias_type ty, idx_list with
     | ty, [] -> ty, []
     | Tarray(ty, exp), idx::idx_list ->
         let typed_idx = expect const_env h (Tid Initial.pint) idx in
