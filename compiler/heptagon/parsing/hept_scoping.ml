@@ -9,6 +9,7 @@ open Idents
 open Format
 open Printf
 open Static
+open Modules
 
 module Error =
 struct
@@ -109,7 +110,10 @@ let rec static_exp_of_exp const_env e =
         if NamesEnv.mem n const_env then
           Svar (Name n)
         else
-          raise Not_static
+          (try
+            let { qualid = q } = find_const (Name n) in
+              Svar (Modname q)
+           with Not_found -> raise Not_static)
     | Econst se -> se.se_desc
     | Eapp({ a_op = Earray_fill; a_params = [n] }, [e]) ->
         Sarray_power (static_exp_of_exp const_env e,
@@ -156,8 +160,6 @@ and translate_desc loc const_env env = function
   | Evar x ->
       if Rename.mem x env then (* defined var *)
         Heptagon.Evar (Rename.name loc env x)
-      else if NamesEnv.mem x const_env then (* defined as const var *)
-        Heptagon.Econst (mk_static_exp (Svar (Modules.longname x)))
       else (* undefined var *)
         Error.message loc (Error.Evar x)
   | Elast x -> Heptagon.Elast (Rename.name loc env x)
@@ -316,6 +318,7 @@ let translate_const_dec const_env cd =
     Heptagon.c_loc = cd.c_loc; }, build_cd const_env cd
 
 let translate_program p =
+  List.iter open_module p.p_opened;
   let p_consts, const_env =
     Misc.mapfold translate_const_dec NamesEnv.empty p.p_consts in
   { Heptagon.p_modname = p.p_modname;
