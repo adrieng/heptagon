@@ -116,27 +116,22 @@ let rec cand nc1 nc2 =
     | Aac(ac1), Aac(ac2) -> Aac(Aand(ac1, ac2))
 
 let rec ctuple l =
-  let rec conv = function
-    | Cwrite(n) -> Awrite(n)
-    | Cread(n) -> Aread(n)
-    | Clastread(n) -> Alastread(n)
-    | Ctuple(l) -> Atuple (ctuple l)
-    | Cand (c1, c2) -> Aand (conv c1, conv c2)
-    | Cseq (c1, c2) -> Aseq (conv c1, conv c2)
-    | Cor (Cempty, c2) -> conv c2
-    | Cor (c1, Cempty) -> conv c1
-    | Cempty -> assert false
+  let rec norm_or l res = match l with
+    | [] -> Aac (Atuple (List.rev res))
+    | Aempty::l -> norm_or l res
+    | Aor (Aempty, nc2)::l -> norm_or (nc2::l) res
+    | Aor (nc1, Aempty)::l -> norm_or (nc1::l) res
+    | Aor(nc1, nc2)::l ->
+        Aor(norm_or (nc1::l) res, norm_or (nc2::l) res)
+    | (Aac ac)::l -> norm_or l (ac::res)
   in
-  match l with
-    | [] -> []
-    | Cempty::l -> ctuple l
-    | v::l -> (conv v)::(ctuple l)
+    norm_or l []
 
 and norm = function
   | Cor(c1, c2) -> cor (norm c1) (norm c2)
   | Cand(c1, c2) -> cand (norm c1) (norm c2)
   | Cseq(c1, c2) -> cseq (norm c1) (norm c2)
-  | Ctuple l -> Aac(Atuple (ctuple l))
+  | Ctuple l -> ctuple (List.map norm l)
   | Cwrite(n) -> Aac(Awrite(n))
   | Cread(n) -> Aac(Aread(n))
   | Clastread(n) -> Aac(Alastread(n))
