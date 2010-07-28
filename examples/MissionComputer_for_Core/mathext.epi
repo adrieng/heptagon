@@ -1,0 +1,17 @@
+(* atan() *)
+val fun atanr(a : float) returns (o : float)
+
+(* acos() *)
+val fun acosr(a : float) returns (o : float)
+
+(* cos() *)
+val fun cosr(a : float) returns (o : float)
+
+(* asin() *)
+val fun asinr(a : float) returns (o : float)
+
+(* sin() *)
+val fun sinr(a : float) returns (o : float)
+
+(* sqrt() *)
+val fun sqrtr(a : float) returns (o : float)

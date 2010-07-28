@@ -1,0 +1,4 @@
+
+const nm : float = 1852.0
+const t : float = 0.01
+const pi : float = 3.141592

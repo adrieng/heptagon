@@ -1,0 +1,3 @@
+type trdrmode = TRdrMode_WIDE | TRdrMode_NARROW
+
+type tsensorstate =  TState_OFF | TState_ON | TState_FAIL

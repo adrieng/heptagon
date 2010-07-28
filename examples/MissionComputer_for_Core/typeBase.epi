@@ -1,0 +1,8 @@
+type tid = int
+type tpriority = int
+type tmetres = float
+type tmetresseconde = float
+type tposition = { x : tmetres; y : tmetres }
+type tspeed = { sx : tmetresseconde; sy : tmetresseconde }
+
+type ttargettype = Ttargettype_unknown | Ttargettype_friend | Ttargettype_foe

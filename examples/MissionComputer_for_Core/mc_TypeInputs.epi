@@ -1,0 +1,10 @@
+type tinputspanel = {
+      p_slope : float;
+      p_speed : float;
+      p_id : int;
+      p_x0 : float;
+      p_y0 : float;
+      p_reset : bool
+    }
+
+type tinputspanelarray = tinputspanel^4

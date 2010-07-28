@@ -1,0 +1,7 @@
+(* Detects a rising edge (false to true transition ).
+   The output is true during the transition clock cycle.
+   The output is initialized to false. *)
+node risingEdge(re_Input : bool) returns (re_Output : bool)
+let
+  re_Output = not (re_Input -> pre re_Input) & re_Input;
+tel
