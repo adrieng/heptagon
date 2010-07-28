@@ -133,9 +133,9 @@ and print_app ff (app, args) = match app.a_op, app.a_params, args with
   | Eselect_dyn, _, r::d::e ->
       fprintf ff "%a%a default %a"
         print_exp r  print_dyn_index e  print_exp d
-  | Eupdate, idx, [e1; e2] ->
+  | Eupdate, _, e1::e2::idx ->
         fprintf ff "@[<2>(%a with %a =@ %a)@]"
-          print_exp e1 print_index idx print_exp e2
+          print_exp e1 print_dyn_index idx print_exp e2
   | Econcat, _,[e1; e2] ->
       fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
   | Elambda(inp, outp, _, eq_list), _, e_list ->

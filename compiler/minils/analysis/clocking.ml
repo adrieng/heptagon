@@ -81,9 +81,9 @@ and typing_op op args h e ck = match op, args with
   | Eselect_dyn, e1::defe::idx -> (* TODO defe not treated ? *)
       let ct = skeleton ck e1.e_ty
       in (expect h ct e1; List.iter (expect h ct) idx; ct)
-  | Eupdate, [e1; e2] ->
+  | Eupdate, e1::e2::idx ->
       let ct = skeleton ck e.e_ty
-      in (expect h (Ck ck) e1; expect h ct e2; ct)
+      in (expect h (Ck ck) e1; expect h ct e2; List.iter (expect h ct) idx; ct)
   | Eselect_slice, [e] -> typing h e
   | Econcat, [e1; e2] ->
       let ct = skeleton ck e.e_ty

@@ -141,11 +141,11 @@ and print_op ff op params e_list =
         print_list_r print_exp "[" "][" "] default " ff idx_list;
         print_exp ff defe;
         fprintf ff ")@]"
-    | Eupdate, idx_list, [e1;e2] ->
+    | Eupdate, _, e1::e2::idx_list ->
         fprintf ff "(@[";
         print_exp ff e1;
         fprintf ff " with ";
-        print_list_r print_static_exp "[" "][" "]" ff idx_list;
+        print_list_r print_exp "[" "][" "]" ff idx_list;
         fprintf ff " = ";
         print_exp ff e2;
         fprintf ff ")@]"

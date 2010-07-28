@@ -456,7 +456,7 @@ _exp:
   | simple_exp DOT indexes DEFAULT exp
       { mk_call Eselect_dyn ([$1; $5]@$3) }
   | LBRACKET exp WITH indexes EQUAL exp RBRACKET
-      { mk_call ~params:$4 Eupdate [$2; $6] }
+      { mk_call Eupdate ($2::$6::$4) }
   | simple_exp LBRACKET exp DOUBLE_DOT exp RBRACKET
       { mk_call ~params:[$3; $5] Eselect_slice [$1] }
   | exp AROBASE exp

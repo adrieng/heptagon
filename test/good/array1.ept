@@ -6,7 +6,7 @@ let
     o1 = a @ b;
     o2 = b @ a;
 tel
-(*
+
 node slicing (a:int^n) returns (u1,u2 : int^3)
 let
     u1 = a[0 .. 2];
@@ -18,6 +18,11 @@ var x : int;
 let
    x = a[2] + 1;
    o = [ a with [1] = x ];
+tel
+
+node upd_dyn(a:int^m; i:int) returns (o:int^m)
+let
+  o = [ a with [i] = a[0] ];
 tel
 
 node elt_dyn (a:int^m; i:int) returns (o:int^m)
@@ -36,4 +41,3 @@ node constant(a,b:int) returns (o:int^4)
 let
   o = [a,b,a,b];
 tel
-*)

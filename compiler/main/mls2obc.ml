@@ -225,14 +225,16 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           v, si, j, (control map ck action) :: s
 
     | Minils.Evarpat x,
-            Minils.Eapp ({ Minils.a_op = Minils.Eupdate;
-                           Minils.a_params = idx }, [e1; e2], _) ->
+            Minils.Eapp ({ Minils.a_op = Minils.Eupdate },
+                         e1::e2::idx, _) ->
         let x = var_from_name map x in
-        let copy = Aassgn (x, translate map (si, j, s) e1) in
-        let idx = List.map (fun idx -> mk_exp (Econst idx)) idx in
+        let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
+        let idx = List.map (translate map (si, j, s)) idx in
         let action = Aassgn (lhs_of_idx_list x idx,
-                            translate map (si, j, s) e2)
-        in
+                            translate map (si, j, s) e2) in
+        let cond = bound_check_expr idx bounds in
+        let action = Acase (cond, [ Name "true", mk_block [action] ]) in
+        let copy = Aassgn (x, translate map (si, j, s) e1) in
         v, si, j, (control map ck copy) :: (control map ck action) :: s
 
     | Minils.Evarpat x,

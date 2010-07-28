@@ -242,10 +242,11 @@ and translate_app kind context op e_list =
         let context, idx = translate_list Exp context idx in
         let context, e2 = translate Exp context e2 in
         context, e1::e2::idx
-    | Eupdate, [e1; e2]  ->
+    | Eupdate, e1::e2::idx  ->
         let context, e1 = translate VRef context e1 in
+        let context, idx = translate_list Exp context idx in
         let context, e2 = translate Exp context e2 in
-          context, [e1; e2]
+          context, e1::e2::idx
     | Eselect_slice, [e'] ->
         let context, e' = translate VRef context e' in
         context, [e']

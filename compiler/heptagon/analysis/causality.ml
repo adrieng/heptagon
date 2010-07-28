@@ -125,14 +125,18 @@ and apply op e_list =
         let i3 = typing e3 in
         cseq t1 (cor i2 i3)
     | (Eequal | Efun _| Enode _ | Econcat | Eselect_slice
-      | Eselect_dyn | Eselect _ | Earray_fill), e_list ->
+      | Eselect_dyn| Eselect _ | Earray_fill), e_list ->
         ctuplelist (List.map typing e_list)
     | (Earray | Etuple), e_list ->
         candlist (List.map typing e_list)
-    | (Eupdate _ | Efield_update _), [e1;e2] ->
+    | Efield_update, [e1;e2] ->
         let t1 = typing e1 in
         let t2 = typing e2 in
         cseq t2 t1
+    | Eupdate , e1::e_list ->
+        let t1 = typing e1 in
+        let t2 = ctuplelist (List.map typing e_list) in
+          cseq t2 t1
 
 let rec typing_pat = function
   | Evarpat(x) -> cwrite(x)

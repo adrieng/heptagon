@@ -714,12 +714,12 @@ and typing_app const_env h op e_list =
           typing_array_subscript_dyn const_env h idx_list t1 in
         ty, op, typed_e1::typed_defe::typed_idx_list
 
-    | { a_op = Eupdate; a_params = idx_list }, [e1;e2] ->
+    | { a_op = Eupdate}, e1::e2::idx_list ->
         let typed_e1, t1 = typing const_env h e1 in
-        let typed_idx_list, ty =
-          typing_array_subscript const_env h idx_list t1 in
+        let ty, typed_idx_list =
+          typing_array_subscript_dyn const_env h idx_list t1 in
         let typed_e2 = expect const_env h ty e2 in
-          t1, { op with a_params = typed_idx_list }, [typed_e1; typed_e2]
+          t1, op, typed_e1::typed_e2::typed_idx_list
 
     | { a_op = Eselect_slice; a_params = [idx1; idx2] }, [e] ->
         let typed_idx1 = expect_static_exp const_env (Tid Initial.pint) idx1 in
