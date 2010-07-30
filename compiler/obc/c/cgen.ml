@@ -733,7 +733,7 @@ let cfile_list_of_oprog_ty_decls name oprog =
   let (cty_defs, cty_decls) = List.split (List.rev cdefs_and_cdecls) in
   let filename_types = name ^ "_types" in
   let types_h = (filename_types ^ ".h",
-                 Cheader ([], concat cty_decls)) in
+                 Cheader (["stdbool"], concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
   filename_types, [types_h; types_c]
