@@ -53,28 +53,27 @@ and nc =
   | Aac of ac
   | Aempty
 
-let output_ac ff ac = (*TODO LG fix breaks*)
-  let rec print priority ff ac =
-    fprintf ff "@[<hov 0>";
-    begin match ac with
-      | Aseq(ac1, ac2) ->
-          (if priority > 1
-           then fprintf ff "(%a@ < %a)"
-           else fprintf ff "%a@ < %a")
-            (print 1) ac1 (print 1) ac2
-      | Aand(ac1, ac2) ->
-          (if priority > 0
-           then fprintf ff "(%a || %a)"
-           else fprintf ff "%a || %a")
-            (print 0) ac1 (print 0) ac2
-      | Atuple(acs) ->
-          print_list_r (print 1) "(" "," ")" ff acs
-      | Awrite(m) -> fprintf ff "%s" (name m)
-      | Aread(m) -> fprintf ff "^%s" (name m)
-      | Alastread(m) -> fprintf ff "last %s" (name m)
-    end;
-    fprintf ff "@]" in
-  fprintf ff "@[%a@]@?" (print 0) ac
+let output_ac ff ac =
+  let rec print priority ff ac = match ac with
+    | Aseq(ac1, ac2) -> (* priority 1 *)
+        (if priority = 1 then fprintf ff "%a@ < %a"
+         else if priority > 1
+         then fprintf ff "@[<v 1>(%a@ < %a)@]"
+         else fprintf ff "@[%a@ < %a@]")
+          (print 1) ac1 (print 1) ac2
+    | Aand(ac1, ac2) -> (* priority 0 *)
+        (if priority = 0 then fprintf ff "%a@ || %a"
+         else if priority > 0
+         then fprintf ff "@[<v 1>(%a@ || %a)@]"
+         else fprintf ff "@[%a@ || %a@]")
+          (print 0) ac1 (print 0) ac2
+    | Atuple(acs) ->
+        fprintf ff "@[%a@]" (print_list_r (print 1) "(" "," ")") acs
+    | Awrite(m) -> fprintf ff "%s" (name m)
+    | Aread(m) -> fprintf ff "^%s" (name m)
+    | Alastread(m) -> fprintf ff "last %s" (name m)
+  in
+  fprintf ff "@[<v 1>%a@]@?" (print 0) ac
 
 
 type error =  Ecausality_cycle of ac
