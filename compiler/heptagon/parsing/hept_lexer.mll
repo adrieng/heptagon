@@ -65,7 +65,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "mod", INFIX3("mod");
  "land", INFIX3("land");
  "lor", INFIX2("lor");
- "lxor", INFIX2("lxor");
+ "xor", INFIX2("xor");
  "lsl", INFIX4("lsl");
  "lsr", INFIX4("lsr");
  "asr", INFIX4("asr")
