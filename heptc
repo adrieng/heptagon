@@ -12,7 +12,7 @@ cd $SCRIPT_DIR
 if [ ! -x $HEPTC ] #compile the compiler
 then
 	cd $COMPILER_DIR
-	ocamlbuild $COMPILER
+	ocamlbuild -j 0 $COMPILER
 	cd -
 fi
 
