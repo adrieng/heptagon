@@ -35,7 +35,7 @@ let typ_of_name h x = Env.find x h
 
 let rec typing h e =
   let ct = match e.e_desc with
-    | Econst se -> const_skeleton se
+    | Econst se -> skeleton (new_var ()) se.se_ty
     | Evar x -> Ck (typ_of_name h x)
     | Efby (c, e) -> typing h e
     | Eapp({a_op = op}, args, r) ->
@@ -94,7 +94,7 @@ and expect h expected_ty e =
   let actual_ty = typing h e in
   try unify actual_ty expected_ty
   with
-  | Unify -> eprintf "e %a : " print_exp e;
+  | Unify -> eprintf "%a : " print_exp e;
       error_message e.e_loc (Etypeclash (actual_ty, expected_ty))
 
 and typing_c_e_list h ck_c n c_e_list =

@@ -9,8 +9,6 @@
 
 (* causality check *)
 
-(* $Id: causality.ml 615 2009-11-20 17:43:14Z pouzet $ *)
-
 open Misc
 open Names
 open Idents

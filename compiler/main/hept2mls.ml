@@ -178,7 +178,7 @@ let switch x ci_eqs_list =
       | [] | (_, []) :: _ -> []
       | (ci, (y, { e_ty = ty; e_loc = loc }) :: _) :: _ ->
           let ci_e_list, ci_eqs_list = split ci_eqs_list in
-          (y, mk_exp ~exp_ty:ty (Emerge(x, ci_e_list))) ::
+          (y, mk_exp ~exp_ty:ty ~loc:loc (Emerge(x, ci_e_list))) ::
             distribute ci_eqs_list in
 
   check ci_eqs_list;

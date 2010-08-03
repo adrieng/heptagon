@@ -477,7 +477,7 @@ and typing_static_exp const_env se =
         let typed_se, ty = typing_static_exp const_env se in
         let typed_se_list = List.map (expect_static_exp const_env ty) se_list in
           Sarray (typed_se::typed_se_list),
-        Tarray(ty, mk_static_exp (Sint ((List.length se_list) + 1)))
+        Tarray(ty, mk_static_int ((List.length se_list) + 1))
     | Stuple se_list ->
         let typed_se_list, ty_list = List.split
           (List.map (typing_static_exp const_env) se_list) in
@@ -596,7 +596,7 @@ let rec typing const_env h e =
             (* add size constraints *)
           let size_constrs =
             instanciate_constr m ty_desc.node_params_constraints in
-            add_size_constraint (Clequal (mk_static_exp (Sint  1), typed_n));
+            add_size_constraint (Clequal (mk_static_int 1, typed_n));
             List.iter add_size_constraint size_constrs;
             (* return the type *)
             Eiterator(it, { app with a_op = op; a_params = typed_params }
@@ -666,8 +666,7 @@ and typing_app const_env h op e_list =
     | { a_op = Earray }, exp::e_list ->
         let typed_exp, t1 = typing const_env h exp in
         let typed_e_list = List.map (expect const_env h t1) e_list in
-        let n = mk_static_exp ~ty:(Tid Initial.pint)
-          (Sint (List.length e_list + 1)) in
+        let n = mk_static_int (List.length e_list + 1) in
           Tarray(t1, n), op, typed_exp::typed_e_list
 
     | { a_op = Efield; a_params = [f] }, [e] ->
@@ -698,7 +697,7 @@ and typing_app const_env h op e_list =
     | { a_op = Earray_fill; a_params = [n] }, [e1] ->
         let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
         let typed_e1, t1 = typing const_env h e1 in
-          add_size_constraint (Clequal (mk_static_exp (Sint 1), typed_n));
+          add_size_constraint (Clequal (mk_static_int 1, typed_n));
           Tarray (t1, typed_n), { op with a_params = [typed_n] }, [typed_e1]
 
     | { a_op = Eselect; a_params = idx_list }, [e1] ->
@@ -726,11 +725,11 @@ and typing_app const_env h op e_list =
         let typed_idx2 = expect_static_exp const_env (Tid Initial.pint) idx2 in
         let typed_e, t1 = typing const_env h e in
         (*Create the expression to compute the size of the array *)
-        let e1 = mk_static_exp (Sop (mk_pervasives "-",
-                                     [typed_idx2; typed_idx1])) in
-        let e2 = mk_static_exp (Sop (mk_pervasives "+",
-                                     [e1;mk_static_exp (Sint  1) ])) in
-        add_size_constraint (Clequal (mk_static_exp (Sint  1), e2));
+        let e1 =
+          mk_static_int_op (mk_pervasives "-") [typed_idx2; typed_idx1] in
+        let e2 =
+          mk_static_int_op (mk_pervasives "+") [e1;mk_static_int 1 ] in
+        add_size_constraint (Clequal (mk_static_int 1, e2));
         Tarray (element_type t1, e2),
         { op with a_params = [typed_idx1; typed_idx2] }, [typed_e]
 
@@ -742,8 +741,8 @@ and typing_app const_env h op e_list =
         with
             TypingError(kind) -> message e1.e_loc kind
         end;
-        let n = mk_static_exp (Sop (mk_pervasives "+",
-                                    [array_size t1; array_size t2])) in
+        let n =
+          mk_static_int_op (mk_pervasives "+") [array_size t1; array_size t2] in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
 
     (*Arity problems*)
@@ -823,13 +822,13 @@ and typing_array_subscript const_env h idx_list ty  =
     | Tarray(ty, exp), idx::idx_list ->
         ignore (expect_static_exp const_env (Tid Initial.pint) exp);
         let typed_idx = expect_static_exp const_env (Tid Initial.pint) idx in
-        add_size_constraint (Clequal (mk_static_exp (Sint 0), idx));
-        let bound =  mk_static_exp (Sop(mk_pervasives "-",
-                                        [exp; mk_static_exp (Sint 1)])) in
-          add_size_constraint (Clequal (idx,bound));
-          let typed_idx_list, ty =
-            typing_array_subscript const_env h idx_list ty in
-          typed_idx::typed_idx_list, ty
+        add_size_constraint (Clequal (mk_static_int 0, idx));
+        let bound =
+          mk_static_int_op (mk_pervasives "-") [exp; mk_static_int 1] in
+        add_size_constraint (Clequal (idx,bound));
+        let typed_idx_list, ty =
+          typing_array_subscript const_env h idx_list ty in
+        typed_idx::typed_idx_list, ty
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 
 (* This function checks that the array dimensions matches

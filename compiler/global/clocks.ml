@@ -95,9 +95,9 @@ let rec skeleton ck = function
   | Tprod ty_list -> Cprod (List.map (skeleton ck) ty_list)
   | Tarray _ | Tid _ -> Ck ck
 
-let rec const_skeleton se = match se.se_desc with
-  | Stuple se_list -> Cprod (List.map const_skeleton se_list)
-  | _ -> Ck (new_var ())
+let rec const_skeleton ck se = match se.se_desc with
+  | Stuple se_list -> Cprod (List.map (const_skeleton ck) se_list)
+  | _ -> Ck ck
 
 let ckofct = function | Ck ck -> ck_repr ck | Cprod ct_list -> Cbase
 

@@ -17,6 +17,11 @@ open Types
 open Control
 open Static
 open Obc_mapfold
+open Initial
+
+(** Not giving any type and called after typing, DO NOT use it anywhere else *)
+let static_exp_of_int i =
+  Types.mk_static_exp (Types.Sint i)
 
 let gen_obj_name n =
   (shortname n) ^ "_mem" ^ (gen_symbol ())
@@ -197,13 +202,11 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                                [mk_evar cpt;
                                 mk_exp (Econst idx1) ])) in
         (* bound = (idx2 - idx1) + 1*)
-        let bound =
-          mk_static_exp (Sop(op_from_string "+",
-                         [ mk_static_exp (Sint 1);
-                           mk_static_exp (Sop (op_from_string "-",
-                                                [idx2;idx1])) ])) in
+        let bound = mk_static_int_op (op_from_string "+")
+                      [ mk_static_int 1;
+                        mk_static_int_op (op_from_string "-") [idx2;idx1] ] in
         let action =
-          Afor (cpt, mk_static_exp (Sint 0), bound,
+          Afor (cpt, mk_static_int 0, bound,
                 mk_block [Aassgn (mk_lhs (Larray (var_from_name map x,
                                                   mk_evar cpt)),
                       mk_lhs_exp (Larray (lhs_of_exp e, idx)))] )
@@ -242,7 +245,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                              Minils.a_params = [n] }, [e], _) ->
         let cpt = Idents.fresh "i" in
         let action =
-          Afor (cpt, mk_static_exp (Sint 0), n,
+          Afor (cpt, mk_static_int 0, n,
                 mk_block [Aassgn (mk_lhs (Larray (var_from_name map x,
                                                   mk_evar cpt)),
                                   translate map (si, j, s) e) ])
@@ -259,7 +262,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                let e1 = translate map (si, j, s) e1 in
                let e2 = translate map (si, j, s) e2 in
                let a1 =
-                 Afor (cpt1, mk_static_exp (Sint 0), n1,
+                 Afor (cpt1, mk_static_int 0, n1,
                        mk_block [Aassgn (mk_lhs (Larray (x, mk_evar cpt1)),
                                          mk_lhs_exp (Larray (lhs_of_exp e1,
                                                         mk_evar cpt1)))] ) in

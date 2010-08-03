@@ -14,6 +14,7 @@ open Idents
 open Heptagon
 open Hept_mapfold
 open Types
+open Initial
 
 (* We introduce an initialization variable for each block  *)
 (* Using an asynchronous reset would allow to produce      *)
@@ -52,8 +53,7 @@ let mk_bool_param n =
 let or_op_call e_list = mk_op_app (Efun Initial.por) e_list
 
 let pre_true e =
-  { e with e_desc = Epre (Some (mk_static_exp ~ty:(Tid Initial.pbool)
-                              (Sconstructor Initial.ptrue)), e) }
+  { e with e_desc = Epre (Some (mk_static_bool true), e) }
 let init e = pre_true { dfalse with e_loc = e.e_loc }
 
 let add_resets res e =

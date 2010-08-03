@@ -14,6 +14,7 @@ open Names
 open Idents
 open Heptagon
 open Hept_mapfold
+open Initial
 
 let mk_var_exp n ty =
   mk_exp (Evar n) ty
@@ -28,11 +29,15 @@ let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
 
 let mk_exp_fby_false e =
-  mk_exp (Epre (Some (mk_static_exp (Sconstructor Initial.pfalse)), e))
+  mk_exp (Epre (Some (mk_static_bool false), e))
     (Tid Initial.pbool)
 
+let mk_constructor constr ty =
+  mk_static_exp ~ty:ty (Sconstructor constr)
+
+(* Be sure that [initial] is of the right type [e.e_ty] before using this *)
 let mk_exp_fby_state initial e =
-  { e with e_desc = Epre (Some (mk_static_exp (Sconstructor initial)), e) }
+  { e with e_desc = Epre (Some (mk_constructor initial e.e_ty), e) }
 
 (* the list of enumerated types introduced to represent states *)
 let state_type_dec_list = ref []
@@ -71,8 +76,8 @@ let translate_automaton v eq_list handlers =
   let pre_next_resetname = Idents.fresh "pnr" in
 
   let name n = Name(NamesEnv.find n states) in
-  let state n = mk_exp (Econst (mk_static_exp
-                                  (Sconstructor (name n)))) tstatetype in
+  let state n =
+    mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype in
   let statevar n = mk_var_exp n tstatetype in
   let boolvar n = mk_var_exp n (Tid Initial.pbool) in
 

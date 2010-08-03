@@ -14,6 +14,7 @@ open Idents
 open Static
 open Signature
 open Types
+open Initial
 
 type state_name = name
 
@@ -175,12 +176,8 @@ let mk_block ?(statefull = true) ?(defnames = Env.empty) eqs =
   { b_local = []; b_equs = eqs; b_defnames = defnames;
     b_statefull = statefull; b_loc = no_location }
 
-let dfalse =
-  mk_exp (Econst (mk_static_exp (Sconstructor Initial.pfalse)))
-         (Tid Initial.pbool)
-let dtrue =
-  mk_exp (Econst (mk_static_exp (Sconstructor Initial.ptrue)))
-         (Tid Initial.pbool)
+let dfalse = mk_exp (Econst (mk_static_bool false)) (Tid Initial.pbool)
+let dtrue = mk_exp (Econst (mk_static_bool true)) (Tid Initial.pbool)
 
 let mk_ifthenelse e1 e2 e3 =
   { e3 with e_desc = mk_op_app Eifthenelse [e1; e2; e3] }

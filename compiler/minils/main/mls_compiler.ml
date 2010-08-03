@@ -14,7 +14,7 @@ let pp p = if !verbose then Mls_printer.print stdout p
 
 let compile pp p =
   (* Clocking *)
-  let p = do_pass Clocking.program "Clocking" p pp false in
+  let p = do_pass Clocking.program "Clocking" p pp true in
 
   (* Check that the dataflow code is well initialized *)
   (*let p = do_silent_pass Init.program "Initialization check" p !init in *)

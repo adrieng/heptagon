@@ -9,6 +9,7 @@
 (* initialization of the typing environment *)
 
 open Names
+open Types
 
 let tglobal = []
 let cglobal = []
@@ -21,6 +22,17 @@ let pint = Modname({ qual = "Pervasives"; id = "int" })
 let pfloat = Modname({ qual = "Pervasives"; id = "float" })
 
 let mk_pervasives s = Modname({ qual = "Pervasives"; id = s })
+
+let mk_static_int_op op args =
+  mk_static_exp ~ty:(Tid pint) (Sop (op,args))
+
+let mk_static_int i =
+  mk_static_exp ~ty:(Tid pint) (Sint i)
+
+let mk_static_bool b =
+  mk_static_exp ~ty:(Tid pbool) (Sbool b)
+
+
 
 (* build the initial environment *)
 let initialize () =

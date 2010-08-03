@@ -147,9 +147,11 @@ constructor: /* of type longname */
   | ln=qualified(CONSTRUCTOR)       { ln }
   | b=BOOL                          { Name(if b then "true" else "false") }
 
+/* TODO donner un type !! Phase de typing. */
 field:
   | ln=longname { mk_static_exp ~loc:(Loc($startpos,$endpos)) (Sconstructor ln)}
 
+/* TODO donner un type !! Phase de typing. */
 const : c=_const { mk_static_exp ~loc:(Loc ($startpos,$endpos)) c }
 _const:
   | i=INT { Sint i }
