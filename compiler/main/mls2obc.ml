@@ -105,14 +105,16 @@ let rec translate map (si, j, s) e =
         let e = translate map (si, j, s) e in
         let idx_list = List.map (fun idx -> mk_exp (Econst idx)) idx in
           Elhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
-    | _ -> (*Minils_printer.print_exp stdout e; flush stdout;*) assert false
+    | _ ->
+      Mls_printer.print_exp stdout e;
+      assert false
   in
     mk_exp ~ty:e.Minils.e_ty desc
 
-(* [translate pat act = si, j, d, s] *)
+(* [translate pat act = si, d] *)
 and translate_act map context pat
     ({ Minils.e_desc = desc } as act) =
-  match pat, desc with
+    match pat, desc with
     | Minils.Etuplepat p_list,
       Minils.Eapp ({ Minils.a_op = Minils.Etuple }, act_list, _) ->
         List.flatten (List.map2 (translate_act map context) p_list act_list)
@@ -125,7 +127,33 @@ and translate_act map context pat
     | pat, Minils.Emerge (x, c_act_list) ->
         let lhs = var_from_name map x in
         [Acase (mk_exp (Elhs lhs),
-               translate_c_act_list map context pat c_act_list)]
+                translate_c_act_list map context pat c_act_list)]
+
+    | Minils.Evarpat x,
+                Minils.Eapp ({ Minils.a_op = Minils.Econcat }, [e1; e2], _) ->
+        let cpt1 = Idents.fresh "i" in
+        let cpt2 = Idents.fresh "i" in
+        let x = var_from_name map x in
+        (match e1.Minils.e_ty, e2.Minils.e_ty with
+           | Tarray (_, n1), Tarray (_, n2) ->
+               let e1 = translate map context e1 in
+               let e2 = translate map context e2 in
+               let a1 =
+                 Afor (cpt1, mk_static_int 0, n1,
+                       mk_block [Aassgn (mk_lhs (Larray (x, mk_evar cpt1)),
+                                         mk_lhs_exp (Larray (lhs_of_exp e1,
+                                                        mk_evar cpt1)))] ) in
+               let idx = mk_exp (Eop (op_from_string "+",
+                                      [ mk_exp (Econst n1); mk_evar cpt2])) in
+               let a2 =
+                 Afor (cpt2, static_exp_of_int 0, n2,
+                       mk_block [Aassgn (mk_lhs (Larray (x, idx)),
+                                         mk_lhs_exp (Larray (lhs_of_exp e2,
+                                                             mk_evar cpt2)))] )
+               in
+               [a1; a2]
+           | _ -> assert false )
+
     | Minils.Evarpat n, _ ->
         [Aassgn (var_from_name map n, translate map context act)]
     | _ -> (*Minils_printer.print_exp stdout act;*) assert false
@@ -251,31 +279,6 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                                   translate map (si, j, s) e) ])
         in
         v, si, j, (control map ck action) :: s
-
-    | Minils.Evarpat x,
-                Minils.Eapp ({ Minils.a_op = Minils.Econcat }, [e1; e2], _) ->
-        let cpt1 = Idents.fresh "i" in
-        let cpt2 = Idents.fresh "i" in
-        let x = var_from_name map x in
-        (match e1.Minils.e_ty, e2.Minils.e_ty with
-           | Tarray (_, n1), Tarray (_, n2) ->
-               let e1 = translate map (si, j, s) e1 in
-               let e2 = translate map (si, j, s) e2 in
-               let a1 =
-                 Afor (cpt1, mk_static_int 0, n1,
-                       mk_block [Aassgn (mk_lhs (Larray (x, mk_evar cpt1)),
-                                         mk_lhs_exp (Larray (lhs_of_exp e1,
-                                                        mk_evar cpt1)))] ) in
-               let idx = mk_exp (Eop (op_from_string "+",
-                                      [ mk_exp (Econst n1); mk_evar cpt2])) in
-               let a2 =
-                 Afor (cpt2, static_exp_of_int 0, n2,
-                       mk_block [Aassgn (mk_lhs (Larray (x, idx)),
-                                         mk_lhs_exp (Larray (lhs_of_exp e2,
-                                                             mk_evar cpt2)))] )
-               in
-               v, si, j, (control map ck a1) :: (control map ck a2) :: s
-           | _ -> assert false )
 
     | pat, Minils.Eapp ({ Minils.a_op = Minils.Efun _ | Minils.Enode _ } as app,
                         e_list, r) ->
