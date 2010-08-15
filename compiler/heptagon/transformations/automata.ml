@@ -50,15 +50,15 @@ let intro_type states =
     (mk_type_dec state_type (Type_enum (list states))) :: !state_type_dec_list;
   Name(state_type)
 
-(* an automaton may be a Moore automaton, i.e., with only weak transitions; *)
-(* a Mealy one, i.e., with only strong transition or mixed *)
-let moore_mealy state_handlers =
-  let handler (moore, mealy) { s_until = l1; s_unless = l2 } =
-    (moore or (l1 <> []), mealy or (l2 <> [])) in
-  List.fold_left handler (false, false) state_handlers
+(** Allows to classify an automaton :
+    Moore automatons doesn't have strong transitions,
+    Mealy automatons may have some. *)
+let no_strong_transition state_handlers =
+  let handler no_strong { s_unless = l } = no_strong & (l = []) in
+  List.fold_left handler true state_handlers
+
 
 let translate_automaton v eq_list handlers =
-  let has_until, has_unless = moore_mealy handlers in
   let states =
     let suffix = gen_symbol () in
     List.fold_left
@@ -116,44 +116,39 @@ let translate_automaton v eq_list handlers =
       (mk_var_dec resetname (Tid Initial.pbool)) ::
       (mk_var_dec next_resetname (Tid Initial.pbool)) ::
       (mk_var_dec pre_next_resetname (Tid Initial.pbool)) :: v in
-  (* we optimise the case of an only strong automaton *)
-  (* or only weak automaton *)
-  match has_until, has_unless with
-    | true, false ->
-        let switch_e = mk_exp_fby_state initial (statevar next_statename) in
-        let switch_handlers = (List.map
-                                 (fun ({ s_state = n } as case) ->
-                                    { w_name = name n; w_block = weak case })
-                                 handlers) in
-        let switch_eq = mk_switch_equation switch_e switch_handlers in
-        let nr_eq = mk_simple_equation (Evarpat pre_next_resetname)
-          (mk_exp_fby_false (boolvar (next_resetname))) in
-        let pnr_eq = mk_simple_equation (Evarpat resetname)
-          (boolvar pre_next_resetname) in
-        (* a Moore automaton with only weak transitions *)
-        v, switch_eq :: nr_eq :: pnr_eq :: eq_list
-    | _ ->
-        (* the general case; two switch to generate,
-           statename variable used and defined *)
-        let v = (mk_var_dec statename (Tid statetype)) :: v in
-
-        let ns_switch_e = mk_exp_fby_state initial (statevar next_statename) in
-        let ns_switch_handlers = List.map
-          (fun ({ s_state = n } as case) ->
-             { w_name = name n; w_block = strong case })
-          handlers in
-        let ns_switch_eq = mk_switch_equation ns_switch_e ns_switch_handlers in
-
-        let switch_e = statevar statename in
-        let switch_handlers = List.map
-          (fun ({ s_state = n } as case) ->
-             { w_name = name n; w_block = weak case })
-          handlers in
-        let switch_eq = mk_switch_equation switch_e switch_handlers in
-
-        let pnr_eq = mk_simple_equation (Evarpat pre_next_resetname)
-          (mk_exp_fby_false (boolvar (next_resetname))) in
-        v, ns_switch_eq :: switch_eq :: pnr_eq :: eq_list
+  if no_strong_transition handlers
+  then (* Only weak transitions : a Moore automaton. *)
+    let switch_e = mk_exp_fby_state initial (statevar next_statename) in
+    let switch_handlers =
+      List.map (fun ({ s_state = n } as case) ->
+                  { w_name = name n; w_block = weak case })
+               handlers in
+    let switch_eq = mk_switch_equation switch_e switch_handlers in
+    let nr_eq =
+      mk_simple_equation (Evarpat pre_next_resetname)
+                         (mk_exp_fby_false (boolvar (next_resetname))) in
+    let pnr_eq =
+      mk_simple_equation (Evarpat resetname) (boolvar pre_next_resetname) in
+    v, switch_eq :: nr_eq :: pnr_eq :: eq_list
+  else (* General case,
+          two switch to generate statename variable used and defined *)
+    let v = (mk_var_dec statename (Tid statetype)) :: v in
+    let ns_switch_e = mk_exp_fby_state initial (statevar next_statename) in
+    let ns_switch_handlers =
+      List.map (fun ({ s_state = n } as case) ->
+                  { w_name = name n; w_block = strong case })
+               handlers in
+    let ns_switch_eq = mk_switch_equation ns_switch_e ns_switch_handlers in
+    let switch_e = statevar statename in
+    let switch_handlers =
+      List.map (fun ({ s_state = n } as case) ->
+                  { w_name = name n; w_block = weak case })
+               handlers in
+    let switch_eq = mk_switch_equation switch_e switch_handlers in
+    let pnr_eq =
+      mk_simple_equation (Evarpat pre_next_resetname)
+                         (mk_exp_fby_false (boolvar (next_resetname))) in
+    v, ns_switch_eq :: switch_eq :: pnr_eq :: eq_list
 
 let rec eq funs (v, eq_list) eq =
   let eq, (v, eq_list) = Hept_mapfold.eq funs (v, eq_list) eq in
