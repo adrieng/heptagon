@@ -2,8 +2,6 @@
 
 # TODO: rewrite in OCaml or something better than sh
 
-# $Id$
-
 shopt -s nullglob
 
 # script de test
