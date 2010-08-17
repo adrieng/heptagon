@@ -160,7 +160,10 @@ let generate_new_name ln params =
         (match ln with
            | Modname { qual = q; id = id } ->
                let new_ln =
-                 Modname { qual = q;
+                 Modname { qual = q; (* TODO ??? c'est quoi ce nom ??? *)
+                (* l'utilité de fresh n'est vrai que si toute les fonctions
+                   sont touchées.. ce qui n'est pas vrai cf main_nodes *)
+                (* TODO mettre les valeurs des params dans le nom *)
                            id = id ^ (Idents.name (Idents.fresh "")) } in
                  Hashtbl.add info.nodes_names (ln, params) new_ln
            | _ -> assert false)
@@ -172,7 +175,7 @@ struct
   (** Replaces static parameters with their value in the instance. *)
   let static_exp funs m se =
     let se, m = Global_mapfold.static_exp funs m se in
-    match se.se_desc with
+    let se, m = match se.se_desc with
       | Svar ln ->
           let se = (match ln with
              | Name n ->
@@ -181,7 +184,10 @@ struct
                     Error.message se.se_loc (Error.Evar_unbound n))
              | Modname _ -> se) in
           se, m
-      | _ -> se, m
+      | _ -> se, m in
+    simplify m se, m
+
+  let global_funs = { Global_mapfold.defaults with static_exp = static_exp }
 
   (** Replaces nodes call with the call to the correct instance. *)
   let edesc funs m ed =
@@ -190,11 +196,11 @@ struct
         | Eapp ({ a_op = Efun ln; a_params = params } as app, e_list, r) ->
             let params = List.map (simplify m) params in
             Eapp ({ app with a_op = Efun (node_for_params_call ln params);
-                      a_params = [] }, e_list, r)
+                             a_params = [] }, e_list, r)
         | Eapp ({ a_op = Enode ln; a_params = params } as app, e_list, r) ->
             let params = List.map (simplify m) params in
             Eapp ({ app with a_op = Enode (node_for_params_call ln params);
-                      a_params = [] }, e_list, r)
+                             a_params = [] }, e_list, r)
         | Eiterator(it, ({ a_op = Efun ln; a_params = params } as app),
                    n, e_list, r) ->
             let params = List.map (simplify m) params in
@@ -205,20 +211,17 @@ struct
         | Eiterator(it, ({ a_op = Enode ln; a_params = params } as app),
                    n, e_list, r) ->
             let params = List.map (simplify m) params in
-              Eiterator(it,
-                        { app with a_op = Enode
-                            (node_for_params_call ln params);
-                            a_params = [] }, n, e_list, r)
+              Eiterator
+                (it, { app with a_op = Enode (node_for_params_call ln params);
+                                a_params = [] }, n, e_list, r)
         | _ -> ed
     in ed, m
 
-  let node_dec_instance modname n params =
-    let global_funs = { Global_mapfold.defaults with
-                          static_exp = static_exp } in
-    let funs = { Mls_mapfold.defaults with
-                   edesc = edesc;
-                   global_funs = global_funs } in
-    let m = build NamesEnv.empty n.n_params params in
+  let funs = { Mls_mapfold.defaults
+                 with edesc = edesc; global_funs = global_funs }
+
+  let node_dec_instance m modname n params =
+    let m = build m n.n_params params in
     let n, _ = Mls_mapfold.node_dec_it funs m n in
 
     (* Add to the global environment the signature of the new instance *)
@@ -233,13 +236,13 @@ struct
       { n with n_name = shortname ln;
           n_params = []; n_params_constraints = []; }
 
-  let node_dec modname n =
+  let node_dec m modname n =
     let ln = Modname { qual = modname; id = n.n_name } in
-    List.map (node_dec_instance modname n) (get_node_instances ln)
+    List.map (node_dec_instance m modname n) (get_node_instances ln)
 
-  let program p =
-    { p
-      with p_nodes = List.flatten (List.map (node_dec p.p_modname) p.p_nodes) }
+  let program m p =
+    { p with
+        p_nodes = List.flatten (List.map (node_dec m p.p_modname) p.p_nodes) }
 end
 
 (** Checks that a static expression does not contain any static parameter. *)
@@ -254,10 +257,10 @@ let check_no_static_var se =
 
 (** Generates the list of instances of nodes needed to call
     [ln] with static parameters [params]. *)
-let rec call_node (ln, params) =
+let rec call_node m (ln, params) =
   (* First, add the instance for this node *)
   let n = node_by_longname ln in
-  let m = build NamesEnv.empty n.n_params params in
+  let m = build m n.n_params params in
     List.iter check_no_static_var params;
     add_node_instance ln params;
     generate_new_name ln params;
@@ -266,15 +269,34 @@ let rec call_node (ln, params) =
     let call_list = called_nodes ln in
     let call_list = List.map
       (fun (ln, p) -> ln, List.map (simplify m) p) call_list in
-      List.iter call_node call_list
+    List.iter (call_node m) call_list
+
+(** Deal with the global const declarations of a program,
+    and return the associated environnment. *)
+let const_decs m const_l =
+  let const_dec m cd =
+    let c_value, m =
+      Global_mapfold.static_exp_it Instantiate.global_funs m cd.c_value in
+    let c_type, m =
+      Global_mapfold.ty_it Instantiate.global_funs m cd.c_type in
+    let m = NamesEnv.add cd.c_name c_value m in
+    { cd with c_value = c_value; c_type = c_type }, m in
+  mapfold const_dec m const_l
+
+let type_decs m type_l =
+  mapfold (Mls_mapfold.type_dec_it Instantiate.funs) m type_l
 
 let program p =
+  (* construct the global env [m] with valued static idents *)
+  let p_consts, m = const_decs NamesEnv.empty p.p_consts in
+  let p_types, m = type_decs m p.p_types in
+  let p = { p with p_consts = p_consts; p_types = p_types } in
   (* Find the nodes without static parameters *)
   let main_nodes = List.filter (fun n -> is_empty n.n_params) p.p_nodes in
   let main_nodes = List.map (fun n -> (longname n.n_name, [])) main_nodes in
     info.opened <- NamesEnv.add p.p_modname p NamesEnv.empty;
     (* Creates the list of instances starting from these nodes *)
-    List.iter call_node main_nodes;
+    List.iter (call_node m) main_nodes;
     let p_list = NamesEnv.fold (fun _ p l -> p::l) info.opened [] in
       (* Generate all the needed instances *)
-      List.map Instantiate.program p_list
+      List.map (Instantiate.program m) p_list
