@@ -43,6 +43,13 @@ let targets = [ "c", Obc_no_params Cmain.program;
                 "epo", Minils write_object_file ]
 
 let generate_target p s =
+  let print_unfolded p_list =
+    if !Misc.verbose then
+      begin
+        Printf.fprintf stderr "** Unfolding done **\n\n";
+        List.iter (Mls_printer.print stderr) p_list;
+      end in
+
   let target =
     (try List.assoc s targets
     with Not_found -> language_error s; raise Error) in
@@ -58,6 +65,12 @@ let generate_target p s =
       | Obc_no_params convert_fun ->
           let p_list = Callgraph_mapfold.program p in
           let o_list = List.map Mls2obc.program p_list in
+          print_unfolded p_list;
+          if !Misc.verbose then
+            begin
+              Printf.fprintf stderr "** Translation to Obc done **\n\n";
+              List.iter (wrap_print Obc_printer.print_prog stderr) o_list;
+            end;
             List.iter convert_fun o_list
 
 let program p =
