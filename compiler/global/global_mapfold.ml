@@ -1,5 +1,6 @@
 open Misc
 open Types
+(*open Clocks*)
 open Signature
 
 type 'a global_it_funs = {
@@ -7,21 +8,20 @@ type 'a global_it_funs = {
     'a global_it_funs -> 'a -> static_exp -> static_exp * 'a;
   static_exp_desc :
     'a global_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
-  ty :
-    'a global_it_funs -> 'a -> ty -> ty * 'a;
-  param:
-    'a global_it_funs -> 'a -> param -> param * 'a;
+  ty : 'a global_it_funs -> 'a -> ty -> ty * 'a;
+(*  ct : 'a global_it_funs -> 'a -> ct -> ct * 'a;
+  ck : 'a global_it_funs -> 'a -> ck -> ck * 'a;
+  link : 'a global_it_funs -> 'a -> link -> link * 'a; *)
+  param: 'a global_it_funs -> 'a -> param -> param * 'a;
   arg: 'a global_it_funs -> 'a -> arg -> arg * 'a;
   node : 'a global_it_funs -> 'a -> node -> node * 'a;
-  structure:
-    'a global_it_funs -> 'a -> structure -> structure * 'a;
-  field:
-    'a global_it_funs -> 'a -> field -> field * 'a; }
+  structure: 'a global_it_funs -> 'a -> structure -> structure * 'a;
+  field: 'a global_it_funs -> 'a -> field -> field * 'a; }
 
 let rec static_exp_it funs acc se = funs.static_exp funs acc se
 and static_exp funs acc se =
-  let se_desc, acc = static_exp_desc_it funs acc se.se_desc in
   let se_ty, acc = ty_it funs acc se.se_ty in
+  let se_desc, acc = static_exp_desc_it funs acc se.se_desc in
   { se with se_desc = se_desc; se_ty = se_ty }, acc
 
 and static_exp_desc_it funs acc sd =
@@ -57,6 +57,30 @@ and ty funs acc t = match t with
       let t, acc = ty_it funs acc t in
       let se, acc = static_exp_it funs acc se in
       Tarray (t, se), acc
+
+(*
+and ct_it funs acc c = try funs.ct funs acc c with Fallback -> ct funs acc t
+and ct funs acc c = match c with
+  | Ck(ck) -> let ck, acc = ck_it funs acc ck in Ck ck, acc
+  | Cprod(ct_l) ->
+      let ct_l, acc = mapfold (ct_it funs) acc ct_l in Cprod ct_l, acc
+
+and ck_it funs acc c = try funs.ck funs acc c with Fallback -> ck funs acc c
+and ck funs acc c = match c with
+  | Cbase -> c, acc
+  | Cvar(link_ref) ->
+      let l, acc = link_it funs acc link_ref.contents in
+      Cvar {link_ref with contents = l}, acc
+  | Con(ck, constructor_name, var_ident) ->
+      let ck, acc = ck_it funs acc ck in
+      Con (ck, constructor_name, var_ident), acc
+
+and link_it funs acc c =
+  try funs.link funs acc c with Fallback -> link funs acc c
+and link funs acc l = match l with
+  | Cindex _ -> l, acc
+  | Clink(ck) -> let ck, acc = ck_it funs acc ck in Clink ck, acc
+*)
 
 and structure_it funs acc s = funs.structure funs acc s
 and structure funs acc s =
@@ -102,7 +126,7 @@ let defaults = {
 }
 
 
-(* Used to stop the pass at this level *)
+(** Is used to stop the pass at this level *)
 let stop funs acc x = x, acc
 
 let defaults_stop = {

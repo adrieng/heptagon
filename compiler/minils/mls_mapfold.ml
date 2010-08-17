@@ -12,8 +12,8 @@ open Global_mapfold
 open Minils
 
 (* /!\ do never, never put in your funs record one
-  of the generic iterator function (_omega),
-  either yours either the _default version *)
+  of the generic iterator function (_it),
+  either yours either the default version named according to the type. *)
 
 type 'a mls_it_funs = {
   app:        'a mls_it_funs -> 'a -> Minils.app -> Minils.app * 'a;

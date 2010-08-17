@@ -170,16 +170,18 @@ let generate_new_name ln params =
 module Instantiate =
 struct
   (** Replaces static parameters with their value in the instance. *)
-  let static_exp funs m se = match se.se_desc with
-    | Svar ln ->
-        let se = (match ln with
-           | Name n ->
-               (try NamesEnv.find n m
-                with Not_found ->
-                      Error.message se.se_loc (Error.Evar_unbound n))
-           | Modname _ -> se) in
+  let static_exp funs m se =
+    let se, m = Global_mapfold.static_exp funs m se in
+    match se.se_desc with
+      | Svar ln ->
+          let se = (match ln with
+             | Name n ->
+                 (try NamesEnv.find n m
+                  with Not_found ->
+                    Error.message se.se_loc (Error.Evar_unbound n))
+             | Modname _ -> se) in
           se, m
-    | _ -> Global_mapfold.static_exp funs m se
+      | _ -> se, m
 
   (** Replaces nodes call with the call to the correct instance. *)
   let edesc funs m ed =
