@@ -56,7 +56,8 @@ let print_const_dec ff c =
       print_name c.c_name print_type c.c_type print_static_exp c.c_value
   else
     fprintf ff "const %a = %a"
-      print_name c.c_name print_static_exp c.c_value
+      print_name c.c_name print_static_exp c.c_value;
+  fprintf ff "@."
 
 
 let rec print_params ff l =
