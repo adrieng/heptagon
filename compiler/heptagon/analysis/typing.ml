@@ -994,12 +994,17 @@ and build const_env h dec =
   let var_dec (acc_defined, h) vd =
     try
       let ty = check_type const_env vd.v_type in
-        if Env.mem vd.v_ident h then
-          error (Ealready_defined(sourcename vd.v_ident));
 
-        let acc_defined = Env.add vd.v_ident ty acc_defined in
-        let h = Env.add vd.v_ident { ty = ty; last = last vd.v_last } h in
-          { vd with v_type = ty }, (acc_defined, h)
+      let last_dec = match vd.v_last with
+        | Last (Some se) -> Last (Some (expect_static_exp const_env ty se))
+        | Var | Last None -> vd.v_last in
+
+      if Env.mem vd.v_ident h then
+        error (Ealready_defined(sourcename vd.v_ident));
+
+      let acc_defined = Env.add vd.v_ident ty acc_defined in
+      let h = Env.add vd.v_ident { ty = ty; last = last vd.v_last } h in
+      { vd with v_last = last_dec; v_type = ty }, (acc_defined, h)
     with
         TypingError(kind) -> message vd.v_loc kind
   in
