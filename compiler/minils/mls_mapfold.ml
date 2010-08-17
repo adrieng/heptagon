@@ -36,8 +36,9 @@ type 'a mls_it_funs = {
 
 let rec exp_it funs acc e = funs.exp funs acc e
 and exp funs acc e =
+  let e_ty, acc = ty_it funs.global_funs acc e.e_ty in
   let ed, acc = edesc_it funs acc e.e_desc in
-  { e with e_desc = ed }, acc
+  { e with e_desc = ed; e_ty = e_ty }, acc
 
 
 and edesc_it funs acc ed =
@@ -159,13 +160,16 @@ and tdesc funs acc td = match td with
   | Type_struct s ->
       let s, acc = structure_it funs.global_funs acc s in
         Type_struct s, acc
-  | _ -> td, acc
+  | Type_alias ty ->
+      let ty, acc = ty_it funs.global_funs acc ty in
+        Type_alias ty, acc
+  | Type_abs | Type_enum _ -> td, acc
 
 
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
-  let td_list, acc = mapfold (type_dec_it funs) acc p.p_types in
   let cd_list, acc = mapfold (const_dec_it funs) acc p.p_consts in
+  let td_list, acc = mapfold (type_dec_it funs) acc p.p_types in
   let nd_list, acc = mapfold (node_dec_it funs) acc p.p_nodes in
   { p with p_types = td_list; p_consts = cd_list; p_nodes = nd_list }, acc
 
