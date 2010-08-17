@@ -470,7 +470,7 @@ and typing_static_exp const_env se =
     | Sarray_power (se, n) ->
         let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
         let typed_se, ty = typing_static_exp const_env se in
-          Sarray_power (typed_se, typed_n), Tarray(ty, n)
+          Sarray_power (typed_se, typed_n), Tarray(ty, typed_n)
     | Sarray [] ->
         message se.se_loc Eempty_array
     | Sarray (se::se_list) ->
