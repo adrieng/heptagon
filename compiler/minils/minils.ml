@@ -79,6 +79,8 @@ and op =
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
   | Eupdate            (** [ arg1 with arg3..arg_n = arg2 ] *)
   | Econcat            (** arg1@@arg2 *)
+(*
+*)
 
 type pat =
   | Etuplepat of pat list
@@ -150,11 +152,19 @@ let mk_node
     n_params = param;
     n_params_constraints = constraints }
 
-let mk_type_dec ?(type_desc = Type_abs) ?(loc = no_location) name =
+let mk_type_dec type_desc name loc =
   { t_name = name; t_desc = type_desc; t_loc = loc }
+
+let mk_const_dec id ty e loc =
+  { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
 let mk_app ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }
+
+(** The modname field has to be set when known, TODO LG : format_version *)
+let mk_program o n t c =
+  { p_modname = ""; p_format_version = "";
+    p_opened = o; p_nodes = n; p_types = t; p_consts = c }
 
 let void = mk_exp (Eapp (mk_app Etuple, [], None))
 

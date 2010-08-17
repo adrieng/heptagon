@@ -12,9 +12,10 @@ open Compiler_utils
 
 let pp p = if !verbose then Mls_printer.print stdout p
 
-let parse parsing_fun lexing_fun lexbuf =
+let parse prog_name parsing_fun lexing_fun lexbuf =
   try
-    parsing_fun lexing_fun lexbuf
+    let p = parsing_fun lexing_fun lexbuf in
+    { p with p_modname = prog_name }
   with
     | Mls_lexer.Lexical_error(err, loc) ->
         lexical_error err loc
@@ -24,8 +25,8 @@ let parse parsing_fun lexing_fun lexbuf =
         let l = Loc(pos1,pos2) in
         syntax_error l
 
-let parse_implementation lexbuf =
-  parse Mls_parser.program Mls_lexer.token lexbuf
+let parse_implementation prog_name lexbuf =
+  parse prog_name Mls_parser.program Mls_lexer.token lexbuf
 
 let compile pp p =
   (* Clocking *)

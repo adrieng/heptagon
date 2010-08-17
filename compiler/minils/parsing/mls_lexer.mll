@@ -51,7 +51,8 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "lxor", INFIX2("lxor");
  "lsl", INFIX4("lsl");
  "lsr", INFIX4("lsr");
- "asr", INFIX4("asr")
+ "asr", INFIX4("asr");
+ "on", ON;
 ]
 
 
@@ -111,31 +112,33 @@ let newline = '\n' | '\r' '\n'
 rule token = parse
   | newline         { new_line lexbuf; token lexbuf }
   | [' ' '\t'] +    { token lexbuf }
-  | "."             {DOT}
-  | ".."            {DOTDOT}
-  | "("             {LPAREN}
-  | ")"             {RPAREN}
+  | "."             { DOT }
+  | ".."            { DOTDOt }
+  | "("             { LPAREN }
+  | ")"             { RPAREN }
   | "*"             { STAR }
-  | "{"             {LBRACE}
-  | "}"             {RBRACE}
-  | "["             {LBRACKET}
-  | "]"             {RBRACKET}
-  | ":"             {COLON}
-  | ";"             {SEMICOL}
-  | "="             {EQUAL}
-  | "=="            {EQUALEQUAL}
-  | "&"             {AMPERSAND}
-  | "&&"            {AMPERAMPER}
-  | "||"            {BARBAR}
-  | ","             {COMMA}
-  | "->"            {ARROW}
-  | "|"             {BAR}
-  | "-"             {SUBTRACTIVE "-"}
-  | "-."            {SUBTRACTIVE "-."}
-  | "^"             {POWER}
-  | "@"             {AROBASE}
-  | "<<"            {DOUBLE_LESS}
-  | ">>"            {DOUBLE_GREATER}
+  | "{"             { LBRACE }
+  | "}"             { RBRACE }
+  | "["             { LBRACKET }
+  | "]"             { RBRACKET }
+  | ":"             { COLON }
+  | "::"            { COLONCOLON }
+  | ";"             { SEMICOL }
+  | "="             { EQUAL }
+  | "=="            { EQUALEQUAL }
+  | "&"             { AMPERSAND }
+  | "&&"            { AMPERAMPER }
+  | "||"            { BARBAR }
+  | ","             { COMMA }
+  | "->"            { ARROW }
+  | "|"             { BAR }
+  | "-"             { SUBTRACTIVE "-" }
+  | "-."            { SUBTRACTIVE "-." }
+  | "_"             { UNDERSCORE }
+  | "^"             { POWER }
+  | "@"             { AROBASE }
+  | "<<"            { DOUBLE_LESS }
+  | ">>"            { DOUBLE_GREATER }
   | (['A'-'Z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {CONSTRUCTOR id}
   | (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)

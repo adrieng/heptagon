@@ -15,7 +15,6 @@ open Mls2seq
 
 let compile_impl modname filename =
   (* input and output files *)
-  (* input and output files *)
   let source_name = filename ^ ".mls"
   and mls_norm_name = filename ^ "_norm.mls"
   and obc_name = filename ^ ".obc" in
@@ -37,10 +36,12 @@ let compile_impl modname filename =
     let pp = Mls_compiler.pp in
 
     (* Parsing of the file *)
-    let p = Mls_compiler.parse_implementation lexbuf in
+    let p =
+      do_silent_pass Mls_compiler.parse_implementation "Parsing" lexbuf true in
     let p = { p with Minils.p_modname = modname } in
-    comment "Parsing";
-    pp p;
+
+    (* Convert Parse tree to Minils AST *)
+    let p = Mls_scoping.translate_program "Scoping" p pp true in
 
     (* Process the MiniLS AST *)
     let p = Mls_compiler.compile pp p in

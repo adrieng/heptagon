@@ -365,7 +365,6 @@ and mk_node_call map call_context app loc name_list args =
              | Minils.Efun _ -> []
              | Minils.Enode _ -> [reinit o]) in
           [], si, [obj], [Acall (name_list, o, Mstep, args)]
-
     | _ -> assert false
 
 and translate_iterator map call_context it name_list app loc n x c_list =
