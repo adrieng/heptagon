@@ -1,0 +1,20 @@
+
+const c:int = 3
+
+fun f<<n:int>>() returns (y:int)
+let
+  y = n + 3;
+tel
+
+fun g<<m:int>>() returns (y:int)
+var x:int;
+let
+  x = m + f<<2>>();
+  y = f<<m>>();
+tel
+
+fun h() returns (y:int)
+let
+  y = c + g<<c>>();
+tel
+
