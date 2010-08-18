@@ -27,7 +27,7 @@ let iterator_to_string i =
 let rec print_pat ff = function
   | Evarpat n -> print_ident ff n
   | Etuplepat pat_list ->
-      fprintf ff "@[<2>%a@]" (print_list_r print_pat "("","")") pat_list
+      fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
 
 let rec print_ck ff = function
   | Cbase -> fprintf ff "base"
@@ -39,7 +39,7 @@ let rec print_ck ff = function
 let rec print_clock ff = function
   | Ck ck -> print_ck ff ck
   | Cprod ct_list ->
-      fprintf ff "@[<2>%a@]" (print_list_r print_clock "("" *"")") ct_list
+      fprintf ff "@[<2>(%a)@]" (print_list_r print_clock """ *""") ct_list
 
 let print_vd ff { v_ident = n; v_type = ty; v_clock = ck } =
   if !Misc.full_type_info then
@@ -67,7 +67,7 @@ and print_node_params ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_param "<<"","">>") l
 
 and print_exp_tuple ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_exp "("","")") l
+  fprintf ff "@[<2>(%a)@]" (print_list_r print_exp """,""") l
 
 and print_vd_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_vd "("";"")") l
@@ -149,8 +149,7 @@ and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_longname print_exp "("" -> "")") c
 
 and print_tag_e_list ff tag_e_list =
-  fprintf ff "@[%a@]"
-    (print_list print_handler """""") tag_e_list
+  fprintf ff "@[%a@]" (print_list print_handler """""") tag_e_list
 
 
 and print_eq ff { eq_lhs = p; eq_rhs = e } =
@@ -185,8 +184,8 @@ and print_field ff field =
   fprintf ff "@[%a: %a@]" print_name field.f_name  print_type field.f_type
 
 
-let print_contract ff
-    { c_local = l; c_eq = eqs; c_assume = e_a; c_enforce = e_g; } =
+let print_contract ff { c_local = l; c_eq = eqs;
+                        c_assume = e_a; c_enforce = e_g; } =
   fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@]"
     print_local_vars l
     print_eqs eqs
@@ -194,9 +193,9 @@ let print_contract ff
     print_exp e_g
 
 
-let print_node ff
-    { n_name = n; n_input = ni; n_output = no;
-      n_contract = contract; n_local = nl; n_equs = ne; n_params = params } =
+let print_node ff { n_name = n; n_input = ni; n_output = no;
+                    n_contract = contract; n_local = nl;
+                    n_equs = ne; n_params = params } =
   fprintf ff "@[node %s%a%a@ returns %a@]@\n%a%a%a@]@\n@."
     n
     print_node_params params
