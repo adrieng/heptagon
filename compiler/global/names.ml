@@ -88,4 +88,7 @@ let print_longname ff n =
         Format.fprintf ff "%s." m1;
         print_name ff m2
 
-
+let opname ln = match ln with
+  | Name n -> n
+  | Modname { qual = "Pervasives"; id = m; } -> m
+  | Modname { qual = qual; id = id; } -> qual ^ "." ^ id

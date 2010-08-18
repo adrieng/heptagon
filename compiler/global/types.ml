@@ -48,9 +48,18 @@ let rec print_static_exp ff se = match se.se_desc with
   | Sfloat f -> fprintf ff "%f" f
   | Sconstructor ln -> print_longname ff ln
   | Svar id -> fprintf ff "%a" print_longname id
+  (* | Sop (op, [e_l; e_r]) -> *)
+  (*     fprintf ff "(@[<2>%a@ %a %a@])" *)
+  (*       print_static_exp e_l print_longname op print_static_exp r *)
   | Sop (op, se_list) ->
-      fprintf ff "@[<2>%a@,%a@]"
-        print_longname op  print_static_exp_tuple se_list
+      if is_infix (shortname op)
+      then
+        let op_s = opname op ^ " " in
+        fprintf ff "@[%a@]"
+          (print_list_l print_static_exp "(" op_s ")") se_list
+      else
+        fprintf ff "@[<2>%a@,%a@]"
+          print_longname op  print_static_exp_tuple se_list
   | Sarray_power (se, n) ->
       fprintf ff "%a^%a" print_static_exp se  print_static_exp n
   | Sarray se_list ->
