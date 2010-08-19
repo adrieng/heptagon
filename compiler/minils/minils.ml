@@ -77,7 +77,7 @@ and op =
   | Eselect            (** arg1[a_params] *)
   | Eselect_slice      (** arg1[a_param1..a_param2] *)
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
-  | Eupdate            (** [ arg1 with a_params = arg2 ] *)
+  | Eupdate            (** [ arg1 with arg3..arg_n = arg2 ] *)
   | Econcat            (** arg1@@arg2 *)
   | Elambda of var_dec list * var_dec list * var_dec list * eq list
       (* inputs, outputs, locals, body *)
