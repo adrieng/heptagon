@@ -8,7 +8,6 @@
 (**************************************************************************)
 
 (** This module defines static expressions, used in params and for constants.
-
     const n: int = 3;
     var x : int^n; var y : int^(n + 2);
     x[n - 1], x[1 + 3],...
@@ -35,31 +34,28 @@ let op_from_app_name ln =
     variables values taken from env (mapping vars to integers).
     Variables are replaced with their values and every operator
     that can be computed is replaced with the value of the result. *)
-let rec simplify env se =
-  match se.se_desc with
-    | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
-    | Svar ln ->
-        (try
-           let { info = cd } = find_const ln in
-             simplify env cd.c_value
-         with
-             Not_found ->
-               (match ln with
-                  | Name n -> (try simplify env (NamesEnv.find n env) with | _ -> se)
-                  | Modname _ -> se)
-        )
-    | Sop (op, se_list) ->
-        let se_list = List.map (simplify env) se_list in
-          { se with se_desc = apply_op op se_list }
-    | Sarray se_list ->
-        { se with se_desc = Sarray (List.map (simplify env) se_list) }
-    | Sarray_power (se, n) ->
-         { se with se_desc = Sarray_power (simplify env se, simplify env n) }
-    | Stuple se_list ->
-         { se with se_desc = Stuple (List.map (simplify env) se_list) }
-    | Srecord f_se_list ->
-        { se with se_desc = Srecord
-            (List.map (fun (f,se) -> f, simplify env se) f_se_list) }
+let rec simplify env se = match se.se_desc with
+  | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
+  | Svar ln -> (
+      try
+        let { info = cd } = find_const ln in
+        simplify env cd.c_value
+      with Not_found -> (
+        match ln with
+          | Name n -> (try simplify env (NamesEnv.find n env) with | _ -> se)
+          | Modname _ -> se ) )
+  | Sop (op, se_list) ->
+      let se_list = List.map (simplify env) se_list in
+        { se with se_desc = apply_op op se_list }
+  | Sarray se_list ->
+      { se with se_desc = Sarray (List.map (simplify env) se_list) }
+  | Sarray_power (se, n) ->
+       { se with se_desc = Sarray_power (simplify env se, simplify env n) }
+  | Stuple se_list ->
+       { se with se_desc = Stuple (List.map (simplify env) se_list) }
+  | Srecord f_se_list ->
+      { se with se_desc = Srecord
+          (List.map (fun (f,se) -> f, simplify env se) f_se_list) }
 
 and apply_op op se_list =
   match se_list with
@@ -73,7 +69,7 @@ and apply_op op se_list =
                Sint (n1 * n2)
            | Modname { qual = "Pervasives"; id = "/" } ->
                let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
-                 Sint n
+               Sint n
            | Modname { qual = "Pervasives"; id = "=" } ->
                Sbool (n1 = n2)
            | _ -> assert false (*TODO: add missing operators*)
@@ -85,12 +81,17 @@ and apply_op op se_list =
         )
     | _ -> Sop(op, se_list)
 
+
 (** [int_of_static_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises
     Instanciation_failed if it cannot be computed (if a var has no value).*)
-let int_of_static_exp env e =
-  let e =  simplify env e in
-  match e.se_desc with | Sint n -> n | _ -> raise Instanciation_failed
+let int_of_static_exp env se =
+  match (simplify env se).se_desc with
+    | Sint i -> i
+    | _ ->
+      (Format.eprintf "Internal compiler error, \
+        [eval_int] received the static_exp %a.\n" Types.print_static_exp se;
+      assert false)
 
 (** [is_true env constr] returns whether the constraint is satisfied
     in the environment (or None if this can be decided)
@@ -101,15 +102,13 @@ let is_true env =
         Some true, Cequal (simplify env e1, simplify env e2)
     | Cequal (e1, e2) ->
         let e1 = simplify env e1 in
-        let e2 = simplify env e2
-        in
+       let e2 = simplify env e2 in
         (match e1.se_desc, e2.se_desc with
            | Sint n1, Sint n2 -> Some (n1 = n2), Cequal (e1, e2)
            | (_, _) -> None, Cequal (e1, e2))
     | Clequal (e1, e2) ->
         let e1 = simplify env e1 in
-        let e2 = simplify env e2
-        in
+        let e2 = simplify env e2 in
         (match e1.se_desc, e2.se_desc with
            | Sint n1, Sint n2 -> Some (n1 <= n2), Clequal (e1, e2)
            | _, _ -> None, Clequal (e1, e2))
@@ -125,8 +124,7 @@ let rec solve const_env =
     | [] -> []
     | c :: l ->
         let l = solve const_env l in
-        let (res, c) = is_true const_env c
-        in
+        let (res, c) = is_true const_env c in
         (match res with
            | None -> c :: l
            | Some v -> if not v then raise (Solve_failed c) else l)
@@ -160,8 +158,8 @@ let instanciate_constr m constr =
   let replace_one m = function
     | Cequal (e1, e2) -> Cequal (static_exp_subst m e1, static_exp_subst m e2)
     | Clequal (e1, e2) -> Clequal (static_exp_subst m e1, static_exp_subst m e2)
-    | Cfalse -> Cfalse
-  in List.map (replace_one m) constr
+    | Cfalse -> Cfalse in
+  List.map (replace_one m) constr
 
 
 open Format
