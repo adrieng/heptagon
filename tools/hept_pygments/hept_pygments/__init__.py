@@ -20,7 +20,7 @@ class HeptagonLexer(RegexLexer):
             (r'pre|\-\>|\+|\-|\/|=|&|not|\*|<=|>=|\^', Operator),
             (r'\d+', Number.Integer),
             (r' |\t', Whitespace),
-            (r'\(|\)|;|\||:|,|\]|\[|\.|<|>', Punctuation),
+            (r'\(|\)|;|\||:|,|\]|\[|\.|<|>|<<|>>', Punctuation),
             (r'true|false', Literal),
             (r'[A-Z]\w*', String.Symbol),
             (r'\w+', Name)
@@ -47,7 +47,7 @@ class MLSLexer(RegexLexer):
             (r'pre|\-\>|\+|\-|\/|=|&|not|\*|<=|>=|\^', Operator),
             (r'\d+', Number.Integer),
             (r' |\t', Whitespace),
-            (r'\(|\)|;|\||:|,|\]|\[|\.', Punctuation),
+            (r'\(|\)|;|\||:|,|\]|\[|\.|<<|>>', Punctuation),
             (r'true|false', Literal),
             (r'[A-Z]\w*', String.Symbol),
             (r'\w+', Name)
