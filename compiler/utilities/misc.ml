@@ -179,6 +179,16 @@ let rec split_last = function
 let remove x l =
   List.filter (fun y -> x <> y) l
 
+let make_list_compare c l1 l2 =
+  let rec aux l1 l2 = match (l1, l2) with
+    | (h1::t1, h2::t2) ->
+        let result = c h1 h2 in
+        if result = 0 then aux t1 t2 else result
+    | ([],     []    ) -> 0
+    | (_,      []    ) -> 1
+    | ([],     _     ) -> -1
+  in aux l1 l2
+
 let is_empty = function
   | [] -> true
   | _ -> false

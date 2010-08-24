@@ -163,7 +163,12 @@ val repeat_list : 'a -> int -> 'a list
 val memd_assoc : 'b -> ('a * 'b) list -> bool
 
 (** Same as List.assoc but searching for a data and returning the key. *)
-val assocd: 'b -> ('a * 'b) list -> 'a
+val assocd : 'b -> ('a * 'b) list -> 'a
+
+(** [make_compare c] generates the lexicographical compare function on lists
+    induced by [c] *)
+val make_list_compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
+
 
 
 (** Ast iterators *)
