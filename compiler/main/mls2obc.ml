@@ -106,7 +106,7 @@ let rec translate map (si, j, s) e =
         let idx_list = List.map (fun idx -> mk_exp (Econst idx)) idx in
           Elhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
     | _ ->
-      Mls_printer.print_exp stdout e;
+      Format.eprintf "%a" Mls_printer.print_exp e;
       assert false
   in
     mk_exp ~ty:e.Minils.e_ty desc

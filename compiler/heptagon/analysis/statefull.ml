@@ -22,12 +22,12 @@ type error =
 let message loc kind =
   begin match kind with
     | Eshould_be_a_node ->
-        Printf.eprintf "%aThis node is statefull \
-                       but was declared stateless.\n"
-          output_location loc
+        Format.eprintf "%aThis node is statefull \
+                       but was declared stateless.@."
+          print_location loc
     | Eexp_should_be_stateless ->
-        Printf.eprintf "%aThis expression should be stateless.\n"
-          output_location loc
+        Format.eprintf "%aThis expression should be stateless.@."
+          print_location loc
   end;
   raise Error
 

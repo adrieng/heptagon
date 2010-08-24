@@ -19,7 +19,7 @@ open Signature
 open C
 open Cgen
 open Location
-open Printf
+open Format
 open Compiler_utils
 
 (** {1 Main C function generation} *)
@@ -31,13 +31,13 @@ and max_step = Idents.fresh "step_max"
 let assert_node_res cd =
   let stepm = find_step_method cd in
   if List.length stepm.m_inputs > 0 then
-    (Printf.eprintf "Cannot generate run-time check for node %s with inputs.\n"
+    (Format.eprintf "Cannot generate run-time check for node %s with inputs.\n"
        cd.cd_name;
      exit 1);
   if (match stepm.m_outputs with
         | [{ v_type = Tid nbool; }] when nbool = Initial.pbool -> false
         | _ -> true) then
-    (Printf.eprintf
+    (Format.eprintf
        "Cannot generate run-time check for node %s with non-boolean output.\n"
        cd.cd_name;
      exit 1);
@@ -116,7 +116,7 @@ let main_def_of_class_def cd =
           | _ -> assert false in
         let (prompt, args_format_s) = mk_prompt lhs in
         let scan_exp =
-          let printf_s = Printf.sprintf "%s ? " prompt in
+          let printf_s = Format.sprintf "%s ? " prompt in
           let format_s = format_for_type ty in
           Csblock { var_decls = [];
                     block_body = [
@@ -256,7 +256,7 @@ let mk_main name p = match (!Misc.simulation_node, !Misc.assert_nodes) with
       let find_class n =
         try List.find (fun cd -> cd.cd_name = n) p.p_defs
         with Not_found ->
-          Printf.eprintf "Unknown node %s.\n" n;
+          Format.eprintf "Unknown node %s.\n" n;
           exit 1 in
 
       let a_classes = List.map find_class n_names in

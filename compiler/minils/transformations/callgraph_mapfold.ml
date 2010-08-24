@@ -18,12 +18,12 @@ struct
   let message loc kind =
     begin match kind with
       | Enode_unbound ln ->
-          Printf.eprintf "%aUnknown node '%s'\n"
-            output_location loc
+          Format.eprintf "%aUnknown node '%s'@."
+            print_location loc
             (fullname ln)
       | Evar_unbound n ->
-          Printf.eprintf "%aUnbound static var '%s'\n"
-            output_location loc
+          Format.eprintf "%aUnbound static var '%s'\n"
+            print_location loc
             n
     end;
     raise Misc.Error
@@ -219,7 +219,7 @@ let load_object_file modname =
         try
           let p:program = input_value ic in
             if p.p_format_version <> minils_format_version then (
-              Printf.eprintf "The file %s was compiled with \
+              Format.eprintf "The file %s was compiled with \
                        an older version of the compiler.\n \
                        Please recompile %s.ept first.\n" filename name;
               raise Error
@@ -229,12 +229,12 @@ let load_object_file modname =
         with
           | End_of_file | Failure _ ->
               close_in ic;
-              Printf.eprintf "Corrupted object file %s.\n\
+              Format.eprintf "Corrupted object file %s.\n\
                         Please recompile %s.ept first.\n" filename name;
               raise Error
     with
       | Modules.Cannot_find_file(filename) ->
-          Printf.eprintf "Cannot find the object file '%s'.\n"
+          Format.eprintf "Cannot find the object file '%s'.\n"
             filename;
           raise Error
 

@@ -67,9 +67,9 @@ let load_module modname =
     try
       let m:env = input_value ic in
       if m.format_version <> interface_format_version then (
-        Printf.eprintf "The file %s was compiled with \
+        Format.eprintf "The file %s was compiled with \
                        an older version of the compiler.\n \
-                       Please recompile %s.ept first.\n" filename name;
+                       Please recompile %s.ept first.@." filename name;
         raise Error
       );
       close_in ic;
@@ -77,12 +77,12 @@ let load_module modname =
     with
       | End_of_file | Failure _ ->
           close_in ic;
-          Printf.eprintf "Corrupted compiled interface file %s.\n\
-                        Please recompile %s.ept first.\n" filename name;
+          Format.eprintf "Corrupted compiled interface file %s.\n\
+                        Please recompile %s.ept first.@." filename name;
           raise Error
   with
     | Cannot_find_file(filename) ->
-        Printf.eprintf "Cannot find the compiled interface file %s.\n"
+        Format.eprintf "Cannot find the compiled interface file %s.@."
           filename;
         raise Error
 

@@ -142,23 +142,18 @@ module Printer = struct
   open Format
   open Pp_tools
 
-  let rec fprint_init ff i = match i.i_desc with
+  let rec print_init ff i = match i.i_desc with
     | Izero -> fprintf ff "0"
     | Ione -> fprintf ff "1"
     | Ivar -> fprintf ff "0"
-    | Imax(i1, i2) -> fprintf ff "@[%a\\/%a@]" fprint_init i1 fprint_init i2
-    | Ilink(i) -> fprint_init ff i
+    | Imax(i1, i2) -> fprintf ff "@[%a\\/%a@]" print_init i1 print_init i2
+    | Ilink(i) -> print_init ff i
 
-  let rec fprint_typ ff = function
-    | Ileaf(i) -> fprint_init ff i
+  let rec print_type ff = function
+    | Ileaf(i) -> print_init ff i
     | Iproduct(ty_list) ->
-        fprintf ff "@[%a@]" (print_list_r fprint_typ "("" *"")") ty_list
+        fprintf ff "@[%a@]" (print_list_r print_type "("" *"")") ty_list
 
-  let output_typ oc ty =
-    let ff = formatter_of_out_channel oc in
-    fprintf ff "@[";
-    fprint_typ ff ty;
-    fprintf ff "@?@]"
 end
 
 module Error = struct
@@ -173,12 +168,12 @@ module Error = struct
   let message loc kind =
     begin match kind with
       | Eclash(left_ty, right_ty) ->
-          Printf.eprintf "%aInitialization error: this expression has type \
+          Format.eprintf "%aInitialization error: this expression has type \
               %a, \n\
-              but is expected to have type %a\n"
-            output_location loc
-            Printer.output_typ left_ty
-            Printer.output_typ right_ty
+              but is expected to have type %a@."
+            print_location loc
+            Printer.print_type left_ty
+            Printer.print_type right_ty
     end;
     raise Misc.Error
 end

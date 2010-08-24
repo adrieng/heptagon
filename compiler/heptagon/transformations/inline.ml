@@ -48,8 +48,8 @@ let mk_unique_node nd =
 
 let exp funs (env, newvars, newequs) exp = match exp.e_desc with
   | Eiterator (it, { a_op = Enode nn; }, _, _, _) when to_be_inlined nn ->
-      Printf.eprintf
-        "WARN: inlining iterators (\"%s %s\" here) is unsupported.\n"
+      Format.eprintf
+        "WARN: inlining iterators (\"%s %s\" here) is unsupported.@."
         (Hept_printer.iterator_to_string it) (fullname nn);
       (exp, (env, newvars, newequs))
 

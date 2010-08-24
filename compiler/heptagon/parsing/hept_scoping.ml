@@ -7,7 +7,6 @@ open Hept_parsetree
 open Names
 open Idents
 open Format
-open Printf
 open Static
 open Modules
 
@@ -23,24 +22,24 @@ struct
   let message loc kind =
     begin match kind with
       | Evar name ->
-          eprintf "%aThe value identifier %s is unbound.\n"
-            output_location loc
+          eprintf "%aThe value identifier %s is unbound.@."
+            print_location loc
             name
       | Econst_var name ->
-          eprintf "%aThe const identifier %s is unbound.\n"
-            output_location loc
+          eprintf "%aThe const identifier %s is unbound.@."
+            print_location loc
             name
       | Evariable_already_defined name ->
-          eprintf "%aThe variable %s is already defined.\n"
-            output_location loc
+          eprintf "%aThe variable %s is already defined.@."
+            print_location loc
             name
       | Econst_variable_already_defined name ->
-          eprintf "%aThe const variable %s is already defined.\n"
-            output_location loc
+          eprintf "%aThe const variable %s is already defined.@."
+            print_location loc
             name
       | Estatic_exp_expected ->
-          eprintf "%aA static expression was expected.\n"
-            output_location loc
+          eprintf "%aA static expression was expected.@."
+            print_location loc
     end;
     raise Misc.Error
 end

@@ -83,13 +83,11 @@ exception Error of error
 let error kind = raise (Error(kind))
 
 let message loc kind =
-  let output_ac oc ac =
-    let ff = formatter_of_out_channel oc in output_ac ff ac in
   begin match kind with
     | Ecausality_cycle(ac) ->
-        Printf.eprintf
-          "%aCausality error: the following constraint is not causal.\n%a\n."
-          output_location loc
+        eprintf
+          "%aCausality error: the following constraint is not causal.\n%a@."
+          print_location loc
           output_ac ac
   end;
   raise Misc.Error

@@ -16,16 +16,16 @@ open Signature
 open Types
 open Clocks
 open Location
-open Printf
+open Format
 
 (** Error Kind *)
 type error_kind = | Etypeclash of ct * ct
 
 let error_message loc = function
   | Etypeclash (actual_ct, expected_ct) ->
-      Printf.eprintf "%aClock Clash: this expression has clock %a, \n\
-                        but is expected to have clock %a.\n"
-        output_location loc
+      Format.eprintf "%aClock Clash: this expression has clock %a, \n\
+                        but is expected to have clock %a.@."
+        print_location loc
         print_clock actual_ct
         print_clock expected_ct;
       raise Error
@@ -88,6 +88,7 @@ and typing_op op args h e ck = match op, args with
   | Econcat, [e1; e2] ->
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; ct)
+  | Elambda  _, _ -> Format.eprintf "Elambda dans le cloking"; assert false;
 
 
 and expect h expected_ty e =
@@ -115,7 +116,7 @@ let typing_eqs h eq_list = (*TODO FIXME*)
     let ty_pat = typing_pat h pat in
     (try expect h ty_pat e with
       | Error -> (* DEBUG *)
-          Printf.eprintf "Complete expression: %a\nClock pattern: %a\n"
+          Format.eprintf "Complete expression: %a\nClock pattern: %a@."
             Mls_printer.print_exp e
             Mls_printer.print_clock ty_pat;
           raise Error)

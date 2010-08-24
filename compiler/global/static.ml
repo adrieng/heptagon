@@ -90,7 +90,7 @@ let int_of_static_exp env se =
     | Sint i -> i
     | _ ->
       (Format.eprintf "Internal compiler error, \
-        [eval_int] received the static_exp %a.\n" Types.print_static_exp se;
+        [eval_int] received the static_exp %a.@." Types.print_static_exp se;
       assert false)
 
 (** [is_true env constr] returns whether the constraint is satisfied
@@ -170,8 +170,4 @@ let print_size_constraint ff = function
   | Clequal (e1, e2) ->
       fprintf ff "@[%a <= %a@]" print_static_exp e1 print_static_exp e2
   | Cfalse -> fprintf ff "Cfalse"
-
-let psize_constraint oc c =
-  let ff = formatter_of_out_channel oc
-  in (print_size_constraint ff c; fprintf ff "@?")
 

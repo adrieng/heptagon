@@ -55,111 +55,111 @@ let error kind = raise (TypingError(kind))
 let message loc kind =
   begin match kind with
     | Emissing(s) ->
-        Printf.eprintf "%aNo equation is given for name %s.\n"
-          output_location loc
+        Format.eprintf "%aNo equation is given for name %s.@."
+          print_location loc
           s;
     | Emissingcase(s) ->
-        Printf.eprintf "%aCase %s not defined.\n"
-          output_location loc
+        Format.eprintf "%aCase %s not defined.@."
+          print_location loc
           s;
     | Eundefined(s) ->
-        Printf.eprintf "%aThe name %s is unbound.\n"
-          output_location loc
+        Format.eprintf "%aThe name %s is unbound.@."
+          print_location loc
           s;
     | Elast_undefined(s) ->
-        Printf.eprintf "%aThe name %s does not have a last value.\n"
-          output_location loc
+        Format.eprintf "%aThe name %s does not have a last value.@."
+          print_location loc
           s;
     | Eshould_be_last(s) ->
-        Printf.eprintf "%aOnly the last value of %s can be accessed.\n"
-          output_location loc
+        Format.eprintf "%aOnly the last value of %s can be accessed.@."
+          print_location loc
           s;
     | Etype_clash(actual_ty, expected_ty) ->
-        Printf.eprintf "%aType Clash: this expression has type %a, \n\
-            but is expected to have type %a.\n"
-          output_location loc
-          Hept_printer.ptype actual_ty
-          Hept_printer.ptype expected_ty
+        Format.eprintf "%aType Clash: this expression has type %a, \n\
+            but is expected to have type %a.@."
+          print_location loc
+          Types.print_type actual_ty
+          Types.print_type expected_ty
     | Earity_clash(actual_arit, expected_arit) ->
-        Printf.eprintf "%aType Clash: this expression expects %d arguments,\n\
-            but is expected to have %d.\n"
-          output_location loc
+        Format.eprintf "%aType Clash: this expression expects %d arguments,\n\
+            but is expected to have %d.@."
+          print_location loc
           expected_arit actual_arit
     | Estatic_arity_clash(actual_arit, expected_arit) ->
-        Printf.eprintf "%aType Clash: this node expects %d static parameters,\n\
-            but was given %d.\n"
-          output_location loc
+        Format.eprintf "%aType Clash: this node expects %d static parameters,\n\
+            but was given %d.@."
+          print_location loc
           expected_arit actual_arit
     | Ealready_defined(s) ->
-        Printf.eprintf "%aThe name %s is already defined.\n"
-          output_location loc
+        Format.eprintf "%aThe name %s is already defined.@."
+          print_location loc
           s
     | Enon_exaustive ->
-        Printf.eprintf "%aSome constructors are missing in this \
-                        pattern/matching.\n"
-          output_location loc
+        Format.eprintf "%aSome constructors are missing in this \
+                        pattern/matching.@."
+          print_location loc
     | Epartial_switch(s) ->
-        Printf.eprintf
-          "%aThe case %s is missing.\n"
-          output_location loc
+        Format.eprintf
+          "%aThe case %s is missing.@."
+          print_location loc
           s
     | Etoo_many_outputs ->
-        Printf.eprintf
-          "%aA function may only returns a basic value.\n"
-          output_location loc
+        Format.eprintf
+          "%aA function may only returns a basic value.@."
+          print_location loc
     | Esome_fields_are_missing ->
-        Printf.eprintf
-          "%aSome fields are missing.\n"
-          output_location loc
+        Format.eprintf
+          "%aSome fields are missing.@."
+          print_location loc
     | Esubscripted_value_not_an_array  ty ->
-        Printf.eprintf
-          "%aSubscript used on a non array type : %a.\n"
-          output_location loc
-          Hept_printer.ptype ty
+        Format.eprintf
+          "%aSubscript used on a non array type : %a.@."
+          print_location loc
+          Types.print_type ty
     | Earray_subscript_should_be_const ->
-        Printf.eprintf
-          "%aSubscript has to be a static value.\n"
-          output_location loc
+        Format.eprintf
+          "%aSubscript has to be a static value.@."
+          print_location loc
     | Eundefined_const ln ->
-        Printf.eprintf
-          "%aThe const name '%s' is unbound.\n"
-          output_location loc
+        Format.eprintf
+          "%aThe const name '%s' is unbound.@."
+          print_location loc
           (fullname ln)
     | Econstraint_solve_failed c ->
-        Printf.eprintf
-          "%aThe following constraint cannot be satisified:\n %a.\n"
-          output_location loc
-          psize_constraint c
+        Format.eprintf
+          "%aThe following constraint cannot be satisified:\n %a.@."
+          print_location loc
+          print_size_constraint c
     | Etype_should_be_static ty ->
-        Printf.eprintf
-          "%aThis type should be static : %a.\n"
-          output_location loc
-          Hept_printer.ptype ty
+        Format.eprintf
+          "%aThis type should be static : %a.@."
+          print_location loc
+          Types.print_type ty
     | Erecord_type_expected ty ->
-        Printf.eprintf
-          "%aA record was expected (found %a).\n"
-          output_location loc
-          Hept_printer.ptype ty
+        Format.eprintf
+          "%aA record was expected (found %a).@."
+          print_location loc
+          Types.print_type ty
     | Eno_such_field (ty, f) ->
-        Printf.eprintf
-          "%aThe record type '%a' does not have a '%s' field.\n"
-          output_location loc
-          Hept_printer.ptype ty
+        Format.eprintf
+          "%aThe record type '%a' does not have a '%s' field.@."
+          print_location loc
+          Types.print_type ty
           (shortname f)
     | Eempty_record ->
-        Printf.eprintf
-          "%aThe record is empty.\n"
-          output_location loc
+        Format.eprintf
+          "%aThe record is empty.@."
+          print_location loc
     | Eempty_array ->
-        Printf.eprintf
-          "%aThe array is empty.\n"
-          output_location loc
+        Format.eprintf
+          "%aThe array is empty.@."
+          print_location loc
     | Efoldi_bad_args  ty ->
-        Printf.eprintf
+        Format.eprintf
           "%aThe function given to foldi should expect an integer \
-               as the last but one argument (found: %a).\n"
-          output_location loc
-          Hept_printer.ptype ty
+               as the last but one argument (found: %a).@."
+          print_location loc
+          Types.print_type ty
   end;
   raise Error
 

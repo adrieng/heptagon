@@ -46,7 +46,7 @@ let generate_target p s =
   let print_unfolded p_list =
     if !Misc.verbose then
       begin
-        Printf.fprintf stderr "** Unfolding done **\n\n";
+        Format.eprintf "** Unfolding done **\n@.";
         List.iter (Mls_printer.print stderr) p_list;
       end in
 
@@ -68,7 +68,7 @@ let generate_target p s =
           print_unfolded p_list;
           if !Misc.verbose then
             begin
-              Printf.fprintf stderr "** Translation to Obc done **\n\n";
+              Format.eprintf "** Translation to Obc done **\n@.";
               List.iter (wrap_print Obc_printer.print_prog stderr) o_list;
             end;
             List.iter convert_fun o_list

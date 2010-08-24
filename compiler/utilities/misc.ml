@@ -35,10 +35,10 @@ let locate_stdlib () =
     Sys.getenv "HEPTLIB"
   with
       Not_found -> standard_lib in
-  Printf.printf "Standard library in %s\n" stdlib
+  Format.printf "Standard library in %s\n" stdlib
 
 let show_version () =
-  Printf.printf "The Heptagon compiler, version %s (%s)\n"
+  Format.printf "The Heptagon compiler, version %s (%s)\n"
     version date;
   locate_stdlib ()
 

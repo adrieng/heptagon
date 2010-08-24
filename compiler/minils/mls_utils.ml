@@ -15,7 +15,7 @@ type err_kind = | Enot_static_exp
 
 let err_message ?(exp=void) ?(loc=exp.e_loc) = function
   | Enot_static_exp ->
-      Printf.eprintf "The expression %a should be a static_exp.@."
+      Format.eprintf "The expression %a should be a static_exp.@."
         print_exp exp;
       raise Error
 

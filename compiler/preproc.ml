@@ -24,7 +24,7 @@ let date =
     let prefix s = String.sub s 0 3 in
     (prefix days.(tm.tm_wday), prefix months.(tm.tm_mon)) in
 
-  Printf.sprintf "%s. %s. %d %d:%d:%d CET %d"
+  Format.sprintf "%s. %s. %d %d:%d:%d CET %d"
     day month tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec (1900 + tm.tm_year)
 
 

@@ -264,13 +264,13 @@ and print_block ff { b_local = v_list; b_equs = eqs; b_defnames = defnames } =
 
 let print_type_def ff { t_name = name; t_desc = tdesc } =
   match tdesc with
-    | Type_abs -> fprintf ff "@[type %s@\n@]" name
+    | Type_abs -> fprintf ff "@[type %s@.@]" name
     | Type_alias ty ->
-        fprintf ff  "@[type %s@ = %a\n@]" name  print_type ty
+        fprintf ff  "@[type %s@ = %a@.@]" name  print_type ty
     | Type_enum(tag_name_list) ->
         fprintf ff "@[type %s = " name;
         print_list_r print_name "" "| " "" ff tag_name_list;
-        fprintf ff "@\n@]"
+        fprintf ff "@.@]"
     | Type_struct(f_ty_list) ->
         fprintf ff "@[type %s = " name;
         print_list_r
@@ -306,7 +306,7 @@ let print_contract ff {c_block = b;
   fprintf ff "assume %a@;enforce %a@;with (@[<hov>"
     print_exp e_a
     print_exp e_g;
-  fprintf ff "@])@]@\n"
+  fprintf ff "@])@]@."
 
 let print_node_params ff = function
   | [] -> ()
@@ -337,10 +337,6 @@ let print_open_module ff name =
   fprintf ff "@[open ";
   print_name ff name;
   fprintf ff "@.@]"
-
-let ptype oc ty =
-  let ff = formatter_of_out_channel oc in
-  print_type ff ty; fprintf ff "@?"
 
 let print oc { p_opened = po; p_types = pt; p_nodes = pn; p_consts = pc } =
   let ff = formatter_of_out_channel oc in

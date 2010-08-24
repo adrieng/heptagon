@@ -4,7 +4,7 @@ open Names
 open Idents
 open Format
 open Location
-open Printf
+open Format
 open Static
 open Signature
 

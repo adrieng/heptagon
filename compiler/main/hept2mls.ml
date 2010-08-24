@@ -17,7 +17,6 @@ open Static
 open Types
 open Clocks
 open Format
-open Printf
 
 open Minils
 open Mls_utils
@@ -32,11 +31,11 @@ struct
   let message loc kind =
     begin match kind with
       | Ereset_not_var ->
-          eprintf "%aOnly variables can be used for resets.\n"
-            output_location loc
+          eprintf "%aOnly variables can be used for resets.@."
+            print_location loc
       | Eunsupported_language_construct ->
-          eprintf "%aThis construct is not supported by MiniLS.\n"
-            output_location loc
+          eprintf "%aThis construct is not supported by MiniLS.@."
+            print_location loc
     end;
     raise Misc.Error
 end
@@ -65,7 +64,7 @@ struct
   let con env x e =
     let rec conrec env =
       match env with
-        | Eempty -> Printf.eprintf "%s\n" (name x); assert false
+        | Eempty -> Format.eprintf "%s@." (name x); assert false
         | Eon(env, tag, name) ->
             let e, ck = conrec env in
             let ck_tag_name = Con(ck, tag, name) in
@@ -155,7 +154,7 @@ let switch x ci_eqs_list =
             else
               begin
                 List.iter
-                  (fun (x,e) -> Printf.eprintf "|%s|, " (name x))
+                  (fun (x,e) -> Format.eprintf "|%s|, " (name x))
                   firsts;
                 assert false
               end;
