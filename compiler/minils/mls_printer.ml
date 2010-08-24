@@ -10,12 +10,9 @@ open Pp_tools
 open Minils
 
 (** Every print_ function is boxed, that is it doesn't export break points,
-    Exceptions are print_list* print_type_desc *)
+    Exceptions are [list] class functions *)
 
-(** Every print_ function is without heading white space,
-    except for print_type_desc *)
-
-(** Every print_ function is without heading carry return *)
+(** Every print_ function is without heading carry return or white space *)
 
 let iterator_to_string i =
   match i with
@@ -166,19 +163,15 @@ and print_eqs ff = function
 let print_open_module ff name = fprintf ff "open %a@." print_name name
 
 let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
+  let print_type_desc ff = function
+    | Type_abs -> ()
+    | Type_alias ty -> fprintf ff  " =@ %a" print_type ty
+    | Type_enum tag_name_list ->
+        fprintf ff " =@ %a" (print_list print_name """|""") tag_name_list
+    | Type_struct f_ty_list ->
+        fprintf ff " =@ %a" (print_record print_field) f_ty_list in
   fprintf ff "@[<2>type %s%a@]@." name print_type_desc tdesc
 
-(** Small exception to the rule,
-    adding a heading space itself when needed and exporting a break*)
-and print_type_desc ff = function
-  | Type_abs -> () (* that's the reason of the exception *)
-  | Type_alias ty ->
-      fprintf ff  " =@ %a" print_type ty
-  | Type_enum tag_name_list ->
-      fprintf ff " =@ %a" (print_list print_name """|""") tag_name_list
-  | Type_struct f_ty_list ->
-      fprintf ff " =@ %a"
-        (print_record print_field) f_ty_list
 
 and print_field ff field =
   fprintf ff "@[%a: %a@]" print_name field.f_name  print_type field.f_type
@@ -205,16 +198,6 @@ let print_node ff { n_name = n; n_input = ni; n_output = no;
     print_local_vars nl
     print_eqs ne
 
-
-let print_exp oc e =
-  let ff = formatter_of_out_channel oc in (print_exp ff e; fprintf ff "@.")
-
-let print_type oc ty =
-  let ff = formatter_of_out_channel oc in (print_type ff ty; fprintf ff "@?")
-
-let print_clock oc ct =
-  let ff = formatter_of_out_channel oc
-  in (print_clock ff ct; fprintf ff "@?")
 
 let print oc { p_opened = pm; p_types = pt; p_nodes = pn; p_consts = pc } =
   let ff = formatter_of_out_channel oc
