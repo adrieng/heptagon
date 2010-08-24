@@ -34,7 +34,7 @@ let prod = function
   | [ty]    -> ty
   | ty_list -> Tprod ty_list
 
-(** DO NOT use this after the typing, since it gives invalid_type *)
+(** DO NOT use this after the typing, since it could give invalid_type *)
 let mk_static_exp ?(loc = no_location) ?(ty = invalid_type) desc =
   { se_desc = desc; se_ty = ty; se_loc = loc }
 

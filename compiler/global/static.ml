@@ -21,6 +21,7 @@ open Modules
 
 (* unsatisfiable constraint *)
 exception Instanciation_failed
+exception Partial_instanciation of static_exp
 
 exception Not_static
 
@@ -30,34 +31,9 @@ let op_from_app_name ln =
     | Modname { qual = "Pervasives" } -> ln
     | _ -> raise Not_static
 
-(** [simplify env e] returns e simplified with the
-    variables values taken from env (mapping vars to integers).
-    Variables are replaced with their values and every operator
-    that can be computed is replaced with the value of the result. *)
-let rec simplify env se = match se.se_desc with
-  | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
-  | Svar ln -> (
-      try
-        let { info = cd } = find_const ln in
-        simplify env cd.c_value
-      with Not_found -> (
-        match ln with
-          | Name n -> (try simplify env (NamesEnv.find n env) with | _ -> se)
-          | Modname _ -> se ) )
-  | Sop (op, se_list) ->
-      let se_list = List.map (simplify env) se_list in
-        { se with se_desc = apply_op op se_list }
-  | Sarray se_list ->
-      { se with se_desc = Sarray (List.map (simplify env) se_list) }
-  | Sarray_power (se, n) ->
-       { se with se_desc = Sarray_power (simplify env se, simplify env n) }
-  | Stuple se_list ->
-       { se with se_desc = Stuple (List.map (simplify env) se_list) }
-  | Srecord f_se_list ->
-      { se with se_desc = Srecord
-          (List.map (fun (f,se) -> f, simplify env se) f_se_list) }
 
-and apply_op op se_list =
+
+let partial_apply_op op se_list =
   match se_list with
     | [{ se_desc = Sint n1 }; { se_desc = Sint n2 }] ->
         (match op with
@@ -81,6 +57,49 @@ and apply_op op se_list =
         )
     | _ -> Sop(op, se_list)
 
+let apply_op op se_list =
+  let se = partial_apply_op op se_list in
+  match se with
+    | Sop _ -> raise Not_found
+    | _ -> se
+
+let eval_core eval apply_op env se = match se.se_desc with
+  | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
+  | Svar ln -> (
+      try (* first try to find in global const env *)
+        let { info = cd } = find_const ln in
+        eval env cd.c_value
+      with Not_found -> (
+        match ln with (* then try to find in local env *)
+          | Name n -> eval env (NamesEnv.find n env)
+          | Modname _ -> raise Not_found ) )
+  | Sop (op, se_list) ->
+      let se_list = List.map (eval env) se_list in
+        { se with se_desc = apply_op op se_list }
+  | Sarray se_list ->
+      { se with se_desc = Sarray (List.map (eval env) se_list) }
+  | Sarray_power (se, n) ->
+       { se with se_desc = Sarray_power (eval env se, eval env n) }
+  | Stuple se_list ->
+       { se with se_desc = Stuple (List.map (eval env) se_list) }
+  | Srecord f_se_list ->
+      { se with se_desc = Srecord
+          (List.map (fun (f,se) -> f, eval env se) f_se_list) }
+
+(** [simplify env e] returns e simplified with the
+    variables values taken from [env] or from the global env with [find_const].
+    Every operator that can be computed is.
+    It can return static_exp with uninstanciated variables.*)
+let rec simplify env se =
+  try eval_core simplify partial_apply_op env se
+  with _ -> se
+
+(** [eval env e] does the same as [simplify]
+    but if it returns, there are no variables nor op left.
+    @raise [Partial_instanciation] when it cannot fully evaluate *)
+let rec eval env se =
+  try eval_core eval apply_op env se
+  with Not_found -> raise (Partial_instanciation se)
 
 (** [int_of_static_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises

@@ -13,7 +13,7 @@ module Error =
 struct
   type error =
     | Enode_unbound of longname
-    | Evar_unbound of name
+    | Epartial_instanciation of static_exp
 
   let message loc kind =
     begin match kind with
@@ -21,10 +21,10 @@ struct
           Format.eprintf "%aUnknown node '%s'@."
             print_location loc
             (fullname ln)
-      | Evar_unbound n ->
-          Format.eprintf "%aUnbound static var '%s'\n"
-            print_location loc
-            n
+      | Epartial_instanciation se ->
+          Format.eprintf "%aUnable to fully instanciate the static exp '%a'@."
+            print_location se.se_loc
+            print_static_exp se
     end;
     raise Misc.Error
 end
@@ -76,7 +76,10 @@ struct
   let nodes_instances = ref LongNameEnv.empty
 
   (** create a params instance *)
-  let instantiate m se = List.map (simplify m) se
+  let instantiate m se =
+    try List.map (eval m) se
+    with Partial_instanciation se ->
+      Error.message no_location (Error.Epartial_instanciation se)
 
   (** @return the name of the node corresponding to the instance of
       [ln] with the static parameters [params]. *)
@@ -137,9 +140,6 @@ struct
                | Name n ->
                    (try NamesEnv.find n m
                     with Not_found -> (* It should then be in the global env *)
-                    (* TODO should we check it's in the global env ?
-                       I guess it should not be necessary cf typing.
-                       Error.message se.se_loc (Error.Evar_unbound n)) *)
                     se)
                | Modname _ -> se)
         | _ -> se in
