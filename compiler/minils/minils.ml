@@ -111,9 +111,8 @@ type node_dec = {
   n_local  : var_dec list;
   n_equs   : eq list;
   n_loc    : location;
-  n_params : param list; (** TODO CP mettre des petits commentaires *)
-  n_params_constraints : size_constraint list;
-  n_params_instances : (static_exp list) list }
+  n_params : param list;
+  n_params_constraints : size_constraint list }
 
 type const_dec = {
   c_name : name;
@@ -151,8 +150,7 @@ let mk_node
     n_equs = eq;
     n_loc = loc;
     n_params = param;
-    n_params_constraints = constraints;
-    n_params_instances = pinst; }
+    n_params_constraints = constraints }
 
 let mk_type_dec ?(type_desc = Type_abs) ?(loc = no_location) name =
   { t_name = name; t_desc = type_desc; t_loc = loc }

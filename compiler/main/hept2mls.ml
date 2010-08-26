@@ -381,8 +381,7 @@ let node
     n_equs = l_eqs;
     n_loc = loc ;
     n_params = params;
-    n_params_constraints = params_constr;
-    n_params_instances = []; }
+    n_params_constraints = params_constr }
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =
