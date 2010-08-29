@@ -11,18 +11,18 @@ open Location
 open Minils
 
 let lexical_error err loc =
-  Format.eprintf "%aIllegal character.\n" print_location loc;
+  Format.eprintf "%aIllegal character.\n@." print_location loc;
   raise Error
 
 let syntax_error loc =
-  Format.eprintf "%aSyntax error.\n" print_location loc;
+  Format.eprintf "%aSyntax error.\n@." print_location loc;
   raise Error
 
 let language_error lang =
-  Format.eprintf "Unknown language: '%s'.\n" lang
+  Format.eprintf "Unknown language: '%s'.\n@." lang
 
 let comment s =
-  if !verbose then Format.printf "** %s done **\n" s; flush stdout
+  if !verbose then Format.printf "** %s done **\n@." s
 
 
 let do_pass f d p pp enabled =

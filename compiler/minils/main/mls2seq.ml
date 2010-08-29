@@ -69,7 +69,7 @@ let generate_target p s =
           if !Misc.verbose then
             begin
               Format.eprintf "** Translation to Obc done **\n@.";
-              List.iter (wrap_print Obc_printer.print_prog stderr) o_list;
+              List.iter (Obc_printer.print_prog Format.err_formatter) o_list;
             end;
             List.iter convert_fun o_list
 

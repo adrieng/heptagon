@@ -339,7 +339,7 @@ let print_open_module ff name =
   fprintf ff "@.@]"
 
 let print oc { p_opened = po; p_types = pt; p_nodes = pn; p_consts = pc } =
-  let ff = formatter_of_out_channel oc in
+  let ff = Format.formatter_of_out_channel oc in
   List.iter (print_open_module ff) po;
   List.iter (print_const_dec ff) pc;
   List.iter (print_type_def ff) pt;

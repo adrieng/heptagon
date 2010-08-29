@@ -258,7 +258,3 @@ let mapi3 f l1 l2 l3 =
           (f i v1 v2 v3)::(aux (i+1) l1 l2 l3)
   in
     aux 0 l1 l2 l3
-
-let wrap_print pp out x =
-  let fmt = Format.formatter_of_out_channel out in
-  Format.fprintf fmt "%a@." pp x

@@ -200,10 +200,9 @@ let print_node ff { n_name = n; n_input = ni; n_output = no;
 
 
 let print oc { p_opened = pm; p_types = pt; p_nodes = pn; p_consts = pc } =
-  let ff = formatter_of_out_channel oc
-  in (
-    List.iter (print_open_module ff) pm;
-    List.iter (print_const_dec ff) pc;
-    List.iter (print_type_dec ff) pt;
-    List.iter (print_node ff) pn;
-    fprintf ff "@?" )
+  let ff = formatter_of_out_channel oc in (
+  List.iter (print_open_module ff) pm;
+  List.iter (print_const_dec ff) pc;
+  List.iter (print_type_dec ff) pt;
+  List.iter (print_node ff) pn;
+  fprintf ff "@?" )

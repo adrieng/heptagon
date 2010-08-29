@@ -187,7 +187,3 @@ val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
 val mapi2: (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->
   'a list -> 'b list -> 'c list -> 'd list
-
-(** Enable the use of a plain pretty-printing function with an output channel
-    instead of a formatter. *)
-val wrap_print : (Format.formatter -> 'a -> unit) -> out_channel -> 'a -> unit
