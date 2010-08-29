@@ -7,6 +7,7 @@ COMPILER_DIR=compiler #relative to the script_dir
 COMPILER=heptc.native
 HEPTC=$COMPILER_DIR/$COMPILER
 
+RUN_DIR=`pwd`
 cd $SCRIPT_DIR
 
 if [ ! -x $HEPTC ] #compile the compiler
@@ -21,6 +22,6 @@ then
 	$HEPTC -nopervasives lib/pervasives.epi
 fi
 
-cd -
+cd $RUN_DIR
 
 $SCRIPT_DIR/$HEPTC -stdlib $SCRIPT_DIR/lib "$@" #call the compiler with the passed arguments.
