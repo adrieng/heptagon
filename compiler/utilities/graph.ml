@@ -127,6 +127,7 @@ let accessible useful_nodes g_list =
 let exists_path nodes n1 n2 =
   List.mem n2 (accessible [n1] nodes)
 
+(*
 open Format
 
 let print_node print g =
@@ -142,5 +143,5 @@ let print_node print g =
        printf "@]@ ")
     g.g_depends_on;
   printf "@]"
-
+*)
 
