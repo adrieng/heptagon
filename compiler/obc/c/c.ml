@@ -287,7 +287,6 @@ let pp_cfile_desc fmt filen cfile =
         Misc.print_header_info fmt "/*" "*/";
         fprintf fmt "#ifndef %s_H@\n" headern_macro;
         fprintf fmt "#define %s_H@\n@\n" headern_macro;
-        (* fprintf fmt "#include \"types.h\"\n"; *)
         iter (fun d -> fprintf fmt "#include \"%s.h\"@\n" d)
           deps;
         iter (pp_cdecl fmt) cdecls;
@@ -307,7 +306,7 @@ let pp_cfile_desc fmt filen cfile =
 (** [output_cfile dir cfile] pretty-prints the content of [cfile] to the
     corresponding file in the [dir] directory. *)
 let output_cfile dir (filen, cfile_desc) =
-  if !Misc.verbose then Format.printf "C-NG generating %s/%s\n" dir filen;
+  if !Misc.verbose then Format.printf "C-NG generating %s/%s@." dir filen;
   let buf = Buffer.create 20000 in
   let oc = open_out (Filename.concat dir filen) in
   let fmt = Format.formatter_of_buffer buf in

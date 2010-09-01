@@ -33,7 +33,7 @@ let rec bounds_list ty =
 (** @return the [var_dec] object corresponding to the name [n]
     in a list of [var_dec]. *)
 let rec vd_find n = function
-  | [] -> Format.printf "Not found var %s\n" (name n); raise Not_found
+  | [] -> Format.eprintf "Not found var %s@." (name n); raise Not_found
   | vd::l ->
       if vd.v_ident = n then vd else vd_find n l
 

@@ -102,7 +102,7 @@ struct
     (match constr with
        | [] -> ()
        | constr ->
-           fprintf ff "\n with: @[";
+           fprintf ff "@\n with: @[";
            print_list_r Static.print_size_constraint "" "," "" ff constr;
            fprintf ff "@]"
     );

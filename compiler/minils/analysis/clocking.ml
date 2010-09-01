@@ -23,7 +23,7 @@ type error_kind = | Etypeclash of ct * ct
 
 let error_message loc = function
   | Etypeclash (actual_ct, expected_ct) ->
-      Format.eprintf "%aClock Clash: this expression has clock %a, \n\
+      Format.eprintf "%aClock Clash: this expression has clock %a,@\n\
                         but is expected to have clock %a.@."
         print_location loc
         print_clock actual_ct
@@ -116,7 +116,7 @@ let typing_eqs h eq_list = (*TODO FIXME*)
     let ty_pat = typing_pat h pat in
     (try expect h ty_pat e with
       | Error -> (* DEBUG *)
-          Format.eprintf "Complete expression: %a\nClock pattern: %a@."
+          Format.eprintf "Complete expression: %a@\nClock pattern: %a@."
             Mls_printer.print_exp e
             Mls_printer.print_clock ty_pat;
           raise Error)

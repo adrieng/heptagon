@@ -31,14 +31,14 @@ and max_step = Idents.fresh "step_max"
 let assert_node_res cd =
   let stepm = find_step_method cd in
   if List.length stepm.m_inputs > 0 then
-    (Format.eprintf "Cannot generate run-time check for node %s with inputs.\n"
+    (Format.eprintf "Cannot generate run-time check for node %s with inputs.@."
        cd.cd_name;
      exit 1);
   if (match stepm.m_outputs with
         | [{ v_type = Tid nbool; }] when nbool = Initial.pbool -> false
         | _ -> true) then
     (Format.eprintf
-       "Cannot generate run-time check for node %s with non-boolean output.\n"
+       "Cannot generate run-time check for node %s with non-boolean output.@."
        cd.cd_name;
      exit 1);
   let mem =

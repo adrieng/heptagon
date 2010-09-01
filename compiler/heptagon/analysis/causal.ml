@@ -86,7 +86,7 @@ let message loc kind =
   begin match kind with
     | Ecausality_cycle(ac) ->
         eprintf
-          "%aCausality error: the following constraint is not causal.\n%a@."
+          "%aCausality error: the following constraint is not causal.@\n%a@."
           print_location loc
           output_ac ac
   end;

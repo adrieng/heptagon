@@ -220,8 +220,8 @@ let load_object_file modname =
           let p:program = input_value ic in
             if p.p_format_version <> minils_format_version then (
               Format.eprintf "The file %s was compiled with \
-                       an older version of the compiler.\n \
-                       Please recompile %s.ept first.\n" filename name;
+                       an older version of the compiler.@\n\
+                       Please recompile %s.ept first.@." filename name;
               raise Error
             );
             close_in ic;
@@ -229,12 +229,12 @@ let load_object_file modname =
         with
           | End_of_file | Failure _ ->
               close_in ic;
-              Format.eprintf "Corrupted object file %s.\n\
-                        Please recompile %s.ept first.\n" filename name;
+              Format.eprintf "Corrupted object file %s.@\n\
+                        Please recompile %s.ept first.@." filename name;
               raise Error
     with
       | Modules.Cannot_find_file(filename) ->
-          Format.eprintf "Cannot find the object file '%s'.\n"
+          Format.eprintf "Cannot find the object file '%s'.@."
             filename;
           raise Error
 

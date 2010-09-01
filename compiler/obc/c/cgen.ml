@@ -32,20 +32,20 @@ struct
 
   let message loc kind = (match kind with
     | Evar name ->
-        eprintf "%aCode generation : The variable name '%s' is unbound.\n"
+        eprintf "%aCode generation : The variable name '%s' is unbound.@."
           print_location loc name
     | Enode name ->
-        eprintf "%aCode generation : The node name '%s' is unbound.\n"
+        eprintf "%aCode generation : The node name '%s' is unbound.@."
           print_location loc name
     | Eno_unnamed_output ->
-        eprintf "%aCode generation : Unnamed outputs are not supported.\n"
+        eprintf "%aCode generation : Unnamed outputs are not supported.@."
           print_location loc
     | Ederef_not_pointer ->
-        eprintf "%aCode generation : Trying to deference a non pointer type.\n"
+        eprintf "%aCode generation : Trying to deference a non pointer type.@."
           print_location loc
     | Estatic_exp_compute_failed ->
         eprintf "%aCode generation : Computation of the value of the static \
-                 expression failed.\n"
+                 expression failed.@."
           print_location loc);
     raise Misc.Error
 end

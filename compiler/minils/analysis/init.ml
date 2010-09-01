@@ -188,8 +188,8 @@ struct
         | Eclash (left_ty, right_ty) ->
             Format.eprintf
               "%aInitialization error: this expression has type \
-              %a, \n\
-              but is expected to have type %a\n"
+              %a,@\n\
+              but is expected to have type %a@."
               print_location loc Printer.output_typ left_ty Printer.
               output_typ right_ty);
      raise Misc.Error)

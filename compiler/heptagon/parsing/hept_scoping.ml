@@ -22,23 +22,23 @@ struct
   let message loc kind =
     begin match kind with
       | Evar name ->
-          eprintf "%a@\nThe value identifier %s is unbound.@."
+          eprintf "%aThe value identifier %s is unbound.@."
             print_location loc
             name
       | Econst_var name ->
-          eprintf "%a@\nThe const identifier %s is unbound.@."
+          eprintf "%aThe const identifier %s is unbound.@."
             print_location loc
             name
       | Evariable_already_defined name ->
-          eprintf "%a@\nThe variable %s is already defined.@."
+          eprintf "%aThe variable %s is already defined.@."
             print_location loc
             name
       | Econst_variable_already_defined name ->
-          eprintf "%a@\nThe const variable %s is already defined.@."
+          eprintf "%aThe const variable %s is already defined.@."
             print_location loc
             name
       | Estatic_exp_expected ->
-          eprintf "%a@\nA static expression was expected.@."
+          eprintf "%aA static expression was expected.@."
             print_location loc
     end;
     raise Misc.Error

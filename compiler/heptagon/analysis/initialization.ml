@@ -169,7 +169,7 @@ module Error = struct
     begin match kind with
       | Eclash(left_ty, right_ty) ->
           Format.eprintf "%aInitialization error: this expression has type \
-              %a, \n\
+              %a, @\n\
               but is expected to have type %a@."
             print_location loc
             Printer.print_type left_ty

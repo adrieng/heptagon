@@ -126,5 +126,5 @@ let print_location ff (Loc(p1,p2)) =
         copy_chunk lp2 np2 ic ff; (* copy interesting begining of l2 *)
       )
     with Sys_error _ -> ();
-    Format.fprintf ff "@."
   end;
+  fprintf ff "@."
