@@ -44,11 +44,8 @@ let targets = [ "c", Obc_no_params Cmain.program;
 
 let generate_target p s =
   let print_unfolded p_list =
-    if !Misc.verbose then
-      begin
-        Format.eprintf "** Unfolding done **@.";
-        List.iter (Mls_printer.print stderr) p_list;
-      end in
+    comment "Unfolding";
+    if !Misc.verbose then List.iter (Mls_printer.print stderr) p_list in
 
   let target =
     (try List.assoc s targets
@@ -66,12 +63,10 @@ let generate_target p s =
           let p_list = Callgraph.program p in
           let o_list = List.map Mls2obc.program p_list in
           print_unfolded p_list;
+          comment "Translation to Obc";
           if !Misc.verbose then
-            begin
-              Format.eprintf "** Translation to Obc done **@.";
-              List.iter (Obc_printer.print_prog Format.err_formatter) o_list;
-            end;
-            List.iter convert_fun o_list
+              List.iter (Obc_printer.print_prog Format.std_formatter) o_list;
+          List.iter convert_fun o_list
 
 let program p =
   (* Translation into dataflow and sequential languages *)
