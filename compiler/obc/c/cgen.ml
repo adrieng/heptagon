@@ -58,27 +58,6 @@ let rec struct_name ty =
 let int_of_static_exp se =
   Static.int_of_static_exp NamesEnv.empty se
 
-(* Functions to deal with opened modules set. *)
-type world = { mutable opened_modules : S.t }
-let world = { opened_modules = S.empty }
-
-let add_opened_module (m:string) =
-  world.opened_modules <-
-    S.add (String.uncapitalize (cname_of_name m)) world.opened_modules
-let get_opened_modules () =
-  S.elements  world.opened_modules
-let remove_opened_module (m:string) =
-  world.opened_modules <- S.remove m world.opened_modules
-let reset_opened_modules () =
-  world.opened_modules <- S.empty
-
-let shortname = function
-  | Name(n) -> n
-  | Modname(q) ->
-      if q.qual <> "Pervasives" then
-        add_opened_module q.qual;
-      q.id
-
 (** Returns the information concerning a node given by name. *)
 let node_info classln =
   match classln with
@@ -324,7 +303,6 @@ and cop_of_op_aux var_env op_name cexps =
           | _ -> Cfun_call(op, cexps)
         end
     | Modname {qual = m; id = op} ->
-        add_opened_module m;
         Cfun_call(op,cexps)
     | Name(op) ->
         Cfun_call(op,cexps)
