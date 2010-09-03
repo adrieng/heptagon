@@ -191,10 +191,7 @@ let rec pp_vardecl fmt (s, cty) = match cty with
       let ty, indices = pp_array_decl cty in
       fprintf fmt "%a %a%s" pp_cty ty  pp_string s indices
   | _ -> fprintf fmt "%a %a" pp_cty cty  pp_string s
-and pp_paramdecl fmt (s, cty) = match cty with
-  | Cty_arr (n, cty') -> fprintf fmt "%a* %a" pp_param_cty cty'  pp_string s
-  | _ -> pp_vardecl fmt (s, cty)
-and pp_param_list fmt l = pp_list1 pp_paramdecl "," fmt l
+and pp_param_list fmt l = pp_list1 pp_vardecl "," fmt l
 and pp_var_list fmt l = pp_list pp_vardecl ";" fmt l
 
 let rec pp_cblock fmt cb =
