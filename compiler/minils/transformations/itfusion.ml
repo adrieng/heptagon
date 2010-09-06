@@ -6,6 +6,28 @@ open Mls_mapfold
 open Minils
 (* Iterator fusion *)
 
+(* Functions to temporarily store anonymous nodes*)
+let mk_fresh_node_name () =
+  longname (Idents.name (Idents.fresh "_n_"))
+
+let anon_nodes = ref LongNameEnv.empty
+
+let add_anon_node inputs outputs locals eqs =
+  let n = mk_fresh_node_name () in
+  let nd = mk_node ~input:inputs ~output:outputs ~local:locals
+    ~eq:eqs (shortname n) in
+  anon_nodes := LongNameEnv.add n nd !anon_nodes;
+  n
+
+let replace_anon_node n nd =
+  anon_nodes := LongNameEnv.add n nd !anon_nodes
+
+let find_anon_node n = 
+  LongNameEnv.find n !anon_nodes
+
+let is_anon_node n =
+  LongNameEnv.mem n !anon_nodes
+
 let are_equal n m =
   let n = simplify NamesEnv.empty n in
   let m = simplify NamesEnv.empty m in
@@ -28,13 +50,17 @@ let vd_of_arg ad =
 (** @return the lists of inputs and outputs (as var_dec) of
     an app object. *)
 let get_node_inp_outp app = match app.a_op with
+  | (Enode f | Efun f) when is_anon_node f ->
+    (* first check if it is an anonymous node *) 
+    let nd = find_anon_node f in
+      nd.n_input, nd.n_output 
   | Enode f | Efun f ->
-      let { info = ty_desc } = find_value f in
-      let new_inp = List.map vd_of_arg ty_desc.node_outputs in
-      let new_outp = List.map vd_of_arg ty_desc.node_outputs in
-        new_inp, new_outp
-  | Elambda(inp, outp, _,  _) ->
-      inp, outp
+      (* it is a regular node*)
+    let { info = ty_desc } = find_value f in
+    let new_inp = List.map vd_of_arg ty_desc.node_outputs in
+    let new_outp = List.map vd_of_arg ty_desc.node_outputs in
+      new_inp, new_outp
+  | _ -> assert false
 
 (** Creates the equation to call the node [app].
     @return the list of new inputs required by the call, the expression
@@ -87,9 +113,8 @@ let edesc funs acc ed =
             let _, outp = get_node_inp_outp f in
             let eq = mk_equation (pat_of_vd_list outp) call in
             (* create the lambda *)
-            let lambda = mk_app (Elambda(inp, outp, [],
-                                         eq::acc_eq_list)) in
-              Eiterator(Imap, lambda, n, args, r), acc
+	    let anon = mk_app (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
+            Eiterator(Imap, anon, n, args, r), acc
           ) else
             ed, acc
 

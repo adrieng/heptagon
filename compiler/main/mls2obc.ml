@@ -327,19 +327,7 @@ and mk_node_call map call_context app loc name_list args =
         let e = mk_exp (Eop(f, args)) in
         [], [], [], [Aassgn(List.hd name_list, e) ]
 
-    | Minils.Enode f | Minils.Efun f ->
-        let o = mk_obj_call_from_context call_context (gen_obj_name f) in
-        let obj =
-          { o_name = obj_call_name o; o_class = f;
-            o_params = app.Minils.a_params;
-            o_size = size_from_call_context call_context; o_loc = loc } in
-        let si =
-          (match app.Minils.a_op with
-             | Minils.Efun _ -> []
-             | Minils.Enode _ -> [reinit o]) in
-          [], si, [obj], [Acall (name_list, o, Mstep, args)]
-
-    | Minils.Elambda(inp, outp, locals, eq_list) ->
+    | Minils.Enode f when Itfusion.is_anon_node f -> 
         let add_input env vd =
           Env.add vd.Minils.v_ident (mk_lhs (Lvar vd.Minils.v_ident)) env in
         let build env vd a =
@@ -358,12 +346,25 @@ and mk_node_call map call_context app loc name_list args =
             act_list
         in
 
-        let map = List.fold_left add_input map inp in
-        let map = List.fold_left2 build map outp name_list in
-        let map = List.fold_left add_input map locals in
-        let v, si, j, s = translate_eq_list map call_context eq_list in
-        let env = List.fold_left2 build Env.empty inp args in
-          v @ locals, si, j, subst_act_list env s
+	let nd = Itfusion.find_anon_node f in
+        let map = List.fold_left add_input map nd.Minils.n_input in
+        let map = List.fold_left2 build map nd.Minils.n_output name_list in
+        let map = List.fold_left add_input map nd.Minils.n_local in
+        let v, si, j, s = translate_eq_list map call_context nd.Minils.n_equs in
+        let env = List.fold_left2 build Env.empty nd.Minils.n_input args in
+          v @ nd.Minils.n_local, si, j, subst_act_list env s
+
+    | Minils.Enode f | Minils.Efun f ->
+        let o = mk_obj_call_from_context call_context (gen_obj_name f) in
+        let obj =
+          { o_name = obj_call_name o; o_class = f;
+            o_params = app.Minils.a_params;
+            o_size = size_from_call_context call_context; o_loc = loc } in
+        let si =
+          (match app.Minils.a_op with
+             | Minils.Efun _ -> []
+             | Minils.Enode _ -> [reinit o]) in
+          [], si, [obj], [Acall (name_list, o, Mstep, args)]
 
     | _ -> assert false
 

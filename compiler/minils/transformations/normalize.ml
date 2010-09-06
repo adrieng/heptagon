@@ -191,12 +191,14 @@ let rec translate kind context e =
         let context, e_list = translate_app kind context app.a_op e_list in
           context, { e with e_desc = Eapp(app, e_list, r) }
     | Eiterator (it, app, n, e_list, reset) ->
-        let app =
-          (match app.a_op with
-             | Elambda(inp, outp, [], eq_list) ->
-                let d_list, eq_list = translate_eq_list [] eq_list in
-                  { app with a_op = Elambda(inp, outp, d_list, eq_list) }
-             | _ -> app) in
+      (* normalize anonymous nodes *)
+      (match app.a_op with
+        | Enode f when Itfusion.is_anon_node f ->
+	  let nd = Itfusion.find_anon_node f in
+          let d_list, eq_list = translate_eq_list nd.n_local nd.n_equs in
+	  let nd = { nd with n_equs = eq_list; n_local = d_list } in
+	    Itfusion.replace_anon_node f nd
+        | _ -> () );
 
         (* Add an intermediate equation for each array lit argument. *)
         let translate_iterator_arg_list context e_list =

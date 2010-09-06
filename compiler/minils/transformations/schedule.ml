@@ -78,11 +78,12 @@ let eqs funs () eq_list =
     schedule eqs, ()
 
 let edesc funs () = function
-  | Eiterator(it, ({ a_op = Elambda(inp, outp, locals, eq_list) } as app),
-              n, e_list, r) ->
-      let app = { app with a_op =  Elambda(inp, outp,
-                                           locals, schedule eq_list) } in
-        Eiterator(it, app, n, e_list, r), ()
+  | Eiterator(it, ({ a_op = Enode f } as app),
+              n, e_list, r) when Itfusion.is_anon_node f ->
+    let nd = Itfusion.find_anon_node f in
+    let nd = { nd with n_equs = schedule nd.n_equs } in
+      Itfusion.replace_anon_node f nd;
+      Eiterator(it, app, n, e_list, r), ()
   | _ -> raise Fallback
 
 let program p =

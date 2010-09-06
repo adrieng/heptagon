@@ -88,8 +88,6 @@ and typing_op op args h e ck = match op, args with
   | Econcat, [e1; e2] ->
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; ct)
-  | Elambda  _, _ -> Format.eprintf "Elambda dans le cloking"; assert false;
-
 
 and expect h expected_ty e =
   let actual_ty = typing h e in

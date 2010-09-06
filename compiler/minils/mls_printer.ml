@@ -137,10 +137,6 @@ and print_app ff (app, args) = match app.a_op, app.a_params, args with
           print_exp e1 print_dyn_index idx print_exp e2
   | Econcat, _,[e1; e2] ->
       fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
-  | Elambda(inp, outp, _, eq_list), _, e_list ->
-      fprintf ff "(%a -> %a with %a)@,%a"
-        print_vd_tuple inp  print_vd_tuple outp
-        print_eqs eq_list  print_exp_tuple e_list
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_longname print_exp "("" -> "")") c
