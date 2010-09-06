@@ -71,11 +71,6 @@ let add_const_var loc x env =
   else (* create a new id for this var and add it to the env *)
     NamesEnv.add x x env
 
-let rec build_pat loc env = function
-  | Evarpat x -> add_var loc x env
-  | Etuplepat l ->
-      List.fold_left (build_pat loc) env l
-
 let build_vd_list env l =
   let build_vd env vd =
     add_var vd.v_loc vd.v_name env
