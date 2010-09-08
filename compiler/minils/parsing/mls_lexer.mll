@@ -113,7 +113,7 @@ rule token = parse
   | newline         { new_line lexbuf; token lexbuf }
   | [' ' '\t'] +    { token lexbuf }
   | "."             { DOT }
-  | ".."            { DOTDOt }
+  | ".."            { DOTDOT }
   | "("             { LPAREN }
   | ")"             { RPAREN }
   | "*"             { STAR }

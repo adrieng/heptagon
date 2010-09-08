@@ -89,10 +89,10 @@ let print_location ff (Loc(p1,p2)) =
 
   if f1 != f2 then (* Strange case *)
     fprintf ff
-    "File \"%s\" line %d, character %d, to file \"%s\" line %d, character %d@\n"
+    "File \"%s\" line %d, character %d, to file \"%s\" line %d, character %d@."
       f1 l1 n1 f2 l2 n2
 
-  else begin
+  else begin (* Same file *)
     if l2 > l1 then
       fprintf ff
         "File \"%s\", line %d-%d, characters %d-%d:@\n" f1 l1 l2 n1 n2

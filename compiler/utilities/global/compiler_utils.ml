@@ -21,28 +21,29 @@ let syntax_error loc =
 let language_error lang =
   Format.eprintf "Unknown language: '%s'.@." lang
 
-let comment s =
-  if !verbose then Format.printf "** %s done **@." s
+let separateur = "\n*********************************************\
+    *********************************\n*** "
 
+let comment ?(sep=separateur) s =
+  if !verbose then Format.printf "%s%s@." sep s
 
-let do_pass f d p pp enabled =
+let do_pass d f p pp =
+  comment (d^" ...\n");
+  let r = f p in
+  pp r;
+  comment ~sep:"*** " (d^" done.");
+  r
+
+let do_silent_pass d f p = do_pass d f p (fun x -> ())
+
+let pass d enabled f p pp =
   if enabled
-  then
-    let r = f p in
-    if !verbose
-    then begin
-      comment d;
-      pp r;
-    end;
-    r
+  then do_pass d f p pp
   else p
 
-let do_silent_pass f d p enabled =
+let silent_pass d enabled f p =
   if enabled
-  then begin
-    let r = f p in
-    if !verbose then comment d; r
-  end
+  then do_silent_pass d f p
   else p
 
 let build_path suf =

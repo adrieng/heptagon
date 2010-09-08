@@ -12,7 +12,7 @@ open Minils
 module Error =
 struct
   type error =
-    | Enode_unbound of longname
+    | Enode_unbound of qualname
     | Epartial_instanciation of static_exp
 
   let message loc kind =
@@ -34,8 +34,8 @@ sig
   type key = private static_exp (** Fully instantiated param *)
   type env = key NamesEnv.t
   val instantiate: env -> static_exp list -> key list
-  val get_node_instances : LongNameEnv.key -> key list list
-  val add_node_instance : LongNameEnv.key -> key list -> unit
+  val get_node_instances : QualEnv.key -> key list list
+  val add_node_instance : QualEnv.key -> key list -> unit
   val build : env -> param list -> key list -> env
   module Instantiate :
   sig
@@ -63,7 +63,7 @@ struct
   module M = (** Map instance to its instantiated node *)
     Map.Make(
       struct
-        type t = longname * instance
+        type t = qualname * instance
         let compare (l1,i1) (l2,i2) =
           let cl = compare l1 l2 in
           if cl = 0 then compare_instances i1 i2 else cl
@@ -73,7 +73,7 @@ struct
   let nodes_names = ref M.empty
 
   (** Maps a node to its list of instances *)
-  let nodes_instances = ref LongNameEnv.empty
+  let nodes_instances = ref QualEnv.empty
 
   (** create a params instance *)
   let instantiate m se =
@@ -91,32 +91,30 @@ struct
       [ln] with the static parameters [params] and stores it. *)
   let generate_new_name ln params = match params with
     | [] -> nodes_names := M.add (ln, params) ln !nodes_names
-    | _ -> (match ln with
-        | Modname { qual = q; id = id } ->
-            let new_ln = Modname { qual = q;
+    | _ -> let { qual = q; name = n } = ln in
+           let new_ln = { qual = q;
                   (* TODO ??? c'est quoi ce nom ??? *)
                   (* l'utilite de fresh n'est vrai que si toute les fonctions
                      sont touchees.. ce qui n'est pas vrai cf main_nodes *)
                   (* TODO mettre les valeurs des params dans le nom *)
-                                   id = id^(Idents.name (Idents.fresh "")) } in
-            nodes_names := M.add (ln, params) new_ln !nodes_names
-        | _ -> assert false)
+                          name = n^(Idents.name (Idents.fresh "")) } in
+           nodes_names := M.add (ln, params) new_ln !nodes_names
 
   (** Adds an instance of a node. *)
   let add_node_instance ln params =
     (* get the already defined instances *)
-    let instances = try LongNameEnv.find ln !nodes_instances
+    let instances = try QualEnv.find ln !nodes_instances
                     with Not_found -> S.empty in
     if S.mem params instances then () (* nothing to do *)
     else ( (* it's a new instance *)
       let instances = S.add params instances in
-      nodes_instances := LongNameEnv.add ln instances !nodes_instances;
+      nodes_instances := QualEnv.add ln instances !nodes_instances;
       generate_new_name ln params )
 
   (** @return the list of instances of a node. *)
   let get_node_instances ln =
    let instances_set =
-      try LongNameEnv.find ln !nodes_instances
+      try QualEnv.find ln !nodes_instances
       with Not_found -> S.empty in
    S.elements instances_set
 
@@ -135,13 +133,14 @@ struct
     let static_exp funs m se =
       let se, _ = Global_mapfold.static_exp funs m se in
       let se = match se.se_desc with
-        | Svar ln ->
-            (match ln with
-               | Name n ->
-                   (try NamesEnv.find n m
-                    with Not_found -> (* It should then be in the global env *)
-                    se)
-               | Modname _ -> se)
+        | Svar { qual = q; name = n } ->
+            if q = local_qualname
+            then (* This var is a static parameter, it has to be instanciated *)
+              (try NamesEnv.find n m
+               with Not_found ->
+                Format.eprintf "local param not local";
+                assert false;)
+            else se
         | _ -> se in
       se, m
 
@@ -176,19 +175,17 @@ struct
       let n, _ = Mls_mapfold.node_dec_it funs m n in
 
       (* Add to the global environment the signature of the new instance *)
-      let ln = Modname { qual = modname; id = n.n_name } in
-      let { info = node_sig } = find_value ln in
+      let { info = node_sig } = find_value n.n_name in
       let node_sig, _ = Global_mapfold.node_it global_funs m node_sig in
       let node_sig = { node_sig with node_params = [];
                                      node_params_constraints = [] } in
       (* Find the name that was associated to this instance *)
-      let ln = node_for_params_call ln params in
+      let ln = node_for_params_call n.n_name params in
       Modules.add_value_by_longname ln node_sig;
-      { n with n_name = shortname ln; n_params = []; n_params_constraints = [];}
+      { n with n_name = ln; n_params = []; n_params_constraints = []; }
 
     let node_dec modname n =
-      let ln = Modname { qual = modname; id = n.n_name } in
-      List.map (node_dec_instance modname n) (get_node_instances ln)
+      List.map (node_dec_instance modname n) (get_node_instances n.n_name)
 
     let program p =
       { p
@@ -201,13 +198,13 @@ open Param_instances
 
 type info =
   { mutable opened : program NamesEnv.t;
-    mutable called_nodes : ((longname * static_exp list) list) LongNameEnv.t; }
+    mutable called_nodes : ((qualname * static_exp list) list) QualEnv.t; }
 
 let info =
   { (** opened programs*)
     opened = NamesEnv.empty;
     (** Maps a node to the list of (node name, params) it calls *)
-    called_nodes = LongNameEnv.empty }
+    called_nodes = QualEnv.empty }
 
 (** Loads the modname.epo file. *)
 let load_object_file modname =
@@ -240,17 +237,14 @@ let load_object_file modname =
 
 (** @return the node with name [ln], loading the corresponding
     object file if necessary. *)
-let node_by_longname ln =
-  match ln with
-    | Modname { qual = q; id = id } ->
-        if not (NamesEnv.mem q info.opened) then
-          load_object_file q;
-        (try
-           let p = NamesEnv.find q info.opened in
-             List.find (fun n -> n.n_name = id) p.p_nodes
-         with
-             Not_found -> Error.message no_location (Error.Enode_unbound ln))
-    | _ -> assert false
+let node_by_longname ({ qual = q; name = n } as node) =
+  if not (NamesEnv.mem q info.opened)
+  then load_object_file q;
+  try
+    let p = NamesEnv.find q info.opened in
+    List.find (fun n -> n.n_name = node) p.p_nodes
+  with
+    Not_found -> Error.message no_location (Error.Enode_unbound node)
 
 (** @return the list of nodes called by the node named [ln], with the
     corresponding params (static parameters appear as free variables). *)
@@ -260,7 +254,7 @@ let collect_node_calls ln =
       | [] -> acc
       | _ ->
           (match ln with
-            | Modname { qual = "Pervasives" } -> acc
+            | { qual = "Pervasives" } -> acc
             | _ -> (ln, params)::acc)
   in
   let edesc funs acc ed = match ed with
@@ -279,24 +273,12 @@ let collect_node_calls ln =
 (** @return the list of nodes called by the node named [ln]. This list is
     computed lazily the first time it is needed. *)
 let called_nodes ln =
-  if not (LongNameEnv.mem ln info.called_nodes) then (
+  if not (QualEnv.mem ln info.called_nodes) then (
     let called = collect_node_calls ln in
-      info.called_nodes <- LongNameEnv.add ln called info.called_nodes;
+      info.called_nodes <- QualEnv.add ln called info.called_nodes;
       called
   ) else
-    LongNameEnv.find ln info.called_nodes
-
-(*
-(** Checks that a static expression does not contain any static parameter. *)
-let check_no_static_var se =
-  let static_exp_desc funs acc sed = match sed with
-    | Svar (Name n) -> Error.message se.se_loc (Error.Evar_unbound n)
-    | _ -> raise Misc.Fallback
-  in
-  let funs = { Global_mapfold.defaults with
-                 static_exp_desc = static_exp_desc } in
-  ignore (Global_mapfold.static_exp_it funs false se)
-*)
+    QualEnv.find ln info.called_nodes
 
 (** Generates the list of instances of nodes needed to call
     [ln] with static parameters [params]. *)
@@ -316,7 +298,7 @@ let rec call_node (ln, params) =
 let program p =
   (* Find the nodes without static parameters *)
   let main_nodes = List.filter (fun n -> is_empty n.n_params) p.p_nodes in
-  let main_nodes = List.map (fun n -> (longname n.n_name, [])) main_nodes in
+  let main_nodes = List.map (fun n -> n.n_name, []) main_nodes in
     info.opened <- NamesEnv.add p.p_modname p NamesEnv.empty;
     (* Creates the list of instances starting from these nodes *)
     List.iter call_node main_nodes;

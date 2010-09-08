@@ -28,14 +28,14 @@ type iterator_type =
   | Imapfold
 
 type type_dec = {
-  t_name: name;
+  t_name: qualname;
   t_desc: tdesc;
   t_loc: location }
 
 and tdesc =
   | Type_abs
   | Type_alias of ty
-  | Type_enum of name list
+  | Type_enum of constructor_name list
   | Type_struct of structure
 
 and exp = {
@@ -58,7 +58,7 @@ and edesc =
   | Estruct of (field_name * exp) list
                        (** { field=exp; ... } *)
   | Eiterator of iterator_type * app * static_exp * exp list * var_ident option
-                       (** map f <<n>> (exp,exp...) reset ident *)
+                       (** map f <<n>> (exp, exp...) reset ident *)
 
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
     (** Unsafe applications could have side effects
@@ -79,8 +79,7 @@ and op =
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
   | Eupdate            (** [ arg1 with arg3..arg_n = arg2 ] *)
   | Econcat            (** arg1@@arg2 *)
-(*
-*)
+
 
 type pat =
   | Etuplepat of pat list
@@ -104,7 +103,7 @@ type contract = {
   c_eq : eq list }
 
 type node_dec = {
-  n_name   : name;
+  n_name   : qualname;
   n_input  : var_dec list;
   n_output : var_dec list;
   n_contract : contract option;
@@ -115,7 +114,7 @@ type node_dec = {
   n_params_constraints : size_constraint list }
 
 type const_dec = {
-  c_name : name;
+  c_name : qualname;
   c_type : ty;
   c_value : static_exp;
   c_loc : location }

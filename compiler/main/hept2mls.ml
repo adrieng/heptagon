@@ -389,8 +389,7 @@ let typedec
     | Heptagon.Type_abs -> Type_abs
     | Heptagon.Type_alias ln -> Type_alias ln
     | Heptagon.Type_enum tag_list -> Type_enum tag_list
-    | Heptagon.Type_struct field_ty_list ->
-        Type_struct field_ty_list
+    | Heptagon.Type_struct field_ty_list -> Type_struct field_ty_list
   in
   { t_name = n; t_desc = onetype tdesc; t_loc = loc }
 

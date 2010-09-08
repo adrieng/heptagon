@@ -12,10 +12,9 @@ open Compiler_utils
 
 let pp p = if !verbose then Mls_printer.print stdout p
 
-let parse prog_name parsing_fun lexing_fun lexbuf =
+let parse parsing_fun lexing_fun lexbuf =
   try
-    let p = parsing_fun lexing_fun lexbuf in
-    { p with p_modname = prog_name }
+    parsing_fun lexing_fun lexbuf
   with
     | Mls_lexer.Lexical_error(err, loc) ->
         lexical_error err loc
@@ -26,22 +25,23 @@ let parse prog_name parsing_fun lexing_fun lexbuf =
         syntax_error l
 
 let parse_implementation prog_name lexbuf =
-  parse prog_name Mls_parser.program Mls_lexer.token lexbuf
+  let p = parse Mls_parser.program Mls_lexer.token lexbuf in
+  { p with Mls_parsetree.p_modname = prog_name }
 
 let compile pp p =
   (* Clocking *)
-  let p = do_pass Clocking.program "Clocking" p pp true in
+  let p = pass "Clocking" true Clocking.program p pp in
 
   (* Check that the dataflow code is well initialized *)
-  (*let p = do_silent_pass Init.program "Initialization check" p !init in *)
+  (*let p = silent_pass "Initialization check" !init Init.program p in *)
 
   (* Iterator fusion *)
-  let p = do_pass Itfusion.program "Iterator fusion" p pp true in
+  (*let p = pass "Iterator fusion" false Itfusion.program  p pp in*)
 
   (* Normalization to maximize opportunities *)
-  let p = do_pass Normalize.program "Normalization" p pp true in
+  let p = pass "Normalization" true Normalize.program p pp in
 
   (* Scheduling *)
-  let p = do_pass Schedule.program "Scheduling" p pp true in
+  let p = pass "Scheduling" true Schedule.program p pp in
 
   p

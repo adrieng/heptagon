@@ -10,8 +10,7 @@
 (** This module defines static expressions, used in params and for constants.
     const n: int = 3;
     var x : int^n; var y : int^(n + 2);
-    x[n - 1], x[1 + 3],...
-*)
+    x[n - 1], x[1 + 3],... *)
 
 open Names
 open Format
@@ -25,34 +24,26 @@ exception Partial_instanciation of static_exp
 
 exception Not_static
 
-(** Returns the op from an operator full name. *)
-let op_from_app_name ln =
-  match ln with
-    | Modname { qual = "Pervasives" } -> ln
-    | _ -> raise Not_static
-
-
-
 let partial_apply_op op se_list =
   match se_list with
     | [{ se_desc = Sint n1 }; { se_desc = Sint n2 }] ->
         (match op with
-           | Modname { qual = "Pervasives"; id = "+" } ->
+           | { qual = "Pervasives"; name = "+" } ->
                Sint (n1 + n2)
-           | Modname { qual = "Pervasives"; id = "-" } ->
+           | { qual = "Pervasives"; name = "-" } ->
                Sint (n1 - n2)
-           | Modname { qual = "Pervasives"; id = "*" } ->
+           | { qual = "Pervasives"; name = "*" } ->
                Sint (n1 * n2)
-           | Modname { qual = "Pervasives"; id = "/" } ->
+           | { qual = "Pervasives"; name = "/" } ->
                let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
                Sint n
-           | Modname { qual = "Pervasives"; id = "=" } ->
+           | { qual = "Pervasives"; name = "=" } ->
                Sbool (n1 = n2)
            | _ -> assert false (*TODO: add missing operators*)
         )
     | [{ se_desc = Sint n }] ->
         (match op with
-           | Modname { qual = "Pervasives"; id = "~-" } -> Sint (-n)
+           | { qual = "Pervasives"; name = "~-" } -> Sint (-n)
            | _ -> assert false (*TODO: add missing operators*)
         )
     | _ -> Sop(op, se_list)
@@ -67,12 +58,10 @@ let eval_core eval apply_op env se = match se.se_desc with
   | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
   | Svar ln -> (
       try (* first try to find in global const env *)
-        let { info = cd } = find_const ln in
+        let cd = find_const ln in
         eval env cd.c_value
-      with Not_found -> (
-        match ln with (* then try to find in local env *)
-          | Name n -> eval env (NamesEnv.find n env)
-          | Modname _ -> raise Not_found ) )
+      with Not_found -> (* then try to find in local env *)
+        eval env (QualEnv.find ln env))
   | Sop (op, se_list) ->
       let se_list = List.map (eval env) se_list in
         { se with se_desc = apply_op op se_list }
@@ -109,7 +98,8 @@ let int_of_static_exp env se =
     | Sint i -> i
     | _ ->
       (Format.eprintf "Internal compiler error, \
-        [eval_int] received the static_exp %a.@." Types.print_static_exp se;
+        [eval_int] received the static_exp %a.@."
+        Global_printer.print_static_exp se;
       assert false)
 
 (** [is_true env constr] returns whether the constraint is satisfied
@@ -152,10 +142,7 @@ let rec solve const_env =
     in the map (mapping vars to size exps). *)
 let rec static_exp_subst m se =
   match se.se_desc with
-    | Svar ln ->
-        (match ln with
-           | Name n -> (try NamesEnv.find n m with | Not_found -> se)
-           | Modname _ -> se)
+    | Svar qn -> (try QualEnv.find qn m with | Not_found -> se)
     | Sop (op, se_list) ->
         { se with se_desc = Sop (op, List.map (static_exp_subst m) se_list) }
     | Sarray_power (se, n) ->
@@ -180,13 +167,4 @@ let instanciate_constr m constr =
     | Cfalse -> Cfalse in
   List.map (replace_one m) constr
 
-
-open Format
-
-let print_size_constraint ff = function
-  | Cequal (e1, e2) ->
-      fprintf ff "@[%a = %a@]" print_static_exp e1 print_static_exp e2
-  | Clequal (e1, e2) ->
-      fprintf ff "@[%a <= %a@]" print_static_exp e1 print_static_exp e2
-  | Cfalse -> fprintf ff "Cfalse"
 

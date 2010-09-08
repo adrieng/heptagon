@@ -28,17 +28,13 @@ let check_implementation modname filename =
     init_compiler modname;
 
     (* Parsing of the file *)
-    let p = parse_implementation lexbuf in
-    comment "Parsing";
+    let p = do_silent_pass parse_implementation "Parsing" lexbuf true in
 
     (* Convert the parse tree to Heptagon AST *)
-    let p = Hept_scoping.translate_program p in
-    comment "Scoping";
-    pp p;
+    let p = do_pass Hept_scoping.translate_program "Scoping" p pp true in
 
     (* Call the compiler*)
-    let p = Hept_compiler.compile_impl pp p in
-    comment "Checking";
+    let p = do_silent_pass Hept_compiler.compile_impl "Checking" p true in
 
     close_all_files ()
 

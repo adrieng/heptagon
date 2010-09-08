@@ -24,7 +24,10 @@ type iterator_type =
   | Ifoldi
   | Imapfold
 
-type exp = { e_desc : desc; e_ty : ty; e_loc : location }
+type exp = {
+  e_desc : desc;
+  e_ty   : ty;
+  e_loc  : location }
 
 and desc =
   | Econst of static_exp
@@ -36,7 +39,10 @@ and desc =
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp * exp list * exp option
 
-and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
+and app = {
+  a_op     : op;
+  a_params : static_exp list;
+  a_unsafe : bool }
 
 and op =
   | Eequal
@@ -59,7 +65,10 @@ and pat =
   | Etuplepat of pat list
   | Evarpat of var_ident
 
-type eq = { eq_desc : eqdesc; eq_statefull : bool; eq_loc : location }
+type eq = {
+  eq_desc      : eqdesc;
+  eq_statefull : bool;
+  eq_loc       : location }
 
 and eqdesc =
   | Eautomaton of state_handler list
@@ -69,82 +78,92 @@ and eqdesc =
   | Eeq of pat * exp
 
 and block = {
-  b_local : var_dec list;
-  b_equs : eq list;
-  b_defnames : ty Env.t;
+  b_local     : var_dec list;
+  b_equs      : eq list;
+  b_defnames  : ty Env.t;
   b_statefull : bool;
-  b_loc : location }
+  b_loc       : location }
 
 and state_handler = {
-  s_state : state_name;
-  s_block : block;
-  s_until : escape list;
+  s_state  : state_name;
+  s_block  : block;
+  s_until  : escape list;
   s_unless : escape list }
 
 and escape = {
-  e_cond : exp;
-  e_reset : bool;
+  e_cond       : exp;
+  e_reset      : bool;
   e_next_state : state_name }
 
-and switch_handler = { w_name : constructor_name; w_block : block }
+and switch_handler = {
+  w_name  : constructor_name;
+  w_block : block }
 
-and present_handler = { p_cond : exp; p_block : block }
+and present_handler = {
+  p_cond  : exp;
+  p_block : block }
 
 and var_dec = {
   v_ident : var_ident;
-  v_type : ty;
-  v_last : last;
-  v_loc : location }
+  v_type  : ty;
+  v_last  : last;
+  v_loc   : location }
 
 and last = Var | Last of static_exp option
 
-type type_dec = { t_name : name; t_desc : type_dec_desc; t_loc : location }
+type type_dec = {
+  t_name : qualname;
+  t_desc : type_dec_desc;
+  t_loc  : location }
 
 and type_dec_desc =
   | Type_abs
   | Type_alias of ty
-  | Type_enum of name list
+  | Type_enum of constructor_name list
   | Type_struct of structure
 
 type contract = {
-  c_assume : exp;
+  c_assume  : exp;
   c_enforce : exp;
-  c_block : block }
+  c_block   : block }
 
 type node_dec = {
-  n_name : name;
+  n_name      : qualname;
   n_statefull : bool;
-  n_input : var_dec list;
-  n_output : var_dec list;
-  n_contract : contract option;
-  n_block : block;
-  n_loc : location;
-  n_params : param list;
+  n_input     : var_dec list;
+  n_output    : var_dec list;
+  n_contract  : contract option;
+  n_block     : block;
+  n_loc       : location;
+  n_params    : param list;
   n_params_constraints : size_constraint list }
 
 type const_dec = {
-  c_name : name;
-  c_type : ty;
+  c_name  : qualname;
+  c_type  : ty;
   c_value : static_exp;
-  c_loc : location }
+  c_loc   : location }
 
 type program = {
   p_modname : name;
-  p_opened : name list;
-  p_types : type_dec list;
-  p_nodes : node_dec list;
-  p_consts : const_dec list }
+  p_opened  : name list;
+  p_types   : type_dec list;
+  p_nodes   : node_dec list;
+  p_consts  : const_dec list }
 
 type signature = {
-  sig_name : name;
-  sig_inputs : arg list;
+  sig_name      : qualname;
+  sig_inputs    : arg list;
   sig_statefull : bool;
-  sig_outputs : arg list;
-  sig_params : param list }
+  sig_outputs   : arg list;
+  sig_params    : param list;
+  sig_loc       : location }
 
 type interface = interface_decl list
 
-and interface_decl = { interf_desc : interface_desc; interf_loc : location }
+and interface_decl = {
+  interf_desc : interface_desc;
+  interf_loc  : location }
 
 and interface_desc =
   | Iopen of name
@@ -188,17 +207,14 @@ let mk_simple_equation pat e =
 let mk_switch_equation ?(statefull = true) e l =
   mk_equation ~statefull:statefull (Eswitch (e, l))
 
-(** @return a size exp operator from a Heptagon operator. *)
-let op_from_app app =
-  match app.a_op with
-    | Efun op -> op_from_app_name op
-    | _ -> raise Not_static
+let mk_signature name ins outs statefull params loc =
+  { sig_name = name;
+    sig_inputs = ins;
+    sig_statefull = statefull;
+    sig_outputs = outs;
+    sig_params = params;
+    sig_loc = loc }
 
-(** Translates a Heptagon exp into a static size exp. *)
-(*let rec static_exp_of_exp e =
-  match e.e_desc with
-    | Econst se -> se
-    | _ -> raise Not_static *)
 
 (** @return the set of variables defined in [pat]. *)
 let vars_pat pat =

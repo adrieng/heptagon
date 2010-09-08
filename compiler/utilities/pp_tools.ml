@@ -56,12 +56,12 @@ let print_type_params ff pl =
   print_list_r (fun ff s -> fprintf ff "'%s" s) "("","") " ff pl
 
 
-let print_set print_element ff set =
+let print_set iter print_element ff set =
   fprintf ff "@[{@ ";
   iter (fun e -> fprintf ff "%a@ " print_element e) set;
   fprintf ff "}@]"
 
-let print_map print_key print_element ff map =
-  pfrintf ff "@[<hv 2>[@ ";
-  iter (fun k x -> fprintf ff "| %a -> %a@ " print_key k print_element x map;
+let print_map iter print_key print_element ff map =
+  fprintf ff "@[<hv 2>[@ ";
+  iter (fun k x -> fprintf ff "| %a -> %a@ " print_key k print_element x) map;
   fprintf ff "]@]"

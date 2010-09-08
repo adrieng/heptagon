@@ -83,7 +83,7 @@ let tomato = ref false
 
 let inline = ref []
 
-let add_inlined_node s = inline := Names.mk_longname s :: !inline
+let add_inlined_node s = inline := s :: !inline
 
 let flatten = ref false
 
@@ -216,7 +216,7 @@ let rec assocd value = function
         assocd value l
 
 
-(** Compiler iterators *)
+(** { 3 Compiler iterators } *)
 exception Fallback
 
 (** Mapfold *)
@@ -258,3 +258,18 @@ let mapi3 f l1 l2 l3 =
           (f i v1 v2 v3)::(aux (i+1) l1 l2 l3)
   in
     aux 0 l1 l2 l3
+
+exception Cannot_find_file of string
+
+let findfile filename =
+  if Sys.file_exists filename then
+    filename
+  else if not(Filename.is_implicit filename) then
+    raise(Cannot_find_file filename)
+  else
+    let rec find = function
+      | [] -> raise(Cannot_find_file filename)
+      | a::rest ->
+          let b = Filename.concat a filename in
+          if Sys.file_exists b then b else find rest in
+    find !load_path

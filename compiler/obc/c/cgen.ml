@@ -59,27 +59,20 @@ let int_of_static_exp se =
   Static.int_of_static_exp NamesEnv.empty se
 
 (** Returns the information concerning a node given by name. *)
-let node_info classln =
-  match classln with
-    | Modname {qual = modname; id = modname_name } ->
-        begin try
-          modname, find_value (Modname({qual = modname;
-                                        id = modname_name }))
-        with Not_found ->
-          (* name might be of the form Module.name, remove the module name*)
-          (*let ind_name = (String.length modname) + 1 in
-          let name = String.sub modname_name ind_name
-            ((String.length modname_name)-ind_name) in
-          begin try
-            modname, find_value (Modname({qual = modname;
-                                          id = name }))
-          with Not_found ->*)
-            Error.message no_location (Error.Enode modname)
-          (*end *)
-        end
-    | Name n ->
-        assert false;
-        Error.message no_location (Error.Enode n)
+let node_info {qual = modname; name = modname_name } =
+  try
+    modname, find_value {qual = modname; name = modname_name }
+  with Not_found ->
+    (* name might be of the form Module.name, remove the module name*)
+    (*let ind_name = (String.length modname) + 1 in
+    let name = String.sub modname_name ind_name
+      ((String.length modname_name)-ind_name) in
+    begin try
+      modname, find_value (Modname({qual = modname;
+                                    id = name }))
+    with Not_found ->*)
+      Error.message no_location (Error.Enode modname)
+    (*end *)
 
 let output_names_list sig_info =
   let remove_option ad = match ad.a_name with
@@ -176,7 +169,7 @@ let rec assoc_type n var_env =
 let rec unalias_ctype = function
   | Cty_id ty_name ->
       (try
-        let { qualid = q; info = ty_desc } = find_type (longname ty_name) in
+        let { qualname = q; info = ty_desc } = find_type (qualname ty_name) in
           match ty_desc with
             | Talias ty -> unalias_ctype (ctype_of_otype ty)
             | _ -> Cty_id ty_name
@@ -202,8 +195,8 @@ let rec assoc_type_lhs lhs var_env =
     | Cfield(x, f) ->
         let ty = assoc_type_lhs x var_env in
         let n = struct_name ty in
-        let { info = fields } = find_struct (longname n) in
-        ctype_of_otype (field_assoc (Name f) fields)
+        let { info = fields } = find_struct (qualname n) in
+        ctype_of_otype (field_assoc (qualname f) fields)
 
 (** Creates the statement a = [e_1, e_2, ..], which gives a list
     a[i] = e_i.*)
@@ -287,9 +280,8 @@ let rec cexpr_of_exp var_env exp =
 and cexprs_of_exps var_env exps =
   List.map (cexpr_of_exp var_env) exps
 
-and cop_of_op_aux var_env op_name cexps =
-  match op_name with
-    | Modname { qual = "Pervasives"; id = op } ->
+and cop_of_op_aux var_env op_name cexps = match op_name with
+    | { qual = "Pervasives"; name = op } ->
         begin match op,cexps with
           | "~-", [e] -> Cuop ("-", e)
           | "not", [e] -> Cuop ("!", e)
@@ -302,9 +294,7 @@ and cop_of_op_aux var_env op_name cexps =
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
         end
-    | Modname {qual = m; id = op} ->
-        Cfun_call(op,cexps)
-    | Name(op) ->
+    | {qual = m; name = op} ->
         Cfun_call(op,cexps)
 
 and cop_of_op var_env op_name exps =
@@ -350,7 +340,7 @@ let assoc_cn instance obj_env =
   (assoc_obj (obj_call_name instance) obj_env).o_class
 
 let is_op = function
-  | Modname { qual = "Pervasives"; id = _ } -> true
+  | { qual = "Pervasives"; name = _ } -> true
   | _ -> false
 
 let out_var_name_of_objn o =
@@ -431,8 +421,8 @@ let rec create_affect_const var_env dest c =
 let rec cstm_of_act var_env obj_env act =
   match act with
       (** Case on boolean values are converted to if instead of switch! *)
-    | Acase (c, [(Name "true", te); (Name "false", fe)])
-    | Acase (c, [(Name "false", fe); (Name "true", te)]) ->
+    | Acase (c, [({name = "true"}, te); ({ name = "false" }, fe)])
+    | Acase (c, [({name = "false"}, fe); ({ name = "true"}, te)]) ->
         let cc = cexpr_of_exp var_env c in
         let cte = cstm_of_act_list var_env obj_env te in
         let cfe = cstm_of_act_list var_env obj_env fe in
@@ -511,7 +501,7 @@ let global_name = ref "";;
 (** {2 step() and reset() functions generation *)
 
 let mk_current_longname n =
-  Modname { qual = !global_name; id = n }
+  { qual = !global_name; name = n }
 
 (** Builds the argument list of step function*)
 let step_fun_args n md =
@@ -654,7 +644,7 @@ let decls_of_type_decl otd =
                          Cty_ptr Cty_char,
                          [("x", Cty_id name); ("buf", Cty_ptr Cty_char)])]
     | Type_struct fl ->
-        let decls = List.map (fun f -> f.Signature.f_name,
+        let decls = List.map (fun f -> shortname f.Signature.f_name,
                                 ctype_of_otype f.Signature.f_type) fl in
         [Cdecl_struct (otd.t_name, decls)];;
 
@@ -698,7 +688,7 @@ let cdefs_and_cdecls_of_type_decl otd =
          [Cdecl_enum (otd.t_name, nl); cdecl_of_cfundef of_string_fun;
           cdecl_of_cfundef to_string_fun])
     | Type_struct fl ->
-        let decls = List.map (fun f -> f.Signature.f_name,
+        let decls = List.map (fun f -> shortname f.Signature.f_name,
                                 ctype_of_otype f.Signature.f_type) fl in
         let decl = Cdecl_struct (otd.t_name, decls) in
         ([], [decl])

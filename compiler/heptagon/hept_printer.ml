@@ -15,6 +15,7 @@ open Idents
 open Modules
 open Static
 open Format
+open Global_printer
 open Pp_tools
 open Types
 open Signature
@@ -68,7 +69,7 @@ and print_exp ff e =
         )
     | Estruct(f_e_list) ->
         print_list_r
-          (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
+          (fun ff (field, e) -> print_qualname ff field;fprintf ff " = ";
              print_exp ff e)
           "{" ";" "}" ff f_e_list;
         fprintf ff "}@]"
@@ -78,10 +79,10 @@ and print_exp ff e =
         print_iterator ff it;
         fprintf ff " ";
         (match params with
-           | [] -> print_longname ff ln
+           | [] -> print_qualname ff ln
            | l ->
                fprintf ff "(";
-               print_longname ff ln;
+               print_qualname ff ln;
                print_call_params ff params;
                fprintf ff ")"
         );
@@ -114,7 +115,7 @@ and print_op ff op params e_list =
     | Earray, _, e_list ->
         print_list_r print_exp "[" "," "]" ff e_list
     | (Efun f|Enode f), params, e_list ->
-        print_longname ff f;
+        print_qualname ff f;
         print_call_params ff params;
         print_exps ff e_list
     | Efield, [field], [e] ->
@@ -210,7 +211,7 @@ and print_eq_list ff = function
 and print_state_handler ff
     { s_state = s; s_block = b; s_until = until; s_unless = unless } =
   fprintf ff "  @[<v 2>state ";
-  fprintf ff "%s@," s;
+  fprintf ff "%a@," print_name s;
   print_block ff b;
   if until <> [] then
     begin
@@ -228,7 +229,7 @@ and print_state_handler ff
 
 and print_switch_handler ff { w_name = tag; w_block = b } =
   fprintf ff "  @[<v 2>| ";
-  print_longname ff tag;
+  print_qualname ff tag;
   fprintf ff "@,";
   print_block ff b;
   fprintf ff "@]"
@@ -264,25 +265,25 @@ and print_block ff { b_local = v_list; b_equs = eqs; b_defnames = defnames } =
 
 let print_type_def ff { t_name = name; t_desc = tdesc } =
   match tdesc with
-    | Type_abs -> fprintf ff "@[type %s@.@]" name
+    | Type_abs -> fprintf ff "@[type %a@.@]" print_qualname name
     | Type_alias ty ->
-        fprintf ff  "@[type %s@ = %a@.@]" name  print_type ty
+        fprintf ff  "@[type %a@ = %a@.@]" print_qualname name print_type ty
     | Type_enum(tag_name_list) ->
-        fprintf ff "@[type %s = " name;
-        print_list_r print_name "" "| " "" ff tag_name_list;
+        fprintf ff "@[type %a = " print_qualname name;
+        print_list_r print_qualname "" "| " "" ff tag_name_list;
         fprintf ff "@.@]"
     | Type_struct(f_ty_list) ->
-        fprintf ff "@[type %s = " name;
+        fprintf ff "@[type %a = " print_qualname name;
         print_list_r
           (fun ff { f_name = field; f_type = ty } ->
-             print_name ff field;
+             print_qualname ff field;
              fprintf ff ": ";
              print_type ff ty) "{" ";" "}" ff f_ty_list;
         fprintf ff "@.@]"
 
 let print_const_dec ff c =
   fprintf ff "@[const ";
-  print_name ff c.c_name;
+  print_qualname ff c.c_name;
   fprintf ff " : ";
   print_type ff c.c_type;
   fprintf ff " = ";
@@ -317,7 +318,7 @@ let print_node ff
       n_block = nb; n_output = no; n_contract = contract;
       n_params = params; } =
   fprintf ff "@[<v 2>node ";
-  print_name ff n;
+  print_qualname ff n;
   fprintf ff "@[%a@]" print_node_params params;
   fprintf ff "@[%a@]" (print_list_r print_vd "(" ";" ")") ni;
   fprintf ff " returns ";

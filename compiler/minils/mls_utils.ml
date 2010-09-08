@@ -46,14 +46,13 @@ let rec vd_mem n = function
 (** @return whether [ty] corresponds to a record type. *)
 let is_record_type ty = match ty with
   | Tid n ->
-      (try
-         ignore (Modules.find_struct n); true
-       with
-           Not_found -> false)
+      (match Modules.find_type n with
+        | Tenum _ -> true
+        | _ -> false)
   | _ -> false
 
 let is_op = function
-  | Modname { qual = "Pervasives"; id = _ } -> true | _ -> false
+  | { qual = "Pervasives"; name = _ } -> true | _ -> false
 
 
 let exp_list_of_static_exp_list se_list =

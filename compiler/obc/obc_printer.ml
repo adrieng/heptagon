@@ -14,7 +14,7 @@ let print_vd ff vd =
 
 let print_obj ff o =
   fprintf ff "@[<v>"; print_name ff o.o_name;
-  fprintf ff " : "; print_longname ff o.o_class;
+  fprintf ff " : "; print_qualname ff o.o_class;
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") o.o_params;
   (match o.o_size with
      | Some se -> fprintf ff "[%a]" print_static_exp se
@@ -42,7 +42,7 @@ and print_exp ff e =
     | Estruct(_,f_e_list) ->
         fprintf ff "@[<v 1>";
         print_list_r
-          (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
+          (fun ff (field, e) -> print_qualname ff field;fprintf ff " = ";
              print_exp ff e)
           "{" ";" "}" ff f_e_list;
         fprintf ff "@]"
@@ -53,9 +53,9 @@ and print_exp ff e =
 
 and print_op ff op e_list = match e_list with
   | [l; r] ->
-      fprintf ff "(@[%a@ %a %a@])" print_longname op print_exp l print_exp r
+      fprintf ff "(@[%a@ %a %a@])" print_qualname op print_exp l print_exp r
   | _ ->
-      print_longname ff op;
+      print_qualname ff op;
       print_list_l print_exp "(" "," ")" ff e_list
 
 let print_asgn ff pref x e =
@@ -117,7 +117,7 @@ and print_tag_act_list ff tag_act_list =
   print_list
     (fun ff (tag, a) ->
        fprintf ff "@[<v 2>case %a:@ %a@]"
-         print_longname tag
+         print_qualname tag
          print_block a)
     "" "" "" ff tag_act_list
 
@@ -167,7 +167,7 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
         fprintf ff "@[<v 1>";
         print_list
           (fun ff { Signature.f_name = field; Signature.f_type = ty } ->
-             print_name ff field;
+             print_qualname ff field;
              fprintf ff ": ";
              print_type ff ty) "{" ";" "}" ff f_ty_list;
         fprintf ff "@]@.@]"

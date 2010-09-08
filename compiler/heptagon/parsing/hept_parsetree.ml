@@ -13,6 +13,31 @@ open Location
 open Signature
 open Types
 
+type qualname =
+  | Q of Names.qualname (* already qualified name *)
+  | ToQ of name (* name to qualify in the scoping process *)
+
+type type_name = qualname
+type fun_name = qualname
+type field_name = qualname
+type constructor_name = qualname
+type constant_name = qualname
+type module_name = name
+
+type static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
+
+and static_exp_desc =
+  | Svar of constant_name
+  | Sint of int
+  | Sfloat of float
+  | Sbool of bool
+  | Sconstructor of constructor_name
+  | Stuple of static_exp list
+  | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
+  | Sarray of static_exp list (** [ e1, e2, e3 ] *)
+  | Srecord of (field_name * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
+  | Sop of fun_name * static_exp list (** defined ops for now in pervasives *)
+
 type iterator_type =
   | Imap
   | Ifold
@@ -21,7 +46,7 @@ type iterator_type =
 
 type ty =
   | Tprod of ty list
-  | Tid of longname
+  | Tid of qualname
   | Tarray of ty * exp
 
 and exp =
@@ -34,7 +59,7 @@ and desc =
   | Elast of name
   | Epre of exp option * exp
   | Efby of exp * exp
-  | Estruct of (longname * exp) list
+  | Estruct of (qualname * exp) list
   | Eapp of app * exp list
   | Eiterator of iterator_type * app * exp * exp list
 
@@ -43,8 +68,8 @@ and app = { a_op: op; a_params: exp list; }
 and op =
   | Eequal
   | Etuple
-  | Enode of longname
-  | Efun of longname
+  | Enode of qualname
+  | Efun of qualname
   | Eifthenelse
   | Earrow
   | Efield
@@ -89,7 +114,7 @@ and escape =
       e_next_state : name; }
 
 and switch_handler =
-    { w_name : longname;
+    { w_name : constructor_name;
       w_block : block; }
 
 and present_handler =
@@ -148,11 +173,12 @@ type program =
 type arg = { a_type : ty; a_name : name option }
 
 type signature =
-    { sig_name    : name;
-      sig_inputs  : arg list;
+    { sig_name      : name;
+      sig_inputs    : arg list;
       sig_statefull : bool;
-      sig_outputs : arg list;
-      sig_params  : var_dec list; }
+      sig_outputs   : arg list;
+      sig_params    : var_dec list;
+      sig_loc       : location }
 
 type interface = interface_decl list
 
@@ -178,13 +204,16 @@ let mk_call ?(params=[]) op exps =
 
 let mk_op_call ?(params=[]) s exps =
   mk_call ~params:params
-    (Efun (Modname { qual = "Pervasives"; id = s })) exps
+    (Efun (Q { qual = "Pervasives"; name = s })) exps
 
 let mk_iterator_call it ln params n exps =
   Eiterator (it, mk_app (Enode ln) params, n, exps)
 
+let mk_static_exp ?(ty = invalid_type) desc loc =
+  { se_desc = desc; se_ty = ty; se_loc = loc }
+
 let mk_constructor_exp f loc =
-  mk_exp (Econst (mk_static_exp (Sconstructor f))) loc
+  mk_exp (Econst (mk_static_exp (Sconstructor f) loc)) loc
 
 let mk_type_dec name desc loc =
   { t_name = name; t_desc = desc; t_loc = loc }
@@ -204,9 +233,12 @@ let mk_block locals eqs loc =
     b_loc = loc }
 
 let mk_const_dec id ty e loc =
-  { c_name = id; c_type = ty; c_value = e;
-    c_loc = loc }
+  { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
 let mk_arg name ty =
   { a_type = ty; a_name = name }
 
+
+
+let ptrue = Q Initial.ptrue
+let pfalse = Q Initial.pfalse

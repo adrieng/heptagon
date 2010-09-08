@@ -16,9 +16,9 @@ open Signature
 open Location
 
 type class_name = name
-type instance_name = longname
+type instance_name = qualname
 type obj_name = name
-type op_name = longname
+type op_name = qualname
 
 type type_dec =
     { t_name : name;

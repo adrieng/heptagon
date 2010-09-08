@@ -16,9 +16,8 @@ open Global_mapfold
 
 module Deps =
 struct
-  let deps_longname deps ln = match ln with
-    | Modname { qual = modn; } -> S.add modn deps
-    | _ -> deps
+
+  let deps_longname deps { qual = modn; } = S.add modn deps
 
   let deps_static_exp_desc funs deps sedesc =
     let (sedesc, deps) = Global_mapfold.static_exp_desc funs deps sedesc in

@@ -7,6 +7,7 @@
 (*                                                                        *)
 (**************************************************************************)
 open Misc
+open Initial
 open Names
 open Idents
 open Signature
@@ -15,8 +16,6 @@ open Mls_utils
 open Types
 open Clocks
 
-let ctrue = Name "true"
-and cfalse = Name "false"
 
 let equation (d_list, eq_list) e =
   let add_one_var ty d_list =
@@ -112,9 +111,9 @@ let rec merge e x ci_a_list =
 let ifthenelse context e1 e2 e3 =
   let context, n = intro context e1 in
   let n = (match n with Evar n -> n | _ -> assert false) in
-  let context, e2 = whenc context e2 ctrue n in
-  let context, e3 = whenc context e3 cfalse n in
-    context, merge e1 n [ctrue, e2; cfalse, e3]
+  let context, e2 = whenc context e2 ptrue n in
+  let context, e3 = whenc context e3 pfalse n in
+    context, merge e1 n [ptrue, e2; pfalse, e3]
 
 let const e c =
   let rec const = function
@@ -194,10 +193,10 @@ let rec translate kind context e =
       (* normalize anonymous nodes *)
       (match app.a_op with
         | Enode f when Itfusion.is_anon_node f ->
-	  let nd = Itfusion.find_anon_node f in
+    let nd = Itfusion.find_anon_node f in
           let d_list, eq_list = translate_eq_list nd.n_local nd.n_equs in
-	  let nd = { nd with n_equs = eq_list; n_local = d_list } in
-	    Itfusion.replace_anon_node f nd
+    let nd = { nd with n_equs = eq_list; n_local = d_list } in
+      Itfusion.replace_anon_node f nd
         | _ -> () );
 
         (* Add an intermediate equation for each array lit argument. *)

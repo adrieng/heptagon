@@ -36,12 +36,11 @@ let compile_impl modname filename =
     let pp = Mls_compiler.pp in
 
     (* Parsing of the file *)
-    let p =
-      do_silent_pass Mls_compiler.parse_implementation "Parsing" lexbuf true in
-    let p = { p with Minils.p_modname = modname } in
+    let p = do_silent_pass "Parsing" (Mls_compiler.parse_implementation modname)
+                           lexbuf in
 
     (* Convert Parse tree to Minils AST *)
-    let p = Mls_scoping.translate_program "Scoping" p pp true in
+    let p = do_pass "Scoping" Mls_scoping.translate_program p pp in
 
     (* Process the MiniLS AST *)
     let p = Mls_compiler.compile pp p in

@@ -1,6 +1,28 @@
 (** Scoping. Introduces unique indexes for local names and replace global
     names by qualified names *)
 
+
+(* [local_const] is the environnement with local constant variables,
+  that is for now only the statics node parameters.
+  It is built with [build_const].
+  When qualifying a constant var,
+  it is first check in the local_const env, so qualified with [local_qn]
+  if not found we try to qualify with the global env. *)
+
+(* The global environement is initialized by the scoping pass.
+   This allow at the same time
+   to qualify types, constants, constructors, fields and node calls,
+   according to the current module definitions and opened modules. *)
+
+(* [env] of type Rename.t is the renaming environnement
+   used to map a var name to a var ident.
+   It is initialized at node declaration level with the inputs and outputs,
+   and then appended with the local var declarations at each block level
+   with the [build] function. *)
+
+(* convention : static params are set as the first static args,
+    op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
+
 open Location
 open Types
 open Hept_parsetree
@@ -8,25 +30,36 @@ open Names
 open Idents
 open Format
 open Static
+open Global_printer
 open Modules
 
 module Error =
 struct
   type error =
-    | Evar of string
-    | Econst_var of string
-    | Evariable_already_defined of string
-    | Econst_variable_already_defined of string
+    | EvarUnbound of name
+    | EqualUnbound of qualname
+    | Econst_var of name
+    | Enotlast of name
+    | Evariable_already_defined of name
+    | Econst_variable_already_defined of name
     | Estatic_exp_expected
 
   let message loc kind =
     begin match kind with
-      | Evar name ->
+      | EvarUnbound name ->
           eprintf "%aThe value identifier %s is unbound.@."
             print_location loc
             name
+      |EqualUnbound q ->
+          eprintf "%aThe qualified name %a can't be found.@."
+            print_location loc
+            print_qualname q
       | Econst_var name ->
           eprintf "%aThe const identifier %s is unbound.@."
+            print_location loc
+            name
+      | Enotlast name ->
+          eprintf "%aThe variable identifier %s should be declared as a last.@."
             print_location loc
             name
       | Evariable_already_defined name ->
@@ -42,140 +75,199 @@ struct
             print_location loc
     end;
     raise Misc.Error
+
+  exception ScopingError of error
+
+  let error kind = raise (ScopingError(kind))
 end
+
+open Error
+
+
+(** { 3 qualify when ToQ and check when Q according to the global env } *)
+
+let _qualify_with_error qfun cqfun q = match q with
+  | ToQ name ->
+    (*TODO good error*)
+      (try qfun name with Not_found -> error (EvarUnbound name))
+  | Q q ->
+      if cqfun q then q else error (EqualUnbound q)
+
+let qualify_value = _qualify_with_error qualify_value check_value
+let qualify_type = _qualify_with_error qualify_type check_type
+let qualify_constrs = _qualify_with_error qualify_constrs check_constrs
+let qualify_field = _qualify_with_error qualify_field check_field
+
+(** Qualify with [Names.local_qualname] when in local_const,
+    otherwise qualify according to the global env *)
+let qualify_const local_const c = match c with
+  | ToQ c ->
+      if S.mem c local_const
+      then local_qn c
+      else (try qualify_const c with Not_found -> raise Not_static)
+  | Q q ->
+      if check_const q then q else raise Not_static
+
 
 module Rename =
 struct
+  open Error
   include
     (Map.Make (struct type t = string let compare = String.compare end))
-  let append env0 env =
-    fold (fun key v env -> add key v env) env0 env
-
-  let name loc env n =
+  (** Rename a var *)
+  let var loc env n =
+    try fst (find n env)
+    with Not_found -> message loc (EvarUnbound n)
+  (** Rename a last *)
+  let last loc env n =
     try
-      find n env
-    with
-        Not_found -> Error.message loc (Error.Evar(n))
+      let id, last = find n env in
+      if not last then message loc (Enotlast n) else id
+    with Not_found -> message loc (EvarUnbound n)
+  (** Add a var *)
+  let add_var loc env n =
+    if mem n env then message loc (Evariable_already_defined n)
+    else (* create a new id for this var and add it to the env *)
+        add n (ident_of_name n, false) env
+  (** Add a last *)
+  let add_last loc env n =
+    if mem n env then message loc (Evariable_already_defined n)
+    else (* create a new id for this var and add it to the env *)
+        add n (ident_of_name n, true) env
+  (** Add a var dec *)
+  let add env vd =
+    let add = match vd.v_last with
+      | Var -> add_var
+      | Last _ -> add_last in
+    add vd.v_loc env vd.v_name
+  (** Append a list of var dec *)
+  let append env vd_list = List.fold_left add env vd_list
 end
 
-(*Functions to build the renaming map*)
-let add_var loc x env =
-  if Rename.mem x env then
-    Error.message loc (Error.Evariable_already_defined x)
-  else (* create a new id for this var and add it to the env *)
-    Rename.add x (ident_of_name x) env
 
-let add_const_var loc x env =
-  if NamesEnv.mem x env then
-    Error.message loc (Error.Econst_variable_already_defined x)
-  else (* create a new id for this var and add it to the env *)
-    NamesEnv.add x x env
+(** Function to build the defined static parameters set *)
+let build_const loc vd_list =
+  let _add_const_var loc c local_const =
+    if S.mem c local_const
+    then Error.message loc (Error.Econst_variable_already_defined c)
+    else S.add c local_const in
+  let build local_const vd =
+    _add_const_var loc vd.v_name local_const in
+  List.fold_left build S.empty vd_list
 
-let build_vd_list env l =
-  let build_vd env vd =
-    add_var vd.v_loc vd.v_name env
-  in
-  List.fold_left build_vd env l
 
-let build_cd env cd =
-  add_const_var cd.c_loc cd.c_name env
-
-let build_id_list loc env l =
-  let build_id env vd =
-    add_const_var loc vd.v_name env
-  in
-  List.fold_left build_id env l
-
-(* Translate the AST into Heptagon. *)
+(** { 3 Translate the AST into Heptagon. } *)
 let translate_iterator_type = function
   | Imap -> Heptagon.Imap
   | Ifold -> Heptagon.Ifold
   | Ifoldi -> Heptagon.Ifoldi
   | Imapfold -> Heptagon.Imapfold
 
-let op_from_app loc app =
+(** convention : static params are set as the first static args,
+    op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
+let static_app_from_app app args=
   match app.a_op with
-    | Efun op | Enode op -> op_from_app_name op
+    | Efun (Q ({ qual = "pervasives" } as q))
+    | Enode (Q ({ qual = "pervasives" } as q)) ->
+        q, (app.a_params @ args)
     | _ -> raise Not_static
 
-let rec static_exp_of_exp const_env e =
-  let desc = match e.e_desc with
-    | Evar n ->
-        if NamesEnv.mem n const_env then
-          Svar (Name n)
-        else
-          (try
-            let { qualid = q } = find_const (Name n) in
-              Svar (Modname q)
-           with Not_found -> raise Not_static)
-    | Econst se -> se.se_desc
-    | Eapp({ a_op = Earray_fill; a_params = [n] }, [e]) ->
-        Sarray_power (static_exp_of_exp const_env e,
-                      static_exp_of_exp const_env n)
-    | Eapp({ a_op = Earray }, e_list) ->
-        Sarray (List.map (static_exp_of_exp const_env) e_list)
-    | Eapp({ a_op = Etuple }, e_list) ->
-        Stuple (List.map (static_exp_of_exp const_env) e_list)
-    | Eapp(app, e_list) ->
-        let op = op_from_app e.e_loc app in
-          Sop(op, List.map (static_exp_of_exp const_env) e_list)
-    | Estruct e_list ->
-        Srecord (List.map (fun (f,e) -> f,
-                             static_exp_of_exp const_env e) e_list)
-    | _ -> raise Not_static
-  in
-     mk_static_exp ~loc:e.e_loc desc
-
-let expect_static_exp const_env e =
+let rec translate_static_exp local_const se =
   try
-    static_exp_of_exp const_env e
+    let se_d = translate_static_exp_desc local_const se.se_desc in
+    Types.mk_static_exp ~loc:se.se_loc se_d
   with
-      Not_static -> Error.message e.e_loc Error.Estatic_exp_expected
+    | ScopingError err -> message se.se_loc err
 
-let rec translate_type const_env = function
-  | Tprod ty_list -> Types.Tprod(List.map (translate_type const_env) ty_list)
-  | Tid ln -> Types.Tid ln
-  | Tarray (ty, e) ->
-      let ty = translate_type const_env ty in
-        Types.Tarray (ty, expect_static_exp const_env e)
+and translate_static_exp_desc local_const ed =
+  let t = translate_static_exp local_const in
+  match ed with
+    | Svar q -> Types.Svar (qualify_const local_const q)
+    | Sint i -> Types.Sint i
+    | Sfloat f -> Types.Sfloat f
+    | Sbool b -> Types.Sbool b
+    | Sconstructor c -> Types.Sconstructor (qualify_constrs c)
+    | Stuple se_list -> Types.Stuple (List.map t se_list)
+    | Sarray_power (se,sn) -> Types.Sarray_power (t se, t sn)
+    | Sarray se_list -> Types.Sarray (List.map t se_list)
+    | Srecord se_f_list ->
+        let qualf (f, se) = (qualify_field f, t se) in
+        Types.Srecord (List.map qualf se_f_list)
+    | Sop (fn, se_list) -> Types.Sop (qualify_value fn, List.map t se_list)
 
-and translate_exp const_env env e =
+let rec static_exp_of_exp local_const e =
+  try
+    let t = static_exp_of_exp local_const in
+    let desc = match e.e_desc with
+      | Evar n -> Types.Svar (qualify_const local_const (ToQ n))
+      | Econst se -> translate_static_exp_desc local_const se.se_desc
+      | Eapp({ a_op = Earray_fill; a_params = [n] }, [e]) ->
+          Types.Sarray_power (t e, t n)
+      | Eapp({ a_op = Earray }, e_list) ->
+          Types.Sarray (List.map t e_list)
+      | Eapp({ a_op = Etuple }, e_list) ->
+          Types.Stuple (List.map t e_list)
+      | Eapp(app, e_list) ->
+          let op, args = static_app_from_app app e_list in
+          Types.Sop (op, List.map t args)
+      | Estruct e_list ->
+          Types.Srecord (List.map (fun (f,e) -> qualify_field f, t e) e_list)
+      | _ -> raise Not_static in
+    Types.mk_static_exp ~loc:e.e_loc desc
+  with
+    | ScopingError err -> message e.e_loc err
+
+let expect_static_exp local_const e =
+  try static_exp_of_exp local_const e
+  with Not_static -> message e.e_loc Estatic_exp_expected
+
+let rec translate_type loc local_const ty =
+  try
+    (match ty with
+      | Tprod ty_list ->
+          Types.Tprod(List.map (translate_type loc local_const) ty_list)
+      | Tid ln -> Types.Tid (qualify_type ln)
+      | Tarray (ty, e) ->
+          let ty = translate_type loc local_const ty in
+          Types.Tarray (ty, expect_static_exp local_const e))
+  with
+    | ScopingError err -> message loc err
+
+
+and translate_exp local_const env e =
   let desc =
     try (* try to see if the exp is a constant *)
-      Heptagon.Econst (static_exp_of_exp const_env e)
+      Heptagon.Econst (static_exp_of_exp local_const e)
     with
-        Not_static -> translate_desc e.e_loc const_env env e.e_desc in
+        Not_static -> translate_desc e.e_loc local_const env e.e_desc in
   { Heptagon.e_desc = desc;
     Heptagon.e_ty = Types.invalid_type;
     Heptagon.e_loc = e.e_loc }
 
-and translate_desc loc const_env env = function
-  | Econst c -> Heptagon.Econst c
-  | Evar x ->
-      if Rename.mem x env then (* defined var *)
-        Heptagon.Evar (Rename.name loc env x)
-      else (* undefined var *)
-        Error.message loc (Error.Evar x)
-  | Elast x -> Heptagon.Elast (Rename.name loc env x)
-  | Epre (None, e) -> Heptagon.Epre (None, translate_exp const_env env e)
+and translate_desc loc local_const env = function
+  | Econst c -> Heptagon.Econst (translate_static_exp local_const c)
+  | Evar x -> Heptagon.Evar (Rename.var loc env x)
+  | Elast x -> Heptagon.Elast (Rename.last loc env x)
+  | Epre (None, e) -> Heptagon.Epre (None, translate_exp local_const env e)
   | Epre (Some c, e) ->
-      Heptagon.Epre (Some (expect_static_exp const_env c),
-                    translate_exp const_env env e)
-  | Efby (e1, e2) -> Heptagon.Efby (translate_exp const_env env e1,
-                                    translate_exp const_env env e2)
+      Heptagon.Epre (Some (expect_static_exp local_const c),
+                     translate_exp local_const env e)
+  | Efby (e1, e2) -> Heptagon.Efby (translate_exp local_const env e1,
+                                    translate_exp local_const env e2)
   | Estruct f_e_list ->
       let f_e_list =
-        List.map (fun (f,e) -> f, translate_exp const_env env e) f_e_list in
+        List.map (fun (f,e) -> qualify_field f, translate_exp local_const env e)
+                 f_e_list in
       Heptagon.Estruct f_e_list
   | Eapp ({ a_op = op; a_params = params }, e_list) ->
-      let e_list = List.map (translate_exp const_env env) e_list in
-      let params = List.map (expect_static_exp const_env) params in
+      let e_list = List.map (translate_exp local_const env) e_list in
+      let params = List.map (expect_static_exp local_const) params in
       let app = Heptagon.mk_op ~params:params (translate_op op) in
         Heptagon.Eapp (app, e_list, None)
   | Eiterator (it, { a_op = op; a_params = params }, n, e_list) ->
-      let e_list = List.map (translate_exp const_env env) e_list in
-      let n = expect_static_exp const_env n in
-      let params = List.map (expect_static_exp const_env) params in
+      let e_list = List.map (translate_exp local_const env) e_list in
+      let n = expect_static_exp local_const n in
+      let params = List.map (expect_static_exp local_const) params in
       let app = Heptagon.mk_op ~params:params (translate_op op) in
       Heptagon.Eiterator (translate_iterator_type it,
                           app, n, e_list, None)
@@ -194,161 +286,183 @@ and translate_op = function
   | Eselect_slice -> Heptagon.Eselect_slice
   | Econcat -> Heptagon.Econcat
   | Eselect_dyn -> Heptagon.Eselect_dyn
-  | Efun ln -> Heptagon.Efun ln
-  | Enode ln -> Heptagon.Enode ln
+  | Efun ln -> Heptagon.Efun (qualify_value ln)
+  | Enode ln -> Heptagon.Enode (qualify_value ln)
 
 and translate_pat loc env = function
-  | Evarpat x -> Heptagon.Evarpat (Rename.name loc env x)
+  | Evarpat x -> Heptagon.Evarpat (Rename.var loc env x)
   | Etuplepat l -> Heptagon.Etuplepat (List.map (translate_pat loc env) l)
 
-let rec translate_eq const_env env eq =
-  { Heptagon.eq_desc = translate_eq_desc eq.eq_loc const_env env eq.eq_desc ;
+let rec translate_eq local_const env eq =
+  { Heptagon.eq_desc = translate_eq_desc eq.eq_loc local_const env eq.eq_desc ;
     Heptagon.eq_statefull = false;
     Heptagon.eq_loc = eq.eq_loc }
 
-and translate_eq_desc loc const_env env = function
+and translate_eq_desc loc local_const env = function
   | Eswitch(e, switch_handlers) ->
       let sh = List.map
-        (translate_switch_handler loc const_env env)
+        (translate_switch_handler loc local_const env)
         switch_handlers in
-      Heptagon.Eswitch (translate_exp const_env env e, sh)
+      Heptagon.Eswitch (translate_exp local_const env e, sh)
   | Eeq(p, e) ->
-      Heptagon.Eeq (translate_pat loc env p, translate_exp const_env env e)
+      Heptagon.Eeq (translate_pat loc env p, translate_exp local_const env e)
   | Epresent (present_handlers, b) ->
       Heptagon.Epresent
-        (List.map (translate_present_handler const_env env) present_handlers
-           , fst (translate_block const_env env b))
+        (List.map (translate_present_handler local_const env) present_handlers
+           , fst (translate_block local_const env b))
   | Eautomaton state_handlers ->
-      Heptagon.Eautomaton (List.map (translate_state_handler const_env env)
+      Heptagon.Eautomaton (List.map (translate_state_handler local_const env)
                              state_handlers)
   | Ereset (b, e) ->
-      let b, _ = translate_block const_env env b in
-      Heptagon.Ereset (b, translate_exp const_env env e)
+      let b, _ = translate_block local_const env b in
+      Heptagon.Ereset (b, translate_exp local_const env e)
 
-and translate_block const_env env b =
-  let env = build_vd_list env b.b_local in
-  { Heptagon.b_local = translate_vd_list const_env env b.b_local;
-    Heptagon.b_equs = List.map (translate_eq const_env env) b.b_equs;
-    Heptagon.b_defnames = Env.empty ;
+and translate_block local_const env b =
+  let env = Rename.append env b.b_local in
+  { Heptagon.b_local = translate_vd_list local_const env b.b_local;
+    Heptagon.b_equs = List.map (translate_eq local_const env) b.b_equs;
+    Heptagon.b_defnames = Env.empty;
     Heptagon.b_statefull = false;
     Heptagon.b_loc = b.b_loc }, env
 
-and translate_state_handler const_env env sh =
-  let b, env = translate_block const_env env sh.s_block in
+and translate_state_handler local_const env sh =
+  let b, env = translate_block local_const env sh.s_block in
   { Heptagon.s_state = sh.s_state;
     Heptagon.s_block = b;
-    Heptagon.s_until = List.map (translate_escape const_env env) sh.s_until;
-    Heptagon.s_unless = List.map (translate_escape const_env env) sh.s_unless; }
+    Heptagon.s_until = List.map (translate_escape local_const env) sh.s_until;
+    Heptagon.s_unless =
+      List.map (translate_escape local_const env) sh.s_unless; }
 
-and translate_escape const_env env esc =
-  { Heptagon.e_cond = translate_exp const_env env esc.e_cond;
+and translate_escape local_const env esc =
+  { Heptagon.e_cond = translate_exp local_const env esc.e_cond;
     Heptagon.e_reset = esc.e_reset;
     Heptagon.e_next_state = esc.e_next_state }
 
-and translate_present_handler const_env env ph =
-  { Heptagon.p_cond = translate_exp const_env env ph.p_cond;
-    Heptagon.p_block = fst (translate_block const_env env ph.p_block) }
+and translate_present_handler local_const env ph =
+  { Heptagon.p_cond = translate_exp local_const env ph.p_cond;
+    Heptagon.p_block = fst (translate_block local_const env ph.p_block) }
 
-and translate_switch_handler loc const_env env sh =
-  { Heptagon.w_name = sh.w_name;
-    Heptagon.w_block = fst (translate_block const_env env sh.w_block) }
+and translate_switch_handler loc local_const env sh =
+  try
+    { Heptagon.w_name = qualify_constrs sh.w_name;
+      Heptagon.w_block = fst (translate_block local_const env sh.w_block) }
+  with
+    | ScopingError err -> message loc err
 
-and translate_var_dec const_env env vd =
-  { Heptagon.v_ident = Rename.name vd.v_loc env vd.v_name;
-    Heptagon.v_type = translate_type const_env vd.v_type;
-    Heptagon.v_last = translate_last const_env env vd.v_last;
-    Heptagon.v_loc = vd.v_loc }
+and translate_var_dec local_const env vd =
+  (* env is initialized with the declared vars before their translation *)
+    { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
+      Heptagon.v_type = translate_type vd.v_loc local_const vd.v_type;
+      Heptagon.v_last = translate_last local_const vd.v_last;
+      Heptagon.v_loc = vd.v_loc }
 
-and translate_vd_list const_env env =
-  List.map (translate_var_dec const_env env)
+and translate_vd_list local_const env =
+  List.map (translate_var_dec local_const env)
 
-and translate_last const_env env = function
+and translate_last local_const = function
   | Var -> Heptagon.Var
   | Last (None) -> Heptagon.Last None
-  | Last (Some e) -> Heptagon.Last (Some (expect_static_exp const_env e))
+  | Last (Some e) -> Heptagon.Last (Some (expect_static_exp local_const e))
 
-let translate_contract const_env env ct =
-  let b, _ = translate_block const_env env ct.c_block in
-  { Heptagon.c_assume = translate_exp const_env env ct.c_assume;
-    Heptagon.c_enforce = translate_exp const_env env ct.c_enforce;
+let translate_contract local_const env ct =
+  let b, _ = translate_block local_const env ct.c_block in
+  { Heptagon.c_assume = translate_exp local_const env ct.c_assume;
+    Heptagon.c_enforce = translate_exp local_const env ct.c_enforce;
     Heptagon.c_block = b }
 
-let param_of_var_dec const_env vd =
-  Signature.mk_param vd.v_name (translate_type const_env vd.v_type)
+let params_of_var_decs local_const =
+  List.map (fun vd -> Signature.mk_param
+                        vd.v_name
+                        (translate_type vd.v_loc local_const vd.v_type))
 
-let translate_node const_env env node =
-  let const_env = build_id_list node.n_loc const_env node.n_params in
-  let env = build_vd_list env (node.n_input @ node.n_output) in
-  let b, env = translate_block const_env env node.n_block in
-  { Heptagon.n_name = node.n_name;
+let translate_node node =
+  (* Node's params go to local_const env *)
+  let local_const = build_const node.n_loc node.n_params in
+  (* Inputs and outputs define the initial local env *)
+  let env0 = Rename.append Rename.empty (node.n_input @ node.n_output) in
+  let b, env = translate_block local_const env0 node.n_block in
+  (* the env of the block is used in the contract translation *)
+  let n = current_qual node.n_name in
+  { Heptagon.n_name = n;
     Heptagon.n_statefull = node.n_statefull;
-    Heptagon.n_input = translate_vd_list const_env env node.n_input;
-    Heptagon.n_output = translate_vd_list const_env env node.n_output;
-    Heptagon.n_contract = Misc.optional
-      (translate_contract const_env env) node.n_contract;
+    Heptagon.n_input = translate_vd_list local_const env0 node.n_input;
+    Heptagon.n_output = translate_vd_list local_const env0 node.n_output;
+    Heptagon.n_contract =
+      Misc.optional (translate_contract local_const env) node.n_contract;
     Heptagon.n_block = b;
     Heptagon.n_loc = node.n_loc;
-    Heptagon.n_params = List.map (param_of_var_dec const_env) node.n_params;
+    Heptagon.n_params = params_of_var_decs local_const node.n_params;
     Heptagon.n_params_constraints = []; }
 
-let translate_typedec const_env ty =
-  let onetype = function
-    | Type_abs -> Heptagon.Type_abs
-    | Type_alias ty -> Heptagon.Type_alias (translate_type const_env ty)
-    | Type_enum(tag_list) -> Heptagon.Type_enum(tag_list)
-    | Type_struct(field_ty_list) ->
-        let translate_field_type (f,ty) =
-          Signature.mk_field f (translate_type const_env ty) in
-        Heptagon.Type_struct (List.map translate_field_type field_ty_list)
-  in
-  { Heptagon.t_name = ty.t_name;
-    Heptagon.t_desc = onetype ty.t_desc;
-    Heptagon.t_loc = ty.t_loc }
+let translate_typedec ty =
+    let n = current_qual ty.t_name in
+    let tydesc = match ty.t_desc with
+      | Type_abs ->
+          add_type n Signature.Tabstract;
+          Heptagon.Type_abs
+      | Type_alias t ->
+          let t = translate_type ty.t_loc S.empty t in
+          add_type n (Signature.Talias t);
+          Heptagon.Type_alias t
+      | Type_enum(tag_list) ->
+          let tag_list = List.map current_qual tag_list in
+          List.iter (fun tag -> add_constrs tag n) tag_list;
+          add_type n (Signature.Tenum tag_list);
+          Heptagon.Type_enum tag_list
+      | Type_struct(field_ty_list) ->
+          let translate_field_type (f,t) =
+            let f = current_qual f in
+            let t = translate_type ty.t_loc S.empty t in
+            add_field f n;
+            Signature.mk_field f t in
+          let field_list = List.map translate_field_type field_ty_list in
+          add_type n (Signature.Tstruct field_list);
+          Heptagon.Type_struct field_list in
+    { Heptagon.t_name = n;
+      Heptagon.t_desc = tydesc;
+      Heptagon.t_loc = ty.t_loc }
 
-let translate_const_dec const_env cd =
-  { Heptagon.c_name = cd.c_name;
-    Heptagon.c_type = translate_type const_env cd.c_type;
-    Heptagon.c_value = expect_static_exp const_env cd.c_value;
-    Heptagon.c_loc = cd.c_loc; }, build_cd const_env cd
+
+let translate_const_dec cd =
+  let c_name = current_qual cd.c_name in
+  let c_type = translate_type cd.c_loc S.empty cd.c_type in
+  let c_value = expect_static_exp S.empty cd.c_value in
+  add_const c_name (Signature.mk_const_def c_type c_value);
+  { Heptagon.c_name = c_name;
+    Heptagon.c_type = c_type;
+    Heptagon.c_value = c_value;
+    Heptagon.c_loc = cd.c_loc; }
 
 let translate_program p =
   List.iter open_module p.p_opened;
-  let p_consts, const_env =
-    Misc.mapfold translate_const_dec NamesEnv.empty p.p_consts in
   { Heptagon.p_modname = p.p_modname;
     Heptagon.p_opened = p.p_opened;
-    Heptagon.p_types = List.map (translate_typedec const_env) p.p_types;
-    Heptagon.p_nodes =
-      List.map (translate_node const_env Rename.empty) p.p_nodes;
-    Heptagon.p_consts = p_consts; }
-
-let translate_arg const_env a =
-  Signature.mk_arg a.a_name (translate_type const_env a.a_type)
+    Heptagon.p_types = List.map translate_typedec p.p_types;
+    Heptagon.p_nodes = List.map translate_node p.p_nodes;
+    Heptagon.p_consts = List.map translate_const_dec p.p_consts; }
 
 let translate_signature s =
-  let const_env = build_id_list no_location NamesEnv.empty s.sig_params in
-  { Heptagon.sig_name = s.sig_name;
-    Heptagon.sig_inputs = List.map (translate_arg const_env) s.sig_inputs;
-    Heptagon.sig_outputs = List.map (translate_arg const_env) s.sig_outputs;
-    Heptagon.sig_statefull = s.sig_statefull;
-    Heptagon.sig_params = List.map (param_of_var_dec const_env) s.sig_params; }
+  let local_const = build_const s.sig_loc s.sig_params in
+  let translate_arg a =
+    Signature.mk_arg a.a_name (translate_type s.sig_loc local_const a.a_type) in
+  let n = current_qual s.sig_name in
+  let i = List.map translate_arg s.sig_inputs in
+  let o = List.map translate_arg s.sig_outputs in
+  let p = params_of_var_decs local_const s.sig_params in
+  add_value n (Signature.mk_node i o s.sig_statefull p);
+  Heptagon.mk_signature n i o s.sig_statefull p s.sig_loc
 
-let translate_interface_desc const_env = function
-  | Iopen n -> Heptagon.Iopen n, const_env
-  | Itypedef tydec ->
-      Heptagon.Itypedef (translate_typedec const_env tydec), const_env
-  | Iconstdef const_dec ->
-      let const_dec, const_env = translate_const_dec const_env const_dec in
-        Heptagon.Iconstdef const_dec, const_env
-  | Isignature s -> Heptagon.Isignature (translate_signature s) , const_env
 
-let translate_interface_decl const_env idecl =
-  let desc, const_env =
-    translate_interface_desc const_env idecl.interf_desc in
+let translate_interface_desc = function
+  | Iopen n -> open_module n; Heptagon.Iopen n
+  | Itypedef tydec -> Heptagon.Itypedef (translate_typedec tydec)
+  | Iconstdef const_dec -> Heptagon.Iconstdef (translate_const_dec const_dec)
+  | Isignature s -> Heptagon.Isignature (translate_signature s)
+
+let translate_interface_decl idecl =
+  let desc = translate_interface_desc idecl.interf_desc in
   { Heptagon.interf_desc = desc;
-    Heptagon.interf_loc = idecl.interf_loc }, const_env
+    Heptagon.interf_loc = idecl.interf_loc }
 
-let translate_interface i =
-  let i, _ = Misc.mapfold translate_interface_decl NamesEnv.empty i in
-    i
+let translate_interface i = List.map translate_interface_decl i
 

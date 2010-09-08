@@ -77,7 +77,6 @@ let eqs funs () eq_list =
   let eqs, () = Mls_mapfold.eqs funs () eq_list in
     schedule eqs, ()
 
-let edesc funs () = function
   | Eiterator(it, ({ a_op = Enode f } as app),
               n, e_list, r) when Itfusion.is_anon_node f ->
     let nd = Itfusion.find_anon_node f in

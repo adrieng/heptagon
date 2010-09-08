@@ -17,6 +17,7 @@ open Modules
 open Initial
 open Static
 open Types
+open Global_printer
 open Heptagon
 open Hept_mapfold
 
@@ -38,11 +39,11 @@ type error =
   | Esome_fields_are_missing
   | Esubscripted_value_not_an_array of ty
   | Earray_subscript_should_be_const
-  | Eundefined_const of longname
+  | Eundefined_const of qualname
   | Econstraint_solve_failed of size_constraint
   | Etype_should_be_static of ty
   | Erecord_type_expected of ty
-  | Eno_such_field of ty * longname
+  | Eno_such_field of ty * qualname
   | Eempty_record
   | Eempty_array
   | Efoldi_bad_args of ty
@@ -78,8 +79,8 @@ let message loc kind =
         Format.eprintf "%aType Clash: this expression has type %a, @\n\
             but is expected to have type %a.@."
           print_location loc
-          Types.print_type actual_ty
-          Types.print_type expected_ty
+          print_type actual_ty
+          print_type expected_ty
     | Earity_clash(actual_arit, expected_arit) ->
         Format.eprintf "%aType Clash: this expression expects %d arguments,@\n\
             but is expected to have %d.@."
@@ -116,7 +117,7 @@ let message loc kind =
         Format.eprintf
           "%aSubscript used on a non array type : %a.@."
           print_location loc
-          Types.print_type ty
+          Global_printer.print_type ty
     | Earray_subscript_should_be_const ->
         Format.eprintf
           "%aSubscript has to be a static value.@."
@@ -135,17 +136,17 @@ let message loc kind =
         Format.eprintf
           "%aThis type should be static : %a.@."
           print_location loc
-          Types.print_type ty
+          print_type ty
     | Erecord_type_expected ty ->
         Format.eprintf
           "%aA record was expected (found %a).@."
           print_location loc
-          Types.print_type ty
+          print_type ty
     | Eno_such_field (ty, f) ->
         Format.eprintf
           "%aThe record type '%a' does not have a '%s' field.@."
           print_location loc
-          Types.print_type ty
+          print_type ty
           (shortname f)
     | Eempty_record ->
         Format.eprintf
@@ -160,7 +161,7 @@ let message loc kind =
           "%aThe function given to foldi should expect an integer \
                as the last but one argument (found: %a).@."
           print_location loc
-          Types.print_type ty
+          print_type ty
   end;
   raise Error
 
@@ -296,11 +297,10 @@ let simplify_type loc ty =
       Instanciation_failed -> message loc (Etype_should_be_static ty)
 
 let build_subst names values =
-  if List.length names <> List.length values then
-    error (Estatic_arity_clash (List.length values, List.length names));
-
-  List.fold_left2 (fun m { p_name = n } v -> NamesEnv.add n v m)
-    NamesEnv.empty names values
+  if List.length names <> List.length values
+  then error (Estatic_arity_clash (List.length values, List.length names));
+  List.fold_left2 (fun m n v -> QualEnv.add n v m)
+    QualEnv.empty names values
 
 let rec subst_type_vars m = function
   | Tarray(ty, e) -> Tarray(subst_type_vars m ty, static_exp_subst m e)
@@ -407,7 +407,7 @@ let check_static_field_unicity l =
     [loc] is the location used for error reporting.*)
 let struct_info_from_name n =
   try
-    let { qualid = q;
+    let { qualname = q;
           info = fields } = find_struct n in
     q, fields
   with
@@ -426,18 +426,19 @@ let struct_info ty = match ty with
     [loc] is the location used for error reporting.*)
 let struct_info_from_field f =
   try
-    let { qualid = q; info = n } = find_field f in
-    struct_info_from_name (Modname { qual = q.qual; id = n })
+    let { qualname = q; info = n } = find_field f in
+    struct_info_from_name { qual = q.qual; name = n }
   with
       Not_found -> error (Eundefined (fullname f))
 
 (** [check_type t] checks that t exists *)
+(*TODO should be already done in scoping *)
 let rec check_type const_env = function
   | Tarray(ty, e) ->
       let typed_e = expect_static_exp const_env (Tid Initial.pint) e in
         Tarray(check_type const_env ty, typed_e)
   | Tid ty_name ->
-      (try Tid(Modname((find_type ty_name).qualid))
+      (try Tid((find_type ty_name).qualname)
        with Not_found -> error (Eundefined(fullname ty_name)))
   | Tprod l ->
       Tprod (List.map (check_type const_env) l)
@@ -450,23 +451,20 @@ and typing_static_exp const_env se =
     | Sfloat v -> Sfloat v, Tid Initial.pfloat
     | Svar ln ->
         (try (* this can be a global const*)
-           let { qualid = q; info = cd } = Modules.find_const ln in
-             Svar (Modname q), cd.Signature.c_type
+           let { qualname = q; info = cd } = Modules.find_const ln in
+             Svar q, cd.Signature.c_type
+(* TODO verifier... *)
          with Not_found -> (* or a static parameter *)
-           (match ln with
-              | Name n ->
-                  (try Svar ln, NamesEnv.find n const_env
-                  with Not_found -> error (Eundefined_const ln))
-              | Modname _ -> error (Eundefined_const ln))
-        )
+           (try Svar ln, QualEnv.find ln const_env
+            with Not_found -> error (Eundefined_const ln) ) )
     | Sconstructor c ->
-        let { qualid = q; info = ty } = find_constr c in
-          Sconstructor(Modname q), ty
+        let { qualname = q; info = ty } = find_constr c in
+          Sconstructor q, ty
     | Sop (op, se_list) ->
-        let { qualid = q; info = ty_desc } = find_value op in
+        let { qualname = q; info = ty_desc } = find_value op in
         let typed_se_list = typing_static_args const_env
           (types_of_arg_list ty_desc.node_inputs) se_list in
-          Sop (Modname q, typed_se_list),
+          Sop (q, typed_se_list),
         prod (types_of_arg_list ty_desc.node_outputs)
     | Sarray_power (se, n) ->
         let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
@@ -496,8 +494,8 @@ and typing_static_exp const_env se =
           check_static_field_unicity f_se_list;
           let f_se_list =
             List.map (typing_static_field const_env fields
-                        (Tid (Modname q)) q.qual) f_se_list in
-          Srecord f_se_list, Tid (Modname q)
+                        (Tid q) q.qual) f_se_list in
+          Srecord f_se_list, Tid q
   in
    { se with se_ty = ty; se_desc = desc }, ty
 
@@ -508,7 +506,7 @@ and typing_static_field const_env fields t1 modname (f,se) =
   try
     let ty = check_type const_env (field_assoc f fields) in
     let typed_se = expect_static_exp const_env ty se in
-      Modname { qual = modname; id = shortname f }, typed_se
+    { qual = modname; name = shortname f }, typed_se
   with
       Not_found -> message se.se_loc (Eno_such_field (t1, f))
 
@@ -563,8 +561,8 @@ let rec typing const_env h e =
           check_field_unicity l;
           let l =
             List.map (typing_field
-                        const_env h fields (Tid (Modname q)) q.qual) l in
-          Estruct l, Tid (Modname q)
+                        const_env h fields (Tid q) q.qual) l in
+          Estruct l, Tid q
 
       | Epre (None, e) ->
           let typed_e,ty = typing const_env h e in
@@ -583,9 +581,12 @@ let rec typing const_env h e =
       | Eiterator (it, ({ a_op = (Enode f | Efun f);
                           a_params = params } as app),
                    n, e_list, reset) ->
-          let { qualid = q; info = ty_desc } = find_value f in
-          let op, expected_ty_list, result_ty_list = kind (Modname q) ty_desc in
-          let m = build_subst ty_desc.node_params params in
+          let { qualname = q; info = ty_desc } = find_value f in
+          let op, expected_ty_list, result_ty_list = kind q ty_desc in
+(*TODO verifier....*)
+          let node_params =
+            List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
+          let m = build_subst node_params params in
           let expected_ty_list =
             List.map (subst_type_vars m) expected_ty_list in
           let result_ty_list = List.map (subst_type_vars m) result_ty_list in
@@ -611,7 +612,7 @@ and typing_field const_env h fields t1 modname (f, e) =
   try
     let ty = check_type const_env (field_assoc f fields) in
     let typed_e = expect const_env h ty e in
-    Modname { qual = modname; id = shortname f }, typed_e
+    { qual = modname; name = shortname f }, typed_e
   with
       Not_found -> message e.e_loc (Eno_such_field (t1, f))
 
@@ -642,9 +643,12 @@ and typing_app const_env h op e_list =
         t1, op, [typed_e1; typed_e2; typed_e3]
 
     | { a_op = (Efun f | Enode f); a_params = params } as app, e_list ->
-        let { qualid = q; info = ty_desc } = find_value f in
-        let op, expected_ty_list, result_ty_list = kind (Modname q) ty_desc in
-        let m = build_subst ty_desc.node_params params in
+        let { qualname = q; info = ty_desc } = find_value f in
+        let op, expected_ty_list, result_ty_list = kind q ty_desc in
+(*TODO verifier....*)
+        let node_params =
+          List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
+        let m = build_subst node_params params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args const_env h
           expected_ty_list e_list in
@@ -678,7 +682,7 @@ and typing_app const_env h op e_list =
         let typed_e, t1 = typing const_env h e in
         let q, fields = struct_info t1 in
         let t2 = field_type const_env fn fields t1 e.e_loc in
-        let fn = Modname { qual = q.qual; id = shortname fn } in
+        let fn = { qual = q.qual; name = shortname fn } in
         let f = { f with se_desc = Sconstructor fn } in
           t2, { op with a_params = [f] }, [typed_e]
 
@@ -690,7 +694,7 @@ and typing_app const_env h op e_list =
              | Sconstructor fn -> fn
              | _ -> assert false) in
         let f = { f with se_desc =
-            Sconstructor (Modname { qual = q.qual; id = shortname fn }) } in
+            Sconstructor { qual = q.qual; name = shortname fn } } in
         let t2 = field_type const_env fn fields t1 e1.e_loc in
         let typed_e2 = expect const_env h t2 e2 in
         t1, { op with a_params = [f] } , [typed_e1; typed_e2]
@@ -945,7 +949,7 @@ and typing_switch_handlers const_env h acc ty switch_handlers =
     let typed_b, defined_names, _ = typing_block const_env h b in
     { w_block = typed_b;
       (* Replace handler name with fully qualified name *)
-      w_name = Modname((find_constr name).qualid)},
+      w_name = (find_constr name).qualname},
     defined_names in
 
   let typed_switch_handlers, defined_names_list =
@@ -1050,7 +1054,9 @@ let solve loc cl =
 let build_node_params const_env l =
   let check_param env p =
     let ty = check_type const_env p.p_type in
-      { p with p_type = ty }, NamesEnv.add p.p_name ty env
+    let p = { p with p_type = ty } in
+    let n = Names.local_qn p.p_name in
+    p, QualEnv.add n ty env
   in
     mapfold check_param const_env l
 
@@ -1061,7 +1067,7 @@ let node ({ n_name = f; n_statefull = statefull;
             n_params = node_params; } as n) =
   try
     let typed_params, const_env =
-      build_node_params NamesEnv.empty node_params in
+      build_node_params QualEnv.empty node_params in
     let typed_i_list, (input_names, h) =
       build const_env Env.empty i_list in
     let typed_o_list, (output_names, h) = build const_env h o_list in
@@ -1074,9 +1080,6 @@ let node ({ n_name = f; n_statefull = statefull;
       (* check that the defined names match exactly the outputs and locals *)
       included_env defined_names output_names;
       included_env output_names defined_names;
-
-    (* if not (statefull) & (List.length o_list <> 1)
-       then error (Etoo_many_outputs);*)
 
     let cl = get_size_constraint () in
     let cl = solve loc cl in
@@ -1098,13 +1101,13 @@ let deftype { t_name = n; t_desc = tdesc; t_loc = loc } =
       | Type_alias ln -> add_type n (Talias ln)
       | Type_enum(tag_name_list) ->
           add_type n (Tenum tag_name_list);
-          List.iter (fun tag -> add_constr tag (Tid (longname n))) tag_name_list
+          List.iter (fun tag -> add_constr tag (Tid (qualname n))) tag_name_list
       | Type_struct(field_ty_list) ->
           let field_ty_list =
             List.map (fun f ->
                         mk_field f.f_name
                           (simplify_type loc
-                             (check_type NamesEnv.empty f.f_type)))
+                             (check_type QualEnv.empty f.f_type)))
               field_ty_list in
           add_type n (Tstruct field_ty_list);
           add_struct n field_ty_list;
@@ -1114,10 +1117,10 @@ let deftype { t_name = n; t_desc = tdesc; t_loc = loc } =
       TypingError(error) -> message loc error
 
 let typing_const_dec cd =
-  let ty = check_type NamesEnv.empty cd.c_type in
-  let se = expect_static_exp NamesEnv.empty ty cd.c_value in
+  let ty = check_type QualEnv.empty cd.c_type in
+  let se = expect_static_exp QualEnv.empty ty cd.c_value in
   let cd = { cd with c_value = se; c_type = ty } in
-    add_const cd.c_name (mk_const_def cd.c_name cd.c_type cd.c_value);
+    add_const cd.c_name (mk_const_def cd.c_type cd.c_value);
     cd
 
 let program

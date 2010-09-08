@@ -84,7 +84,7 @@ val cse : bool ref
 val tomato : bool ref
 
 (* List of nodes to inline *)
-val inline : Names.longname list ref
+val inline : string list ref
 (* Add a new node name to the list of nodes to inline. *)
 val add_inlined_node : string -> unit
 (* Inline every node. *)
@@ -187,3 +187,6 @@ val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
 val mapi2: (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->
   'a list -> 'b list -> 'c list -> 'd list
+
+exception Cannot_find_file of string
+val findfile : string -> string

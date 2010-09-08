@@ -146,7 +146,7 @@ label_ty_list:
 ;
 
 label_ty:
-  IDENT COLON ty_ident { ($1, $3) }
+  IDENT COLON ty_ident { $1, $3 }
 ;
 
 node_decs:
@@ -158,14 +158,14 @@ node_dec:
   | node_or_fun ident node_params LPAREN in_params RPAREN
     RETURNS LPAREN out_params RPAREN
     contract b=block(LET) TEL
-      {{ n_name   = $2;
-   n_statefull = $1;
-   n_input  = $5;
-   n_output = $9;
-   n_contract = $11;
-   n_block = b;
-   n_params = $3;
-   n_loc = (Loc($startpos,$endpos)) }}
+      {{ n_name = $2;
+			   n_statefull = $1;
+			   n_input  = $5;
+			   n_output = $9;
+			   n_contract = $11;
+			   n_block = b;
+			   n_params = $3;
+			   n_loc = (Loc($startpos,$endpos)) }}
 ;
 
 node_or_fun:
@@ -216,7 +216,7 @@ contract:
 ;
 
 opt_assume:
-  | /* empty */ { mk_constructor_exp Initial.ptrue (Loc($startpos,$endpos)) }
+  | /* empty */ { mk_constructor_exp ptrue (Loc($startpos,$endpos)) }
   | ASSUME exp { $2 }
 ;
 
@@ -250,7 +250,7 @@ ident_list:
 ;
 
 ty_ident:
-  | longname
+  | qualname
       { Tid $1 }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
@@ -293,8 +293,8 @@ _equ:
       { Epresent(List.rev $3, b) }
   | IF exp THEN tb=block(DO) ELSE fb=block(DO) END
       { Eswitch($2,
-                   [{ w_name = Name("true"); w_block = tb };
-                    { w_name = Name("false"); w_block = fb }]) }
+                   [{ w_name = ptrue; w_block = tb };
+                    { w_name = pfalse; w_block = fb }]) }
   | RESET equs EVERY exp
       { Ereset(mk_block [] $2 (Loc($startpos,$endpos)), $4) }
 ;
@@ -343,7 +343,7 @@ switch_handler:
 ;
 
 constructor_or_bool:
-  | BOOL { Name(if $1 then "true" else "false") }
+  | BOOL { if $1 then Q Initial.ptrue else Q Initial.pfalse }
   | constructor { $1 }
 
 switch_handlers:
@@ -394,13 +394,13 @@ _simple_exp:
   | LBRACE field_exp_list RBRACE     { Estruct $2 }
   | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
   | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
-  | simple_exp DOT c=longname
+  | simple_exp DOT c=qualname
       { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
                 Efield [$1] }
 ;
 
 node_name:
-  | longname call_params { mk_app (Enode $1) $2 }
+  | qualname call_params { mk_app (Enode $1) $2 }
 
 
 exp:
@@ -462,13 +462,13 @@ _exp:
   | exp AROBASE exp
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
-  | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
+  | iterator qualname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_iterator_call $1 $2 [] $4 $7 }
-  | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER
+  | iterator LPAREN qualname DOUBLE_LESS array_exp_list DOUBLE_GREATER
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
       { mk_iterator_call $1 $3 $5 $9 $12 }
 /*Records operators */
-  | LBRACE simple_exp WITH DOT c=longname EQUAL exp RBRACE
+  | LBRACE simple_exp WITH DOT c=qualname EQUAL exp RBRACE
       { mk_call ~params:[mk_constructor_exp c (Loc($startpos(c),$endpos(c)))]
                 Efield_update [$2; $7] }
 ;
@@ -491,24 +491,24 @@ indexes:
 ;
 
 constructor:
-  | Constructor { Name($1) } %prec prec_ident
-  | Constructor DOT Constructor { Modname({qual = $1; id = $3}) }
+  | Constructor { ToQ $1 } %prec prec_ident
+  | Constructor DOT Constructor { Q {qual = $1; name = $3} }
 ;
 
-longname:
-  | ident { Name($1) }
-  | Constructor DOT ident { Modname({qual = $1; id = $3}) }
+qualname:
+  | ident { ToQ $1 }
+  | Constructor DOT ident { Q {qual = $1; name = $3} }
 ;
 
 
-const: c=_const { mk_static_exp c ~loc:(Loc($startpos,$endpos)) }
+const: c=_const { mk_static_exp c (Loc($startpos,$endpos)) }
 _const:
   | INT         { Sint $1 }
   | FLOAT       { Sfloat $1 }
   | BOOL        { Sbool $1 }
   | constructor { Sconstructor $1 }
   | Constructor DOT ident
-      { Svar (Modname({qual = $1; id = $3})) }
+      { Svar (Q {qual = $1; name = $3}) }
 ;
 
 tuple_exp:
@@ -527,7 +527,7 @@ array_exp_list:
 ;
 
 field_exp:
-  | longname EQUAL exp { ($1, $3) }
+  | qualname EQUAL exp { ($1, $3) }
 ;
 
 /* identifiers */
@@ -569,10 +569,11 @@ _interface_decl:
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
     { Isignature({ sig_name = $3;
-                                      sig_inputs = $6;
-                                      sig_statefull = $2;
-                                      sig_outputs = $10;
-                                      sig_params = $4; }) }
+                   sig_inputs = $6;
+                   sig_statefull = $2;
+                   sig_outputs = $10;
+                   sig_params = $4;
+                   sig_loc = (Loc($startpos,$endpos)) }) }
 ;
 
 params_signature:

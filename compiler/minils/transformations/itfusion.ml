@@ -22,7 +22,7 @@ let add_anon_node inputs outputs locals eqs =
 let replace_anon_node n nd =
   anon_nodes := LongNameEnv.add n nd !anon_nodes
 
-let find_anon_node n = 
+let find_anon_node n =
   LongNameEnv.find n !anon_nodes
 
 let is_anon_node n =
@@ -51,9 +51,9 @@ let vd_of_arg ad =
     an app object. *)
 let get_node_inp_outp app = match app.a_op with
   | (Enode f | Efun f) when is_anon_node f ->
-    (* first check if it is an anonymous node *) 
+    (* first check if it is an anonymous node *)
     let nd = find_anon_node f in
-      nd.n_input, nd.n_output 
+      nd.n_input, nd.n_output
   | Enode f | Efun f ->
       (* it is a regular node*)
     let { info = ty_desc } = find_value f in
@@ -113,7 +113,7 @@ let edesc funs acc ed =
             let _, outp = get_node_inp_outp f in
             let eq = mk_equation (pat_of_vd_list outp) call in
             (* create the lambda *)
-	    let anon = mk_app (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
+      let anon = mk_app (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
             Eiterator(Imap, anon, n, args, r), acc
           ) else
             ed, acc

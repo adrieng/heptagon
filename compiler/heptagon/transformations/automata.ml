@@ -48,7 +48,7 @@ let intro_type states =
   let state_type = "st" ^ n in
   state_type_dec_list :=
     (mk_type_dec state_type (Type_enum (list states))) :: !state_type_dec_list;
-  Name(state_type)
+  current_qual state_type
 
 (** Allows to classify an automaton :
     Moore automatons doesn't have strong transitions,
