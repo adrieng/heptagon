@@ -377,6 +377,11 @@ let params_of_var_decs local_const =
                         vd.v_name
                         (translate_type vd.v_loc local_const vd.v_type))
 
+let args_of_var_decs local_const =
+  List.map (fun vd -> Signature.mk_arg
+                        (Some (name vd.v_name))
+                        (translate_type vd.v_loc local_const vd.v_type))
+
 let translate_node node =
   (* Node's params go to local_const env *)
   let local_const = build_const node.n_loc node.n_params in
@@ -385,6 +390,11 @@ let translate_node node =
   let b, env = translate_block local_const env0 node.n_block in
   (* the env of the block is used in the contract translation *)
   let n = current_qual node.n_name in
+  (* add the node signature to the environment *)
+  let i = args_of_var_decs local_const node.n_input in
+  let o = args_of_var_decs local_const node.n_output in
+  let p = params_of_var_decs local_const node.n_params in
+    add_value n (Signature.mk_node i o node.n_statefull p);
   { Heptagon.n_name = n;
     Heptagon.n_statefull = node.n_statefull;
     Heptagon.n_input = translate_vd_list local_const env0 node.n_input;
