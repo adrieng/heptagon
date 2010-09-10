@@ -8,6 +8,7 @@ open Static
 open Global_mapfold
 open Mls_mapfold
 open Minils
+open Global_printer
 
 module Error =
 struct
@@ -32,7 +33,7 @@ end
 module Param_instances :
 sig
   type key = private static_exp (** Fully instantiated param *)
-  type env = key NamesEnv.t
+  type env = key QualEnv.t
   val instantiate: env -> static_exp list -> key list
   val get_node_instances : QualEnv.key -> key list list
   val add_node_instance : QualEnv.key -> key list -> unit
@@ -44,7 +45,7 @@ sig
 end =
 struct
   type key = static_exp
-  type env = key NamesEnv.t
+  type env = key QualEnv.t
 
   (** An instance is a list of instantiated params *)
   type instance = key list
@@ -121,7 +122,7 @@ struct
 
   (** Build an environment by instantiating the passed params *)
   let build env params_names params_values =
-    List.fold_left2 (fun m { p_name = n } v -> NamesEnv.add n v m)
+    List.fold_left2 (fun m { p_name = n } v -> QualEnv.add (local_qn n) v m)
       env params_names (instantiate env params_values)
 
 
@@ -133,10 +134,10 @@ struct
     let static_exp funs m se =
       let se, _ = Global_mapfold.static_exp funs m se in
       let se = match se.se_desc with
-        | Svar { qual = q; name = n } ->
-            if q = local_qualname
+        | Svar q ->
+            if q.qual = local_qualname
             then (* This var is a static parameter, it has to be instanciated *)
-              (try NamesEnv.find n m
+              (try QualEnv.find q m
                with Not_found ->
                 Format.eprintf "local param not local";
                 assert false;)
@@ -171,17 +172,17 @@ struct
       let funs =
         { Mls_mapfold.defaults with edesc = edesc;
                                     global_funs = global_funs } in
-      let m = build NamesEnv.empty n.n_params params in
+      let m = build QualEnv.empty n.n_params params in
       let n, _ = Mls_mapfold.node_dec_it funs m n in
 
       (* Add to the global environment the signature of the new instance *)
-      let { info = node_sig } = find_value n.n_name in
+      let node_sig = find_value n.n_name in
       let node_sig, _ = Global_mapfold.node_it global_funs m node_sig in
       let node_sig = { node_sig with node_params = [];
                                      node_params_constraints = [] } in
       (* Find the name that was associated to this instance *)
       let ln = node_for_params_call n.n_name params in
-      Modules.add_value_by_longname ln node_sig;
+      Modules.add_value ln node_sig;
       { n with n_name = ln; n_params = []; n_params_constraints = []; }
 
     let node_dec modname n =
@@ -211,7 +212,7 @@ let load_object_file modname =
   Modules.open_module modname;
   let name = String.uncapitalize modname in
     try
-      let filename = Modules.findfile (name ^ ".epo") in
+      let filename = Misc.findfile (name ^ ".epo") in
       let ic = open_in_bin filename in
         try
           let p:program = input_value ic in
@@ -230,7 +231,7 @@ let load_object_file modname =
                         Please recompile %s.ept first.@." filename name;
               raise Error
     with
-      | Modules.Cannot_find_file(filename) ->
+      | Misc.Cannot_find_file(filename) ->
           Format.eprintf "Cannot find the object file '%s'.@."
             filename;
           raise Error
@@ -285,7 +286,7 @@ let called_nodes ln =
 let rec call_node (ln, params) =
   (* First, add the instance for this node *)
   let n = node_by_longname ln in
-  let m = build NamesEnv.empty n.n_params params in
+  let m = build QualEnv.empty n.n_params params in
 (*  List.iter check_no_static_var params; *)
   add_node_instance ln params;
 

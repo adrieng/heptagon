@@ -48,7 +48,7 @@ struct
   type env =
     | Eempty
     | Ecomp of env * IdentSet.t
-    | Eon of env * longname * ident
+    | Eon of env * constructor_name * ident
 
   let empty = Eempty
 

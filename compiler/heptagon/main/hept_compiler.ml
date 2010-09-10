@@ -11,6 +11,7 @@
 open Misc
 open Compiler_utils
 open Location
+open Global_printer
 
 let pp p = if !verbose then Hept_printer.print stdout p
 
@@ -39,7 +40,7 @@ let compile_impl pp p =
   (*let p = pass "Typing" true Typing.program p pp in*)
   let p = silent_pass "Statefullness check" true Statefull.program p in
 
-  if !print_types then print_interface Format.std_formatter l;
+  if !print_types then print_interface Format.std_formatter p;
 
   (* Causality check *)
   let p = silent_pass "Causality check" true Causality.program p in
@@ -95,7 +96,7 @@ let compile_interface modname filename =
     if !print_types then print_interface Format.std_formatter l;
 
 
-    Modules.write itc;
+      output_value itc (Modules.current_module ());
 
     close_all_files ()
   with

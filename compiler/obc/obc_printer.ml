@@ -4,6 +4,7 @@ open Pp_tools
 open Types
 open Idents
 open Names
+open Global_printer
 
 let print_vd ff vd =
   fprintf ff "@[<v>";

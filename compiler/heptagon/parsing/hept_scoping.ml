@@ -379,7 +379,7 @@ let params_of_var_decs local_const =
 
 let args_of_var_decs local_const =
   List.map (fun vd -> Signature.mk_arg
-                        (Some (name vd.v_name))
+                        (Some vd.v_name)
                         (translate_type vd.v_loc local_const vd.v_type))
 
 let translate_node node =

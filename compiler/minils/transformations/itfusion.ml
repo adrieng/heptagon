@@ -8,29 +8,29 @@ open Minils
 
 (* Functions to temporarily store anonymous nodes*)
 let mk_fresh_node_name () =
-  longname (Idents.name (Idents.fresh "_n_"))
+  current_qual (Idents.name (Idents.fresh "_n_"))
 
-let anon_nodes = ref LongNameEnv.empty
+let anon_nodes = ref QualEnv.empty
 
 let add_anon_node inputs outputs locals eqs =
   let n = mk_fresh_node_name () in
   let nd = mk_node ~input:inputs ~output:outputs ~local:locals
-    ~eq:eqs (shortname n) in
-  anon_nodes := LongNameEnv.add n nd !anon_nodes;
+    ~eq:eqs n in
+  anon_nodes := QualEnv.add n nd !anon_nodes;
   n
 
 let replace_anon_node n nd =
-  anon_nodes := LongNameEnv.add n nd !anon_nodes
+  anon_nodes := QualEnv.add n nd !anon_nodes
 
 let find_anon_node n =
-  LongNameEnv.find n !anon_nodes
+  QualEnv.find n !anon_nodes
 
 let is_anon_node n =
-  LongNameEnv.mem n !anon_nodes
+  QualEnv.mem n !anon_nodes
 
 let are_equal n m =
-  let n = simplify NamesEnv.empty n in
-  let m = simplify NamesEnv.empty m in
+  let n = simplify QualEnv.empty n in
+  let m = simplify QualEnv.empty m in
     n = m
 
 let pat_of_vd_list l =
@@ -56,7 +56,7 @@ let get_node_inp_outp app = match app.a_op with
       nd.n_input, nd.n_output
   | Enode f | Efun f ->
       (* it is a regular node*)
-    let { info = ty_desc } = find_value f in
+    let ty_desc = find_value f in
     let new_inp = List.map vd_of_arg ty_desc.node_outputs in
     let new_outp = List.map vd_of_arg ty_desc.node_outputs in
       new_inp, new_outp

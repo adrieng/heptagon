@@ -44,7 +44,7 @@ let compile_impl modname filename =
 
     (* Process the Heptagon AST *)
     let p = compile_impl pp p in
-    Modules.write_current_module itc;
+    output_value itc (Modules.current_module ());
 
     (* Set pretty printer to the Minils one *)
     let pp = Mls_compiler.pp in

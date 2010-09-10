@@ -154,10 +154,9 @@ let rec assoc_type n var_env =
 let rec unalias_ctype = function
   | Cty_id ty_name ->
       (try
-        let { qualname = q; info = ty_desc } = find_type (qualname ty_name) in
-          match ty_desc with
-            | Talias ty -> unalias_ctype (ctype_of_otype ty)
-            | _ -> Cty_id ty_name
+         match find_type (current_qual ty_name) with
+           | Talias ty -> unalias_ctype (ctype_of_otype ty)
+           | _ -> Cty_id ty_name
       with Not_found -> Cty_id ty_name)
   | Cty_arr (n, cty) -> Cty_arr (n, unalias_ctype cty)
   | Cty_ptr cty -> Cty_ptr (unalias_ctype cty)
@@ -180,8 +179,8 @@ let rec assoc_type_lhs lhs var_env =
     | Cfield(x, f) ->
         let ty = assoc_type_lhs x var_env in
         let n = struct_name ty in
-        let { info = fields } = find_struct (qualname n) in
-        ctype_of_otype (field_assoc (qualname f) fields)
+        let fields = find_struct (current_qual n) in
+        ctype_of_otype (field_assoc (current_qual f) fields)
 
 (** Creates the statement a = [e_1, e_2, ..], which gives a list
     a[i] = e_i.*)
@@ -232,11 +231,11 @@ let rec cexpr_of_static_exp se =
           Carraylit (repeat_list cc (int_of_static_exp n))
     | Svar ln ->
         (try
-          let { info = cd } = find_const ln in
-            cexpr_of_static_exp (Static.simplify NamesEnv.empty cd.c_value)
+          let cd = find_const ln in
+            cexpr_of_static_exp (Static.simplify QualEnv.empty cd.c_value)
         with Not_found -> assert false)
     | Sop _ ->
-        let se' = Static.simplify NamesEnv.empty se in
+        let se' = Static.simplify QualEnv.empty se in
           if se = se' then
             Error.message se.se_loc Error.Estatic_exp_compute_failed
           else
@@ -364,7 +363,7 @@ let generate_function_call var_env obj_env outvl objn args =
     else
       (** The step function takes scalar arguments and its own internal memory
           holding structure. *)
-      let args = step_fun_call var_env sig_info.info objn out args in
+      let args = step_fun_call var_env sig_info objn out args in
       (** Our C expression for the function call. *)
       Cfun_call (classn ^ "_step", args)
   in
