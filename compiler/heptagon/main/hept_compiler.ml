@@ -57,7 +57,7 @@ let compile_impl pp p =
     pass "Inlining" call_inline_pass Inline.program p pp in *)
 
   (* Automata *)
-  (*let p = pass "Automata" true Automata.program p pp in*)
+  let p = pass "Automata" true Automata.program p pp in
 
   (* Present *)
   let p = pass "Present" true Present.program p pp in

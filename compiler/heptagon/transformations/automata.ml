@@ -15,6 +15,7 @@ open Idents
 open Heptagon
 open Hept_mapfold
 open Initial
+open Modules
 
 let mk_var_exp n ty =
   mk_exp (Evar n) ty
@@ -42,13 +43,21 @@ let mk_exp_fby_state initial e =
 (* the list of enumerated types introduced to represent states *)
 let state_type_dec_list = ref []
 
-let intro_type states =
-  let list env = NamesEnv.fold (fun _ state l -> state :: l) env [] in
-  let n = gen_symbol () in
-  let state_type = "st" ^ n in
+
+(* create and add to the env the constructors corresponding to a name state *)
+let intro_state_constr type_name state state_env =
+  let c = Modules.fresh_constr state in
+  Modules.add_constrs c type_name; NamesEnv.add state c state_env
+
+(* create and add the the global env and to state_type_dec_list
+   a type corresponding to the state env*)
+let intro_type type_name state_env =
+  let state_constrs = NamesEnv.fold (fun _ c c_l -> c::c_l) state_env [] in
+  (* Add the new type to the env *)
+  Modules.add_type type_name (Signature.Tenum state_constrs);
+  (* Add the new type to the types to add to the Ast *)
   state_type_dec_list :=
-    (mk_type_dec state_type (Type_enum (list states))) :: !state_type_dec_list;
-  current_qual state_type
+    (mk_type_dec type_name (Type_enum state_constrs)) :: !state_type_dec_list
 
 (** Allows to classify an automaton :
     Moore automatons doesn't have strong transitions,
@@ -59,15 +68,17 @@ let no_strong_transition state_handlers =
 
 
 let translate_automaton v eq_list handlers =
-  let states =
-    let suffix = gen_symbol () in
+  let type_name = Modules.fresh_type ("states") in
+  (* the state env associate a name to a qualified constructor *)
+  let state_env =
     List.fold_left
-      (fun env { s_state = n } -> NamesEnv.add n (n ^ suffix) env)
+      (fun env { s_state = n } -> intro_state_constr type_name n env)
       NamesEnv.empty handlers in
+  intro_type type_name state_env;
+  let tstatetype = Tid type_name in
 
-  let statetype = intro_type states in
-  let tstatetype = Tid statetype in
-  let initial = Name(NamesEnv.find (List.hd handlers).s_state states) in
+  (* The initial state constructor *)
+  let initial = (NamesEnv.find (List.hd handlers).s_state state_env) in
 
   let statename = Idents.fresh "s" in
   let next_statename = Idents.fresh "ns" in
@@ -75,7 +86,7 @@ let translate_automaton v eq_list handlers =
   let next_resetname = Idents.fresh "nr" in
   let pre_next_resetname = Idents.fresh "pnr" in
 
-  let name n = Name(NamesEnv.find n states) in
+  let name n = NamesEnv.find n state_env in
   let state n =
     mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype in
   let statevar n = mk_var_exp n tstatetype in
@@ -112,7 +123,7 @@ let translate_automaton v eq_list handlers =
   in
 
   let v =
-    (mk_var_dec next_statename (Tid(statetype))) ::
+    (mk_var_dec next_statename tstatetype) ::
       (mk_var_dec resetname (Tid Initial.pbool)) ::
       (mk_var_dec next_resetname (Tid Initial.pbool)) ::
       (mk_var_dec pre_next_resetname (Tid Initial.pbool)) :: v in
@@ -132,7 +143,7 @@ let translate_automaton v eq_list handlers =
     v, switch_eq :: nr_eq :: pnr_eq :: eq_list
   else (* General case,
           two switch to generate statename variable used and defined *)
-    let v = (mk_var_dec statename (Tid statetype)) :: v in
+    let v = (mk_var_dec statename tstatetype) :: v in
     let ns_switch_e = mk_exp_fby_state initial (statevar next_statename) in
     let ns_switch_handlers =
       List.map (fun ({ s_state = n } as case) ->
