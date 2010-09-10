@@ -164,7 +164,7 @@ let message loc kind =
     and display the correct location. *)
 let add_with_error add_fun f v =
   try add_fun f v
-  with Already_defined -> error (Ealready_defined f)
+  with Already_defined -> error (Ealready_defined (fullname f))
 let find_with_error find_fun f =
   try find_fun f
   with Not_found -> error (Eundefined(fullname f))
@@ -244,12 +244,12 @@ let typ_of_name h x =
       Not_found -> error (Eundefined(sourcename x))
 
 let desc_of_ty = function
-  | Tid n when n = pbool  -> Tenum ["true";"false"]
+  | Tid n when n = pbool  -> Tenum [ptrue; pfalse]
   | Tid ty_name -> find_type ty_name
   | _  -> Tabstract
 let set_of_constr = function
   | Tabstract | Tstruct _  -> assert false
-  | Tenum tag_list -> List.fold_right S.add tag_list S.empty
+  | Tenum tag_list -> List.fold_right QualSet.add tag_list QualSet.empty
 
 let name_mem n env =
   let check_one id _ acc =
@@ -292,6 +292,12 @@ let add_distinct_env id ty env =
   else
     Env.add id ty env
 
+let add_distinct_qualset n acc =
+  if QualSet.mem n acc then
+    error (Ealready_defined (fullname n))
+  else
+    QualSet.add n acc
+
 let add_distinct_S n acc =
   if S.mem n acc then
     error (Ealready_defined n)
@@ -305,13 +311,14 @@ let add env1 env2 =
 (** Checks that constructors are included in constructor list from type
     def and returns the difference *)
 let included_const s1 s2 =
-  S.iter
-    (fun elt -> if not (S.mem elt s2) then error (Emissingcase(elt)))
+  QualSet.iter
+    (fun elt -> if not (QualSet.mem elt s2)
+      then error (Emissingcase (fullname elt)))
     s1
 
 let diff_const defined_names local_names =
   included_const local_names defined_names;
-  S.diff defined_names local_names
+  QualSet.diff defined_names local_names
 
 (** Checks that local_names are included in defined_names and returns
     the difference *)
@@ -425,7 +432,7 @@ and typing_static_exp const_env se =
          with Not_found -> (* or a static parameter *)
            Svar ln, QualEnv.find ln const_env)
     | Sconstructor c ->
-      Sconstructor c, find_type (find_constrs c)
+      Sconstructor c, Tid (find_constrs c)
     | Sop (op, se_list) ->
         let ty_desc = find_value op in
         let typed_se_list = typing_static_args const_env
@@ -548,7 +555,7 @@ let rec typing const_env h e =
                           a_params = params } as app),
                    n, e_list, reset) ->
           let ty_desc = find_value f in
-          let op, expected_ty_list, result_ty_list = kind q ty_desc in
+          let op, expected_ty_list, result_ty_list = kind f ty_desc in
 (*TODO verifier....*)
           let node_params =
             List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
@@ -610,7 +617,7 @@ and typing_app const_env h op e_list =
 
     | { a_op = (Efun f | Enode f); a_params = params } as app, e_list ->
         let ty_desc = find_value f in
-        let op, expected_ty_list, result_ty_list = kind op ty_desc in
+        let op, expected_ty_list, result_ty_list = kind f ty_desc in
 (*TODO verifier....*)
         let node_params =
           List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
@@ -901,11 +908,11 @@ and typing_automaton_handlers const_env h acc state_handlers =
 
 and typing_switch_handlers const_env h acc ty switch_handlers =
   (* checks unicity of states *)
-  let addname acc { w_name = n } =
-    add_distinct_S (shortname n) acc in
-  let cases = List.fold_left addname S.empty switch_handlers in
+  let addname acc { w_name = n } = add_distinct_qualset n acc in
+  let cases = List.fold_left addname QualSet.empty switch_handlers in
   let d = diff_const (set_of_constr (desc_of_ty ty)) cases in
-  if not (S.is_empty d) then error (Epartial_switch(S.choose d));
+  if not (QualSet.is_empty d) then
+    error (Epartial_switch (fullname (QualSet.choose d)));
 
   let handler ({ w_block = b } as sh) =
     let typed_b, defined_names, _ = typing_block const_env h b in
@@ -996,7 +1003,7 @@ let typing_contract const_env h contract =
 
 let solve loc cl =
   try
-    solve NamesEnv.empty cl
+    solve QualEnv.empty cl
   with
       Solve_failed c -> message loc (Econstraint_solve_failed c)
 

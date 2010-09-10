@@ -183,7 +183,7 @@ let find_const = _find g_env.consts
 (** @return the fields of a record type. *)
 let find_struct n =
   match find_type n with
-    | Tstructure fields -> fields
+    | Tstruct fields -> fields
     | _ -> raise Not_found
 
 (** { 3 Load_check functions }
