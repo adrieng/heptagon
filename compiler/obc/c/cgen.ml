@@ -56,35 +56,20 @@ let rec struct_name ty =
   | _ -> assert false
 
 let int_of_static_exp se =
-  Static.int_of_static_exp NamesEnv.empty se
+  Static.int_of_static_exp QualEnv.empty se
 
-(** Returns the information concerning a node given by name. *)
-let node_info {qual = modname; name = modname_name } =
-  try
-    modname, find_value {qual = modname; name = modname_name }
-  with Not_found ->
-    (* name might be of the form Module.name, remove the module name*)
-    (*let ind_name = (String.length modname) + 1 in
-    let name = String.sub modname_name ind_name
-      ((String.length modname_name)-ind_name) in
-    begin try
-      modname, find_value (Modname({qual = modname;
-                                    id = name }))
-    with Not_found ->*)
-      Error.message no_location (Error.Enode modname)
-    (*end *)
 
 let output_names_list sig_info =
   let remove_option ad = match ad.a_name with
     | Some n -> n
     | None -> Error.message no_location Error.Eno_unnamed_output
   in
-  List.map remove_option sig_info.info.node_outputs
+  List.map remove_option sig_info.node_outputs
 
 let is_statefull n =
   try
-    let _, sig_info = node_info n in
-      sig_info.info.node_statefull
+    let sig_info = find_value n in
+      sig_info.node_statefull
   with
       Not_found -> Error.message no_location (Error.Enode (fullname n))
 
@@ -370,7 +355,7 @@ let generate_function_call var_env obj_env outvl objn args =
   (** Class name for the object to step. *)
   let classln = assoc_cn objn obj_env in
   let classn = shortname classln in
-  let mod_classn, sig_info = node_info classln in
+  let sig_info = find_value classln in
   let out = Cvar (out_var_name_of_objn classn) in
 
   let fun_call =
