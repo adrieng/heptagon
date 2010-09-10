@@ -47,7 +47,7 @@ let rec vd_mem n = function
 let is_record_type ty = match ty with
   | Tid n ->
       (match Modules.find_type n with
-        | Tenum _ -> true
+        | Tstruct _ -> true
         | _ -> false)
   | _ -> false
 
