@@ -145,7 +145,9 @@ let add_value f v =
   g_env.values <- QualEnv.add f v g_env.values
 let add_type f v =
   _check_not_defined g_env.types f;
-  g_env.types <- QualEnv.add f v g_env.types
+  QualEnv.iter (fun k v -> Format.printf "%s.%s@." k.qual k.name) g_env.types;
+  g_env.types <- QualEnv.add f v g_env.types;
+  QualEnv.iter (fun k v -> Format.printf "%s.%s@." k.qual k.name) g_env.types
 let add_constrs f v =
   _check_not_defined g_env.constrs f;
   g_env.constrs <- QualEnv.add f v g_env.constrs
@@ -163,7 +165,7 @@ let replace_value f v =
 (** { 3 Find functions look in the global environnement, nothing more } *)
 
 let _check_loaded_module m =
-  if not (List.mem m g_env.loaded_mod)
+  if not (List.mem m g_env. loaded_mod)
   then (
     Format.eprintf "The module %s was not loaded." m;
     raise Error )
@@ -174,11 +176,11 @@ let _find env x =
     _check_loaded_module x.qual; (* should never arrive, sanity check *)
     raise Not_found
 
-let find_value = _find g_env.values
-let find_type = _find g_env.types
-let find_constrs = _find g_env.constrs
-let find_field = _find g_env.fields
-let find_const = _find g_env.consts
+let find_value x = _find g_env.values x
+let find_type x = _find g_env.types x
+let find_constrs x = _find g_env.constrs x
+let find_field x = _find g_env.fields x
+let find_const x = _find g_env.consts x
 
 (** @return the fields of a record type. *)
 let find_struct n =
@@ -195,12 +197,11 @@ let _check env q =
   try let _ = QualEnv.find q env in true
   with Not_found -> false
 
-let check_value = _check g_env.values
-let check_type = _check g_env.types
-let check_constrs = _check g_env.constrs
-let check_field = _check g_env.fields
-let check_const = _check g_env.consts
-
+let check_value q = _check g_env.values q
+let check_type q = _check g_env.types q
+let check_constrs q = _check g_env.constrs q
+let check_field q = _check g_env.fields q
+let check_const q = _check g_env.consts q
 
 
 (** { 3 Qualify functions [qualify_* name] return the qualified name
@@ -210,20 +211,50 @@ let check_const = _check g_env.consts
 let _qualify env name =
   let tries m =
     try
+      let q = { qual = m; name = name } in
       let _ = QualEnv.find { qual = m; name = name } env in
       true
     with Not_found -> false in
   let m = List.find tries (g_env.current_mod::g_env.opened_mod) in
   { qual = m; name = name }
+open Format
+let qualify_value name = _qualify g_env.values name
+let qualify_type name = _qualify g_env.types name
+let qualify_constrs name = _qualify g_env.constrs name
+let qualify_field name = _qualify g_env.fields name
+let qualify_const name = _qualify g_env.consts name
 
-let qualify_value = _qualify g_env.values
-let qualify_type = _qualify g_env.types
-let qualify_constrs = _qualify g_env.constrs
-let qualify_field = _qualify g_env.fields
-let qualify_const = _qualify g_env.consts
 
-(** @return the name as qualified with the current module *)
+(** @return the name as qualified with the current module
+  (should not be used..)*)
 let current_qual n = { qual = g_env.current_mod; name = n }
+
+
+(** { 3 Fresh functions return a fresh qualname for the current module } *)
+
+let rec fresh_value name =
+  let q = current_qual ("__" ^ name ^ "_" ^ Misc.gen_symbol()) in
+  if QualEnv.mem q g_env.values
+  then fresh_value name
+  else q
+
+let rec fresh_type name =
+  let q = current_qual ("__" ^ name ^ "_" ^ Misc.gen_symbol()) in
+  if QualEnv.mem q g_env.types
+  then fresh_type name
+  else q
+
+let rec fresh_const name =
+  let q = current_qual ("__" ^ name ^ "_" ^ Misc.gen_symbol()) in
+  if QualEnv.mem q g_env.consts
+  then fresh_const name
+  else q
+
+let rec fresh_constr name =
+  let q = current_qual ("__" ^ name ^ "_" ^ Misc.gen_symbol()) in
+  if QualEnv.mem q g_env.constrs
+  then fresh_constr name
+  else q
 
 
 exception Undefined_type of qualname
@@ -262,4 +293,6 @@ let current_module () =
       m_constrs = unqualify_all g_env.constrs;
       m_fields = unqualify_all g_env.fields;
       m_format_version = g_env.format_version }
+
+
 
