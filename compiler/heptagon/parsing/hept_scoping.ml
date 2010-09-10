@@ -36,30 +36,30 @@ open Modules
 module Error =
 struct
   type error =
-    | EvarUnbound of name
-    | EqualUnbound of qualname
-    | Econst_var of name
-    | Enotlast of name
+    | Evar_unbound of name
+    | Equal_notfound of name*qualname
+    | Equal_unbound of name*name
+    | Enot_last of name
     | Evariable_already_defined of name
     | Econst_variable_already_defined of name
     | Estatic_exp_expected
 
   let message loc kind =
     begin match kind with
-      | EvarUnbound name ->
-          eprintf "%aThe value identifier %s is unbound.@."
+      | Evar_unbound name ->
+          eprintf "%aThe variable %s is unbound.@."
             print_location loc
             name
-      |EqualUnbound q ->
-          eprintf "%aThe qualified name %a can't be found.@."
+      | Equal_notfound (s,q) ->
+          eprintf "%aThe qualified %s %a can't be found.@."
             print_location loc
-            print_qualname q
-      | Econst_var name ->
-          eprintf "%aThe const identifier %s is unbound.@."
+            s print_qualname q
+      | Equal_unbound (s,n) ->
+          eprintf "%aUnbound %s %a.@."
             print_location loc
-            name
-      | Enotlast name ->
-          eprintf "%aThe variable identifier %s should be declared as a last.@."
+            s print_name n
+      | Enot_last name ->
+          eprintf "%aThe variable %s should be declared as a last.@."
             print_location loc
             name
       | Evariable_already_defined name ->
@@ -84,19 +84,19 @@ end
 open Error
 
 
-(** { 3 qualify when ToQ and check when Q according to the global env } *)
+(** {3 Qualify when ToQ and check when Q according to the global env } *)
 
-let _qualify_with_error qfun cqfun q = match q with
+let _qualify_with_error s qfun cqfun q = match q with
   | ToQ name ->
-    (*TODO good error*)
-      (try qfun name with Not_found -> error (EvarUnbound name))
+      (try qfun name with Not_found -> error (Equal_unbound (s,name)))
   | Q q ->
-      if cqfun q then q else error (EqualUnbound q)
+      if cqfun q then q else error (Equal_notfound (s,q))
 
-let qualify_value = _qualify_with_error qualify_value check_value
-let qualify_type = _qualify_with_error qualify_type check_type
-let qualify_constrs = _qualify_with_error qualify_constrs check_constrs
-let qualify_field = _qualify_with_error qualify_field check_field
+let qualify_value = _qualify_with_error "value" qualify_value check_value
+let qualify_type = _qualify_with_error "type" qualify_type check_type
+let qualify_constrs =
+  _qualify_with_error "constructor" qualify_constrs check_constrs
+let qualify_field = _qualify_with_error "field" qualify_field check_field
 
 (** Qualify with [Names.local_qualname] when in local_const,
     otherwise qualify according to the global env *)
@@ -104,7 +104,9 @@ let qualify_const local_const c = match c with
   | ToQ c ->
       if S.mem c local_const
       then local_qn c
-      else (try qualify_const c with Not_found -> raise Not_static)
+      else (
+        try qualify_const c
+        with Not_found -> error (Equal_unbound ("constant",c )))
   | Q q ->
       if check_const q then q else raise Not_static
 
@@ -117,22 +119,22 @@ struct
   (** Rename a var *)
   let var loc env n =
     try fst (find n env)
-    with Not_found -> message loc (EvarUnbound n)
+    with Not_found -> message loc (Evar_unbound n)
   (** Rename a last *)
   let last loc env n =
     try
       let id, last = find n env in
-      if not last then message loc (Enotlast n) else id
-    with Not_found -> message loc (EvarUnbound n)
+      if not last then message loc (Enot_last n) else id
+    with Not_found -> message loc (Evar_unbound n)
   (** Add a var *)
   let add_var loc env n =
     if mem n env then message loc (Evariable_already_defined n)
-    else (* create a new id for this var and add it to the env *)
+    else
         add n (ident_of_name n, false) env
   (** Add a last *)
   let add_last loc env n =
     if mem n env then message loc (Evariable_already_defined n)
-    else (* create a new id for this var and add it to the env *)
+    else
         add n (ident_of_name n, true) env
   (** Add a var dec *)
   let add env vd =
@@ -167,8 +169,8 @@ let translate_iterator_type = function
     op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
 let static_app_from_app app args=
   match app.a_op with
-    | Efun (Q ({ qual = "pervasives" } as q))
-    | Enode (Q ({ qual = "pervasives" } as q)) ->
+    | Efun (Q ({ qual = "Pervasives" } as q))
+    | Enode (Q ({ qual = "Pervasives" } as q)) ->
         q, (app.a_params @ args)
     | _ -> raise Not_static
 
