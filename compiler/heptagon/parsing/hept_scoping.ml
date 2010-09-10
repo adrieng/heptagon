@@ -238,10 +238,10 @@ let rec translate_type loc local_const ty =
 
 and translate_exp local_const env e =
   let desc =
-    try (* try to see if the exp is a constant *)
+    (*try (* try to see if the exp is a constant *)
       Heptagon.Econst (static_exp_of_exp local_const e)
     with
-        Not_static -> translate_desc e.e_loc local_const env e.e_desc in
+        Not_static -> *) translate_desc e.e_loc local_const env e.e_desc in
   { Heptagon.e_desc = desc;
     Heptagon.e_ty = Types.invalid_type;
     Heptagon.e_loc = e.e_loc }
