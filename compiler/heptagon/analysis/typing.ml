@@ -277,7 +277,7 @@ let build_subst names values =
     QualEnv.empty names values
 
 let rec subst_type_vars m = function
-  | Tarray(ty, e) -> Tarray(subst_type_vars m ty, static_exp_subst m e)
+  | Tarray(ty, e) -> Tarray(subst_type_vars m ty, simplify m e)
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
   | t -> t
 
@@ -561,8 +561,8 @@ let rec typing const_env h e =
             List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
           let m = build_subst node_params params in
           let expected_ty_list =
-            List.map (simplify m) expected_ty_list in
-          let result_ty_list = List.map (simplify m) result_ty_list in
+            List.map (subst_type_vars m) expected_ty_list in
+          let result_ty_list = List.map (subst_type_vars m) result_ty_list in
           let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
           let ty, typed_e_list = typing_iterator const_env h it n
             expected_ty_list result_ty_list e_list in
