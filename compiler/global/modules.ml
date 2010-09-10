@@ -156,6 +156,9 @@ let add_const f v =
   _check_not_defined g_env.consts f;
   g_env.consts <- QualEnv.add f v g_env.consts
 
+(** Same as add_value but without checking for redefinition *)
+let replace_value f v =
+  g_env.values <- QualEnv.add f v g_env.values
 
 (** { 3 Find functions look in the global environnement, nothing more } *)
 
@@ -177,6 +180,11 @@ let find_constrs = _find g_env.constrs
 let find_field = _find g_env.fields
 let find_const = _find g_env.consts
 
+(** @return the fields of a record type. *)
+let find_struct n =
+  match find_type n with
+    | Tstructure fields -> fields
+    | _ -> raise Not_found
 
 (** { 3 Load_check functions }
     Try to load the needed module and then to find it,
