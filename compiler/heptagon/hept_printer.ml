@@ -269,7 +269,7 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
     | Type_alias ty ->
         fprintf ff  "@[type %a@ = %a@.@]" print_qualname name print_type ty
     | Type_enum(tag_name_list) ->
-        fprintf ff "@[type %a = " print_qualname name;
+        fprintf ff "@[<2>type %a = " print_qualname name;
         print_list_r print_qualname "" "| " "" ff tag_name_list;
         fprintf ff "@.@]"
     | Type_struct(f_ty_list) ->

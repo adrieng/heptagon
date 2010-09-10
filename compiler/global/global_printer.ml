@@ -46,6 +46,11 @@ and print_type ff = function
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
 
+let print_field ff field =
+  fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type
+
+let print_struct ff field_list = print_record print_field ff field_list
+
 let print_size_constraint ff = function
   | Cequal (e1, e2) ->
       fprintf ff "@[%a = %a@]" print_static_exp e1 print_static_exp e2
@@ -56,4 +61,47 @@ let print_size_constraint ff = function
 let print_param ff p =
   fprintf ff "%a:%a"  Names.print_name p.p_name  print_type p.p_type
 
+let print_interface_type ff name tdesc =
+  match tdesc with
+    | Tabstract -> fprintf ff "@[type %s@]" name
+    | Tenum tag_name_list ->
+        fprintf ff "@[<2>type %s =@ %a@]"
+          name
+          (print_list_r print_qualname "" " |" "") tag_name_list;
+    | Tstruct f_ty_list ->
+        fprintf ff "@[<2>type %s =@ %a@]" name print_struct f_ty_list
+    | Talias t -> fprintf ff "@[<2>type %s = %a@]" name print_type t
+
+let print_interface_const ff name c =
+  fprintf ff "@[<2>const %a : %a = %a@]@."
+      print_name name
+      print_type c.Signature.c_type
+      print_static_exp c.Signature.c_value
+
+let print_interface_value ff name node =
+  let print_arg ff arg = match arg.a_name with
+      | None -> print_type ff arg.a_type
+      | Some(name) ->
+        fprintf ff "@[%a : %a@]" print_name name print_type arg.a_type in
+  let print_node_params ff p_list =
+    print_list_r (fun ff p -> print_name ff p.p_name) "<<" "," ">>" ff p_list
+  in
+  fprintf ff "@[<v 2>val %a%a@[%a@] returns @[%a@]@,@[%a@]@]"
+    print_name name
+    print_node_params node.node_params
+    (print_list_r print_arg "(" ";" ")") node.node_inputs
+    (print_list_r print_arg "(" ";" ")") node.node_outputs
+    (print_list_r print_size_constraint " with: " "," "")
+      node.node_params_constraints
+
+
+let print_interface ff i =
+  let m = Modules.current_module () in
+  NamesEnv.iter
+    (fun key typdesc -> print_interface_type ff key typdesc) m.m_types;
+  NamesEnv.iter
+    (fun key constdec -> print_interface_const ff key constdec) m.m_consts;
+  NamesEnv.iter
+    (fun key sigtype -> print_interface_value ff key sigtype) m.m_values;
+  Format.fprintf ff "@."
 

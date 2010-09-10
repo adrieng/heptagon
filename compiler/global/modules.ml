@@ -240,8 +240,8 @@ let rec unalias_type t = match t with
   | Tprod ty_list -> Tprod (List.map unalias_type ty_list)
 
 
-(** Write the current module as a [module_object] to oc *)
-let write_current_module oc =
+(** Return the current module as a [module_object] *)
+let current_module () =
   (* Filter and transform a qualified env into the current module object env *)
   let unqualify env = (* unqualify env keys *)
     QualEnv.fold
@@ -255,13 +255,11 @@ let write_current_module oc =
         if x.qual = g_env.current_mod
         then NamesEnv.add x.name v.name current
         else current) env NamesEnv.empty in
-  let current =
     { m_name = g_env.current_mod;
       m_values = unqualify g_env.values;
       m_types = unqualify g_env.types;
+      m_consts = unqualify g_env.consts;
       m_constrs = unqualify_all g_env.constrs;
       m_fields = unqualify_all g_env.fields;
-      m_consts = unqualify g_env.consts;
-      m_format_version = g_env.format_version } in
-  output_value oc current
+      m_format_version = g_env.format_version }
 

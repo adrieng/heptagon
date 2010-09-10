@@ -53,7 +53,8 @@ let print_record print_field ff record =
 
 
 let print_type_params ff pl =
-  print_list_r (fun ff s -> fprintf ff "'%s" s) "("","") " ff pl
+  fprintf ff "@[%a@]"
+    (print_list_r (fun ff s -> fprintf ff "'%s" s) "("","") ") pl
 
 
 let print_set iter print_element ff set =

@@ -39,7 +39,7 @@ let compile_impl pp p =
   (*let p = pass "Typing" true Typing.program p pp in*)
   let p = silent_pass "Statefullness check" true Statefull.program p in
 
-  (*if !print_types then Interface.Printer.print stdout;*)
+  if !print_types then print_interface Format.std_formatter l;
 
   (* Causality check *)
   let p = silent_pass "Causality check" true Causality.program p in
@@ -92,10 +92,7 @@ let compile_interface modname filename =
 
     (* Convert the parse tree to Heptagon AST *)
     let l = do_silent_pass "Scoping" Hept_scoping.translate_interface l in
-
-    (* Compile*)
-    (*Interface.Type.main l;
-    if !print_types then Interface.Printer.print stdout;*)
+    if !print_types then print_interface Format.std_formatter l;
 
 
     Modules.write itc;

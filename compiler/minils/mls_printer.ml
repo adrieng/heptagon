@@ -170,10 +170,6 @@ let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
   fprintf ff "@[<2>type %a%a@]@." print_qualname name print_type_desc tdesc
 
 
-and print_field ff field =
-  fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type
-
-
 let print_contract ff { c_local = l; c_eq = eqs;
                         c_assume = e_a; c_enforce = e_g; } =
   fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@]"
