@@ -11,7 +11,7 @@ open Location
 open Compiler_utils
 
 let pp p = if !verbose then Mls_printer.print stdout p
-
+(*
 let parse parsing_fun lexing_fun lexbuf =
   try
     parsing_fun lexing_fun lexbuf
@@ -27,7 +27,7 @@ let parse parsing_fun lexing_fun lexbuf =
 let parse_implementation prog_name lexbuf =
   let p = parse Mls_parser.program Mls_lexer.token lexbuf in
   { p with Mls_parsetree.p_modname = prog_name }
-
+*)
 let compile pp p =
   (* Clocking *)
   let p = pass "Clocking" true Clocking.program p pp in
