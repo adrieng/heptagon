@@ -90,30 +90,29 @@ let _load_module modname =
   if is_loaded modname then ()
   else
     let name = String.uncapitalize modname in
-    let filename = Misc.findfile (name ^ ".epci") in
-    let ic =
-      try
-         open_in_bin filename
-      with
-        | Misc.Cannot_find_file(f) ->
-            Format.eprintf "Cannot find the compiled interface file %s.@." f;
-            raise Error in
-    let mo:module_object =
-      try
-        input_value ic
-      with
-        | End_of_file | Failure _ ->
-            close_in ic;
-            Format.eprintf "Corrupted compiled interface file %s.@\n\
-                            Please recompile %s.ept first.@." filename name;
-            raise Error in
-    if mo.m_format_version <> interface_format_version
-    then (
-      Format.eprintf "The file %s was compiled with an older version \
-                      of the compiler.@\nPlease recompile %s.ept first.@."
-                     filename name;
-      raise Error );
-    _append_module mo
+    try
+      let filename = Misc.findfile (name ^ ".epci") in
+      let ic = open_in_bin filename in
+      let mo:module_object =
+        try
+          input_value ic
+        with
+          | End_of_file | Failure _ ->
+              close_in ic;
+              Format.eprintf "Corrupted compiled interface file %s.@\n\
+                              Please recompile %s.ept first.@." filename name;
+              raise Error in
+      if mo.m_format_version <> interface_format_version
+      then (
+        Format.eprintf "The file %s was compiled with an older version \
+                        of the compiler.@\nPlease recompile %s.ept first.@."
+                       filename name;
+        raise Error );
+      _append_module mo
+    with
+      | Misc.Cannot_find_file(f) ->
+          Format.eprintf "Cannot find the compiled interface file %s.@." f;
+          raise Error
 
 
 
@@ -186,20 +185,26 @@ let find_struct n =
     | Tstruct fields -> fields
     | _ -> raise Not_found
 
-(** { 3 Load_check functions }
+(** { 3 Check functions }
     Try to load the needed module and then to find it,
     return true if in the table, return false if it can't find it. *)
 
-let _check env q =
+(* NB : we can't factorize this functions since g_env is changed by _load... *)
+let check_value q =
   _load_module q.qual;
-  try let _ = QualEnv.find q env in true
-  with Not_found -> false
-
-let check_value q = _check g_env.values q
-let check_type q = _check g_env.types q
-let check_constrs q = _check g_env.constrs q
-let check_field q = _check g_env.fields q
-let check_const q = _check g_env.consts q
+  try let _ = QualEnv.find q g_env.values in true with Not_found -> false
+let check_type q =
+  _load_module q.qual;
+  try let _ = QualEnv.find q g_env.types in true with Not_found -> false
+let check_constrs q =
+  _load_module q.qual;
+  try let _ = QualEnv.find q g_env.constrs in true with Not_found -> false
+let check_field q =
+  _load_module q.qual;
+  try let _ = QualEnv.find q g_env.fields in true with Not_found -> false
+let check_const q =
+  _load_module q.qual;
+  try let _ = QualEnv.find q g_env.consts in true with Not_found -> false
 
 
 (** { 3 Qualify functions [qualify_* name] return the qualified name
@@ -271,13 +276,13 @@ let rec unalias_type t = match t with
 (** Return the current module as a [module_object] *)
 let current_module () =
   (* Filter and transform a qualified env into the current module object env *)
-  let unqualify env = (* unqualify env keys *)
+  let unqualify env = (* unqualify and filter env keys *)
     QualEnv.fold
       (fun x v current ->
         if x.qual = g_env.current_mod
         then NamesEnv.add x.name v current
         else current) env NamesEnv.empty in
-  let unqualify_all env = (* unqualify env keys and values *)
+  let unqualify_all env = (* unqualify and filter env keys and values *)
     QualEnv.fold
       (fun x v current ->
         if x.qual = g_env.current_mod
