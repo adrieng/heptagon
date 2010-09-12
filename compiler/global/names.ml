@@ -69,6 +69,9 @@ let print_name ff n =
   else n
   in fprintf ff "%s" n
 
+let print_raw_qualname ff {qual = q; name = n} =
+  fprintf ff "%s.%a" q print_name n
+
 let opname qn = match qn with
   | { qual = "Pervasives"; name = m; } -> m
   | { qual = qual; name = n; } -> qual ^ "." ^ n
