@@ -182,7 +182,7 @@ struct
                                      node_params_constraints = [] } in
       (* Find the name that was associated to this instance *)
       let ln = node_for_params_call n.n_name params in
-      Modules.add_value ln node_sig;
+      Modules.add_value ln node_sig; (*TODO Bug with array1.ept*)
       { n with n_name = ln; n_params = []; n_params_constraints = []; }
 
     let node_dec modname n =
