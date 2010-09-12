@@ -212,6 +212,13 @@ let unalias_type ty =
   try unalias_type ty
   with Undefined_type ln -> error (Eundefined (fullname ln))
 
+let flatten_ty_list l =
+  let flatten = function
+    | Tprod l -> l
+    | ty -> [ty]
+  in
+    List.flatten (List.map flatten l)
+
 let rec unify t1 t2 =
   match t1, t2 with
     | b1, b2 when b1 = b2 -> ()
@@ -818,10 +825,19 @@ and typing_array_subscript_dyn const_env h idx_list ty =
     | _, _ -> error (Esubscripted_value_not_an_array ty)
 
 and typing_args const_env h expected_ty_list e_list =
-  try
-    List.map2 (expect const_env h) expected_ty_list e_list
+    let typed_e_list, args_ty_list =
+      List.split (List.map (typing const_env h) e_list) in
+    let args_ty_list = flatten_ty_list args_ty_list in
+      (match args_ty_list, expected_ty_list with
+  | [], [] -> ()
+  | _, _ ->
+    unify (prod args_ty_list) (prod expected_ty_list));
+    typed_e_list
+
+    (*try
+      List.map2 (expect const_env h) expected_ty_list e_list
   with Invalid_argument _ ->
-    error (Earity_clash(List.length e_list, List.length expected_ty_list))
+    error (Earity_clash(List.length e_list, List.length expected_ty_list)) *)
 
 and typing_node_params const_env params_sig params =
   List.map2 (fun p_sig p -> expect_static_exp const_env
