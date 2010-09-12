@@ -145,9 +145,7 @@ let add_value f v =
   g_env.values <- QualEnv.add f v g_env.values
 let add_type f v =
   _check_not_defined g_env.types f;
-  QualEnv.iter (fun k v -> Format.printf "%s.%s@." k.qual k.name) g_env.types;
-  g_env.types <- QualEnv.add f v g_env.types;
-  QualEnv.iter (fun k v -> Format.printf "%s.%s@." k.qual k.name) g_env.types
+  g_env.types <- QualEnv.add f v g_env.types
 let add_constrs f v =
   _check_not_defined g_env.constrs f;
   g_env.constrs <- QualEnv.add f v g_env.constrs
@@ -211,13 +209,12 @@ let check_const q = _check g_env.consts q
 let _qualify env name =
   let tries m =
     try
-      let q = { qual = m; name = name } in
       let _ = QualEnv.find { qual = m; name = name } env in
       true
     with Not_found -> false in
   let m = List.find tries (g_env.current_mod::g_env.opened_mod) in
   { qual = m; name = name }
-open Format
+
 let qualify_value name = _qualify g_env.values name
 let qualify_type name = _qualify g_env.types name
 let qualify_constrs name = _qualify g_env.constrs name
