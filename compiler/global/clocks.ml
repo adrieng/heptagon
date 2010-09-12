@@ -92,7 +92,10 @@ and unify_list t1_list t2_list =
   try List.iter2 unify t1_list t2_list with | _ -> raise Unify
 
 let rec skeleton ck = function
-  | Tprod ty_list -> Cprod (List.map (skeleton ck) ty_list)
+  | Tprod ty_list ->
+      (match ty_list with
+        | [] -> Format.eprintf "Warning, an exp with void type@."; Ck ck
+        | _ -> Cprod (List.map (skeleton ck) ty_list))
   | Tarray _ | Tid _ -> Ck ck
 
 let ckofct = function | Ck ck -> ck_repr ck | Cprod ct_list -> Cbase
