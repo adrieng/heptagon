@@ -47,6 +47,8 @@ compile () {
   fi
 
   if [ $verbose != 0 ]; then
+    echo ""
+    echo "****************************************"
     echo Compile -i $coption $1 $2 $args_comp
     $compilo $coption -I good $1 $2 $args_comp
   else
@@ -67,7 +69,9 @@ launch_check () {
   # les mauvais
   echo -n "bad "
   for f in bad/*.ept ; do
-    echo -n ".";
+    if [ $verbose = 0 ]; then
+      echo -n "."
+    fi
     max=`expr $max + 1`;
     if compile $f; then
       echo
@@ -82,7 +86,9 @@ launch_check () {
   echo -n "bons"
   for f in good/*.ept; do
     echec=0
-    echo -n ".";
+    if [ $verbose = 0 ]; then
+      echo -n "."
+    fi
     max=`expr $max + 1`;
     base_f=`basename $f .ept`
     if compile $f; then
