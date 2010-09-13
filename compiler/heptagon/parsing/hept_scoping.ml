@@ -98,17 +98,19 @@ let qualify_constrs =
   _qualify_with_error "constructor" qualify_constrs check_constrs
 let qualify_field = _qualify_with_error "field" qualify_field check_field
 
+(** Qualify a var name as a constant variable,
+    if not in local_const or global_const then raise Not_found *)
+let qualify_var_as_const local_const c =
+  if S.mem c local_const
+  then local_qn c
+  else qualify_const c
+
 (** Qualify with [Names.local_qualname] when in local_const,
     otherwise qualify according to the global env *)
 let qualify_const local_const c = match c with
-  | ToQ c ->
-      if S.mem c local_const
-      then local_qn c
-      else (
-        try qualify_const c
-        with Not_found -> error (Equal_unbound ("constant",c )))
-  | Q q ->
-      if check_const q then q else raise Not_static
+  | ToQ c -> (try qualify_var_as_const local_const c
+              with Not_found -> error (Equal_unbound ("constant",c )))
+  | Q q -> if check_const q then q else raise Not_static
 
 
 module Rename =
@@ -248,7 +250,12 @@ and translate_exp local_const env e =
 
 and translate_desc loc local_const env = function
   | Econst c -> Heptagon.Econst (translate_static_exp local_const c)
-  | Evar x -> Heptagon.Evar (Rename.var loc env x)
+  | Evar x -> (
+      try (* First check if it is a const var *)
+        Heptagon.Econst
+          (Types.mk_static_exp
+            ~loc:loc (Types.Svar (qualify_var_as_const local_const x)))
+      with Not_found -> Heptagon.Evar (Rename.var loc env x))
   | Elast x -> Heptagon.Elast (Rename.last loc env x)
   | Epre (None, e) -> Heptagon.Epre (None, translate_exp local_const env e)
   | Epre (Some c, e) ->
@@ -387,23 +394,27 @@ let translate_node node =
   let local_const = build_const node.n_loc node.n_params in
   (* Inputs and outputs define the initial local env *)
   let env0 = Rename.append Rename.empty (node.n_input @ node.n_output) in
+  let params = params_of_var_decs local_const node.n_params in
+  let inputs = translate_vd_list local_const env0 node.n_input in
+  let outputs = translate_vd_list local_const env0 node.n_output in
   let b, env = translate_block local_const env0 node.n_block in
+  let contract =
+    Misc.optional (translate_contract local_const env) node.n_contract in
   (* the env of the block is used in the contract translation *)
   let n = current_qual node.n_name in
   (* add the node signature to the environment *)
   let i = args_of_var_decs local_const node.n_input in
   let o = args_of_var_decs local_const node.n_output in
   let p = params_of_var_decs local_const node.n_params in
-    add_value n (Signature.mk_node i o node.n_statefull p);
+  add_value n (Signature.mk_node i o node.n_statefull p);
   { Heptagon.n_name = n;
     Heptagon.n_statefull = node.n_statefull;
-    Heptagon.n_input = translate_vd_list local_const env0 node.n_input;
-    Heptagon.n_output = translate_vd_list local_const env0 node.n_output;
-    Heptagon.n_contract =
-      Misc.optional (translate_contract local_const env) node.n_contract;
+    Heptagon.n_input = inputs;
+    Heptagon.n_output = outputs;
+    Heptagon.n_contract = contract;
     Heptagon.n_block = b;
     Heptagon.n_loc = node.n_loc;
-    Heptagon.n_params = params_of_var_decs local_const node.n_params;
+    Heptagon.n_params = params;
     Heptagon.n_params_constraints = []; }
 
 let translate_typedec ty =
@@ -447,11 +458,14 @@ let translate_const_dec cd =
 
 let translate_program p =
   List.iter open_module p.p_opened;
+  let consts = List.map translate_const_dec p.p_consts in
+  let types = List.map translate_typedec p.p_types in
+  let nodes = List.map translate_node p.p_nodes in
   { Heptagon.p_modname = p.p_modname;
     Heptagon.p_opened = p.p_opened;
-    Heptagon.p_types = List.map translate_typedec p.p_types;
-    Heptagon.p_nodes = List.map translate_node p.p_nodes;
-    Heptagon.p_consts = List.map translate_const_dec p.p_consts; }
+    Heptagon.p_types = types;
+    Heptagon.p_nodes = nodes;
+    Heptagon.p_consts = consts; }
 
 let translate_signature s =
   let local_const = build_const s.sig_loc s.sig_params in
