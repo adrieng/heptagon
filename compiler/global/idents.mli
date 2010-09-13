@@ -22,6 +22,9 @@ val fresh : string -> ident
 (** [ident_of_name n] returns an identifier corresponding
   to a _source_ variable (do not use it for generated variables). *)
 val ident_of_name : string -> ident
+(** Resets the sets that makes sure that idents are mapped to unique
+    identifiers. Should be called when scoping a new function. *)
+val new_function : unit -> unit
 
 (** Maps taking an identifier as a key. *)
 module Env :

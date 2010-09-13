@@ -18,6 +18,8 @@ type ident = {
 
 type var_ident = ident
 
+let num = ref 0
+
 let compare id1 id2 = compare id1.num id2.num
 let sourcename id = id.source
 let name id =
@@ -28,15 +30,6 @@ let name id =
 
 let set_sourcename id v =
   { id with source = v }
-
-let num = ref 0
-let fresh s =
-  num := !num + 1;
-  { num = !num; source = s; is_generated = true }
-
-let ident_of_name s =
-  num := !num + 1;
-  { num = !num; source = s; is_generated = false }
 
 let fprint_t ff id = Format.fprintf ff "%s" (name id)
 
@@ -84,26 +77,47 @@ end
 module S = Set.Make (struct type t = string
                             let compare = Pervasives.compare end)
 
-(** @return a unique string for each identifier. Idents corresponding
-    to variables defined in the source file have the same name unless
-    there is a collision. *)
-let name =
-  let used_names = ref S.empty in
-  let env = ref Env.empty in
-  let rec fresh_string base =
-    let base = name (fresh base) in
-      if S.mem base !used_names then fresh_string base else base
-  in
-  let unique_name n =
-    if Env.mem n !env then
-      Env.find n !env
-    else
-      let s = name n in
-      let s = if S.mem s !used_names then fresh_string s else s in
-        used_names := S.add s !used_names;
-        env := Env.add n s !env;
-        s
-  in
-    unique_name
+module UniqueNames =
+struct
+  let used_names = ref S.empty
+  let env = ref Env.empty
+
+  let new_function () =
+    used_names := S.empty
+
+  (** @return a unique string for each identifier. Idents corresponding
+      to variables defined in the source file have the same name unless
+      there is a collision. *)
+  let assign_name n =
+    let fresh s =
+      num := !num + 1;
+      s ^ "_" ^ (string_of_int !num)
+    in
+    let rec fresh_string base =
+      let base = fresh base in
+        if S.mem base !used_names then fresh_string base else base
+    in
+      if not (Env.mem n !env) then
+        let s = name n in
+        let s = if S.mem s !used_names then fresh_string s else s in
+          used_names := S.add s !used_names;
+          env := Env.add n s !env
+
+  let name id =
+    Env.find id !env
+end
+
+let fresh s =
+  num := !num + 1;
+  let id = { num = !num; source = s; is_generated = true } in
+    UniqueNames.assign_name id; id
+
+let ident_of_name s =
+  num := !num + 1;
+  let id = { num = !num; source = s; is_generated = false } in
+    UniqueNames.assign_name id; id
+
+let name id = UniqueNames.name id
+let new_function () = UniqueNames.new_function ()
 
 let print_ident ff id = Format.fprintf ff "%s" (name id)

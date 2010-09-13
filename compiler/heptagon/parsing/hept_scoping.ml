@@ -391,6 +391,7 @@ let args_of_var_decs local_const =
                         (translate_type vd.v_loc local_const vd.v_type))
 
 let translate_node node =
+  Idents.new_function ();
   (* Node's params go to local_const env *)
   let local_const = build_const node.n_loc node.n_params in
   (* Inputs and outputs define the initial local env *)
