@@ -139,7 +139,7 @@ let print_method ff md =
 
 let print_class_def ff
     { cd_name = id; cd_mems = mem; cd_objs = objs; cd_methods = m_list } =
-  fprintf ff "@[<v 2>machine "; print_name ff id; fprintf ff " =@,";
+  fprintf ff "@[<v 2>machine "; print_qualname ff id; fprintf ff " =@,";
   if mem <> [] then begin
     fprintf ff "@[<hov 4>var ";
     print_list_r print_vd "" ";" "" ff mem;
@@ -156,15 +156,15 @@ let print_class_def ff
 
 let print_type_def ff { t_name = name; t_desc = tdesc } =
   match tdesc with
-    | Type_abs -> fprintf ff "@[type %s@\n@]" name
+    | Type_abs -> fprintf ff "@[type %a@\n@]" print_qualname name
     | Type_alias ty ->
-        fprintf ff  "@[type %s@ = %a@\n@]" name  print_type ty
+        fprintf ff  "@[type %a@ = %a@\n@]" print_qualname name  print_type ty
     | Type_enum(tag_name_list) ->
-        fprintf ff "@[type %s = " name;
+        fprintf ff "@[type %a = " print_qualname name;
         print_list_r print_name "" "|" "" ff tag_name_list;
         fprintf ff "@\n@]"
     | Type_struct(f_ty_list) ->
-        fprintf ff "@[type %s = " name;
+        fprintf ff "@[type %a = " print_qualname name;
         fprintf ff "@[<v 1>";
         print_list
           (fun ff { Signature.f_name = field; Signature.f_type = ty } ->
@@ -179,7 +179,7 @@ let print_open_module ff name =
   fprintf ff "@.@]"
 
 let print_const_dec ff c =
-  fprintf ff "const %a = %a@." print_name c.c_name
+  fprintf ff "const %a = %a@." print_qualname c.c_name
     print_static_exp c.c_value
 
 let print_prog ff { p_opened = modules; p_types = types;

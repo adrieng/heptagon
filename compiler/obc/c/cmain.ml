@@ -32,23 +32,24 @@ let assert_node_res cd =
   let stepm = find_step_method cd in
   if List.length stepm.m_inputs > 0 then
     (Format.eprintf "Cannot generate run-time check for node %s with inputs.@."
-       cd.cd_name;
+       (cname_of_qn cd.cd_name);
      exit 1);
   if (match stepm.m_outputs with
         | [{ v_type = Tid nbool; }] when nbool = Initial.pbool -> false
         | _ -> true) then
     (Format.eprintf
        "Cannot generate run-time check for node %s with non-boolean output.@."
-       cd.cd_name;
+       (cname_of_qn cd.cd_name);
      exit 1);
+  let name = cname_of_qn cd.cd_name in
   let mem =
-    (name (Idents.fresh ("mem_for_" ^ cd.cd_name)),
-      Cty_id (cd.cd_name ^ "_mem"))
+    (Idents.name (Idents.fresh ("mem_for_" ^ name)),
+      Cty_id (name ^ "_mem"))
   and out =
-    (name (Idents.fresh ("out_for_" ^ cd.cd_name)),
-      Cty_id (cd.cd_name ^ "_out")) in
+    (Idents.name (Idents.fresh ("out_for_" ^ name)),
+      Cty_id (name ^ "_out")) in
   let reset_i =
-    Cfun_call (cd.cd_name ^ "_reset", [Caddrof (Cvar (fst mem))]) in
+    Cfun_call (name ^ "_reset", [Caddrof (Cvar (fst mem))]) in
   let step_i =
     (*
       step(&out, &mem);
@@ -62,15 +63,15 @@ let assert_node_res cd =
       { var_decls = [];
         block_body =
           [
-            Csexpr (Cfun_call (cd.cd_name ^ "_step",
+            Csexpr (Cfun_call (name ^ "_step",
                                [Caddrof (Cvar (fst out));
                                 Caddrof (Cvar (fst mem))]));
             Cif (Cuop ("!", Clhs (Cfield (Cvar (fst out), outn))),
                  [Csexpr (Cfun_call ("printf",
-                                     [Cconst (Cstrlit ("Node \\\"" ^ cd.cd_name
+                                     [Cconst (Cstrlit ("Node \\\"" ^ name
                                                        ^ "\\\" failed at step" ^
                                                        " %d.\\n"));
-                                      Clhs (Cvar (name step_counter))]));
+                                      Clhs (Cvar (Idents.name step_counter))]));
                   Creturn (Cconst (Ccint 1))],
                  []);
           ];
@@ -176,10 +177,10 @@ let main_def_of_class_def cd =
   let printf_calls = List.concat printf_calls in
 
   let cinp = cvarlist_of_ovarlist stepm.m_inputs in
-  let cout = ["res", (Cty_id (cd.cd_name ^ "_out"))] in
+  let cout = ["res", (Cty_id ((cname_of_qn cd.cd_name) ^ "_out"))] in
 
   let varlist =
-    ("mem", Cty_id (cd.cd_name ^ "_mem"))
+    ("mem", Cty_id ((cname_of_qn cd.cd_name) ^ "_mem"))
     :: cinp
     @ cout
     @ concat scanf_decls
@@ -192,7 +193,7 @@ let main_def_of_class_def cd =
       let args =
         map (fun vd -> Clhs (Cvar (name vd.v_ident))) stepm.m_inputs
         @ [Caddrof (Cvar "res"); Caddrof (Cvar "mem")] in
-      Cfun_call (cd.cd_name ^ "_step", args) in
+      Cfun_call ((cname_of_qn cd.cd_name) ^ "_step", args) in
     concat scanf_calls
     @ [Csexpr funcall]
     @ printf_calls
@@ -201,7 +202,8 @@ let main_def_of_class_def cd =
 
   (** Do not forget to initialize memory via reset. *)
   let rst_i =
-    Csexpr (Cfun_call (cd.cd_name ^ "_reset", [Caddrof (Cvar "mem")])) in
+    Csexpr (Cfun_call ((cname_of_qn cd.cd_name) ^ "_reset",
+                       [Caddrof (Cvar "mem")])) in
 
   (varlist, rst_i, step_l)
 
@@ -254,7 +256,7 @@ let mk_main name p = match (!Misc.simulation_node, !Misc.assert_nodes) with
   | (None, []) -> []
   | (_, n_names) ->
       let find_class n =
-        try List.find (fun cd -> cd.cd_name = n) p.p_defs
+        try List.find (fun cd -> cd.cd_name.name = n) p.p_defs
         with Not_found ->
           Format.eprintf "Unknown node %s.\n" n;
           exit 1 in

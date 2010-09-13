@@ -15,13 +15,13 @@ open Types
 open Signature
 open Location
 
-type class_name = name
+type class_name = qualname
 type instance_name = qualname
 type obj_name = name
 type op_name = qualname
 
 type type_dec =
-    { t_name : name;
+    { t_name : qualname;
       t_desc : tdesc;
       t_loc : location }
 
@@ -32,7 +32,7 @@ and tdesc =
   | Type_struct of structure
 
 type const_dec = {
-  c_name : name;
+  c_name : qualname;
   c_value : static_exp;
   c_type : ty;
   c_loc : location }

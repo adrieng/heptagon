@@ -480,7 +480,7 @@ let translate_node
   let resetm = {
     m_name = Mreset; m_inputs = []; m_outputs = [];
     m_body = mk_block si } in
-    { cd_name = shortname f; cd_mems = m; cd_params = params;
+    { cd_name = f; cd_mems = m; cd_params = params;
       cd_objs = j; cd_methods = [stepm; resetm];
       cd_loc = loc }
 
@@ -493,11 +493,11 @@ let translate_ty_def { Minils.t_name = name; Minils.t_desc = tdesc;
         Type_enum (List.map shortname tag_name_list)
     | Minils.Type_struct field_ty_list ->
         Type_struct field_ty_list in
-  { t_name = shortname name; t_desc = tdesc; t_loc = loc }
+  { t_name = name; t_desc = tdesc; t_loc = loc }
 
 let translate_const_def { Minils.c_name = name; Minils.c_value = se;
                           Minils.c_type = ty; Minils.c_loc = loc } =
-  { c_name = shortname name;
+  { c_name = name;
     c_value = se;
     c_type = ty;
     c_loc = loc }
