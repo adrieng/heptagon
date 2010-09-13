@@ -156,7 +156,9 @@ and translate_act map context pat
 
     | Minils.Evarpat n, _ ->
         [Aassgn (var_from_name map n, translate map context act)]
-    | _ -> (*Minils_printer.print_exp stdout act;*) assert false
+    | _ ->
+      (*let ff = Format.formatter_of_out_channel stdout in
+        Mls_printer.print_exp ff act; Format.fprintf ff "@?";*) assert false
 
 and translate_c_act_list map context pat c_act_list =
   List.map
