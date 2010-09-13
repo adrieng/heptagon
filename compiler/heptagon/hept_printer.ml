@@ -94,6 +94,7 @@ and print_exp ff e =
            | None -> ()
            | Some r -> fprintf ff " every %a" print_exp r
         )
+    | Eiterator _ -> assert false
   end;
   if !Misc.full_type_info then fprintf ff " : %a)" print_type e.e_ty
 

@@ -188,5 +188,12 @@ val mapi2: (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->
   'a list -> 'b list -> 'c list -> 'd list
 
+(** Functions to decompose a list into a tuple *)
+val assert_empty : 'a list -> unit
+val assert_1 : 'a list -> 'a
+val assert_2 : 'a list -> 'a * 'a
+val assert_2min : 'a list -> 'a * 'a * 'a list
+val assert_3 : 'a list -> 'a * 'a * 'a
+
 exception Cannot_find_file of string
 val findfile : string -> string

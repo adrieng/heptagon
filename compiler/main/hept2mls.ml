@@ -244,6 +244,7 @@ let rec translate env
                     translate_app env app, n,
                     List.map (translate env) e_list,
                     translate_reset reset))
+    | Heptagon.Efby _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
 

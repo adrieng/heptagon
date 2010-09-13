@@ -259,6 +259,37 @@ let mapi3 f l1 l2 l3 =
   in
     aux 0 l1 l2 l3
 
+(* Functions to decompose a list into a tuple *)
+let _arity_error i l =
+  Format.eprintf "Internal compiler error: \
+     wrong list size (found %d, expected %d).@." (List.length l) i;
+  assert false
+
+let _arity_min_error i l =
+  Format.eprintf "Internal compiler error: \
+     wrong list size (found %d, expected %d at least).@." (List.length l) i;
+  assert false
+
+let assert_empty = function
+  | [] -> ()
+  | l -> _arity_error 1 l
+
+let assert_1 = function
+  | [v] -> v
+  | l -> _arity_error 1 l
+
+let assert_2 = function
+  | [v1; v2] -> v1, v2
+  | l -> _arity_error 1 l
+
+let assert_2min = function
+  | v1::v2::l -> v1, v2, l
+  | l -> _arity_min_error 1 l
+
+let assert_3 = function
+  | [v1; v2; v3] -> v1, v2, v3
+  | l -> _arity_error 1 l
+
 exception Cannot_find_file of string
 
 let findfile filename =

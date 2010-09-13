@@ -246,7 +246,7 @@ let desc_of_ty = function
   | Tid ty_name -> find_type ty_name
   | _  -> Tabstract
 let set_of_constr = function
-  | Tabstract | Tstruct _  -> assert false
+  | Tabstract | Tstruct _ | Talias _ -> assert false
   | Tenum tag_list -> List.fold_right QualSet.add tag_list QualSet.empty
 
 let name_mem n env =
@@ -573,6 +573,8 @@ let rec typing const_env h e =
             (* return the type *)
             Eiterator(it, { app with a_op = op; a_params = typed_params }
                         , typed_n, typed_e_list, reset), ty
+
+      | Eiterator _ -> assert false
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
   with

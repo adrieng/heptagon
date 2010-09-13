@@ -29,6 +29,7 @@ struct
     | Eno_unnamed_output
     | Ederef_not_pointer
     | Estatic_exp_compute_failed
+    | Eunknown_method of string
 
   let message loc kind = (match kind with
     | Evar name ->
@@ -46,7 +47,12 @@ struct
     | Estatic_exp_compute_failed ->
         eprintf "%aCode generation : Computation of the value of the static \
                  expression failed.@."
-          print_location loc);
+          print_location loc
+    | Eunknown_method s ->
+        eprintf "%aCode generation : Methods other than step and \
+                    reset are not supported (found '%s').@."
+          print_location loc
+          s);
     raise Misc.Error
 end
 
@@ -207,6 +213,7 @@ and create_affect_stm dest src ty =
                [Cfor(x, 0, n,
                      create_affect_stm (Carray (dest, Clhs (Cvar x)))
                        (Clhs (Carray (src, Clhs (Cvar x)))) bty)]
+           | _ -> assert false (** TODO: add missing cases eg for records *)
         )
     | _ -> [Caffect (dest, src)]
 
@@ -243,6 +250,8 @@ let rec cexpr_of_static_exp se =
             Error.message se.se_loc Error.Estatic_exp_compute_failed
           else
             cexpr_of_static_exp se'
+    | Stuple _ -> assert false (** TODO *)
+    | Srecord _ -> assert false (** TODO *)
 
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
 let rec cexpr_of_exp var_env exp =
@@ -435,7 +444,9 @@ let rec cstm_of_act var_env obj_env act =
 
     (** Reinitialization of an object variable, extracting the reset
         function's name from our environment [obj_env]. *)
-    | Acall ([], o, Mreset, []) ->
+    | Acall (name_list, o, Mreset, args) ->
+        assert_empty name_list;
+        assert_empty args;
         let on = obj_call_name o in
         let obj = assoc_obj on obj_env in
         let classn = cname_of_qn obj.o_class in
@@ -470,6 +481,11 @@ let rec cstm_of_act var_env obj_env act =
         let args = cexprs_of_exps var_env el in
         let outvl = clhss_of_lhss var_env outvl in
         generate_function_call var_env obj_env outvl objn args
+
+    | Acall(_, o, Mmethod s, _) ->
+        let on = obj_call_name o in
+        let obj = assoc_obj on obj_env in
+          Error.message obj.o_loc (Error.Eunknown_method s)
 
 and cstm_of_act_list var_env obj_env b =
   let l = List.map cvar_of_vd b.b_locals in

@@ -357,7 +357,8 @@ and mk_node_call map call_context app loc name_list args =
         let si =
           (match app.Minils.a_op with
              | Minils.Efun _ -> []
-             | Minils.Enode _ -> [reinit o]) in
+             | Minils.Enode _ -> [reinit o]
+             | _ -> assert false) in
           [], si, [obj], [Acall (name_list, o, Mstep, args)]
     | _ -> assert false
 
