@@ -16,6 +16,12 @@ open Mls_utils
 open Types
 open Clocks
 
+let flatten_e_list l =
+  let flatten = function
+    | { e_desc = Eapp({ a_op =  Etuple }, l, _) } -> l
+    | e -> [e]
+  in
+    List.flatten (List.map flatten l)
 
 let equation (d_list, eq_list) e =
   let add_one_var ty d_list =
@@ -186,6 +192,10 @@ let rec translate kind context e =
         let context, e2 = translate Act context e2 in
         let context, e3 = translate Act context e3 in
           ifthenelse context e1 e2 e3
+    | Eapp({ a_op = Efun _ | Enode _ } as app, e_list, r) ->
+        let context, e_list =
+          translate_list function_args_kind context e_list in
+          context, { e with e_desc = Eapp(app, flatten_e_list e_list, r) }
     | Eapp(app, e_list, r) ->
         let context, e_list = translate_app kind context app.a_op e_list in
           context, { e with e_desc = Eapp(app, e_list, r) }
@@ -210,12 +220,13 @@ let rec translate kind context e =
 
         let context, e_list =
           translate_iterator_arg_list context e_list in
-        context, { e with e_desc = Eiterator(it, app, n, e_list, reset) }
+        context, { e with e_desc = Eiterator(it, app, n,
+                                             flatten_e_list e_list, reset) }
   in add context kind e
 
 and translate_app kind context op e_list =
   match op, e_list with
-    | (Eequal | Efun _ | Enode _), e_list ->
+    | Eequal, e_list ->
         let context, e_list =
           translate_list function_args_kind context e_list in
         context, e_list
