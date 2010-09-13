@@ -54,7 +54,7 @@ let assoc_map_for_fun md =
     | out ->
         let fill_field map vd =
           NamesEnv.add (name vd.Obc.v_ident)
-            (Cfield (Cderef (Cvar "out"), name vd.Obc.v_ident)) map
+            (Cfield (Cderef (Cvar "out"), local_qn (name vd.Obc.v_ident))) map
         in
         List.fold_left fill_field NamesEnv.empty out
 

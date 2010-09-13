@@ -7,7 +7,6 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
 (** Abstract syntax tree for C programs. *)
 (** {2 C abstract syntax tree } *)
 
@@ -21,7 +20,8 @@ type cty =
   | Cty_int (** C machine-dependent integer type. *)
   | Cty_float (** C machine-dependent single-precision floating-point type. *)
   | Cty_char (** C character type. *)
-  | Cty_id of string (** Previously defined C type, such as an enum or struct.*)
+  | Cty_id of Names.qualname
+      (** Previously defined C type, such as an enum or struct.*)
   | Cty_ptr of cty (** C points-to-other-type type. *)
   | Cty_arr of int * cty (** A static array of the specified size. *)
   | Cty_void (** Well, [void] is not really a C type. *)
@@ -57,7 +57,7 @@ and cconst =
 and clhs =
   | Cvar of string (** A local variable. *)
   | Cderef of clhs (** Pointer dereference, *ptr. *)
-  | Cfield of clhs * string (** Field access to left-hand-side. *)
+  | Cfield of clhs * Names.qualname (** Field access to left-hand-side. *)
   | Carray of clhs * cexpr (** Array access clhs[cexpr] *)
 (** C statements. *)
 and cstm =
@@ -114,6 +114,9 @@ val output : string -> cfile list -> unit
 (** [cname_of_name name] translates the string [name] to a valid C identifier.
     Copied verbatim from the old C backend. *)
 val cname_of_name : string -> string
+(** [cname_of_name q] translates the qualified name [q]
+    to a valid C identifier. *)
+val cname_of_qn : Names.qualname -> string
 
 (** Converts an expression to a lhs. *)
 val lhs_of_exp : cexpr -> clhs

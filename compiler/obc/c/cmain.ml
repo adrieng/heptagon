@@ -44,10 +44,10 @@ let assert_node_res cd =
   let name = cname_of_qn cd.cd_name in
   let mem =
     (Idents.name (Idents.fresh ("mem_for_" ^ name)),
-      Cty_id (name ^ "_mem"))
+      Cty_id (qn_append cd.cd_name "_mem"))
   and out =
     (Idents.name (Idents.fresh ("out_for_" ^ name)),
-      Cty_id (name ^ "_out")) in
+      Cty_id (qn_append cd.cd_name "_out")) in
   let reset_i =
     Cfun_call (name ^ "_reset", [Caddrof (Cvar (fst mem))]) in
   let step_i =
@@ -66,7 +66,7 @@ let assert_node_res cd =
             Csexpr (Cfun_call (name ^ "_step",
                                [Caddrof (Cvar (fst out));
                                 Caddrof (Cvar (fst mem))]));
-            Cif (Cuop ("!", Clhs (Cfield (Cvar (fst out), outn))),
+            Cif (Cuop ("!", Clhs (Cfield (Cvar (fst out), local_qn outn))),
                  [Csexpr (Cfun_call ("printf",
                                      [Cconst (Cstrlit ("Node \\\"" ^ name
                                                        ^ "\\\" failed at step" ^
@@ -171,16 +171,17 @@ let main_def_of_class_def cd =
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
       let (stm, vars) =
-        write_lhs_of_ty (Cfield (Cvar "res", name vd.v_ident)) vd.v_type in
+        write_lhs_of_ty (Cfield (Cvar "res",
+                                 local_qn (name vd.v_ident))) vd.v_type in
       (cprint_string "=> " :: stm, vars) in
     split (map write_lhs_of_ty_for_vd stepm.m_outputs) in
   let printf_calls = List.concat printf_calls in
 
   let cinp = cvarlist_of_ovarlist stepm.m_inputs in
-  let cout = ["res", (Cty_id ((cname_of_qn cd.cd_name) ^ "_out"))] in
+  let cout = ["res", (Cty_id (qn_append cd.cd_name "_out"))] in
 
   let varlist =
-    ("mem", Cty_id ((cname_of_qn cd.cd_name) ^ "_mem"))
+    ("mem", Cty_id (qn_append cd.cd_name "_mem"))
     :: cinp
     @ cout
     @ concat scanf_decls

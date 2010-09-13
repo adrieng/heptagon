@@ -10,7 +10,7 @@
 open Format
 open List
 open Modules
-
+open Names
 
 let rec print_list ff print sep l =
   match l with
@@ -51,7 +51,8 @@ type cty =
   | Cty_int (** C machine-dependent integer type. *)
   | Cty_float (** C machine-dependent single-precision floating-point type. *)
   | Cty_char (** C character type. *)
-  | Cty_id of string (** Previously defined C type, such as an enum or struct.*)
+  | Cty_id of qualname
+  (** Previously defined C type, such as an enum or struct.*)
   | Cty_ptr of cty (** C points-to-other-type type. *)
   | Cty_arr of int * cty (** A static array of the specified size. *)
   | Cty_void (** Well, [void] is not really a C type. *)
@@ -90,7 +91,7 @@ and cconst =
 and clhs =
   | Cvar of string (** A local variable. *)
   | Cderef of clhs (** Pointer dereference, *ptr. *)
-  | Cfield of clhs * string (** Field access to left-hand-side. *)
+  | Cfield of clhs * qualname (** Field access to left-hand-side. *)
   | Carray of clhs * cexpr (** Array access clhs[cexpr] *)
       (** C statements. *)
 and cstm =
@@ -161,11 +162,20 @@ let rec pp_list f sep fmt l = match l with
 let pp_string fmt s =
   fprintf fmt "%s" (cname_of_name s)
 
+let cname_of_qn q =
+  if q.qual = "Pervasives" or q.qual = Names.local_qualname then
+    q.name
+  else
+    (q.qual ^ "__" ^ q.name)
+
+let pp_qualname fmt q =
+  pp_string fmt (cname_of_qn q)
+
 let rec pp_cty fmt cty = match cty with
   | Cty_int -> fprintf fmt "int"
   | Cty_float -> fprintf fmt "float"
   | Cty_char -> fprintf fmt "char"
-  | Cty_id s -> pp_string fmt s
+  | Cty_id s -> pp_qualname fmt s
   | Cty_ptr cty' -> fprintf fmt "%a*" pp_cty cty'
   | Cty_arr (n, cty') -> fprintf fmt "%a[%d]" pp_cty cty' n
   | Cty_void -> fprintf fmt "void"
@@ -243,8 +253,8 @@ and pp_cexpr fmt ce = match ce with
 and pp_clhs fmt lhs = match lhs with
   | Cvar s -> pp_string fmt s
   | Cderef lhs' -> fprintf fmt "*%a" pp_clhs lhs'
-  | Cfield (Cderef lhs, f) -> fprintf fmt "%a->%a" pp_clhs lhs  pp_string f
-  | Cfield (lhs, f) -> fprintf fmt "%a.%s" pp_clhs lhs f
+  | Cfield (Cderef lhs, f) -> fprintf fmt "%a->%a" pp_clhs lhs  pp_qualname f
+  | Cfield (lhs, f) -> fprintf fmt "%a.%a" pp_clhs lhs  pp_qualname f
   | Carray (lhs, e) ->
       fprintf fmt "%a[%a]"
         pp_clhs lhs

@@ -56,12 +56,6 @@ struct
     raise Misc.Error
 end
 
-let cname_of_qn q =
-  if q.qual = "Pervasives" then
-    q.name
-  else
-    (q.qual ^ "__" ^ q.name)
-
 let rec struct_name ty =
   match ty with
   | Cty_id n -> n
@@ -104,7 +98,7 @@ let rec ctype_of_otype oty =
     | Types.Tid id when id = Initial.pint -> Cty_int
     | Types.Tid id when id = Initial.pfloat -> Cty_float
     | Types.Tid id when id = Initial.pbool -> Cty_int
-    | Tid id -> Cty_id (cname_of_qn id)
+    | Tid id -> Cty_id id
     | Tarray(ty, n) -> Cty_arr(int_of_static_exp n,
                                ctype_of_otype ty)
     | Tprod _ -> assert false
@@ -166,7 +160,7 @@ let rec assoc_type n var_env =
 let rec unalias_ctype = function
   | Cty_id ty_name ->
       (try
-         match find_type (current_qual ty_name) with
+         match find_type ty_name with
            | Talias ty -> unalias_ctype (ctype_of_otype ty)
            | _ -> Cty_id ty_name
       with Not_found -> Cty_id ty_name)
@@ -187,12 +181,12 @@ let rec assoc_type_lhs lhs var_env =
         (match assoc_type_lhs lhs var_env with
          | Cty_ptr ty -> ty
          | _ -> Error.message no_location Error.Ederef_not_pointer)
-    | Cfield(Cderef (Cvar "self"), x) -> assoc_type x var_env
+    | Cfield(Cderef (Cvar "self"), { name = x }) -> assoc_type x var_env
     | Cfield(x, f) ->
         let ty = assoc_type_lhs x var_env in
         let n = struct_name ty in
-        let fields = find_struct (current_qual n) in
-        ctype_of_otype (field_assoc (current_qual f) fields)
+        let fields = find_struct n in
+        ctype_of_otype (field_assoc f fields)
 
 (** Creates the statement a = [e_1, e_2, ..], which gives a list
     a[i] = e_i.*)
@@ -313,9 +307,9 @@ and clhs_of_lhs var_env l = match l.l_desc with
       else
         Cvar n
   (** Dereference our [self] struct holding the node's memory. *)
-  | Lmem v -> Cfield (Cderef (Cvar "self"), name v)
+  | Lmem v -> Cfield (Cderef (Cvar "self"), local_qn (name v))
   (** Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
-  | Lfield (l, fn) -> Cfield(clhs_of_lhs var_env l, shortname fn)
+  | Lfield (l, fn) -> Cfield(clhs_of_lhs var_env l, fn)
   | Larray (l, idx) ->
       Carray(clhs_of_lhs var_env l, cexpr_of_exp var_env idx)
 
@@ -352,10 +346,10 @@ let step_fun_call var_env sig_info objn out args =
   if sig_info.node_statefull then (
     let mem =
       (match objn with
-         | Oobj o -> Cfield (Cderef (Cvar "self"), o)
+         | Oobj o -> Cfield (Cderef (Cvar "self"), local_qn o)
          | Oarray (o, l) ->
              let l = clhs_of_lhs var_env l in
-               Carray (Cfield (Cderef (Cvar "self"), o), Clhs l)
+               Carray (Cfield (Cderef (Cvar "self"), local_qn o), Clhs l)
       ) in
       args@[Caddrof out; Caddrof mem]
   ) else
@@ -396,7 +390,7 @@ let generate_function_call var_env obj_env outvl objn args =
         let out_sig = output_names_list sig_info in
         let create_affect outv out_name =
           let ty = assoc_type_lhs outv var_env in
-            create_affect_stm outv (Clhs (Cfield (out, out_name))) ty
+            create_affect_stm outv (Clhs (Cfield (out, local_qn out_name))) ty
         in
           (Csexpr fun_call)::(List.flatten (map2 create_affect outvl out_sig))
 
@@ -454,11 +448,12 @@ let rec cstm_of_act var_env obj_env act =
         let obj = assoc_obj on obj_env in
         let classn = cname_of_qn obj.o_class in
         (match obj.o_size with
-           | None -> [Csexpr (Cfun_call (classn ^ "_reset",
-                        [Caddrof (Cfield (Cderef (Cvar "self"), on))]))]
+           | None ->
+             [Csexpr (Cfun_call (classn ^ "_reset",
+                [Caddrof (Cfield (Cderef (Cvar "self"), local_qn on))]))]
            | Some size ->
                let x = gen_symbol () in
-               let field = Cfield (Cderef (Cvar "self"), on) in
+               let field = Cfield (Cderef (Cvar "self"), local_qn on) in
                let elt = [Caddrof( Carray(field, Clhs (Cvar x)) )] in
                  [Cfor(x, 0, int_of_static_exp size,
                        [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
@@ -506,16 +501,16 @@ let global_name = ref "";;
 
 (** {2 step() and reset() functions generation *)
 
-let mk_current_longname n =
-  { qual = !global_name; name = n }
+let qn_append q suffix =
+  { qual = q.qual; name = q.name ^ suffix }
 
 (** Builds the argument list of step function*)
 let step_fun_args n md =
   let args = cvarlist_of_ovarlist md.m_inputs in
-  let out_arg = [("out", Cty_ptr (Cty_id ((cname_of_qn n) ^ "_out")))] in
+  let out_arg = [("out", Cty_ptr (Cty_id (qn_append n "_out")))] in
   let context_arg =
     if is_statefull n then
-      [("self", Cty_ptr (Cty_id ((cname_of_qn n) ^ "_mem")))]
+      [("self", Cty_ptr (Cty_id (qn_append n "_mem")))]
     else
       []
   in
@@ -538,7 +533,7 @@ let fun_def_of_step_fun n obj_env mem objs md =
   let out_vars =
     unique
       (List.map (fun obj -> out_var_name_of_objn (cname_of_qn obj.o_class),
-                   Cty_id ((cname_of_qn obj.o_class) ^ "_out"))
+                   Cty_id (qn_append obj.o_class "_out"))
          (List.filter (fun obj -> not (is_op obj.o_class)) objs)) in
 
   (** The body *)
@@ -569,7 +564,7 @@ let mem_decl_of_class_def cd =
   let struct_field_of_obj_dec l od =
     if is_statefull od.o_class then
       let clsname = cname_of_qn od.o_class in
-      let ty = Cty_id (clsname ^ "_mem") in
+      let ty = Cty_id (qn_append od.o_class "_mem") in
       let ty = match od.o_size with
         | Some se -> Cty_arr (int_of_static_exp se, ty)
         | None -> ty in
@@ -602,7 +597,7 @@ let reset_fun_def_of_class_def cd =
   Cfundef {
     f_name = (cname_of_qn cd.cd_name) ^ "_reset";
     f_retty = Cty_void;
-    f_args = [("self", Cty_ptr (Cty_id ((cname_of_qn cd.cd_name) ^ "_mem")))];
+    f_args = [("self", Cty_ptr (Cty_id (qn_append cd.cd_name "_mem")))];
     f_body = {
       var_decls = [];
       block_body = body;
@@ -645,11 +640,11 @@ let decls_of_type_decl otd =
         let name = !global_name ^ "_" ^ name in
         [Cdecl_enum (name, List.map cname_of_qn nl);
          Cdecl_function (name ^ "_of_string",
-                         Cty_id name,
+                         Cty_id otd.t_name,
                          [("s", Cty_ptr Cty_char)]);
          Cdecl_function ("string_of_" ^ name,
                          Cty_ptr Cty_char,
-                         [("x", Cty_id name); ("buf", Cty_ptr Cty_char)])]
+                         [("x", Cty_id otd.t_name); ("buf", Cty_ptr Cty_char)])]
     | Type_struct fl ->
         let decls = List.map (fun f -> cname_of_qn f.Signature.f_name,
                                 ctype_of_otype f.Signature.f_type) fl in
@@ -660,11 +655,12 @@ let cdefs_and_cdecls_of_type_decl otd =
   let name = cname_of_qn otd.t_name in
   match otd.t_desc with
     | Type_abs -> [], [] (*assert false*)
-    | Type_alias ty -> [], [Cdecl_typedef (ctype_of_otype ty, name)]
+    | Type_alias ty ->
+      [], [Cdecl_typedef (ctype_of_otype ty, name)]
     | Type_enum nl ->
         let of_string_fun = Cfundef
           { f_name = name ^ "_of_string";
-            f_retty = Cty_id name;
+            f_retty = Cty_id otd.t_name;
             f_args = [("s", Cty_ptr Cty_char)];
             f_body =
               { var_decls = [];
@@ -680,7 +676,7 @@ let cdefs_and_cdecls_of_type_decl otd =
         and to_string_fun = Cfundef
           { f_name = "string_of_" ^ name;
             f_retty = Cty_ptr Cty_char;
-            f_args = [("x", Cty_id name); ("buf", Cty_ptr Cty_char)];
+            f_args = [("x", Cty_id otd.t_name); ("buf", Cty_ptr Cty_char)];
             f_body =
               { var_decls = [];
                 block_body =
@@ -708,10 +704,10 @@ let cdefs_and_cdecls_of_type_decl otd =
 let cfile_list_of_oprog_ty_decls name oprog =
   let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_type_decl oprog.p_types in
 
-  let (cty_defs, cty_decls) = List.split (List.rev cdefs_and_cdecls) in
+  let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
   let filename_types = name ^ "_types" in
   let types_h = (filename_types ^ ".h",
-                 Cheader (["stdbool"], concat cty_decls)) in
+                 Cheader (["stdbool"], List.concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
   filename_types, [types_h; types_c]
