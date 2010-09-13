@@ -81,5 +81,29 @@ module IdentSet = struct
     Format.fprintf ff "}@]";
 end
 
+module S = Set.Make (struct type t = string
+                            let compare = Pervasives.compare end)
+
+(** @return a unique string for each identifier. Idents corresponding
+    to variables defined in the source file have the same name unless
+    there is a collision. *)
+let name =
+  let used_names = ref S.empty in
+  let env = ref Env.empty in
+  let rec fresh_string base =
+    let base = name (fresh base) in
+      if S.mem base !used_names then fresh_string base else base
+  in
+  let unique_name n =
+    if Env.mem n !env then
+      Env.find n !env
+    else
+      let s = name n in
+      let s = if S.mem s !used_names then fresh_string s else s in
+        used_names := S.add s !used_names;
+        env := Env.add n s !env;
+        s
+  in
+    unique_name
 
 let print_ident ff id = Format.fprintf ff "%s" (name id)
