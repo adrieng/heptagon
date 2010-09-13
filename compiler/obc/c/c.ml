@@ -287,7 +287,7 @@ let pp_cfile_desc fmt filen cfile =
         iter (fun d -> fprintf fmt "#include \"%s.h\"@\n" d)
           deps;
         iter (pp_cdecl fmt) cdecls;
-        fprintf fmt "#endif // %s_H@\n" headern_macro
+        fprintf fmt "#endif // %s_H@\n@?" headern_macro
     | Csource cdefs ->
         let headern = filen_wo_ext ^ ".h" in
         Misc.print_header_info fmt "/*" "*/";
