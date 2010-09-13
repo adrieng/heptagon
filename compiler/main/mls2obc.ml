@@ -484,8 +484,7 @@ let translate_ty_def { Minils.t_name = name; Minils.t_desc = tdesc;
   let tdesc = match tdesc with
     | Minils.Type_abs -> Type_abs
     | Minils.Type_alias ln -> Type_alias ln
-    | Minils.Type_enum tag_name_list ->
-        Type_enum (List.map shortname tag_name_list)
+    | Minils.Type_enum tag_name_list -> Type_enum tag_name_list
     | Minils.Type_struct field_ty_list ->
         Type_struct field_ty_list in
   { t_name = name; t_desc = tdesc; t_loc = loc }

@@ -640,7 +640,7 @@ let decls_of_type_decl otd =
     | Type_alias ty -> [Cdecl_typedef (ctype_of_otype ty, name)]
     | Type_enum nl ->
         let name = !global_name ^ "_" ^ name in
-        [Cdecl_enum (name, nl);
+        [Cdecl_enum (name, List.map cname_of_qn nl);
          Cdecl_function (name ^ "_of_string",
                          Cty_id name,
                          [("s", Cty_ptr Cty_char)]);
@@ -667,6 +667,7 @@ let cdefs_and_cdecls_of_type_decl otd =
               { var_decls = [];
                 block_body =
                   let gen_if t =
+                    let t = cname_of_qn t in
                     let funcall = Cfun_call ("strcmp", [Clhs (Cvar "s");
                                                         Cconst (Cstrlit t)]) in
                     let cond = Cbop ("==", funcall, Cconst (Ccint 0)) in
@@ -681,6 +682,7 @@ let cdefs_and_cdecls_of_type_decl otd =
               { var_decls = [];
                 block_body =
                   let gen_clause t =
+                    let t = cname_of_qn t in
                     let fun_call =
                       Cfun_call ("strcpy", [Clhs (Cvar "buf");
                                             Cconst (Cstrlit t)]) in
@@ -689,7 +691,8 @@ let cdefs_and_cdecls_of_type_decl otd =
                    Creturn (Clhs (Cvar "buf"))]; }
           } in
         ([of_string_fun; to_string_fun],
-         [Cdecl_enum (name, nl); cdecl_of_cfundef of_string_fun;
+         [Cdecl_enum (name, List.map cname_of_qn nl);
+          cdecl_of_cfundef of_string_fun;
           cdecl_of_cfundef to_string_fun])
     | Type_struct fl ->
         let decls = List.map (fun f -> cname_of_qn f.Signature.f_name,

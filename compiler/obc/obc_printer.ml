@@ -161,7 +161,7 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
         fprintf ff  "@[type %a@ = %a@\n@]" print_qualname name  print_type ty
     | Type_enum(tag_name_list) ->
         fprintf ff "@[type %a = " print_qualname name;
-        print_list_r print_name "" "|" "" ff tag_name_list;
+        print_list_r print_qualname "" "|" "" ff tag_name_list;
         fprintf ff "@\n@]"
     | Type_struct(f_ty_list) ->
         fprintf ff "@[type %a = " print_qualname name;
