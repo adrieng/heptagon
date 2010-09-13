@@ -161,17 +161,7 @@ let replace_value f v =
 
 (** { 3 Find functions look in the global environnement, nothing more } *)
 
-let _check_loaded_module m =
-  if not (List.mem m g_env. loaded_mod)
-  then (
-    Format.eprintf "The module %s was not loaded." m;
-    raise Error )
-
-let _find env x =
-  try QualEnv.find x env
-  with Not_found ->
-    _check_loaded_module x.qual; (* should never arrive, sanity check *)
-    raise Not_found
+let _find env x = QualEnv.find x env
 
 let find_value x = _find g_env.values x
 let find_type x = _find g_env.types x
