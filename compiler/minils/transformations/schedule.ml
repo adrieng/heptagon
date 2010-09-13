@@ -27,6 +27,7 @@ let join ck1 ck2 =
 
 let join eq1 eq2 = join (Vars.clock eq1) (Vars.clock eq2)
 
+(* TODO *)
 (* possible overlapping between nodes *)
 (*let head e =
   match e with
@@ -72,14 +73,20 @@ let schedule eq_list =
   let node_list = List.rev node_list in
   List.map containt node_list
 
-let schedule_contract ({ c_eq = eqs } as c) =
-  let eqs = schedule eqs in
-  { c with c_eq = eqs }
+let eqs funs () eq_list =
+  let eqs, () = Mls_mapfold.eqs funs () eq_list in
+    schedule eqs, ()
 
-let node ({ n_contract = contract; n_equs = eq_list } as node) =
-  let contract = optional schedule_contract contract in
-  let eq_list = schedule eq_list in
-  { node with n_equs = eq_list; n_contract = contract }
+let edesc funs () = function
+  | Eiterator(it, ({ a_op = Enode f } as app),
+              n, e_list, r) when Itfusion.is_anon_node f ->
+    let nd = Itfusion.find_anon_node f in
+    let nd = { nd with n_equs = schedule nd.n_equs } in
+      Itfusion.replace_anon_node f nd;
+      Eiterator(it, app, n, e_list, r), ()
+  | _ -> raise Fallback
 
-let program ({ p_nodes = p_node_list } as p) =
-  { p with p_nodes = List.map node p_node_list }
+let program p =
+  let p, () = Mls_mapfold.program_it
+                { Mls_mapfold.defaults with Mls_mapfold.eqs = eqs;
+                    Mls_mapfold.edesc = edesc } () p in p

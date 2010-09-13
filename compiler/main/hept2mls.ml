@@ -12,11 +12,11 @@
 open Location
 open Misc
 open Names
-open Ident
+open Idents
 open Static
 open Types
+open Clocks
 open Format
-open Printf
 
 open Minils
 open Mls_utils
@@ -31,11 +31,11 @@ struct
   let message loc kind =
     begin match kind with
       | Ereset_not_var ->
-          eprintf "%aOnly variables can be used for resets.\n"
-            output_location loc
+          eprintf "%aOnly variables can be used for resets.@."
+            print_location loc
       | Eunsupported_language_construct ->
-          eprintf "%aThis construct is not supported by MiniLS.\n"
-            output_location loc
+          eprintf "%aThis construct is not supported by MiniLS.@."
+            print_location loc
     end;
     raise Misc.Error
 end
@@ -48,7 +48,7 @@ struct
   type env =
     | Eempty
     | Ecomp of env * IdentSet.t
-    | Eon of env * longname * ident
+    | Eon of env * constructor_name * ident
 
   let empty = Eempty
 
@@ -64,7 +64,7 @@ struct
   let con env x e =
     let rec conrec env =
       match env with
-        | Eempty -> Format.printf "%s\n" (name x); assert false
+        | Eempty -> Format.eprintf "%s@." (name x); assert false
         | Eon(env, tag, name) ->
             let e, ck = conrec env in
             let ck_tag_name = Con(ck, tag, name) in
@@ -90,7 +90,7 @@ end
 
 (* add an equation *)
 let equation locals l_eqs e =
-  let n = Ident.fresh "ck" in
+  let n = Idents.fresh "ck" in
   n,
   (mk_var_dec n e.e_ty) :: locals,
   (mk_equation (Evarpat n) e):: l_eqs
@@ -113,8 +113,9 @@ let add_locals ni l_eqs s_eqs s_handlers =
               s_eqs s_handlers in
   addrec l_eqs s_eqs s_handlers
 
-let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; } =
-  mk_var_dec n ty
+let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty;
+                    Heptagon.v_loc = loc } =
+  mk_var_dec ~loc:loc n ty
 
 let translate_locals locals l =
   List.fold_left (fun locals v -> translate_var v :: locals) locals l
@@ -153,7 +154,7 @@ let switch x ci_eqs_list =
             else
               begin
                 List.iter
-                  (fun (x,e) -> Printf.eprintf "|%s|, " (name x))
+                  (fun (x,e) -> Format.eprintf "|%s|, " (name x))
                   firsts;
                 assert false
               end;
@@ -176,26 +177,11 @@ let switch x ci_eqs_list =
       | [] | (_, []) :: _ -> []
       | (ci, (y, { e_ty = ty; e_loc = loc }) :: _) :: _ ->
           let ci_e_list, ci_eqs_list = split ci_eqs_list in
-          (y, mk_exp ~exp_ty:ty (Emerge(x, ci_e_list))) ::
+          (y, mk_exp ~exp_ty:ty ~loc:loc (Emerge(x, ci_e_list))) ::
             distribute ci_eqs_list in
 
   check ci_eqs_list;
   distribute ci_eqs_list
-
-let rec const = function
-  | Heptagon.Cint i -> Cint i
-  | Heptagon.Cfloat f -> Cfloat f
-  | Heptagon.Cconstr t -> Cconstr t
-  | Heptagon.Carray(n, c) -> Carray(n, const c)
-
-let translate_op_kind = function
-  | Heptagon.Efun -> Efun
-  | Heptagon.Enode -> Enode
-
-let translate_op_desc { Heptagon.op_name = n; Heptagon.op_params = p;
-                        Heptagon.op_kind = k } =
-  { op_name = n; op_params = p;
-    op_kind = translate_op_kind k }
 
 let translate_reset = function
   | Some { Heptagon.e_desc = Heptagon.Evar n } -> Some n
@@ -205,63 +191,59 @@ let translate_reset = function
 let translate_iterator_type = function
   | Heptagon.Imap -> Imap
   | Heptagon.Ifold -> Ifold
+  | Heptagon.Ifoldi -> Ifoldi
   | Heptagon.Imapfold -> Imapfold
 
-let rec application env { Heptagon.a_op = op; } e_list =
-  match op, e_list with
-    | Heptagon.Epre(None), [e] -> Efby(None, e)
-    | Heptagon.Epre(Some(c)), [e] -> Efby(Some(const c), e)
-    | Heptagon.Efby, [{ e_desc = Econst(c) } ; e] -> Efby(Some(c), e)
-    | Heptagon.Eifthenelse, [e1;e2;e3] -> Eifthenelse(e1, e2, e3)
-    | Heptagon.Ecall(op_desc, r), e_list ->
-        Ecall(translate_op_desc op_desc, e_list, translate_reset r)
-    | Heptagon.Efield_update f, [e1;e2] -> Efield_update(f, e1, e2)
-    | Heptagon.Earray_op op, e_list ->
-        Earray_op (translate_array_op env op e_list)
+let rec translate_op env = function
+  | Heptagon.Eequal -> Eequal
+  | Heptagon.Eifthenelse -> Eifthenelse
+  | Heptagon.Efun f -> Efun f
+  | Heptagon.Enode f -> Enode f
+  | Heptagon.Efield -> Efield
+  | Heptagon.Efield_update -> Efield_update
+  | Heptagon.Earray_fill -> Earray_fill
+  | Heptagon.Eselect -> Eselect
+  | Heptagon.Eselect_dyn -> Eselect_dyn
+  | Heptagon.Eupdate -> Eupdate
+  | Heptagon.Eselect_slice -> Eselect_slice
+  | Heptagon.Econcat -> Econcat
+  | Heptagon.Earray -> Earray
+  | Heptagon.Etuple -> Etuple
+  | Heptagon.Earrow ->
+      Error.message no_location Error.Eunsupported_language_construct
 
-and translate_array_op env op e_list =
-  match op, e_list with
-    | Heptagon.Erepeat, [e; idx] ->
-        Erepeat (size_exp_of_exp idx, e)
-    | Heptagon.Eselect idx_list, [e] ->
-        Eselect (idx_list, e)
-    | Heptagon.Eselect_dyn, e::defe::idx_list ->
-        Eselect_dyn (idx_list, e, defe)
-    | Heptagon.Eupdate idx_list, [e1;e2] ->
-        Eupdate (idx_list, e1, e2)
-    | Heptagon.Eselect_slice, [e; idx1; idx2] ->
-        Eselect_slice (size_exp_of_exp idx1, size_exp_of_exp idx2, e)
-    | Heptagon.Econcat, [e1; e2] ->
-        Econcat (e1, e2)
-    | Heptagon.Eiterator(it, op_desc, reset), idx::e_list ->
-        Eiterator(translate_iterator_type it,
-                  translate_op_desc op_desc,
-                  size_exp_of_exp idx, e_list,
-                  translate_reset reset)
+let translate_app env app =
+  mk_app ~params:app.Heptagon.a_params
+    ~unsafe:app.Heptagon.a_unsafe (translate_op env app.Heptagon.a_op)
 
 let rec translate env
     { Heptagon.e_desc = desc; Heptagon.e_ty = ty;
       Heptagon.e_loc = loc } =
   match desc with
-    | Heptagon.Econst(c) ->
-        Env.const env (mk_exp ~loc:loc ~exp_ty:ty (Econst (const c)))
+    | Heptagon.Econst c ->
+        Env.const env (mk_exp ~loc:loc ~exp_ty:ty (Econst c))
     | Heptagon.Evar x ->
         Env.con env x (mk_exp ~loc:loc ~exp_ty:ty (Evar x))
-    | Heptagon.Econstvar(x) ->
-        Env.const env (mk_exp ~loc:loc ~exp_ty:ty (Econstvar x))
-    | Heptagon.Etuple(e_list) ->
-        mk_exp ~loc:loc ~exp_ty:ty (Etuple (List.map (translate env) e_list))
-    | Heptagon.Eapp(app, e_list) ->
-        mk_exp ~loc:loc ~exp_ty:ty (application env app
-                                      (List.map (translate env) e_list))
-    | Heptagon.Efield(e, field) ->
-        mk_exp ~loc:loc ~exp_ty:ty (Efield (translate env e, field))
+    | Heptagon.Epre(None, e) ->
+        mk_exp ~loc:loc ~exp_ty:ty (Efby(None, translate env e))
+    | Heptagon.Epre(Some c, e) ->
+        mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, translate env e))
+    | Heptagon.Efby ({ Heptagon.e_desc = Heptagon.Econst c }, e) ->
+        mk_exp ~loc:loc ~exp_ty:ty (Efby(Some c, translate env e))
     | Heptagon.Estruct f_e_list ->
         let f_e_list = List.map
           (fun (f, e) -> (f, translate env e)) f_e_list in
         mk_exp ~loc:loc ~exp_ty:ty (Estruct f_e_list)
-    | Heptagon.Earray(e_list) ->
-        mk_exp ~loc:loc ~exp_ty:ty (Earray (List.map (translate env) e_list))
+    | Heptagon.Eapp(app, e_list, reset) ->
+        mk_exp ~loc:loc ~exp_ty:ty (Eapp (translate_app env app,
+                                          List.map (translate env) e_list,
+                                          translate_reset reset))
+    | Heptagon.Eiterator(it, app, n, e_list, reset) ->
+        mk_exp ~loc:loc ~exp_ty:ty
+          (Eiterator (translate_iterator_type it,
+                    translate_app env app, n,
+                    List.map (translate env) e_list,
+                    translate_reset reset))
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
 
@@ -272,7 +254,7 @@ let rec translate_pat = function
 let rec rename_pat ni locals s_eqs = function
   | Heptagon.Evarpat(n), ty ->
       if IdentSet.mem n ni then (
-        let n_copy = Ident.fresh (sourcename n) in
+        let n_copy = Idents.fresh (sourcename n) in
         Evarpat n_copy,
         (mk_var_dec n_copy ty) :: locals,
         add n (mk_exp ~exp_ty:ty (Evar n_copy)) s_eqs
@@ -343,7 +325,7 @@ and translate_switch_handlers env ni (locals, l_eqs, s_eqs) e handlers =
       [] -> IdentSet.empty
     | { Heptagon.w_block = { Heptagon.b_defnames = env } } :: _ ->
         (* Create set from env *)
-        (Ident.Env.fold
+        (Idents.Env.fold
            (fun name _ set -> IdentSet.add name set)
            env
            IdentSet.empty) in
@@ -359,12 +341,10 @@ and translate_switch_handlers env ni (locals, l_eqs, s_eqs) e handlers =
 let translate_contract env contract =
   match contract with
     | None -> None, env
-    | Some { Heptagon.c_local = v;
-             Heptagon.c_eq = eq_list;
+    | Some { Heptagon.c_block = { Heptagon.b_local = v;
+                                  Heptagon.b_equs = eq_list };
              Heptagon.c_assume = e_a;
-             Heptagon.c_enforce = e_g;
-             Heptagon.c_controllables = cl } ->
-        let env = Env.add cl env in
+             Heptagon.c_enforce = e_g} ->
         let env' = Env.add v env in
         let locals = translate_locals [] v in
         let locals, l_eqs, s_eqs =
@@ -375,22 +355,21 @@ let translate_contract env contract =
         Some { c_local = locals;
                c_eq = l_eqs;
                c_assume = e_a;
-               c_enforce = e_g;
-               c_controllables = List.map translate_var cl },
+               c_enforce = e_g },
         env
 
 
 let node
     { Heptagon.n_name = n; Heptagon.n_input = i; Heptagon.n_output = o;
       Heptagon.n_contract = contract;
-      Heptagon.n_local = l; Heptagon.n_equs = eq_list;
+      Heptagon.n_block = { Heptagon.b_local = v; Heptagon.b_equs = eq_list };
       Heptagon.n_loc = loc;
       Heptagon.n_params =  params;
       Heptagon.n_params_constraints = params_constr } =
   let env = Env.add o (Env.add i Env.empty) in
   let contract, env = translate_contract env contract in
-  let env = Env.add l env in
-  let locals = translate_locals [] l in
+  let env = Env.add v env in
+  let locals = translate_locals [] v in
   let locals, l_eqs, s_eqs =
     translate_eqs env IdentSet.empty (locals, [], []) eq_list in
   let l_eqs, _ = add_locals IdentSet.empty l_eqs [] s_eqs in
@@ -402,31 +381,32 @@ let node
     n_equs = l_eqs;
     n_loc = loc ;
     n_params = params;
-    n_params_constraints = params_constr;
-    n_params_instances = []; }
+    n_params_constraints = params_constr }
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =
   let onetype = function
     | Heptagon.Type_abs -> Type_abs
+    | Heptagon.Type_alias ln -> Type_alias ln
     | Heptagon.Type_enum tag_list -> Type_enum tag_list
-    | Heptagon.Type_struct field_ty_list ->
-        Type_struct field_ty_list
+    | Heptagon.Type_struct field_ty_list -> Type_struct field_ty_list
   in
   { t_name = n; t_desc = onetype tdesc; t_loc = loc }
 
 let const_dec cd =
-  { c_name = cd.Heptagon.c_name;
-    c_value = cd.Heptagon.c_value;
-    c_loc = cd.Heptagon.c_loc; }
+  { Minils.c_name = cd.Heptagon.c_name;
+    Minils.c_value = cd.Heptagon.c_value;
+    Minils.c_type = cd.Heptagon.c_type;
+    Minils.c_loc = cd.Heptagon.c_loc; }
 
 let program
-    { Heptagon.p_pragmas = pragmas;
+    { Heptagon.p_modname = modname;
       Heptagon.p_opened = modules;
       Heptagon.p_types = pt_list;
       Heptagon.p_nodes = n_list;
       Heptagon.p_consts = c_list; } =
-  { p_pragmas = pragmas;
+  { p_modname = modname;
+    p_format_version = minils_format_version;
     p_opened = modules;
     p_types = List.map typedec pt_list;
     p_nodes = List.map node n_list;

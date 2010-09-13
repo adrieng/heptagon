@@ -1,0 +1,35 @@
+open TypeTracks
+open TypeBase
+
+const kinitifftrackarray : TypeArray.tifftracksarray =
+      { i_pos = { x = 0.0; y = 0.0 }; i_id  = 0 } ^ TypeArray.ksizeifftracksarray
+
+    const kinitmissiontrackarray : TypeArray.tmissiontracksarray =
+      { m_pos             = { x = 0.0;
+                            y = 0.0 };
+        m_speed           = { sx = 0.0;
+                            sy = 0.0 };
+        m_id              = 0;
+        m_priority        = 0;
+        m_d               = 0.0;
+        m_sabs            = 0.0;
+        m_sr              = 0.0;
+        m_detectedbyradar = false;
+        m_detectedbyiff   = false;
+        m_tracknumber     = 0;
+        m_targettype      = TypeBase.Ttargettype_unknown;
+        m_isvisible       = false;
+        m_angle           = 0.0 } ^ TypeArray.ksizemissiontracksarray
+
+    const kinitrdrtrackarray : TypeArray.trdrtracksarray =
+     { r_pos  = { x = 0.0;
+                 y = 0.0 };
+        r_s    = { sx = 0.0;
+                 sy = 0.0 };
+        r_d    = 0.0;
+        r_sabs = 0.0;
+        r_sr   = 0.0 } ^  TypeArray.ksizerdrtracksarray
+
+    const kinittrackarray : TypeArray.ttracksarray =
+        { t_pos = { x = 0.0; y = 0.0 }; t_id  = 0 } ^  TypeArray.ksizetracksarray
+

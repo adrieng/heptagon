@@ -1,0 +1,5 @@
+(* This node implements the "implies" logical operator (not(A) or B). *)
+fun implies(a, b : bool) returns (c : bool)
+let
+  c = (not a) or b;
+tel

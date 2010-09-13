@@ -1,0 +1,18 @@
+const ksizetracksarray : int = 10
+const ksizeifftracksarray : int = 3
+const ksizerdrtracksarray : int = 5
+const ksizemissiontracksarray : int =
+  ksizeifftracksarray + ksizerdrtracksarray
+
+
+type trdrtracksarray = TypeTracks.trdrtrack^ksizerdrtracksarray
+
+type tifftracksarray = TypeTracks.tifftrack^ksizeifftracksarray
+
+type tdetectedifftracksarray = int^ksizeifftracksarray
+
+type tdetectedrdrtracksarray = int^ksizerdrtracksarray
+
+type ttracksarray = TypeTracks.ttrack^ksizetracksarray
+
+type tmissiontracksarray = TypeTracks.tmissiontrack^ksizemissiontracksarray

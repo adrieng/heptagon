@@ -1,0 +1,21 @@
+const n:int = 42
+
+fun inc(a:int) returns (o:int)
+let
+  o = a + 1;
+tel
+
+fun f1(a:int^n) returns (o:int^n)
+let
+  o = map inc <<n>>(map inc <<n>> (a));
+tel
+
+fun f2(a,b:int^n) returns (o:int^n)
+let
+  o = map (+) <<n>>(map inc <<n>>(b), map inc <<n>> (a));
+tel
+
+fun f3(a,b:int^n) returns (o:int^n)
+let
+  o = map (+) <<n>>(b, map inc <<n>> (a));
+tel

@@ -3,12 +3,14 @@
 open Signature
 open Location
 open Names
-open Parsetree
+open Types
+open Hept_parsetree
+
 
 %}
 
 %token DOT LPAREN RPAREN LBRACE RBRACE COLON SEMICOL
-%token EQUAL EQUALEQUAL BARBAR COMMA BAR ARROW LET TEL
+%token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
 %token <int> INT
@@ -43,7 +45,7 @@ open Parsetree
 %token DOUBLE_DOT
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
-%token MAP FOLD MAPFOLD
+%token MAP FOLD FOLDI MAPFOLD
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -61,7 +63,7 @@ open Parsetree
 %right ARROW
 %left OR
 %left AMPERSAND
-%left INFIX0 EQUAL
+%left INFIX0 EQUAL LESS_GREATER
 %right INFIX1
 %left INFIX2 SUBTRACTIVE
 %left STAR INFIX3
@@ -75,20 +77,21 @@ open Parsetree
 %left DOT
 
 %start program
-%type <Parsetree.program> program
+%type <Hept_parsetree.program> program
 
 %start interface
-%type <Parsetree.interface> interface
+%type <Hept_parsetree.interface> interface
 
 %%
 
 program:
   | pragma_headers open_modules const_decs type_decs node_decs EOF
-      {{ p_pragmas = $1;
-	 p_opened = List.rev $2;
+      {{ p_modname = "";
+         p_pragmas = $1;
+	       p_opened = List.rev $2;
          p_types = $4;
          p_nodes = $5;
-	 p_consts = $3; }}
+	       p_consts = $3; }}
 ;
 
 pragma_headers:
@@ -107,7 +110,7 @@ const_decs:
 
 const_dec:
   | CONST IDENT COLON ty_ident EQUAL exp
-      { mk_const_dec $2 $4 $6 }
+      { mk_const_dec $2 $4 $6 (Loc($startpos,$endpos)) }
 ;
 
 type_decs:
@@ -116,9 +119,14 @@ type_decs:
 ;
 
 type_dec:
-  | TYPE IDENT                      { mk_type_dec $2 Type_abs }
-  | TYPE IDENT EQUAL enum_ty_desc   { mk_type_dec $2 (Type_enum ($4)) }
-  | TYPE IDENT EQUAL struct_ty_desc { mk_type_dec $2 (Type_struct ($4)) }
+  | TYPE IDENT
+      { mk_type_dec $2 Type_abs (Loc($startpos,$endpos)) }
+  | TYPE IDENT EQUAL ty_ident
+      { mk_type_dec $2 (Type_alias $4) (Loc($startpos,$endpos)) }
+  | TYPE IDENT EQUAL enum_ty_desc
+      { mk_type_dec $2 (Type_enum ($4)) (Loc($startpos,$endpos)) }
+  | TYPE IDENT EQUAL struct_ty_desc
+      { mk_type_dec $2 (Type_struct ($4)) (Loc($startpos,$endpos)) }
 ;
 
 enum_ty_desc:
@@ -138,7 +146,7 @@ label_ty_list:
 ;
 
 label_ty:
-  IDENT COLON ty_ident { ($1, $3) }
+  IDENT COLON ty_ident { $1, $3 }
 ;
 
 node_decs:
@@ -149,16 +157,15 @@ node_decs:
 node_dec:
   | node_or_fun ident node_params LPAREN in_params RPAREN
     RETURNS LPAREN out_params RPAREN
-    contract loc_vars LET equs TEL
-      {{ n_name   = $2;
-   n_statefull = $1;
-   n_input  = $5;
-   n_output = $9;
-   n_contract = $11;
-   n_local  = $12;
-   n_equs   = $14;
-   n_params = $3;
-   n_loc = Location.current_loc () }}
+    contract b=block(LET) TEL
+      {{ n_name = $2;
+			   n_statefull = $1;
+			   n_input  = $5;
+			   n_output = $9;
+			   n_contract = $11;
+			   n_block = b;
+			   n_params = $3;
+			   n_loc = (Loc($startpos,$endpos)) }}
 ;
 
 node_or_fun:
@@ -182,7 +189,7 @@ nonmt_params:
 
 param:
   | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var) $1 }
+      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
 ;
 
 out_params:
@@ -197,36 +204,24 @@ nonmt_out_params:
 
 node_params:
   | /* empty */ { [] }
-  | DOUBLE_LESS ident_list DOUBLE_GREATER { $2 }
+  | DOUBLE_LESS nonmt_params DOUBLE_GREATER { $2 }
 ;
 
 contract:
   | /* empty */ {None}
-  | CONTRACT loc_vars opt_equs opt_assume enforce opt_with
-      {Some{c_local = $2;
-	    c_eq = $3;
-	    c_assume = $4;
-	    c_enforce = $5;
-	    c_controllables = $6 }}
-;
-
-opt_equs:
-  | /* empty */ { [] }
-  | LET equs TEL { $2 }
+  | CONTRACT b=block(LET) TEL? opt_assume enforce
+      { Some{ c_block = b;
+	            c_assume = $4;
+	            c_enforce = $5 } }
 ;
 
 opt_assume:
-  | /* empty */ {  mk_exp (Econst (Cconstr Initial.ptrue)) }
+  | /* empty */ { mk_constructor_exp ptrue (Loc($startpos,$endpos)) }
   | ASSUME exp { $2 }
 ;
 
 enforce:
   | ENFORCE exp { $2 }
-;
-
-opt_with:
-  | /* empty */ { [] }
-  | WITH LPAREN params RPAREN { $3 }
 ;
 
 loc_vars:
@@ -239,13 +234,14 @@ loc_params:
   | var_last SEMICOL loc_params { $1 @ $3 }
 ;
 
+
 var_last:
   | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var) $1 }
-  | LAST IDENT COLON ty_ident EQUAL const
-      { [ mk_var_dec $2 $4 (Last(Some($6))) ] }
+      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
+  | LAST IDENT COLON ty_ident EQUAL exp
+      { [ mk_var_dec $2 $4 (Last(Some($6))) (Loc($startpos,$endpos)) ] }
   | LAST IDENT COLON ty_ident
-      { [ mk_var_dec $2 $4 (Last(None)) ] }
+      { [ mk_var_dec $2 $4 (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
 ident_list:
@@ -254,8 +250,8 @@ ident_list:
 ;
 
 ty_ident:
-  | IDENT
-      { Tid(Name($1)) }
+  | qualname
+      { Tid $1 }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
 ;
@@ -280,28 +276,32 @@ opt_bar:
   | BAR {}
 ;
 
-equ:
-  | pat EQUAL exp { mk_equation (Eeq($1, $3)) }
+block(S):
+  | l=loc_vars S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
+  | l=loc_vars { mk_block l [] (Loc($startpos,$endpos)) }
+
+equ: eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
+_equ:
+  | pat EQUAL exp { Eeq($1, $3) }
   | AUTOMATON automaton_handlers END
-      { mk_equation (Eautomaton(List.rev $2)) }
+      { Eautomaton(List.rev $2) }
   | SWITCH exp opt_bar switch_handlers END
-      { mk_equation (Eswitch($2, List.rev $4)) }
+      { Eswitch($2, List.rev $4) }
   | PRESENT opt_bar present_handlers END
-      { mk_equation (Epresent(List.rev $3, mk_block [] [])) }
-  | PRESENT opt_bar present_handlers DEFAULT loc_vars DO equs END
-      { mk_equation (Epresent(List.rev $3, mk_block $5 $7)) }
-  | IF exp THEN loc_vars DO equs ELSE loc_vars DO equs END
-      { mk_equation (Eswitch($2,
-           [{ w_name = Name("true"); w_block = mk_block $4 $6};
-      { w_name = Name("false"); w_block = mk_block $8 $10 }])) }
+      { Epresent(List.rev $3, mk_block [] [] (Loc($startpos,$endpos))) }
+  | PRESENT opt_bar present_handlers DEFAULT b=block(DO) END
+      { Epresent(List.rev $3, b) }
+  | IF exp THEN tb=block(DO) ELSE fb=block(DO) END
+      { Eswitch($2,
+                   [{ w_name = ptrue; w_block = tb };
+                    { w_name = pfalse; w_block = fb }]) }
   | RESET equs EVERY exp
-      { mk_equation (Ereset($2, $4)) }
+      { Ereset(mk_block [] $2 (Loc($startpos,$endpos)), $4) }
 ;
 
 automaton_handler:
-  | STATE Constructor loc_vars DO equs opt_until_escapes opt_unless_escapes
-      { { s_state = $2; s_block = mk_block $3 $5;
-    s_until = $6; s_unless = $7 } }
+  | STATE Constructor b=block(DO) ut=opt_until_escapes ul=opt_unless_escapes
+      { { s_state = $2; s_block = b; s_until = ut; s_unless = ul } }
 ;
 
 automaton_handlers:
@@ -338,9 +338,13 @@ escapes:
 ;
 
 switch_handler:
-  | constructor loc_vars DO equs
-      { { w_name = $1; w_block = mk_block $2 $4 } }
+  | constructor_or_bool b=block(DO)
+      { { w_name = $1; w_block = b } }
 ;
+
+constructor_or_bool:
+  | BOOL { if $1 then Q Initial.ptrue else Q Initial.pfalse }
+  | constructor { $1 }
 
 switch_handlers:
   | switch_handler
@@ -350,8 +354,8 @@ switch_handlers:
 ;
 
 present_handler:
-  | exp loc_vars DO equs
-      { { p_cond = $1; p_block = mk_block $2 $4 } }
+  | exp b=block(DO)
+      { { p_cond = $1; p_block = b } }
 ;
 
 present_handlers:
@@ -382,86 +386,91 @@ exps:
 ;
 
 simple_exp:
-  | IDENT                   { mk_exp (Evar $1) }
-  | const                   { mk_exp (Econst $1) }
-  | LBRACE field_exp_list RBRACE
-      { mk_exp (Estruct $2) }
-  | LBRACKET array_exp_list RBRACKET
-      { mk_exp (Earray $2) }
-  | LPAREN tuple_exp RPAREN
-      { mk_exp (Etuple $2) }
-  | LPAREN exp RPAREN
-      { $2 }
+  | e=_simple_exp { mk_exp e (Loc($startpos,$endpos)) }
+  | LPAREN exp RPAREN { $2 }
+_simple_exp:
+  | IDENT                            { Evar $1 }
+  | const                            { Econst $1 }
+  | LBRACE field_exp_list RBRACE     { Estruct $2 }
+  | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
+  | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
+  | simple_exp DOT c=qualname
+      { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))]
+                Efield [$1] }
 ;
 
 node_name:
-  | longname call_params
-      { mk_op_desc $1 $2 Enode }
+  | qualname call_params { mk_app (Enode $1) $2 }
+
 
 exp:
-  | simple_exp { $1 }
+  | e=simple_exp { e }
+  | e=_exp { mk_exp e (Loc($startpos,$endpos)) }
+_exp:
   | simple_exp FBY exp
-      { mk_exp (Eapp(mk_app Efby, [$1; $3])) }
+      { Efby ($1, $3) }
   | PRE exp
-      { mk_exp (Eapp(mk_app (Epre None), [$2])) }
+      { Epre (None, $2) }
   | node_name LPAREN exps RPAREN
-      { mk_exp (mk_call $1 $3) }
+      { Eapp($1, $3) }
   | NOT exp
-      { mk_exp (mk_op_call "not" [] [$2]) }
+      { mk_op_call "not" [$2] }
   | exp INFIX4 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX3 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX2 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX1 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp INFIX0 exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | exp EQUAL exp
-      { mk_exp (mk_op_call "=" [] [$1; $3]) }
+      { mk_call Eequal [$1; $3] }
+  | exp LESS_GREATER exp
+      { let e = mk_exp (mk_call Eequal [$1; $3]) (Loc($startpos,$endpos)) in
+          mk_op_call "not" [e] }
   | exp OR exp
-      { mk_exp (mk_op_call "or" [] [$1; $3]) }
+      { mk_op_call "or" [$1; $3] }
   | exp STAR exp
-      { mk_exp (mk_op_call "*" [] [$1; $3]) }
+      { mk_op_call "*" [$1; $3] }
   | exp AMPERSAND exp
-      { mk_exp (mk_op_call "&" [] [$1; $3]) }
+      { mk_op_call "&" [$1; $3] }
   | exp SUBTRACTIVE exp
-      { mk_exp (mk_op_call $2 [] [$1; $3]) }
+      { mk_op_call $2 [$1; $3] }
   | PREFIX exp
-      { mk_exp (mk_op_call $1 [] [$2]) }
+      { mk_op_call $1 [$2] }
   | SUBTRACTIVE exp %prec prec_uminus
-      { mk_exp (mk_op_call ("~"^$1) [] [$2]) }
+      { mk_op_call ("~"^$1) [$2] }
   | IF exp THEN exp ELSE exp
-      { mk_exp (Eapp(mk_app Eifthenelse, [$2; $4; $6])) }
+      { mk_call Eifthenelse [$2; $4; $6] }
   | simple_exp ARROW exp
-      { mk_exp (Eapp(mk_app Earrow, [$1; $3])) }
+      { mk_call Earrow [$1; $3] }
   | LAST IDENT
-      { mk_exp (Elast $2) }
-  | simple_exp DOT longname
-      { mk_exp (Efield ($1, $3)) }
+      { Elast $2 }
 /*Array operations*/
   | exp POWER simple_exp
-      { mk_exp (mk_array_op_call Erepeat [$1; $3]) }
+      { mk_call ~params:[$3] Earray_fill [$1] }
   | simple_exp indexes
-      { mk_exp (mk_array_op_call (Eselect $2) [$1]) }
+      { mk_call ~params:$2 Eselect [$1] }
   | simple_exp DOT indexes DEFAULT exp
-      { mk_exp (mk_array_op_call Eselect_dyn ([$1; $5]@$3)) }
+      { mk_call Eselect_dyn ([$1; $5]@$3) }
   | LBRACKET exp WITH indexes EQUAL exp RBRACKET
-      { mk_exp (mk_array_op_call (Eupdate $4) [$2; $6]) }
+      { mk_call Eupdate ($2::$6::$4) }
   | simple_exp LBRACKET exp DOUBLE_DOT exp RBRACKET
-      { mk_exp (mk_array_op_call Eselect_slice [$1; $3; $5]) }
+      { mk_call ~params:[$3; $5] Eselect_slice [$1] }
   | exp AROBASE exp
-      { mk_exp (mk_array_op_call Econcat [$1; $3]) }
+      { mk_call Econcat [$1; $3] }
 /*Iterators*/
-  | iterator longname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_exp (mk_iterator_call $1 $2 [] ($4::$7)) }
-  | iterator LPAREN longname DOUBLE_LESS array_exp_list DOUBLE_GREATER
+  | iterator qualname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
+      { mk_iterator_call $1 $2 [] $4 $7 }
+  | iterator LPAREN qualname DOUBLE_LESS array_exp_list DOUBLE_GREATER
       RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_exp (mk_iterator_call $1 $3 $5 ($9::$12)) }
+      { mk_iterator_call $1 $3 $5 $9 $12 }
 /*Records operators */
-  | LBRACE e=simple_exp WITH DOT ln=longname EQUAL nv=exp RBRACE
-      { mk_exp (Eapp (mk_app (Efield_update ln), [e; nv])) }
+  | LBRACE simple_exp WITH DOT c=qualname EQUAL exp RBRACE
+      { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))]
+                Efield_update [$2; $7] }
 ;
 
 call_params:
@@ -472,6 +481,7 @@ call_params:
 iterator:
   | MAP { Imap }
   | FOLD { Ifold }
+  | FOLDI { Ifoldi }
   | MAPFOLD { Imapfold }
 ;
 
@@ -481,20 +491,24 @@ indexes:
 ;
 
 constructor:
-  | Constructor { Name($1) } %prec prec_ident
-  | Constructor DOT Constructor { Modname({qual = $1; id = $3}) }
-  | BOOL { Name(if $1 then "true" else "false") }
+  | Constructor { ToQ $1 } %prec prec_ident
+  | Constructor DOT Constructor { Q {qual = $1; name = $3} }
 ;
 
-longname:
-  | ident { Name($1) }
-  | Constructor DOT ident { Modname({qual = $1; id = $3}) }
+qualname:
+  | ident { ToQ $1 }
+  | Constructor DOT ident { Q {qual = $1; name = $3} }
 ;
 
-const:
-  | INT { Cint($1) }
-  | FLOAT { Cfloat($1) }
-  | constructor { Cconstr($1) }
+
+const: c=_const { mk_static_exp c (Loc($startpos,$endpos)) }
+_const:
+  | INT         { Sint $1 }
+  | FLOAT       { Sfloat $1 }
+  | BOOL        { Sbool $1 }
+  | constructor { Sconstructor $1 }
+  | Constructor DOT ident
+      { Svar (Q {qual = $1; name = $3}) }
 ;
 
 tuple_exp:
@@ -513,7 +527,7 @@ array_exp_list:
 ;
 
 field_exp:
-  | longname EQUAL exp { ($1, $3) }
+  | qualname EQUAL exp { ($1, $3) }
 ;
 
 /* identifiers */
@@ -547,15 +561,19 @@ interface_decls:
 ;
 
 interface_decl:
-  | type_dec         { mk_interface_decl (Itypedef $1) }
-  | OPEN Constructor { mk_interface_decl (Iopen $2) }
+  | id=_interface_decl { mk_interface_decl id (Loc($startpos,$endpos)) }
+_interface_decl:
+  | type_dec         { Itypedef $1 }
+  | const_dec        { Iconstdef $1 }
+  | OPEN Constructor { Iopen $2 }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
-    { mk_interface_decl (Isignature({ sig_name = $3;
-                                      sig_inputs = $6;
-                                      sig_statefull = $2;
-                                      sig_outputs = $10;
-                                      sig_params = $4; })) }
+    { Isignature({ sig_name = $3;
+                   sig_inputs = $6;
+                   sig_statefull = $2;
+                   sig_outputs = $10;
+                   sig_params = $4;
+                   sig_loc = (Loc($startpos,$endpos)) }) }
 ;
 
 params_signature:

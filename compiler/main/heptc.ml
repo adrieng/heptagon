@@ -9,6 +9,7 @@
 
 
 open Misc
+open Modules
 open Location
 open Compiler_utils
 open Hept_compiler
@@ -17,68 +18,50 @@ open Hept_compiler
 
 let compile_impl modname filename =
   (* input and output files *)
-  let source_name = filename ^ ".ept"
+  let source_name = filename ^ ".ept" in
+  let filename = String.uncapitalize filename
   and obj_interf_name = filename ^ ".epci"
-  and mls_name = filename ^ ".mls"
-  and obc_name = filename ^ ".obc"
-  and ml_name = filename ^ ".ml" in
+  and mls_name = filename ^ ".mls" in
 
-  let ic = open_in source_name
+  let ic, lexbuf = lexbuf_from_file source_name
   and itc = open_out_bin obj_interf_name
-  and mlsc = open_out mls_name
-  and obc = open_out obc_name
-  and mlc = open_out ml_name in
+  and mlsc = open_out mls_name in
 
   let close_all_files () =
     close_in ic;
     close_out itc;
-    close_out mlsc;
-    close_out obc;
-    close_out mlc in
+    close_out mlsc in
 
   try
-    init_compiler modname source_name ic;
+    init_compiler modname;
+    add_include (Filename.dirname filename);
 
     (* Parsing of the file *)
-    let lexbuf = Lexing.from_channel ic in
-    let p = parse_implementation lexbuf in
+    let p = do_silent_pass "Parsing" (parse_implementation modname) lexbuf in
 
     (* Convert the parse tree to Heptagon AST *)
-    let p = Scoping.translate_program p in
-    comment "Parsing";
-
-    pp p;
+    let p = do_pass "Scoping" Hept_scoping.translate_program p pp in
 
     (* Process the Heptagon AST *)
-    let p = Hept_compiler.compile_impl pp p in
-    Modules.write itc;
+    let p = compile_impl pp p in
+    output_value itc (Modules.current_module ());
+
+    (* Set pretty printer to the Minils one *)
+    let pp = Mls_compiler.pp in
 
     (* Compile Heptagon to MiniLS *)
-    let p = Hept2mls.program p in
-
-    let pp = Mls_printer.print stdout in
-    comment "Translation into MiniLs";
+    let p = do_pass "Translation into MiniLs" Hept2mls.program p pp in
     Mls_printer.print mlsc p;
 
     (* Process the MiniLS AST *)
     let p = Mls_compiler.compile pp p in
 
-    (* Compile MiniLS to Obc *)
-    let o = Mls2obc.program p in
-    comment "Translation into Obc";
-    Obc.Printer.print obc o;
-
-    let pp = Obc.Printer.print stdout in
-    if !verbose then pp o;
-
-    (* Translation into dataflow and sequential languages *)
-    Mls2seq.targets filename p o !target_languages;
+    (* Generate the sequential code *)
+    Mls2seq.program p;
 
     close_all_files ()
 
-  with
-    | x -> close_all_files (); raise x
-
+  with x -> close_all_files (); raise x
 
 
 let main () =
@@ -91,7 +74,10 @@ let main () =
         "-I", Arg.String add_include, doc_include;
         "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
         "-stdlib", Arg.String set_stdlib, doc_stdlib;
+        "-c", Arg.Set create_object_file, doc_object_file;
         "-s", Arg.String set_simulation_node, doc_sim;
+        "-inline", Arg.String add_inlined_node, doc_inline;
+        "-flatten", Arg.Set flatten, doc_flatten;
         "-assert", Arg.String add_assert, doc_assert;
         "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
         "-target", Arg.String add_target_language, doc_target;

@@ -11,19 +11,21 @@
 open Location
 open Misc
 open Names
-open Ident
-open Heptagon
+open Idents
 open Modules
 open Static
 open Format
+open Global_printer
 open Pp_tools
 open Types
 open Signature
+open Heptagon
 
 let iterator_to_string i =
   match i with
     | Imap -> "map"
     | Ifold -> "fold"
+    | Ifoldi -> "foldi"
     | Imapfold -> "mapfold"
 
 let print_iterator ff it =
@@ -34,15 +36,6 @@ let rec print_pat ff = function
   | Etuplepat(pat_list) ->
       print_list_r print_pat "(" "," ")" ff pat_list
 
-and print_c ff = function
-  | Cint i -> fprintf ff "%d" i
-  | Cfloat f -> fprintf ff "%f" f
-  | Cconstr(tag) -> print_longname ff tag
-  | Carray (n, c) ->
-      print_c ff c;
-      fprintf ff "^";
-      print_size_exp ff n
-
 and print_vd ff { v_ident = n; v_type = ty; v_last = last } =
   fprintf ff "@[<v>";
   begin match last with Last _ -> fprintf ff "last " | _ -> () end;
@@ -50,7 +43,7 @@ and print_vd ff { v_ident = n; v_type = ty; v_last = last } =
   fprintf ff ": ";
   print_type ff ty;
   begin
-    match last with Last(Some(v)) -> fprintf ff "= ";print_c ff v
+    match last with Last(Some(v)) -> fprintf ff "= ";print_static_exp ff v
       | _ -> ()
   end;
   fprintf ff "@]"
@@ -62,110 +55,109 @@ and print_exp ff e =
   if !Misc.full_type_info then fprintf ff "(";
   begin match e.e_desc with
     | Evar x -> print_ident ff x
-    | Econstvar x -> print_name ff x
     | Elast x -> fprintf ff "last "; print_ident ff x
-    | Econst c -> print_c ff c
-    | Eapp({ a_op = op }, e_list) -> print_op ff op e_list
-    | Etuple(e_list) -> print_exps ff e_list
-    | Efield(e, field) ->
-        print_exp ff e; fprintf ff ".";
-        print_longname ff field
-    | Estruct(f_e_list) ->
-        print_list_r
-          (fun ff (field, e) -> print_longname ff field;fprintf ff " = ";
-             print_exp ff e)
-          "{" ";" "}" ff f_e_list;
-        fprintf ff "}@]"
-    | Earray e_list ->
-        print_list_r print_exp "[" "," "]" ff e_list
-  end;
-  if !Misc.full_type_info then fprintf ff " : %a)" print_type e.e_ty
-
-and print_call_params ff = function
-  | [] -> ()
-  | l -> print_list_r print_size_exp "<<" "," ">>" ff l
-
-and print_op ff op e_list =
-  match op, e_list with
-    | Epre(None), [e] -> fprintf ff "pre "; print_exp ff e
-    | Epre(Some(c)), [e] -> print_c ff c; fprintf ff " fby "; print_exp ff e
-    | Efby, [e1;e2] -> print_exp ff e1; fprintf ff " fby "; print_exp ff e2
-    | Earrow, [e1;e2] -> print_exp ff e1; fprintf ff " -> "; print_exp ff e2
-    | Eifthenelse,[e1;e2;e3] ->
-        fprintf ff "@["; fprintf ff "if "; print_exp ff e1;
-        fprintf ff "@ then@ "; print_exp ff e2;
-        fprintf ff "@ else@ "; print_exp ff e3;
-        fprintf ff "@]"
-    | Ecall({ op_name = f; op_params = params }, reset), e_list ->
-        print_longname ff f;
-        print_call_params ff params;
-        print_exps ff e_list;
-        (match reset with
+    | Econst c -> print_static_exp ff c
+    | Epre(None, e) -> fprintf ff "pre "; print_exp ff e
+    | Epre(Some c, e) ->
+        print_static_exp ff c; fprintf ff " fby "; print_exp ff e
+    | Efby(e1, e2) -> print_exp ff e1; fprintf ff " fby "; print_exp ff e2
+    | Eapp({ a_op = op; a_params = params }, e_list, r) ->
+        print_op ff op params e_list;
+        (match r with
            | None -> ()
            | Some r -> fprintf ff " every %a" print_exp r
         )
-    | Efield_update f, [e1;e2] ->
-        fprintf ff "(@[";
-        print_exp ff e1;
-        fprintf ff " with .";
-        print_longname ff f;
-        fprintf ff " = ";
-        print_exp ff e2;
-        fprintf ff ")@]"
-    | Earray_op op, e_list ->
-        print_array_op ff op e_list
-
-and print_array_op ff op e_list =
-  match op, e_list with
-    | Erepeat, [e1; e2] ->
-        print_exp ff e1;
-        fprintf ff "^";
-        print_exp ff e2
-    | Eselect idx_list, [e] ->
-        print_exp ff e;
-        print_list_r print_size_exp "[" "][" "]" ff idx_list
-    | Eselect_dyn, e::defe::idx_list ->
-        fprintf ff "@[(";
-        print_exp ff e;
-        print_list_r print_exp "[" "][" "] default " ff idx_list;
-        print_exp ff defe;
-        fprintf ff ")@]"
-    | Eupdate idx_list, [e1;e2] ->
-        fprintf ff "(@[";
-        print_exp ff e1;
-        fprintf ff " with ";
-        print_list_r print_size_exp "[" "][" "]" ff idx_list;
-        fprintf ff " = ";
-        print_exp ff e2;
-        fprintf ff ")@]"
-    | Eselect_slice, [e; idx1; idx2] ->
-        print_exp ff e;
-        fprintf ff "[";
-        print_exp ff idx1;
-        fprintf ff "..";
-        print_exp ff idx2;
-        fprintf ff "]"
-    | Eiterator (it, { op_name = op; op_params = params } , reset), e::e_list ->
+    | Estruct(f_e_list) ->
+        print_list_r
+          (fun ff (field, e) -> print_qualname ff field;fprintf ff " = ";
+             print_exp ff e)
+          "{" ";" "}" ff f_e_list;
+        fprintf ff "}@]"
+    | Eiterator (it, { a_op = (Efun ln|Enode ln); a_params = params },
+                 n, e_list, reset) ->
         fprintf ff "(";
         print_iterator ff it;
         fprintf ff " ";
         (match params with
-           | [] -> print_longname ff op
+           | [] -> print_qualname ff ln
            | l ->
                fprintf ff "(";
-               print_longname ff op;
+               print_qualname ff ln;
                print_call_params ff params;
                fprintf ff ")"
         );
         fprintf ff " <<";
-        print_exp ff e;
+        print_static_exp ff n;
         fprintf ff ">>) ";
         print_exps ff e_list;
         (match reset with
            | None -> ()
            | Some r -> fprintf ff " every %a" print_exp r
         )
-    | Econcat, [e1;e2] ->
+  end;
+  if !Misc.full_type_info then fprintf ff " : %a)" print_type e.e_ty
+
+and print_call_params ff = function
+  | [] -> ()
+  | l -> print_list_r print_static_exp "<<" "," ">>" ff l
+
+and print_op ff op params e_list =
+  match op, params, e_list with
+    | Eequal, _, [e1; e2] ->
+        fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
+    | Earrow, _, [e1;e2] -> print_exp ff e1; fprintf ff " -> "; print_exp ff e2
+    | Eifthenelse, _, [e1;e2;e3] ->
+        fprintf ff "@["; fprintf ff "if "; print_exp ff e1;
+        fprintf ff "@ then@ "; print_exp ff e2;
+        fprintf ff "@ else@ "; print_exp ff e3;
+        fprintf ff "@]"
+    | Etuple, _, e_list -> print_exps ff e_list
+    | Earray, _, e_list ->
+        print_list_r print_exp "[" "," "]" ff e_list
+    | (Efun f|Enode f), params, e_list ->
+        print_qualname ff f;
+        print_call_params ff params;
+        print_exps ff e_list
+    | Efield, [field], [e] ->
+        print_exp ff e; fprintf ff ".";
+        print_static_exp ff field
+    | Efield_update, [se], [e1;e2] ->
+        fprintf ff "(@[";
+        print_exp ff e1;
+        fprintf ff " with .";
+        print_static_exp ff se;
+        fprintf ff " = ";
+        print_exp ff e2;
+        fprintf ff ")@]"
+    | Earray_fill, [se], [e] ->
+        print_exp ff e;
+        fprintf ff "^";
+        print_static_exp ff se
+    | Eselect, idx_list, [e] ->
+        print_exp ff e;
+        print_list_r print_static_exp "[" "][" "]" ff idx_list
+    | Eselect_dyn, _, e::defe::idx_list ->
+        fprintf ff "@[(";
+        print_exp ff e;
+        print_list_r print_exp "[" "][" "] default " ff idx_list;
+        print_exp ff defe;
+        fprintf ff ")@]"
+    | Eupdate, _, e1::e2::idx_list ->
+        fprintf ff "(@[";
+        print_exp ff e1;
+        fprintf ff " with ";
+        print_list_r print_exp "[" "][" "]" ff idx_list;
+        fprintf ff " = ";
+        print_exp ff e2;
+        fprintf ff ")@]"
+    | Eselect_slice, [idx1;idx2], [e] ->
+        print_exp ff e;
+        fprintf ff "[";
+        print_static_exp ff idx1;
+        fprintf ff "..";
+        print_static_exp ff idx2;
+        fprintf ff "]"
+    | Econcat, _, [e1;e2] ->
         fprintf ff "@[";
         print_exp ff e1;
         fprintf ff " @@ ";
@@ -202,10 +194,10 @@ let rec print_eq ff eq =
           fprintf ff "@]"
         end;
         fprintf ff "@,end@]"
-    | Ereset(eq_list, e) ->
+    | Ereset(b, e) ->
         fprintf ff "@[<v>reset@,";
         fprintf ff "  @[<v>";
-        print_eq_list ff eq_list;
+        print_block ff b;
         fprintf ff "@]";
         fprintf ff "@,every ";
         print_exp ff e;
@@ -219,7 +211,7 @@ and print_eq_list ff = function
 and print_state_handler ff
     { s_state = s; s_block = b; s_until = until; s_unless = unless } =
   fprintf ff "  @[<v 2>state ";
-  fprintf ff "%s@," s;
+  fprintf ff "%a@," print_name s;
   print_block ff b;
   if until <> [] then
     begin
@@ -237,7 +229,7 @@ and print_state_handler ff
 
 and print_switch_handler ff { w_name = tag; w_block = b } =
   fprintf ff "  @[<v 2>| ";
-  print_longname ff tag;
+  print_qualname ff tag;
   fprintf ff "@,";
   print_block ff b;
   fprintf ff "@]"
@@ -273,50 +265,49 @@ and print_block ff { b_local = v_list; b_equs = eqs; b_defnames = defnames } =
 
 let print_type_def ff { t_name = name; t_desc = tdesc } =
   match tdesc with
-    | Type_abs -> fprintf ff "@[type %s@\n@]" name
+    | Type_abs -> fprintf ff "@[type %a@.@]" print_qualname name
+    | Type_alias ty ->
+        fprintf ff  "@[type %a@ = %a@.@]" print_qualname name print_type ty
     | Type_enum(tag_name_list) ->
-        fprintf ff "@[type %s = " name;
-        print_list_r print_name "" "| " "" ff tag_name_list;
-        fprintf ff "@\n@]"
+        fprintf ff "@[<2>type %a = " print_qualname name;
+        print_list_r print_qualname "" "| " "" ff tag_name_list;
+        fprintf ff "@.@]"
     | Type_struct(f_ty_list) ->
-        fprintf ff "@[type %s = " name;
+        fprintf ff "@[type %a = " print_qualname name;
         print_list_r
           (fun ff { f_name = field; f_type = ty } ->
-             print_name ff field;
+             print_qualname ff field;
              fprintf ff ": ";
              print_type ff ty) "{" ";" "}" ff f_ty_list;
         fprintf ff "@.@]"
 
 let print_const_dec ff c =
   fprintf ff "@[const ";
-  print_name ff c.c_name;
+  print_qualname ff c.c_name;
   fprintf ff " : ";
   print_type ff c.c_type;
   fprintf ff " = ";
-  print_size_exp ff c.c_value;
+  print_static_exp ff c.c_value;
   fprintf ff "@.@]"
 
-let print_contract ff {c_local = l;
-                       c_eq = eqs;
+let print_contract ff {c_block = b;
                        c_assume = e_a;
-                       c_enforce = e_g;
-                       c_controllables = cl } =
-  if l <> [] then begin
+                       c_enforce = e_g } =
+  if b.b_local <> [] then begin
     fprintf ff "@[<v 2>contract@\n";
     fprintf ff "@[<hov 4>var ";
-    print_list_r print_vd "" ";" "" ff l;
+    print_list_r print_vd "" ";" "" ff b.b_local;
     fprintf ff ";@]@\n"
   end;
-  if eqs <> [] then begin
+  if b.b_equs <> [] then begin
     fprintf ff "@[<v 2>let @,";
-    print_eq_list ff eqs;
+    print_eq_list ff b.b_equs;
     fprintf ff "@]"; fprintf ff "tel@\n"
   end;
   fprintf ff "assume %a@;enforce %a@;with (@[<hov>"
     print_exp e_a
     print_exp e_g;
-  print_list_r print_vd "" ";" "" ff cl;
-  fprintf ff "@])@]@\n"
+  fprintf ff "@])@]@."
 
 let print_node_params ff = function
   | [] -> ()
@@ -324,23 +315,23 @@ let print_node_params ff = function
 
 let print_node ff
     { n_name = n; n_input = ni;
-      n_local = nl; n_output = no; n_contract = contract; n_equs = ne;
+      n_block = nb; n_output = no; n_contract = contract;
       n_params = params; } =
   fprintf ff "@[<v 2>node ";
-  print_name ff n;
+  print_qualname ff n;
   fprintf ff "@[%a@]" print_node_params params;
   fprintf ff "@[%a@]" (print_list_r print_vd "(" ";" ")") ni;
   fprintf ff " returns ";
   fprintf ff "@[%a@]" (print_list_r print_vd "(" ";" ")") no;
   fprintf ff "@,";
   optunit (print_contract ff) contract;
-  if nl <> [] then begin
+  if nb.b_local <> [] then begin
     fprintf ff "@[<hov 4>var ";
-    print_list_r print_vd "" ";" "" ff nl;
+    print_list_r print_vd "" ";" "" ff nb.b_local;
     fprintf ff ";@]@,"
   end;
   fprintf ff "@[<v 2>let @,";
-  print_eq_list ff ne;
+  print_eq_list ff nb.b_equs;
   fprintf ff "@]@;"; fprintf ff "tel";fprintf ff "@.@]"
 
 let print_open_module ff name =
@@ -348,12 +339,8 @@ let print_open_module ff name =
   print_name ff name;
   fprintf ff "@.@]"
 
-let ptype oc ty =
-  let ff = formatter_of_out_channel oc in
-  print_type ff ty; fprintf ff "@?"
-
 let print oc { p_opened = po; p_types = pt; p_nodes = pn; p_consts = pc } =
-  let ff = formatter_of_out_channel oc in
+  let ff = Format.formatter_of_out_channel oc in
   List.iter (print_open_module ff) po;
   List.iter (print_const_dec ff) pc;
   List.iter (print_type_def ff) pt;

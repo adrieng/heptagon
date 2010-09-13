@@ -53,38 +53,16 @@ let print_record print_field ff record =
 
 
 let print_type_params ff pl =
-  print_list_r (fun ff s -> fprintf ff "'%s" s) "("","") " ff pl
+  fprintf ff "@[%a@]"
+    (print_list_r (fun ff s -> fprintf ff "'%s" s) "("","") ") pl
 
 
-(* Map and Set redefinition to allow pretty printing
+let print_set iter print_element ff set =
+  fprintf ff "@[{@ ";
+  iter (fun e -> fprintf ff "%a@ " print_element e) set;
+  fprintf ff "}@]"
 
-   module type P = sig
-   type t
-   val fprint : Format.formatter -> t -> unit
-   end
-
-   module type ELT = sig
-   type t
-   val compare : t -> t -> int
-   val fprint : Format.formatter -> t -> unit
-   end
-
-   module SetMake (Elt : ELT) = struct
-   module M = Set.Make(Elt)
-   include M
-   let fprint ff es =
-   Format.fprintf ff "@[<hov>{@ ";
-   iter (fun e -> Format.fprintf ff "%a@ " Elt.fprint e) es;
-   Format.fprintf ff "}@]";
-   end
-
-   module MapMake (Key : ELT) (Elt : P) = struct
-   module M = Map.Make(Key)
-   include M
-   let fprint prp  eem =
-   Format.fprintf prp  "[@[<hv 2>";
-   iter (fun k m ->
-           Format.fprintf prp  "@ | %a -> %a" Key.fprint k Elt.fprint m) eem;
-   Format.fprintf prp  "@]@ ]";
-   end
-*)
+let print_map iter print_key print_element ff map =
+  fprintf ff "@[<hv 2>[@ ";
+  iter (fun k x -> fprintf ff "| %a -> %a@ " print_key k print_element x) map;
+  fprintf ff "]@]"

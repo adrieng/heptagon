@@ -9,11 +9,9 @@
 
 (* causality check of scheduling constraints *)
 
-(* $Id: causal.ml 615 2009-11-20 17:43:14Z pouzet $ *)
-
 open Misc
 open Names
-open Ident
+open Idents
 open Heptagon
 open Location
 open Graph
@@ -56,27 +54,26 @@ and nc =
   | Aempty
 
 let output_ac ff ac =
-  let rec print priority ff ac =
-    fprintf ff "@[<hov 0>";
-    begin match ac with
-      | Aseq(ac1, ac2) ->
-          (if priority > 1
-           then fprintf ff "(%a@ < %a)"
-           else fprintf ff "%a@ < %a")
-            (print 1) ac1 (print 1) ac2
-      | Aand(ac1, ac2) ->
-          (if priority > 0
-           then fprintf ff "(%a || %a)"
-           else fprintf ff "%a || %a")
-            (print 0) ac1 (print 0) ac2
-      | Atuple(acs) ->
-          print_list_r (print 1) "(" "," ")" ff acs
-      | Awrite(m) -> fprintf ff "%s" (name m)
-      | Aread(m) -> fprintf ff "^%s" (name m)
-      | Alastread(m) -> fprintf ff "last %s" (name m)
-    end;
-    fprintf ff "@]" in
-  fprintf ff "@[%a@]@?" (print 0) ac
+  let rec print priority ff ac = match ac with
+    | Aseq(ac1, ac2) -> (* priority 1 *)
+        (if priority = 1 then fprintf ff "%a@ < %a"
+         else if priority > 1
+         then fprintf ff "@[<v 1>(%a@ < %a)@]"
+         else fprintf ff "@[%a@ < %a@]")
+          (print 1) ac1 (print 1) ac2
+    | Aand(ac1, ac2) -> (* priority 0 *)
+        (if priority = 0 then fprintf ff "%a@ || %a"
+         else if priority > 0
+         then fprintf ff "@[<v 1>(%a@ || %a)@]"
+         else fprintf ff "@[%a@ || %a@]")
+          (print 0) ac1 (print 0) ac2
+    | Atuple(acs) ->
+        fprintf ff "@[%a@]" (print_list_r (print 1) "(" "," ")") acs
+    | Awrite(m) -> fprintf ff "%s" (name m)
+    | Aread(m) -> fprintf ff "^%s" (name m)
+    | Alastread(m) -> fprintf ff "last %s" (name m)
+  in
+  fprintf ff "@[<v 1>%a@]@?" (print 0) ac
 
 
 type error =  Ecausality_cycle of ac
@@ -86,13 +83,11 @@ exception Error of error
 let error kind = raise (Error(kind))
 
 let message loc kind =
-  let output_ac oc ac =
-    let ff = formatter_of_out_channel oc in output_ac ff ac in
   begin match kind with
     | Ecausality_cycle(ac) ->
-        Printf.eprintf
-          "%aCausality error: the following constraint is not causal.\n%a\n."
-          output_location loc
+        eprintf
+          "%aCausality error: the following constraint is not causal.@\n%a@."
+          print_location loc
           output_ac ac
   end;
   raise Misc.Error
@@ -118,26 +113,22 @@ let rec cand nc1 nc2 =
     | Aac(ac1), Aac(ac2) -> Aac(Aand(ac1, ac2))
 
 let rec ctuple l =
-  let rec conv = function
-    | Cwrite(n) -> Awrite(n)
-    | Cread(n) -> Aread(n)
-    | Clastread(n) -> Alastread(n)
-    | Ctuple(l) -> Atuple (ctuple l)
-    | Cand (c1, c2) -> Aand (conv c1, conv c2)
-    | Cseq _ -> Format.printf "Unexpected seq\n"; assert false
-    | Cor _ -> Format.printf "Unexpected or\n"; assert false
-    | _ -> assert false
+  let rec norm_or l res = match l with
+    | [] -> Aac (Atuple (List.rev res))
+    | Aempty::l -> norm_or l res
+    | Aor (Aempty, nc2)::l -> norm_or (nc2::l) res
+    | Aor (nc1, Aempty)::l -> norm_or (nc1::l) res
+    | Aor(nc1, nc2)::l ->
+        Aor(norm_or (nc1::l) res, norm_or (nc2::l) res)
+    | (Aac ac)::l -> norm_or l (ac::res)
   in
-  match l with
-    | [] -> []
-    | Cempty::l -> ctuple l
-    | v::l -> (conv v)::(ctuple l)
+    norm_or l []
 
 and norm = function
   | Cor(c1, c2) -> cor (norm c1) (norm c2)
   | Cand(c1, c2) -> cand (norm c1) (norm c2)
   | Cseq(c1, c2) -> cseq (norm c1) (norm c2)
-  | Ctuple l -> Aac(Atuple (ctuple l))
+  | Ctuple l -> ctuple (List.map norm l)
   | Cwrite(n) -> Aac(Awrite(n))
   | Cread(n) -> Aac(Aread(n))
   | Clastread(n) -> Aac(Alastread(n))

@@ -1,0 +1,13 @@
+node main() returns (o : int)
+let
+  automaton
+    state I
+      var x : int;
+      do x = 0; o = x;
+      until true then J
+    state J
+      var x : int;
+      do x = 1; o = x;
+      until true then I
+  end
+tel

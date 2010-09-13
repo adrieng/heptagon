@@ -1,0 +1,31 @@
+(* Check manually *)
+(* This test should only create two instances of f. *)
+const c:int = 3
+const k:int = 1
+
+fun f<<n:int>>() returns (y:int)
+let
+  y = n + 3 + c;
+tel
+
+fun g<<m:int>>() returns (y:int)
+var x:int;
+let
+  x = m + f<<2>>();
+  y = f<<m>>();
+tel
+
+fun i<<m:int>>() returns (o : int)
+var x, y, z: int;
+let
+  x = f<<2>>();
+  y = f<<1 + m>>();
+  z = f<<k + 1>>();
+  o = f<<m + k>>();
+tel
+
+fun h() returns (y:int)
+let
+  y = c + g<<c>>() + i<<k>>();
+tel
+

@@ -14,7 +14,7 @@
 
 open Misc
 open Names
-open Ident
+open Idents
 open Heptagon
 open Types
 open Location
@@ -94,6 +94,11 @@ let rec skeleton i ty =
     | Tprod(ty_list) -> product (List.map (skeleton i) ty_list)
     | _ -> leaf i
 
+let rec const_skeleton i se =
+  match se.se_desc with
+    | Stuple l -> product (List.map (const_skeleton i) l)
+    | _ -> leaf i
+
 (* sub-typing *)
 let rec less left_ty right_ty =
   if left_ty == right_ty then ()
@@ -135,31 +140,20 @@ and occur_check index i =
 
 module Printer = struct
   open Format
+  open Pp_tools
 
-  let rec print_list_r print po sep pf ff = function
-    | [] -> ()
-    | x :: l ->
-        fprintf ff "@[%s%a" po print x;
-        List.iter (fprintf ff "%s@]@ @[%a" sep print) l;
-        fprintf ff "%s@]" pf
-
-  let rec fprint_init ff i = match i.i_desc with
+  let rec print_init ff i = match i.i_desc with
     | Izero -> fprintf ff "0"
     | Ione -> fprintf ff "1"
     | Ivar -> fprintf ff "0"
-    | Imax(i1, i2) -> fprintf ff "@[%a\\/%a@]" fprint_init i1 fprint_init i2
-    | Ilink(i) -> fprint_init ff i
+    | Imax(i1, i2) -> fprintf ff "@[%a\\/%a@]" print_init i1 print_init i2
+    | Ilink(i) -> print_init ff i
 
-  let rec fprint_typ ff = function
-    | Ileaf(i) -> fprint_init ff i
+  let rec print_type ff = function
+    | Ileaf(i) -> print_init ff i
     | Iproduct(ty_list) ->
-        fprintf ff "@[%a@]" (print_list_r fprint_typ "("" *"")") ty_list
+        fprintf ff "@[%a@]" (print_list_r print_type "("" *"")") ty_list
 
-  let output_typ oc ty =
-    let ff = formatter_of_out_channel oc in
-    fprintf ff "@[";
-    fprint_typ ff ty;
-    fprintf ff "@?@]"
 end
 
 module Error = struct
@@ -174,12 +168,12 @@ module Error = struct
   let message loc kind =
     begin match kind with
       | Eclash(left_ty, right_ty) ->
-          Printf.eprintf "%aInitialization error: this expression has type \
-              %a, \n\
-              but is expected to have type %a\n"
-            output_location loc
-            Printer.output_typ left_ty
-            Printer.output_typ right_ty
+          Format.eprintf "%aInitialization error: this expression has type \
+              %a, @\n\
+              but is expected to have type %a@."
+            print_location loc
+            Printer.print_type left_ty
+            Printer.print_type right_ty
     end;
     raise Misc.Error
 end
@@ -192,51 +186,54 @@ let less_exp e actual_ty expected_ty =
 (** Main typing function *)
 let rec typing h e =
   match e.e_desc with
-    | Econst _ | Econstvar _ -> leaf izero
+    | Econst c -> const_skeleton izero c
     | Evar(x) | Elast(x) -> let { i_typ = i } = Env.find x h in leaf i
-    | Etuple(e_list) ->
+    | Epre(None, e) ->
+        initialized_exp h e;
+        skeleton ione e.e_ty
+    | Epre(Some _, e) ->
+        initialized_exp h e;
+        skeleton izero e.e_ty
+    | Efby (e1, e2) ->
+        initialized_exp h e2;
+        skeleton (itype (typing h e1)) e.e_ty
+    | Eapp({ a_op = Etuple }, e_list, _) ->
         product (List.map (typing h) e_list)
-    | Eapp({a_op = op}, e_list) ->
+    | Eapp({ a_op = op }, e_list, _) ->
         let i = apply h op e_list in
-        skeleton i e.e_ty
-    | Efield(e1, _) ->
-        let i = itype (typing h e1) in
         skeleton i e.e_ty
     | Estruct(l) ->
         let i =
           List.fold_left
             (fun acc (_, e) -> max acc (itype (typing h e))) izero l in
         skeleton i e.e_ty
-    | Earray(e_list) ->
-        let i =
-          List.fold_left
-            (fun acc e -> max acc (itype (typing h e))) izero e_list in
-        skeleton i e.e_ty
+    | Eiterator (_, _, _, e_list, _) ->
+        List.iter (fun e -> initialized_exp h e) e_list;
+        skeleton izero e.e_ty
 
 (** Typing an application *)
 and apply h op e_list =
   match op, e_list with
-    | Epre(None), [e] ->
-        initialized_exp h e;
-        ione
-    | Epre(Some _), [e] ->
-        initialized_exp h e;
-        izero
-    | Efby, [e1;e2] ->
-        initialized_exp h e2;
-        itype (typing h e1)
     | Earrow, [e1;e2] ->
         let ty1 = typing h e1 in
         let _ = typing h e2 in
         itype ty1
+    | Efield, [e1] ->
+        itype (typing h e1)
+    | Earray, e_list ->
+        List.fold_left
+          (fun acc e -> max acc (itype (typing h e))) izero e_list
     | Eifthenelse, [e1; e2; e3] ->
         let i1 = itype (typing h e1) in
         let i2 = itype (typing h e2) in
         let i3 = itype (typing h e3) in
         max i1 (max i2 i3)
- (*   | Ecall ({ op_kind = Efun }, _), e_list ->
-        List.fold_left (fun acc e -> itype (typing h e)) izero e_list *)
-    | (Ecall _ | Earray_op _| Efield_update _) , e_list ->
+    | Etuple, _ -> assert false
+    (** TODO: init of safe/unsafe nodes
+        This is a tmp fix so that pre x + 1 works.*)
+    | (Eequal | Efun (Modname { qual = "Pervasives" })), e_list ->
+        List.fold_left (fun acc e -> itype (typing h e)) izero e_list
+    | _ , e_list ->
         List.iter (fun e -> initialized_exp h e) e_list; izero
 
 and expect h e expected_ty =
@@ -261,8 +258,8 @@ and typing_eq h eq =
         typing_switch h handlers
     | Epresent(handlers, b) ->
         typing_present h handlers b
-    | Ereset(eq_list, e) ->
-        initialized_exp h e; typing_eqs h eq_list
+    | Ereset(b, e) ->
+        initialized_exp h e; ignore (typing_block h b)
     | Eeq(pat, e) ->
         let ty_pat = typing_pat h pat in
         expect h e ty_pat
@@ -336,11 +333,10 @@ let sbuild h dec =
 let typing_contract h contract =
   match contract with
     | None -> h
-    | Some { c_local = l_list; c_eq = eq_list; c_assume = e_a;
-             c_enforce = e_g; c_controllables = c_list } ->
-        let h = sbuild h c_list in
-        let h' = build h l_list in
-        typing_eqs h' eq_list;
+    | Some { c_block = b; c_assume = e_a;
+             c_enforce = e_g } ->
+        let h' = build h b.b_local in
+        typing_eqs h' b.b_equs;
         (* assumption *)
         expect h' e_a (skeleton izero e_a.e_ty);
         (* property *)
@@ -348,14 +344,11 @@ let typing_contract h contract =
         h
 
 let typing_node { n_name = f; n_input = i_list; n_output = o_list;
-                  n_contract = contract;
-                  n_local = l_list; n_equs = eq_list } =
+                  n_contract = contract; n_block = b } =
   let h = sbuild Env.empty i_list in
   let h = sbuild h o_list in
   let h = typing_contract h contract in
-
-  let h = build h l_list in
-  typing_eqs h eq_list
+    ignore (typing_block h b)
 
 let program ({ p_nodes = p_node_list } as p) =
   List.iter typing_node p_node_list;

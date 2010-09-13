@@ -10,71 +10,65 @@
 
 open Misc
 open Heptagon
-open Ident
+open Global_mapfold
+open Hept_mapfold
+open Idents
+
+
+(* We first define a shallow pass,
+  meant to be called at an automaton/present/switch level
+  It'll collect the set of defined names among the handlers of the automaton/...
+*)
+
+(* We stop at the first level, it'll correspond to an handler *)
+let block_collect funs env b =
+  b, b.b_defnames
+
+let gather f funs env x =
+  let x, new_env = f funs Env.empty x in
+  x, Env.union new_env env
+
+(* We need to return the union of the defined names which is done with [gather],
+  without traversing anything else.
+  This funs_collect will stop directly if called on something else than
+  blocks or handlers. *)
+let funs_collect =
+  { Hept_mapfold.defaults_stop with
+      block = block_collect;
+      switch_handler = gather Hept_mapfold.switch_handler;
+      present_handler = gather Hept_mapfold.present_handler;
+      state_handler = gather Hept_mapfold.state_handler; }
+
+
+
+(* The real pass adding the needed equations *)
 
 (* adds an equation [x = last(x)] for every partially defined variable *)
 (* in a control structure *)
 let complete_with_last defined_names local_defined_names eq_list =
   let last n ty = mk_exp (Elast n) ty in
   let equation n ty eq_list =
-    (mk_equation (Eeq(Evarpat n, last n ty)))::eq_list
-  in
+    (mk_equation (Eeq(Evarpat n, last n ty)))::eq_list in
   let d = Env.diff defined_names local_defined_names in
-    Env.fold equation d eq_list
+  Env.fold equation d eq_list
 
-let rec translate_eq eq =
-  match eq.eq_desc with
-    | Ereset(eq_list, e) ->
-        { eq with eq_desc = Ereset(translate_eqs eq_list, e) }
-    | Eeq(pat, e) ->
-        { eq with eq_desc = Eeq(pat, e) }
-    | Eswitch(e, switch_handlers) ->
-        let defnames =
-          List.fold_left
-            (fun acc { w_block = { b_defnames = d } } -> Env.union acc d)
-            Env.empty switch_handlers in
-        let switch_handlers =
-          List.map (fun ({ w_block = b } as handler) ->
-                      { handler with w_block = translate_block defnames b })
-            switch_handlers in
-        { eq with eq_desc = Eswitch(e, switch_handlers) }
-    | Epresent(present_handlers, b) ->
-        let defnames =
-          List.fold_left
-            (fun acc { p_block = { b_defnames = d } } -> Env.union acc d)
-            b.b_defnames present_handlers in
-        let present_handlers =
-          List.map (fun ({ p_block = b } as handler) ->
-                      { handler with p_block = translate_block defnames b })
-            present_handlers in
-        let b = translate_block defnames b in
-        {eq with eq_desc = Epresent(present_handlers, b)}
-    | Eautomaton(state_handlers) ->
-        let defnames =
-          List.fold_left
-            (fun acc { s_block = { b_defnames = d } } -> Env.union acc d)
-            Env.empty state_handlers in
-        let state_handlers =
-          List.map (fun ({ s_block = b } as handler) ->
-                      { handler with s_block = translate_block defnames b })
-            state_handlers in
-        { eq with eq_desc = Eautomaton(state_handlers) }
 
-and translate_eqs eq_list = List.map translate_eq eq_list
+let block funs defnames b =
+  let b, _ = Hept_mapfold.block funs Env.empty b in (*recursive call*)
+  let added_eq = complete_with_last defnames b.b_defnames [] in
+  { b with b_equs = b.b_equs @ added_eq; b_defnames = defnames }
+  , defnames
 
-and translate_block defnames
-    ({ b_defnames = bdefnames; b_equs = eq_list } as b) =
-  let eq_list = translate_eqs eq_list in
-  let eq_list = complete_with_last defnames bdefnames eq_list in
-  { b with b_equs = eq_list; b_defnames = defnames }
+let eqdesc funs _ ed = match ed with
+  | Epresent _ | Eautomaton _ | Eswitch _ ->
+      (* collect defined names with the special pass *)
+      let ed, defnames =
+        Hept_mapfold.eqdesc funs_collect Env.empty ed in
+      (* add missing defnames *)
+      Hept_mapfold.eqdesc funs defnames ed
+  | _ -> raise Misc.Fallback
 
-let translate_contract ({ c_eq = eqs } as c) =
-  { c with c_eq = translate_eqs eqs }
+let funs = { Hept_mapfold.defaults with eqdesc = eqdesc; block = block; }
 
-let node ({ n_equs = eq_list; n_contract = contract } as n) =
-  { n with
-      n_equs = translate_eqs eq_list;
-      n_contract = optional translate_contract contract }
+let program p = let p, _ = program_it funs Env.empty p in p
 
-let program ({ p_types = pt_list; p_nodes = n_list } as p) =
-  { p with p_types = pt_list; p_nodes = List.map node n_list }

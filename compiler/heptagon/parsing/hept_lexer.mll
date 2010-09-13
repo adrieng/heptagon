@@ -3,7 +3,9 @@
 
 {
 open Lexing
+open Location
 open Hept_parser
+
 
 type lexical_error =
     Illegal_character
@@ -11,7 +13,7 @@ type lexical_error =
   | Bad_char_constant
   | Unterminated_string;;
 
-exception Lexical_error of lexical_error * int * int;;
+exception Lexical_error of lexical_error * location;;
 
 let comment_depth = ref 0
 
@@ -57,12 +59,13 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "with", WITH;
  "map", MAP;
  "fold", FOLD;
+ "foldi", FOLDI;
  "mapfold", MAPFOLD;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");
  "lor", INFIX2("lor");
- "lxor", INFIX2("lxor");
+ "xor", INFIX2("xor");
  "lsl", INFIX4("lsl");
  "lsr", INFIX4("lsr");
  "asr", INFIX4("asr")
@@ -80,14 +83,6 @@ let reset_string_buffer () =
   string_index := 0;
   ()
 
-(*
-let incr_linenum lexbuf =
-  let pos = lexbuf.Lexing.lex_curr_p in
-    lexbuf.Lexing.lex_curr_p <- { pos with
-      Lexing.pos_lnum = pos.Lexing.pos_lnum + 1;
-      Lexing.pos_bol = pos.Lexing.pos_cnum;
-    }
-*)
 
 let store_string_char c =
   if !string_index >= String.length (!string_buff) then begin
@@ -118,11 +113,14 @@ let char_for_decimal_code lexbuf i =
           (int_of_char(Lexing.lexeme_char lexbuf (i+2)) - 48) in
   char_of_int(c land 0xFF)
 
-
 }
 
+
+let newline = '\n' | '\r' '\n'
+
 rule token = parse
-  | [' ' '\010' '\013' '\009' '\012'] +   { token lexbuf }
+  | newline         { new_line lexbuf; token lexbuf }
+  | [' ' '\t'] +    { token lexbuf }
   | "."             {DOT}
   | "("             {LPAREN}
   | ")"             {RPAREN}
@@ -133,6 +131,7 @@ rule token = parse
   | ";"             {SEMICOL}
   | "="             {EQUAL}
   | "=="            {EQUALEQUAL}
+  | "<>"            {LESS_GREATER}
   | "&"             {AMPERSAND}
   | "&&"            {AMPERAMPER}
   | "||"            {BARBAR}
@@ -141,7 +140,7 @@ rule token = parse
   | "|"             {BAR}
   | "-"             {SUBTRACTIVE "-"}
   | "-."            {SUBTRACTIVE "-."}
-  | "^"             {POWER} 
+  | "^"             {POWER}
   | "["             {LBRACKET}
   | "]"             {RBRACKET}
   | "@"             {AROBASE}
@@ -154,9 +153,9 @@ rule token = parse
       { let s = Lexing.lexeme lexbuf in
           begin try
 	    Hashtbl.find keyword_table s
-          with 
+          with
 	      Not_found -> IDENT id
-	  end 
+	  end
       }
   | ['0'-'9']+
   | '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
@@ -168,23 +167,22 @@ rule token = parse
   | "(*@ " (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {
 	reset_string_buffer();
-	let pragma_start = lexbuf.lex_start_pos + lexbuf.lex_abs_pos in
+  let l1 = lexbuf.lex_curr_p in
 	begin try
 	  pragma lexbuf
-	with Lexical_error(Unterminated_comment, _, pragma_end) ->
-	  raise(Lexical_error(Unterminated_comment, pragma_start, pragma_end))
+	with Lexical_error(Unterminated_comment, Loc(_, l2)) ->
+	  raise(Lexical_error(Unterminated_comment, Loc (l1, l2)))
 	end;
-	lexbuf.lex_start_pos <- pragma_start - lexbuf.lex_abs_pos;
 	PRAGMA(id,get_stored_string())
       }
   | "(*"
-      { let comment_start = lexbuf.lex_start_pos + lexbuf.lex_abs_pos in
+      { let comment_start = lexbuf.lex_curr_p in
         comment_depth := 1;
         begin try
           comment lexbuf
-        with Lexical_error(Unterminated_comment, _, comment_end) ->
+        with Lexical_error(Unterminated_comment, (Loc (_, comment_end))) ->
           raise(Lexical_error(Unterminated_comment,
-                              comment_start, comment_end))
+                              Loc (comment_start, comment_end)))
         end;
         token lexbuf }
    | ['!' '?' '~']
@@ -213,43 +211,46 @@ rule token = parse
       { INFIX3(Lexing.lexeme lexbuf) }
   | eof            {EOF}
   | _              {raise (Lexical_error (Illegal_character,
-					  Lexing.lexeme_start lexbuf,
-					  Lexing.lexeme_end lexbuf))}
+					  Loc (Lexing.lexeme_start_p lexbuf,
+					  Lexing.lexeme_end_p lexbuf)))}
 
 and pragma = parse
-    "(*"
-      { let comment_start = lexbuf.lex_start_pos + lexbuf.lex_abs_pos in
+  | newline         { new_line lexbuf; pragma lexbuf }
+  | "(*"
+      { let comment_start = lexbuf.lex_curr_p in
         comment_depth := 1;
         begin try
           comment lexbuf
-        with Lexical_error(Unterminated_comment, _, comment_end) ->
+        with Lexical_error(Unterminated_comment, Loc (_, comment_end)) ->
           raise(Lexical_error(Unterminated_comment,
-                              comment_start, comment_end))
+                              Loc (comment_start, comment_end)))
         end;
         pragma lexbuf }
   | "@*)"
       { }
   | eof
-      { raise(Lexical_error(Unterminated_comment,0,
-                            Lexing.lexeme_start lexbuf)) }
+      { raise(Lexical_error(Unterminated_comment, Loc (dummy_pos,
+                            Lexing.lexeme_start_p lexbuf))) }
 
   | _
       { store_string_char(Lexing.lexeme_char lexbuf 0);
 	pragma lexbuf }
 
 and comment = parse
-    "(*"
+  | newline         { new_line lexbuf; comment lexbuf }
+  |  "(*"
       { comment_depth := succ !comment_depth; comment lexbuf }
   | "*)"
       { comment_depth := pred !comment_depth;
         if !comment_depth > 0 then comment lexbuf }
   | "\""
       { reset_string_buffer();
-        let string_start = lexbuf.lex_start_pos + lexbuf.lex_abs_pos in
+        let string_start = lexbuf.lex_curr_p in
         begin try
           string lexbuf
-        with Lexical_error(Unterminated_string, _, string_end) ->
-          raise(Lexical_error(Unterminated_string, string_start, string_end))
+        with Lexical_error(Unterminated_string, Loc (_, string_end)) ->
+          raise(Lexical_error
+            (Unterminated_string, Loc (string_start, string_end)))
         end;
         comment lexbuf }
   | "''"
@@ -261,13 +262,14 @@ and comment = parse
   | "'" '\\' ['0'-'9'] ['0'-'9'] ['0'-'9'] "'"
       { comment lexbuf }
   | eof
-      { raise(Lexical_error(Unterminated_comment,0,
-                            Lexing.lexeme_start lexbuf)) }
+      { raise(Lexical_error(Unterminated_comment, Loc(dummy_pos,
+                            Lexing.lexeme_start_p lexbuf))) }
   | _
       { comment lexbuf }
 
 and string = parse
-    '"'
+  | newline         { new_line lexbuf; string lexbuf }
+  | '"'
       { () }
   | '\\' ("\010" | "\013" | "\013\010") [' ' '\009'] *
       { string lexbuf }
@@ -278,8 +280,8 @@ and string = parse
       { store_string_char(char_for_decimal_code lexbuf 1);
          string lexbuf }
   | eof
-      { raise (Lexical_error
-                (Unterminated_string, 0, Lexing.lexeme_start lexbuf)) }
+      { raise (Lexical_error(Unterminated_string, Loc (dummy_pos,
+                              Lexing.lexeme_start_p lexbuf))) }
   | _
       { store_string_char(Lexing.lexeme_char lexbuf 0);
         string lexbuf }

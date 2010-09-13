@@ -35,10 +35,10 @@ let locate_stdlib () =
     Sys.getenv "HEPTLIB"
   with
       Not_found -> standard_lib in
-  Printf.printf "Standard library in %s\n" stdlib
+  Format.printf "Standard library in %s@." stdlib
 
 let show_version () =
-  Printf.printf "The Heptagon compiler, version %s (%s)\n"
+  Format.printf "The Heptagon compiler, version %s (%s)@."
     version date;
   locate_stdlib ()
 
@@ -54,6 +54,8 @@ let simulation_node : string option ref = ref None
 let set_simulation_node s =
   simulation := true;
   simulation_node := Some s
+
+let create_object_file = ref false
 
 (* Target languages list for code generation *)
 let target_languages : string list ref = ref []
@@ -79,6 +81,12 @@ let cse = ref false
 
 let tomato = ref false
 
+let inline = ref []
+
+let add_inlined_node s = inline := s :: !inline
+
+let flatten = ref false
+
 (* Backward compatibility *)
 let set_sigali () = add_target_language "z3z";;
 
@@ -99,6 +107,10 @@ let use_new_reset_encoding = ref false
 let optional f = function
   | None -> None
   | Some x -> Some (f x)
+
+let optional_wacc f acc = function
+  | None -> None, acc
+  | Some x -> let x, acc = f acc x in Some x, acc
 
 let optunit f = function
   | None -> ()
@@ -167,6 +179,16 @@ let rec split_last = function
 let remove x l =
   List.filter (fun y -> x <> y) l
 
+let make_list_compare c l1 l2 =
+  let rec aux l1 l2 = match (l1, l2) with
+    | (h1::t1, h2::t2) ->
+        let result = c h1 h2 in
+        if result = 0 then aux t1 t2 else result
+    | ([],     []    ) -> 0
+    | (_,      []    ) -> 1
+    | ([],     _     ) -> -1
+  in aux l1 l2
+
 let is_empty = function
   | [] -> true
   | _ -> false
@@ -192,3 +214,62 @@ let rec assocd value = function
         k
       else
         assocd value l
+
+
+(** { 3 Compiler iterators } *)
+exception Fallback
+
+(** Mapfold *)
+let mapfold f acc l =
+  let l,acc = List.fold_left
+                (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)
+                ([],acc) l in
+  List.rev l, acc
+
+let mapfold_right f l acc =
+  List.fold_right (fun e (acc, l) -> let acc, e = f e acc in (acc, e :: l))
+    l (acc, [])
+
+let mapi f l =
+  let rec aux i = function
+    | [] -> []
+    | v::l -> (f i v)::(aux (i+1) l)
+  in
+    aux 0 l
+
+let mapi2 f l1 l2 =
+  let rec aux i l1 l2 =
+    match l1, l2 with
+      | [], [] -> []
+      | [], _ -> invalid_arg ""
+      | _, [] -> invalid_arg ""
+      | v1::l1, v2::l2 -> (f i v1 v2)::(aux (i+1) l1 l2)
+  in
+    aux 0 l1 l2
+
+let mapi3 f l1 l2 l3 =
+  let rec aux i l1 l2 l3 =
+    match l1, l2, l3 with
+      | [], [], [] -> []
+      | [], _, _ -> invalid_arg ""
+      | _, [], _ -> invalid_arg ""
+      | _, _, [] -> invalid_arg ""
+      | v1::l1, v2::l2, v3::l3 ->
+          (f i v1 v2 v3)::(aux (i+1) l1 l2 l3)
+  in
+    aux 0 l1 l2 l3
+
+exception Cannot_find_file of string
+
+let findfile filename =
+  if Sys.file_exists filename then
+    filename
+  else if not(Filename.is_implicit filename) then
+    raise(Cannot_find_file filename)
+  else
+    let rec find = function
+      | [] -> raise(Cannot_find_file filename)
+      | a::rest ->
+          let b = Filename.concat a filename in
+          if Sys.file_exists b then b else find rest in
+    find !load_path

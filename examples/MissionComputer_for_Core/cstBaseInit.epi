@@ -1,0 +1,4 @@
+open TypeBase
+
+const kInitPosition : TypeBase.tposition = { x = 0.0; y = 0.0 }
+const kInitSpeed : TypeBase.tspeed = { sx = 0.0; sy = 0.0 }

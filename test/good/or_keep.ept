@@ -1,0 +1,27 @@
+node nat() returns (o : int)
+let
+  o = 0 fby (o + 1);
+tel
+
+node f<<n : int>>(i : bool^n) returns (o, b : bool; nat : int)
+let
+  b = fold (or)<<n>>(i, false);
+	automaton
+	  state Idle
+	    do o = false; nat = 0;
+		  unless b then Emit
+		state Emit
+			do o = true;
+			   nat = nat();
+			until nat > 3 then Idle
+		  unless b then Emit
+  end
+tel
+
+node main() returns (i1, i2, i3, o, b : bool; nat : int)
+let
+  i1 = false;
+  i2 = false fby true fby false;
+  i3 = false;
+  (o, b, nat) = f<<3>>([i1, i2, i3]);
+tel

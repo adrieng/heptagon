@@ -52,6 +52,9 @@ val simulation_node : string option ref
 (* Set the simulation mode on *)
 val set_simulation_node : string -> unit
 
+(* If it is true, the compiler will only generate an object file (.epo).
+   Otherwise, it will generate obc code and possibily other targets.*)
+val create_object_file : bool ref
 (* List of target languages *)
 val target_languages : string list ref
 (* Add target language to the list *)
@@ -80,6 +83,13 @@ val cse : bool ref
 (* Automata minimization *)
 val tomato : bool ref
 
+(* List of nodes to inline *)
+val inline : string list ref
+(* Add a new node name to the list of nodes to inline. *)
+val add_inlined_node : string -> unit
+(* Inline every node. *)
+val flatten : bool ref
+
 (* Z/3Z back-end mode *)
 val set_sigali : unit -> unit
 
@@ -106,6 +116,8 @@ val use_new_reset_encoding : bool ref
 
 (* Misc. functions *)
 val optional : ('a -> 'b) -> 'a option -> 'b option
+(** Optional with accumulator *)
+val optional_wacc : ('a -> 'b -> 'c*'a) -> 'a -> 'b option -> ('c option * 'a)
 val optunit : ('a -> unit) -> 'a option -> unit
 val split_string : string -> char -> string list
 
@@ -151,5 +163,30 @@ val repeat_list : 'a -> int -> 'a list
 val memd_assoc : 'b -> ('a * 'b) list -> bool
 
 (** Same as List.assoc but searching for a data and returning the key. *)
-val assocd: 'b -> ('a * 'b) list -> 'a
+val assocd : 'b -> ('a * 'b) list -> 'a
 
+(** [make_compare c] generates the lexicographical compare function on lists
+    induced by [c] *)
+val make_list_compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
+
+
+
+(** Ast iterators *)
+exception Fallback
+
+
+(** Mapfold *)
+val mapfold: ('a -> 'b -> 'c * 'a) -> 'a -> 'b list -> 'c list * 'a
+
+(** Mapfold, right version. *)
+val mapfold_right
+  : ('a -> 'acc -> 'acc * 'b) -> 'a list -> 'acc -> 'acc * 'b list
+
+(** Mapi *)
+val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
+val mapi2: (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
+val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->
+  'a list -> 'b list -> 'c list -> 'd list
+
+exception Cannot_find_file of string
+val findfile : string -> string
