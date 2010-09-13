@@ -233,7 +233,7 @@ and translate_app kind context op e_list =
         let context, e_list = translate_list kind context e_list in
           context, e_list
     | Earray_fill, [e] ->
-        let context, e = translate VRef context e in
+        let context, e = translate Exp context e in
           context, [e]
     | Eselect, [e'] ->
         let context, e' = translate VRef context e' in
