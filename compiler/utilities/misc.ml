@@ -278,6 +278,10 @@ let assert_1 = function
   | [v] -> v
   | l -> _arity_error 1 l
 
+let assert_1min = function
+  | v::l -> v, l
+  | l -> _arity_min_error 1 l
+
 let assert_2 = function
   | [v1; v2] -> v1, v2
   | l -> _arity_error 1 l

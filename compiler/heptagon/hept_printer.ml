@@ -103,26 +103,34 @@ and print_call_params ff = function
   | l -> print_list_r print_static_exp "<<" "," ">>" ff l
 
 and print_op ff op params e_list =
-  match op, params, e_list with
-    | Eequal, _, [e1; e2] ->
+  match op with
+    | Eequal ->
+      let e1, e2 = assert_2 e_list in
         fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
-    | Earrow, _, [e1;e2] -> print_exp ff e1; fprintf ff " -> "; print_exp ff e2
-    | Eifthenelse, _, [e1;e2;e3] ->
+    | Earrow ->
+      let e1, e2 = assert_2 e_list in
+        print_exp ff e1; fprintf ff " -> "; print_exp ff e2
+    | Eifthenelse ->
+      let e1, e2, e3 = assert_3 e_list in
         fprintf ff "@["; fprintf ff "if "; print_exp ff e1;
         fprintf ff "@ then@ "; print_exp ff e2;
         fprintf ff "@ else@ "; print_exp ff e3;
         fprintf ff "@]"
-    | Etuple, _, e_list -> print_exps ff e_list
-    | Earray, _, e_list ->
+    | Etuple -> print_exps ff e_list
+    | Earray ->
         print_list_r print_exp "[" "," "]" ff e_list
-    | (Efun f|Enode f), params, e_list ->
+    | (Efun f|Enode f) ->
         print_qualname ff f;
         print_call_params ff params;
         print_exps ff e_list
-    | Efield, [field], [e] ->
+    | Efield ->
+      let e = assert_1 e_list in
+      let field = assert_1 params in
         print_exp ff e; fprintf ff ".";
         print_static_exp ff field
-    | Efield_update, [se], [e1;e2] ->
+    | Efield_update ->
+      let e1, e2 = assert_2 e_list in
+      let se = assert_1 params in
         fprintf ff "(@[";
         print_exp ff e1;
         fprintf ff " with .";
@@ -130,20 +138,25 @@ and print_op ff op params e_list =
         fprintf ff " = ";
         print_exp ff e2;
         fprintf ff ")@]"
-    | Earray_fill, [se], [e] ->
+    | Earray_fill ->
+      let e = assert_1 e_list in
+      let se = assert_1 params in
         print_exp ff e;
         fprintf ff "^";
         print_static_exp ff se
-    | Eselect, idx_list, [e] ->
+    | Eselect ->
+      let e = assert_1 e_list in
         print_exp ff e;
-        print_list_r print_static_exp "[" "][" "]" ff idx_list
-    | Eselect_dyn, _, e::defe::idx_list ->
+        print_list_r print_static_exp "[" "][" "]" ff params
+    | Eselect_dyn ->
+      let e, defe, idx_list = assert_2min e_list in
         fprintf ff "@[(";
         print_exp ff e;
         print_list_r print_exp "[" "][" "] default " ff idx_list;
         print_exp ff defe;
         fprintf ff ")@]"
-    | Eupdate, _, e1::e2::idx_list ->
+    | Eupdate ->
+      let e1, e2, idx_list = assert_2min e_list in
         fprintf ff "(@[";
         print_exp ff e1;
         fprintf ff " with ";
@@ -151,14 +164,17 @@ and print_op ff op params e_list =
         fprintf ff " = ";
         print_exp ff e2;
         fprintf ff ")@]"
-    | Eselect_slice, [idx1;idx2], [e] ->
+    | Eselect_slice ->
+      let e = assert_1 e_list in
+      let idx1, idx2 = assert_2 params in
         print_exp ff e;
         fprintf ff "[";
         print_static_exp ff idx1;
         fprintf ff "..";
         print_static_exp ff idx2;
         fprintf ff "]"
-    | Econcat, _, [e1;e2] ->
+    | Econcat ->
+      let e1, e2 = assert_2 e_list in
         fprintf ff "@[";
         print_exp ff e1;
         fprintf ff " @@ ";

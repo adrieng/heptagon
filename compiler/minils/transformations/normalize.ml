@@ -225,47 +225,57 @@ let rec translate kind context e =
   in add context kind e
 
 and translate_app kind context op e_list =
-  match op, e_list with
-    | Eequal, e_list ->
+  match op with
+    | Eequal ->
         let context, e_list =
           translate_list function_args_kind context e_list in
         context, e_list
-    | Etuple, e_list ->
+    | Etuple ->
         let context, e_list = translate_list kind context e_list in
           context, e_list
-    | Efield, [e'] ->
+    | Efield ->
+        let e' = assert_1 e_list in
         let context, e' = translate Exp context e' in
           context, [e']
-    | Efield_update, [e1; e2] ->
+    | Efield_update ->
+        let e1, e2 = assert_2 e_list in
         let context, e1 = translate VRef context e1 in
         let context, e2 = translate Exp context e2 in
           context, [e1; e2]
-    | Earray, e_list ->
+    | Earray ->
         let context, e_list = translate_list kind context e_list in
           context, e_list
-    | Earray_fill, [e] ->
+    | Earray_fill ->
+        let e = assert_1 e_list in
         let context, e = translate Exp context e in
           context, [e]
-    | Eselect, [e'] ->
+    | Eselect ->
+        let e' = assert_1 e_list in
         let context, e' = translate VRef context e' in
           context, [e']
-    | Eselect_dyn, e1::e2::idx ->
+    | Eselect_dyn ->
+        let e1, e2, idx = assert_2min e_list in
         let context, e1 = translate VRef context e1 in
         let context, idx = translate_list Exp context idx in
         let context, e2 = translate Exp context e2 in
         context, e1::e2::idx
-    | Eupdate, e1::e2::idx  ->
+    | Eupdate ->
+        let e1, e2, idx = assert_2min e_list in
         let context, e1 = translate VRef context e1 in
         let context, idx = translate_list Exp context idx in
         let context, e2 = translate Exp context e2 in
           context, e1::e2::idx
-    | Eselect_slice, [e'] ->
+    | Eselect_slice ->
+        let e' = assert_1 e_list in
         let context, e' = translate VRef context e' in
         context, [e']
-    | Econcat, [e1; e2] ->
+    | Econcat ->
+        let e1, e2 = assert_2 e_list in
         let context, e1 = translate VRef context e1 in
         let context, e2 = translate VRef context e2 in
         context, [e1; e2]
+    | Enode _ | Efun _ | Eifthenelse _ ->
+      assert false (*already done in translate*)
 
 and translate_list kind context e_list =
   match e_list with

@@ -55,7 +55,7 @@ let apply_op op se_list =
     | _ -> se
 
 let eval_core eval apply_op env se = match se.se_desc with
-  | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ -> se
+  | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _ -> se
   | Svar ln -> (
       try (* first try to find in global const env *)
         let cd = find_const ln in

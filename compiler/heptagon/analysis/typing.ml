@@ -596,25 +596,28 @@ and expect const_env h expected_ty e =
   with TypingError(kind) -> message e.e_loc kind
 
 and typing_app const_env h op e_list =
-  match op, e_list with
-    | { a_op = Eequal }, [e1;e2] ->
+  match op with
+    | { a_op = Eequal } ->
+        let e1, e2 = assert_2 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_e2 = expect const_env h t1 e2 in
           Tid Initial.pbool, op, [typed_e1; typed_e2]
 
-    | { a_op = Earrow }, [e1;e2] ->
+    | { a_op = Earrow } ->
+        let e1, e2 = assert_2 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_e2 = expect const_env h t1 e2 in
         t1, op, [typed_e1;typed_e2]
 
-    | { a_op = Eifthenelse }, [e1;e2;e3] ->
+    | { a_op = Eifthenelse }->
+        let e1, e2, e3 = assert_3 e_list in
         let typed_e1 = expect const_env h
           (Tid Initial.pbool) e1 in
         let typed_e2, t1 = typing const_env h e2 in
         let typed_e3 = expect const_env h t1 e3 in
         t1, op, [typed_e1; typed_e2; typed_e3]
 
-    | { a_op = (Efun f | Enode f); a_params = params } as app, e_list ->
+    | { a_op = (Efun f | Enode f); a_params = params } as app ->
         let ty_desc = find_value f in
         let op, expected_ty_list, result_ty_list = kind f ty_desc in
 (*TODO verifier....*)
@@ -635,18 +638,21 @@ and typing_app const_env h op e_list =
         { app with a_op = op; a_params = typed_params },
          typed_e_list
 
-    | { a_op = Etuple }, e_list ->
+    | { a_op = Etuple } ->
         let typed_e_list,ty_list =
           List.split (List.map (typing const_env h) e_list) in
          prod ty_list, op, typed_e_list
 
-    | { a_op = Earray }, exp::e_list ->
+    | { a_op = Earray } ->
+        let exp, e_list = assert_1min e_list in
         let typed_exp, t1 = typing const_env h exp in
         let typed_e_list = List.map (expect const_env h t1) e_list in
         let n = mk_static_int (List.length e_list + 1) in
           Tarray(t1, n), op, typed_exp::typed_e_list
 
-    | { a_op = Efield; a_params = [f] }, [e] ->
+    | { a_op = Efield; a_params = params } ->
+        let e = assert_1 e_list in
+        let f = assert_1 params in
         let fn =
           (match f.se_desc with
              | Sfield fn -> fn
@@ -656,7 +662,9 @@ and typing_app const_env h op e_list =
         let t2 = field_type const_env fn fields t1 e.e_loc in
           t2, op, [typed_e]
 
-    | { a_op = Efield_update; a_params = [f] }, [e1; e2] ->
+    | { a_op = Efield_update; a_params = params } ->
+        let e1, e2 = assert_2 e_list in
+        let f = assert_1 params in
         let typed_e1, t1 = typing const_env h e1 in
         let q, fields = struct_info t1 in
         let fn =
@@ -667,33 +675,40 @@ and typing_app const_env h op e_list =
         let typed_e2 = expect const_env h t2 e2 in
         t1, op, [typed_e1; typed_e2]
 
-    | { a_op = Earray_fill; a_params = [n] }, [e1] ->
+    | { a_op = Earray_fill; a_params = params } ->
+        let n = assert_1 params in
+        let e1 = assert_1 e_list in
         let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
         let typed_e1, t1 = typing const_env h e1 in
           add_size_constraint (Clequal (mk_static_int 1, typed_n));
           Tarray (t1, typed_n), { op with a_params = [typed_n] }, [typed_e1]
 
-    | { a_op = Eselect; a_params = idx_list }, [e1] ->
+    | { a_op = Eselect; a_params = idx_list } ->
+        let e1 = assert_1 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_idx_list, ty =
           typing_array_subscript const_env h idx_list t1 in
           ty, { op with a_params = typed_idx_list }, [typed_e1]
 
-    | { a_op = Eselect_dyn }, e1::defe::idx_list ->
+    | { a_op = Eselect_dyn } ->
+        let e1, defe, idx_list = assert_2min e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_defe = expect const_env h (element_type t1) defe in
         let ty, typed_idx_list =
           typing_array_subscript_dyn const_env h idx_list t1 in
         ty, op, typed_e1::typed_defe::typed_idx_list
 
-    | { a_op = Eupdate }, e1::e2::idx_list ->
+    | { a_op = Eupdate } ->
+        let e1, e2, idx_list = assert_2min e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let ty, typed_idx_list =
           typing_array_subscript_dyn const_env h idx_list t1 in
         let typed_e2 = expect const_env h ty e2 in
           t1, op, typed_e1::typed_e2::typed_idx_list
 
-    | { a_op = Eselect_slice; a_params = [idx1; idx2] }, [e] ->
+    | { a_op = Eselect_slice; a_params = params } ->
+        let e = assert_1 e_list in
+        let idx1, idx2 = assert_2 params in
         let typed_idx1 = expect_static_exp const_env (Tid Initial.pint) idx1 in
         let typed_idx2 = expect_static_exp const_env (Tid Initial.pint) idx2 in
         let typed_e, t1 = typing const_env h e in
@@ -706,7 +721,8 @@ and typing_app const_env h op e_list =
         Tarray (element_type t1, e2),
         { op with a_params = [typed_idx1; typed_idx2] }, [typed_e]
 
-    | { a_op = Econcat }, [e1; e2] ->
+    | { a_op = Econcat } ->
+        let e1, e2 = assert_2 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_e2, t2 = typing const_env h e2 in
         begin try
@@ -717,28 +733,6 @@ and typing_app const_env h op e_list =
         let n =
           mk_static_int_op (mk_pervasives "+") [array_size t1; array_size t2] in
         Tarray (element_type t1, n), op, [typed_e1; typed_e2]
-
-    (*Arity problems*)
-    | { a_op = Earrow }, _ ->
-        error (Earity_clash(List.length e_list, 2))
-    | { a_op = Eifthenelse }, _ ->
-        error (Earity_clash(List.length e_list, 2))
-    | { a_op = Efield_update }, _ ->
-        error (Earity_clash(List.length e_list, 2))
-    | { a_op = Earray }, [] ->
-        error (Earity_clash (0, 1))
-    | { a_op = Econcat }, _ ->
-        error (Earity_clash(List.length e_list, 2))
-    | { a_op = Eselect_slice }, _ ->
-        error (Earity_clash(List.length e_list, 3))
-    | { a_op = Eupdate }, _ ->
-        error (Earity_clash(List.length e_list, 2))
-    | { a_op = Eselect }, _ ->
-        error (Earity_clash(List.length e_list, 1))
-    | { a_op = Eselect_dyn }, _ ->
-        error (Earity_clash(List.length e_list, 2))
-    | { a_op = Earray_fill }, _ ->
-        error (Earity_clash(List.length e_list, 2))
 
 and typing_iterator const_env h
     it n args_ty_list result_ty_list e_list = match it with

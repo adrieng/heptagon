@@ -191,6 +191,7 @@ val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->
 (** Functions to decompose a list into a tuple *)
 val assert_empty : 'a list -> unit
 val assert_1 : 'a list -> 'a
+val assert_1min : 'a list -> 'a * 'a list
 val assert_2 : 'a list -> 'a * 'a
 val assert_2min : 'a list -> 'a * 'a * 'a list
 val assert_3 : 'a list -> 'a * 'a * 'a

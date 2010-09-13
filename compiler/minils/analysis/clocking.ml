@@ -61,31 +61,37 @@ let rec typing h e =
          Ck ck)
   in (e.e_ck <- ckofct ct; ct)
 
-and typing_op op args h e ck = match op, args with
-  | (Eequal | Efun _ | Enode _), e_list ->
+and typing_op op e_list h e ck = match op with
+  | (Eequal | Efun _ | Enode _) ->
       (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
-  | Etuple, e_list ->
+  | Etuple ->
       Cprod (List.map (typing h) e_list)
-  | Eifthenelse, [e1; e2; e3] ->
+  | Eifthenelse ->
+      let e1, e2, e3 = assert_3 e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; expect h ct e3; ct)
-  | Efield, [e1] ->
+  | Efield ->
+      let e1 = assert_1 e_list in
       let ct = skeleton ck e1.e_ty in (expect h (Ck ck) e1; ct)
-  | Efield_update, [e1; e2] ->
+  | Efield_update ->
+      let e1, e2 = assert_2 e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; ct)
-  | Earray, e_list ->
+  | Earray ->
       (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
-  | Earray_fill, [e] -> typing h e
-  | Eselect, [e] -> typing h e
-  | Eselect_dyn, e1::defe::idx -> (* TODO defe not treated ? *)
+  | Earray_fill -> let e = assert_1 e_list in typing h e
+  | Eselect -> let e = assert_1 e_list in typing h e
+  | Eselect_dyn -> (* TODO defe not treated ? *)
+      let e1, defe, idx = assert_2min e_list in
       let ct = skeleton ck e1.e_ty
       in (List.iter (expect h ct) (e1::defe::idx); ct)
-  | Eupdate, e1::e2::idx ->
+  | Eupdate ->
+      let e1, e2, idx = assert_2min e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; List.iter (expect h ct) idx; ct)
-  | Eselect_slice, [e] -> typing h e
-  | Econcat, [e1; e2] ->
+  | Eselect_slice -> let e = assert_1 e_list in typing h e
+  | Econcat ->
+      let e1, e2 = assert_2 e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; ct)
 

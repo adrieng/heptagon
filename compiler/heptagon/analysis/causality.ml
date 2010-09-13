@@ -111,27 +111,33 @@ let rec typing e =
 
 (** Typing an application *)
 and apply op e_list =
-  match op, e_list with
-    | Earrow, [e1;e2] ->
+  match op with
+    | Earrow ->
+        let e1, e2 = assert_2 e_list in
         let t1 = typing e1 in
         let t2 = typing e2 in
         candlist [t1; t2]
-    | Efield, [e1] -> typing e1
-    | Eifthenelse, [e1; e2; e3] ->
+    | Efield ->
+      let e1 = assert_1 e_list in
+        typing e1
+    | Eifthenelse ->
+        let e1, e2, e3 = assert_3 e_list in
         let t1 = typing e1 in
         let i2 = typing e2 in
         let i3 = typing e3 in
         cseq t1 (cor i2 i3)
     | (Eequal | Efun _| Enode _ | Econcat | Eselect_slice
-      | Eselect_dyn| Eselect _ | Earray_fill), e_list ->
+      | Eselect_dyn| Eselect _ | Earray_fill) ->
         ctuplelist (List.map typing e_list)
-    | (Earray | Etuple), e_list ->
+    | (Earray | Etuple) ->
         candlist (List.map typing e_list)
-    | Efield_update, [e1;e2] ->
+    | Efield_update ->
+        let e1, e2 = assert_2 e_list in
         let t1 = typing e1 in
         let t2 = typing e2 in
         cseq t2 t1
-    | Eupdate , e1::e_list ->
+    | Eupdate ->
+        let e1, e_list = assert_1min e_list in
         let t1 = typing e1 in
         let t2 = ctuplelist (List.map typing e_list) in
           cseq t2 t1

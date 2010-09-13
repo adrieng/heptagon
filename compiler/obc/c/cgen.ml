@@ -231,6 +231,7 @@ let rec cexpr_of_static_exp se =
     | Sint i -> Cconst (Ccint i)
     | Sfloat f -> Cconst (Ccfloat f)
     | Sbool b -> Cconst (Ctag (if b then "TRUE" else "FALSE"))
+    | Sfield f -> assert false
     | Sconstructor c -> Cconst (Ctag (cname_of_qn c))
     | Sarray sl -> Carraylit (List.map cexpr_of_static_exp sl)
     | Sarray_power(n,c) ->
@@ -563,7 +564,6 @@ let mem_decl_of_class_def cd =
       convention we described above. *)
   let struct_field_of_obj_dec l od =
     if is_statefull od.o_class then
-      let clsname = cname_of_qn od.o_class in
       let ty = Cty_id (qn_append od.o_class "_mem") in
       let ty = match od.o_size with
         | Some se -> Cty_arr (int_of_static_exp se, ty)
