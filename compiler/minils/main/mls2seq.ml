@@ -65,7 +65,7 @@ let generate_target p s =
           print_unfolded p_list;
           comment "Translation to Obc";
           if !Misc.verbose then
-              List.iter (Obc_printer.print_prog Format.std_formatter) o_list;
+            List.iter (Obc_printer.print stdout) o_list;
           List.iter convert_fun o_list
 
 let program p =
