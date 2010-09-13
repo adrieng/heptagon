@@ -1062,10 +1062,7 @@ let node ({ n_name = f; n_statefull = statefull;
 let typing_const_dec cd =
   let ty = check_type QualEnv.empty cd.c_type in
   let se = expect_static_exp QualEnv.empty ty cd.c_value in
-  let cd = { cd with c_value = se; c_type = ty } in
-    add_const cd.c_name (mk_const_def cd.c_type cd.c_value);
-    cd
-
+    { cd with c_value = se; c_type = ty }
 let program
     ({ p_opened = opened; p_types = p_type_list;
        p_nodes = p_node_list; p_consts = p_consts_list } as p) =
