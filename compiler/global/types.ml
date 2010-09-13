@@ -19,6 +19,7 @@ and static_exp_desc =
   | Sfloat of float
   | Sbool of bool
   | Sconstructor of constructor_name
+  | Sfield of field_name
   | Stuple of static_exp list
   | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)

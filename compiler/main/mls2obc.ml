@@ -93,7 +93,7 @@ let rec translate map (si, j, s) e =
             f_e_list
         in Estruct (type_name, f_e_list)
     | Minils.Eapp ({ Minils.a_op = Minils.Efield;
-                    Minils.a_params = [{ se_desc = Sconstructor f }] },
+                    Minils.a_params = [{ se_desc = Sfield f }] },
                    [e], _) ->
         let e = translate map (si, j, s) e in
           Elhs (mk_lhs (Lfield (lhs_of_exp e, f)))
@@ -208,7 +208,7 @@ and translate_act map context pat
 
     | Minils.Evarpat x,
           Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
-                   Minils.a_params = [{ se_desc = Sconstructor f }] },
+                   Minils.a_params = [{ se_desc = Sfield f }] },
                   [e1; e2], _) ->
         let x = var_from_name map x in
         let copy = Aassgn (x, translate map context e1) in

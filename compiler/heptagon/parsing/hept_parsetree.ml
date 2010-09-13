@@ -32,6 +32,7 @@ and static_exp_desc =
   | Sfloat of float
   | Sbool of bool
   | Sconstructor of constructor_name
+  | Sfield of field_name
   | Stuple of static_exp list
   | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)
@@ -214,6 +215,9 @@ let mk_static_exp ?(ty = invalid_type) desc loc =
 
 let mk_constructor_exp f loc =
   mk_exp (Econst (mk_static_exp (Sconstructor f) loc)) loc
+
+let mk_field_exp f loc =
+  mk_exp (Econst (mk_static_exp (Sfield f) loc)) loc
 
 let mk_type_dec name desc loc =
   { t_name = name; t_desc = desc; t_loc = loc }

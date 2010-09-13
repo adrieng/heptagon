@@ -426,11 +426,10 @@ and typing_static_exp const_env se =
         (try (* this can be a global const*)
            let cd = Modules.find_const ln in
              Svar ln, cd.Signature.c_type
-(* TODO verifier... *)
          with Not_found -> (* or a static parameter *)
            Svar ln, QualEnv.find ln const_env)
-    | Sconstructor c ->
-      Sconstructor c, Tid (find_constrs c)
+    | Sconstructor c -> Sconstructor c, Tid (find_constrs c)
+    | Sfield c -> Sfield c, Tid (find_field c)
     | Sop (op, se_list) ->
         let ty_desc = find_value op in
         let typed_se_list = typing_static_args const_env
@@ -648,7 +647,7 @@ and typing_app const_env h op e_list =
     | { a_op = Efield; a_params = [f] }, [e] ->
         let fn =
           (match f.se_desc with
-             | Sconstructor fn -> fn
+             | Sfield fn -> fn
              | _ -> assert false) in
         let typed_e, t1 = typing const_env h e in
         let q, fields = struct_info t1 in
@@ -660,7 +659,7 @@ and typing_app const_env h op e_list =
         let q, fields = struct_info t1 in
         let fn =
           (match f.se_desc with
-             | Sconstructor fn -> fn
+             | Sfield fn -> fn
              | _ -> assert false) in
         let t2 = field_type const_env fn fields t1 e1.e_loc in
         let typed_e2 = expect const_env h t2 e2 in

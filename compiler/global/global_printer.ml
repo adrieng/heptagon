@@ -9,6 +9,7 @@ open Pp_tools
 let print_qualname ff qn = match qn with
   | { qual = "Pervasives"; name = n } -> print_name ff n
   | { qual = m; name = n } when m = g_env.current_mod -> print_name ff n
+  | { qual = m; name = n } when m = local_qualname -> print_name ff n
   | { qual = m; name = n } -> fprintf ff "%s.%a" m print_name n
 
 
@@ -17,6 +18,7 @@ let rec print_static_exp ff se = match se.se_desc with
   | Sbool b -> fprintf ff "%b" b
   | Sfloat f -> fprintf ff "%f" f
   | Sconstructor ln -> print_qualname ff ln
+  | Sfield ln -> print_qualname ff ln
   | Svar id -> fprintf ff "%a" print_qualname id
   | Sop (op, se_list) ->
       if is_infix (shortname op)
