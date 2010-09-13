@@ -162,18 +162,9 @@ let message loc kind =
 
 (** Add wrappers around Modules function to raise errors
     and display the correct location. *)
-let add_with_error add_fun f v =
-  try add_fun f v
-  with Already_defined -> error (Ealready_defined (fullname f))
 let find_with_error find_fun f =
   try find_fun f
   with Not_found -> error (Eundefined(fullname f))
-
-let add_value = add_with_error add_value
-let add_type = add_with_error add_type
-let add_constrs = add_with_error add_constrs
-let add_field = add_with_error add_field
-let add_const = add_with_error add_const
 
 let find_value = find_with_error find_value
 let find_constrs = find_with_error find_constrs
