@@ -57,7 +57,10 @@ struct
 end
 
 let cname_of_qn q =
-  (q.qual ^ "__" ^ q.name)
+  if q.qual = "Pervasives" then
+    q.name
+  else
+    (q.qual ^ "__" ^ q.name)
 
 let rec struct_name ty =
   match ty with
