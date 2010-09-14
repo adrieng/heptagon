@@ -272,7 +272,7 @@ let _arity_min_error i l =
 
 let assert_empty = function
   | [] -> ()
-  | l -> _arity_error 1 l
+  | l -> _arity_error 0 l
 
 let assert_1 = function
   | [v] -> v
@@ -284,15 +284,15 @@ let assert_1min = function
 
 let assert_2 = function
   | [v1; v2] -> v1, v2
-  | l -> _arity_error 1 l
+  | l -> _arity_error 2 l
 
 let assert_2min = function
   | v1::v2::l -> v1, v2, l
-  | l -> _arity_min_error 1 l
+  | l -> _arity_min_error 2 l
 
 let assert_3 = function
   | [v1; v2; v3] -> v1, v2, v3
-  | l -> _arity_error 1 l
+  | l -> _arity_error 3 l
 
 exception Cannot_find_file of string
 
