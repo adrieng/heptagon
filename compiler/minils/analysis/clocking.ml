@@ -37,7 +37,7 @@ let rec typing h e =
   let ct = match e.e_desc with
     | Econst se -> skeleton (new_var ()) se.se_ty
     | Evar x -> Ck (typ_of_name h x)
-    | Efby (c, e) -> typing h e
+    | Efby (_, e) -> typing h e
     | Eapp({a_op = op}, args, r) ->
         let ck = match r with
           | None -> new_var ()
@@ -57,7 +57,7 @@ let rec typing h e =
     | Estruct l ->
         let ck = new_var () in
         (List.iter
-           (fun (n, e) -> let ct = skeleton ck e.e_ty in expect h ct e) l;
+           (fun (_, e) -> let ct = skeleton ck e.e_ty in expect h ct e) l;
          Ck ck)
   in (e.e_ck <- ckofct ct; ct)
 
@@ -147,8 +147,7 @@ let typing_contract h contract base =
          expect h' (Ck base) e_g;
          h)
 
-let typing_node ({ n_name = f;
-                   n_input = i_list;
+let typing_node ({ n_input = i_list;
                    n_output = o_list;
                    n_contract = contract;
                    n_local = l_list;

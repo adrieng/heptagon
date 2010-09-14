@@ -62,7 +62,7 @@ let rec pre = function
   | Cand(c1, c2) -> Cand(pre c1, pre c2)
   | Ctuple l -> Ctuple (List.map pre l)
   | Cseq(c1, c2) -> Cseq(pre c1, pre c2)
-  | Cread(x) -> Cempty
+  | Cread _ -> Cempty
   | (Cwrite _ | Clastread _ | Cempty) as c -> c
 
 (* projection and restriction *)
@@ -94,7 +94,7 @@ let build dec =
 (** Main typing function *)
 let rec typing e =
   match e.e_desc with
-    | Econst(c) -> cempty
+    | Econst _ -> cempty
     | Evar(x) -> read x
     | Elast(x) -> lastread x
     | Epre (_, e) -> pre (typing e)
@@ -201,8 +201,7 @@ let typing_contract loc contract =
         let t_contract = clear (build b.b_local) t_contract in
         t_contract
 
-let typing_node { n_name = f; n_input = i_list; n_output = o_list;
-                  n_contract = contract;
+let typing_node { n_contract = contract;
                   n_block = b; n_loc = loc } =
   let _ = typing_contract loc contract in
     ignore (typing_block b)

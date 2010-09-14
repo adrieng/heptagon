@@ -82,7 +82,7 @@ let equation v acc_eq_list e =
 
 let orthen v acc_eq_list res e =
   match e.e_desc with
-    | Evar n -> add_resets res (Some e), v, acc_eq_list
+    | Evar _ -> add_resets res (Some e), v, acc_eq_list
     | _ ->
         let n, v, acc_eq_list = equation v acc_eq_list e in
           add_resets res (Some { e with e_desc = Evar n }), v, acc_eq_list
@@ -180,7 +180,7 @@ let eq funs (res, v, acc_eq_list) equ =
           equ, (res, v, equ::acc_eq_list)
 
 let block funs _ b =
-  let n, (_, v, eq_list) = Hept_mapfold.block funs (None, [], []) b in
+  let _, (_, v, eq_list) = Hept_mapfold.block funs (None, [], []) b in
     { b with b_local = v @ b.b_local; b_equs = eq_list; }, (None, [], [])
 
 let program p =

@@ -127,7 +127,7 @@ let defaults = {
 
 
 (** Is used to stop the pass at this level *)
-let stop funs acc x = x, acc
+let stop _ acc x = x, acc
 
 let defaults_stop = {
   static_exp = stop;

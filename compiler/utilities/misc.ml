@@ -151,9 +151,9 @@ let print_header_info ff cbeg cend =
     cend
 
 let unique l =
-  let tbl = Hashtbl.create 10 in (* You could replace 10 with List.length l *)
+  let tbl = Hashtbl.create (List.length l) in
   List.iter (fun i -> Hashtbl.replace tbl i ()) l;
-  Hashtbl.fold (fun key data accu -> key :: accu) tbl []
+  Hashtbl.fold (fun key _ accu -> key :: accu) tbl []
 
 let rec incomplete_map f l =
   match l with
@@ -165,7 +165,7 @@ let rec last_element l =
   match l with
     | [] -> assert false
     | [v] -> v
-    | v::l -> last_element l
+    | _::l -> last_element l
 
 (** [split_last l] returns l without its last element and
     the last element of l. *)
@@ -204,7 +204,7 @@ let repeat_list v n =
 (** Same as List.mem_assoc but using the value instead of the key. *)
 let rec memd_assoc value = function
   | [] -> false
-  | (k,d)::l -> (d = value) or (memd_assoc value l)
+  | (_,d)::l -> (d = value) or (memd_assoc value l)
 
 (** Same as List.assoc but searching for a data and returning the key. *)
 let rec assocd value = function

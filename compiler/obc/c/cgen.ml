@@ -231,7 +231,7 @@ let rec cexpr_of_static_exp se =
     | Sint i -> Cconst (Ccint i)
     | Sfloat f -> Cconst (Ccfloat f)
     | Sbool b -> Cconst (Ctag (if b then "TRUE" else "FALSE"))
-    | Sfield f -> assert false
+    | Sfield _ -> assert false
     | Sconstructor c -> Cconst (Ctag (cname_of_qn c))
     | Sarray sl -> Carraylit (List.map cexpr_of_static_exp sl)
     | Sarray_power(n,c) ->
@@ -274,7 +274,7 @@ let rec cexpr_of_exp var_env exp =
 and cexprs_of_exps var_env exps =
   List.map (cexpr_of_exp var_env) exps
 
-and cop_of_op_aux var_env op_name cexps = match op_name with
+and cop_of_op_aux op_name cexps = match op_name with
     | { qual = "Pervasives"; name = op } ->
         begin match op,cexps with
           | "~-", [e] -> Cuop ("-", e)
@@ -288,12 +288,11 @@ and cop_of_op_aux var_env op_name cexps = match op_name with
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
         end
-    | {qual = m; name = op} ->
-        Cfun_call(op,cexps)
+    | {qual = m; name = op} -> Cfun_call(op,cexps) (*TODO m should be used?*)
 
 and cop_of_op var_env op_name exps =
   let cexps = cexprs_of_exps var_env exps in
-  cop_of_op_aux var_env op_name cexps
+  cop_of_op_aux op_name cexps
 
 and clhs_of_lhs var_env l = match l.l_desc with
   (** Each Obc variable corresponds to a real local C variable. *)
@@ -369,7 +368,7 @@ let generate_function_call var_env obj_env outvl objn args =
 
   let fun_call =
     if is_op classln then
-      cop_of_op_aux var_env classln args
+      cop_of_op_aux classln args
     else
       (** The step function takes scalar arguments and its own internal memory
           holding structure. *)

@@ -15,7 +15,8 @@ type err_kind = | Enot_static_exp
 
 let err_message ?(exp=void) ?(loc=exp.e_loc) = function
   | Enot_static_exp ->
-      Format.eprintf "The expression %a should be a static_exp.@."
+      Format.eprintf "%aThe expression %a should be a static_exp.@."
+        print_location loc
         print_exp exp;
       raise Error
 
@@ -70,7 +71,7 @@ struct
     | Etuplepat pat_list -> List.fold_left vars_pat acc pat_list
 
   let rec vars_ck acc = function
-    | Con(ck, c, n) -> add n acc
+    | Con(_, _, n) -> add n acc
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
@@ -123,7 +124,7 @@ struct
     let rec headrec ck l =
       match ck with
         | Cbase | Cvar { contents = Cindex _ } -> l
-        | Con(ck, c, n) -> headrec ck (n :: l)
+        | Con(ck, _, n) -> headrec ck (n :: l)
         | Cvar { contents = Clink ck } -> headrec ck l
     in
     headrec ck []
@@ -136,7 +137,7 @@ struct
 end
 
 let node_memory_vars n =
-  let eq funs acc ({ eq_lhs = pat; eq_rhs = e } as eq) =
+  let eq _ acc ({ eq_lhs = pat; eq_rhs = e } as eq) =
     match e.e_desc with
     | Efby(_, _) -> eq, Vars.vars_pat acc pat
     | _ -> eq, acc
@@ -160,5 +161,5 @@ module AllDep = Dep.Make
      type equation = eq
      let read eq = Vars.read false eq
      let def = Vars.def
-     let antidep eq = false
+     let antidep _ = false
    end)

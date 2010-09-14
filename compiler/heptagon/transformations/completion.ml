@@ -21,7 +21,7 @@ open Idents
 *)
 
 (* We stop at the first level, it'll correspond to an handler *)
-let block_collect funs env b =
+let block_collect _ _ b =
   b, b.b_defnames
 
 let gather f funs env x =

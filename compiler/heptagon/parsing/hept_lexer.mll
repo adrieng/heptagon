@@ -5,13 +5,7 @@
 open Lexing
 open Location
 open Hept_parser
-
-
-type lexical_error =
-    Illegal_character
-  | Unterminated_comment
-  | Bad_char_constant
-  | Unterminated_string;;
+open Compiler_utils
 
 exception Lexical_error of lexical_error * location;;
 

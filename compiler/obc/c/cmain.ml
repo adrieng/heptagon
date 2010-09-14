@@ -160,7 +160,7 @@ let main_def_of_class_def cd =
                              :: ep))],
          match nbuf_opt with
            | None -> []
-           | Some id -> [(varn, Cty_arr (20, Cty_char))]) in
+           | Some _ -> [(varn, Cty_arr (20, Cty_char))]) in
 
   let stepm = find_step_method cd in
   let (scanf_calls, scanf_decls) =
@@ -270,7 +270,7 @@ let mk_main name p = match (!Misc.simulation_node, !Misc.assert_nodes) with
           (var @ var_l, res :: res_l, step :: step_l) in
         List.fold_right add a_classes ([], [], []) in
 
-      let (deps, var_l, res_l, step_l) =
+      let (_, var_l, res_l, step_l) =
         (match !Misc.simulation_node with
            | None -> (n_names, var_l, res_l, step_l)
            | Some n ->

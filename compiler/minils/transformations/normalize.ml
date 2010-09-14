@@ -89,7 +89,7 @@ let rec merge e x ci_a_list =
   let rec distribute ci_tas_list =
     match ci_tas_list with
       | [] | (_, _, []) :: _ -> []
-      | (ci, b, (eo :: _)) :: _ ->
+      | (_, b, (eo :: _)) :: _ ->
           let ci_ta_list, ci_tas_list = split ci_tas_list in
           let ci_tas_list = distribute ci_tas_list in
           (if b then

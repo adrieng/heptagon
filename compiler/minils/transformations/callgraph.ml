@@ -239,11 +239,11 @@ let load_object_file modname =
 
 (** @return the node with name [ln], loading the corresponding
     object file if necessary. *)
-let node_by_longname ({ qual = q; name = n } as node) =
-  if not (NamesEnv.mem q info.opened)
-  then load_object_file q;
+let node_by_longname node =
+  if not (NamesEnv.mem node.qual info.opened)
+  then load_object_file node.qual;
   try
-    let p = NamesEnv.find q info.opened in
+    let p = NamesEnv.find node.qual info.opened in
     List.find (fun n -> n.n_name = node) p.p_nodes
   with
     Not_found -> Error.message no_location (Error.Enode_unbound node)
@@ -259,7 +259,7 @@ let collect_node_calls ln =
             | { qual = "Pervasives" } -> acc
             | _ -> (ln, params)::acc)
   in
-  let edesc funs acc ed = match ed with
+  let edesc _ acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
         ed, add_called_node ln params acc
     | Eiterator(_, { a_op = (Enode ln | Efun ln); a_params = params },

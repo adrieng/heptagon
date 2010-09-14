@@ -111,7 +111,6 @@ and print_exp_desc ff = function
         print_static_exp param
         print_exp_tuple args
         print_every reset
-  | Eiterator _ -> assert false
 
 and print_every ff reset =
   print_opt (fun ff id -> fprintf ff " every %a" print_exp id) ff reset
@@ -230,7 +229,7 @@ and print_eq_list ff = function
   | [] -> ()
   | l -> print_list_r print_eq """;""" ff l
 
-and print_block ff { b_local = v_list; b_equs = eqs; b_defnames = defnames } =
+and print_block ff { b_local = v_list; b_equs = eqs } =
   fprintf ff "%a@[<v2>do@ %a@]" print_local_vars v_list  print_eq_list eqs
 
 let rec print_type_def ff { t_name = name; t_desc = tdesc } =

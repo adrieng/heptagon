@@ -84,7 +84,7 @@ struct
             let ck_tag_name = Con(ck, tag, name) in
             { e with e_desc = Ewhen(e, tag, name); e_ck = ck_tag_name },
             ck_tag_name
-        | Ecomp(env, l) -> constrec env in
+        | Ecomp(env, _) -> constrec env in
     let e, _ = constrec env in e
 end
 
@@ -149,12 +149,12 @@ let switch x ci_eqs_list =
         | _ ->
             let firsts,nexts = extract eqs_lists in
             (* check all firsts defining same name *)
-            if (List.for_all (fun (x,e) -> x = (fst (List.hd firsts))) firsts)
+            if (List.for_all (fun (x,_) -> x = (fst (List.hd firsts))) firsts)
             then ()
             else
               begin
                 List.iter
-                  (fun (x,e) -> Format.eprintf "|%s|, " (name x))
+                  (fun (x,_) -> Format.eprintf "|%s|, " (name x))
                   firsts;
                 assert false
               end;
@@ -168,14 +168,14 @@ let switch x ci_eqs_list =
   let rec split ci_eqs_list =
     match ci_eqs_list with
       | [] | (_, []) :: _ -> [], []
-      | (ci, (y, e) :: shared_eq_list) :: ci_eqs_list ->
+      | (ci, (_, e) :: shared_eq_list) :: ci_eqs_list ->
           let ci_e_list, ci_eqs_list = split ci_eqs_list in
           (ci, e) :: ci_e_list, (ci, shared_eq_list) :: ci_eqs_list in
 
   let rec distribute ci_eqs_list =
     match ci_eqs_list with
       | [] | (_, []) :: _ -> []
-      | (ci, (y, { e_ty = ty; e_loc = loc }) :: _) :: _ ->
+      | (_, (y, { e_ty = ty; e_loc = loc }) :: _) :: _ ->
           let ci_e_list, ci_eqs_list = split ci_eqs_list in
           (y, mk_exp ~exp_ty:ty ~loc:loc (Emerge(x, ci_e_list))) ::
             distribute ci_eqs_list in
@@ -194,7 +194,7 @@ let translate_iterator_type = function
   | Heptagon.Ifoldi -> Ifoldi
   | Heptagon.Imapfold -> Imapfold
 
-let rec translate_op env = function
+let rec translate_op = function
   | Heptagon.Eequal -> Eequal
   | Heptagon.Eifthenelse -> Eifthenelse
   | Heptagon.Efun f -> Efun f
@@ -212,9 +212,9 @@ let rec translate_op env = function
   | Heptagon.Earrow ->
       Error.message no_location Error.Eunsupported_language_construct
 
-let translate_app env app =
+let translate_app app =
   mk_app ~params:app.Heptagon.a_params
-    ~unsafe:app.Heptagon.a_unsafe (translate_op env app.Heptagon.a_op)
+    ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
 
 let rec translate env
     { Heptagon.e_desc = desc; Heptagon.e_ty = ty;
@@ -235,13 +235,13 @@ let rec translate env
           (fun (f, e) -> (f, translate env e)) f_e_list in
         mk_exp ~loc:loc ~exp_ty:ty (Estruct f_e_list)
     | Heptagon.Eapp(app, e_list, reset) ->
-        mk_exp ~loc:loc ~exp_ty:ty (Eapp (translate_app env app,
+        mk_exp ~loc:loc ~exp_ty:ty (Eapp (translate_app app,
                                           List.map (translate env) e_list,
                                           translate_reset reset))
     | Heptagon.Eiterator(it, app, n, e_list, reset) ->
         mk_exp ~loc:loc ~exp_ty:ty
           (Eiterator (translate_iterator_type it,
-                    translate_app env app, n,
+                    translate_app app, n,
                     List.map (translate env) e_list,
                     translate_reset reset))
     | Heptagon.Efby _

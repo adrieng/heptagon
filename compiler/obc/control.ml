@@ -46,7 +46,7 @@ let is_deadcode = function
            | Elhs l -> l = lhs
            | _ -> false
         )
-    | Acase (e, []) -> true
+    | Acase (_, []) -> true
     | Afor(_, _, _, { b_body = [] }) -> true
     | _ -> false
 

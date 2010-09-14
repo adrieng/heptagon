@@ -63,7 +63,7 @@ let rec translate_pat map = function
       List.fold_right (fun pat acc -> (translate_pat map pat) @ acc)
         pat_list []
 
-let translate_var_dec map l =
+let translate_var_dec map l = (*TODO bug map unused ?*)
   let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
     mk_var_dec ~loc:loc x t
   in
@@ -238,8 +238,7 @@ let empty_call_context = Oobj "n", None
 
 let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
     (v, si, j, s) =
-  let { Minils.e_desc = desc; Minils.e_ty = ty;
-        Minils.e_ck = ck; Minils.e_loc = loc } = e in
+  let { Minils.e_desc = desc; Minils.e_ck = ck; Minils.e_loc = loc } = e in
   match (pat, desc) with
     | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
         let x = var_from_name map n in

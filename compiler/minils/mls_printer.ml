@@ -31,7 +31,7 @@ let rec print_ck ff = function
   | Cbase -> fprintf ff "base"
   | Con (ck, c, n) ->
       fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
-  | Cvar { contents = Cindex n } -> fprintf ff "base"
+  | Cvar { contents = Cindex _ } -> fprintf ff "base"
   | Cvar { contents = Clink ck } -> print_ck ff ck
 
 let rec print_clock ff = function

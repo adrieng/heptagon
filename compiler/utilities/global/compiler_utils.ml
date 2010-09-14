@@ -10,8 +10,19 @@ open Misc
 open Location
 open Minils
 
+type lexical_error =
+  | Illegal_character
+  | Unterminated_comment
+  | Bad_char_constant
+  | Unterminated_string
+
 let lexical_error err loc =
-  Format.eprintf "%aIllegal character.@." print_location loc;
+  Format.eprintf (match err with
+    | Illegal_character -> Pervasives.format_of_string "%aIllegal character.@."
+    | Unterminated_comment -> "%aUnterminated comment.@."
+    | Bad_char_constant -> "%aBad char constant.@."
+    | Unterminated_string -> "%aUnterminated string.@."
+     ) print_location loc;
   raise Error
 
 let syntax_error loc =
@@ -34,7 +45,7 @@ let do_pass d f p pp =
   comment ~sep:"*** " (d^" done.");
   r
 
-let do_silent_pass d f p = do_pass d f p (fun x -> ())
+let do_silent_pass d f p = do_pass d f p (fun _ -> ())
 
 let pass d enabled f p pp =
   if enabled

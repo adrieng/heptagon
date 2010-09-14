@@ -27,7 +27,7 @@ let last (eq_list, env, v) { v_ident = n; v_type = t; v_last = last } =
 
 let extend_env env v = List.fold_left last ([], env, []) v
 
-let edesc funs env ed = match ed with
+let edesc _ env ed = match ed with
   | Elast x ->
       let lx = Env.find x env in Evar lx, env
   | _ -> raise Misc.Fallback
@@ -38,7 +38,7 @@ let block funs env b =
     { b with b_local = b.b_local @ last_v;
         b_equs = eq_lastn_n_list @ b.b_equs }, env
 
-let node_dec funs env n =
+let node_dec funs _ n =
   let _, env, _ = extend_env Env.empty n.n_input in
   let eq_lasto_list, env, last_o = extend_env env n.n_output in
   let n, _  = Hept_mapfold.node_dec funs env n in

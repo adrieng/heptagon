@@ -190,14 +190,14 @@ let rec pp_array_decl cty =
     | _ -> cty, ""
 
 let rec pp_param_cty fmt = function
-    | Cty_arr(n, cty') ->
+    | Cty_arr(_, cty') ->
           fprintf fmt "%a*" pp_param_cty cty'
     | cty -> pp_cty fmt cty
 
 (* pp_vardecl, featuring an ugly hack coping with C's inconsistent concrete
    syntax! *)
 let rec pp_vardecl fmt (s, cty) = match cty with
-  | Cty_arr (n, cty') ->
+  | Cty_arr _ ->
       let ty, indices = pp_array_decl cty in
       fprintf fmt "%a %a%s" pp_cty ty  pp_string s indices
   | _ -> fprintf fmt "%a %a" pp_cty cty  pp_string s
@@ -349,6 +349,6 @@ let is_pointer_type = function
     then it returns a[i1]..[ip]. *)
 let rec array_base_ctype ty idx_list =
   match ty, idx_list with
-    | Cty_arr (n, ty), [i] -> ty
-    | Cty_arr (n, ty), i::idx_list -> array_base_ctype ty idx_list
+    | Cty_arr (_, ty), [_] -> ty
+    | Cty_arr (_, ty), _::idx_list -> array_base_ctype ty idx_list
     | _ -> assert false

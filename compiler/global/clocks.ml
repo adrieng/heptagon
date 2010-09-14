@@ -98,7 +98,7 @@ let rec skeleton ck = function
         | _ -> Cprod (List.map (skeleton ck) ty_list))
   | Tarray _ | Tid _ -> Ck ck
 
-let ckofct = function | Ck ck -> ck_repr ck | Cprod ct_list -> Cbase
+let ckofct = function | Ck ck -> ck_repr ck | Cprod _ -> Cbase (*TODO bug ?*)
 
 
 

@@ -97,7 +97,7 @@ let print_interface_value ff name node =
       node.node_params_constraints
 
 
-let print_interface ff i =
+let print_interface ff =
   let m = Modules.current_module () in
   NamesEnv.iter
     (fun key typdesc -> print_interface_type ff key typdesc) m.m_types;

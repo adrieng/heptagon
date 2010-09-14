@@ -255,18 +255,6 @@ let name_mem n env =
   in
   Env.fold check_one env false
 
-(*let rec simplify_type = function
-  | Tid _ as t -> t
-  | Tarray(ty, e) ->
-      Tarray(simplify_type ty, simplify NamesEnv.empty e)
-  | Tprod l ->
-      Tprod (List.map simplify_type l)
-
-let simplify_type loc ty =
-  try
-    simplify_type ty
-  with
-      Instanciation_failed -> message loc (Etype_should_be_static ty) *)
 
 let build_subst names values =
   if List.length names <> List.length values
@@ -386,7 +374,7 @@ let check_static_field_unicity l =
     [loc] is the location used for error reporting.*)
 let struct_info_from_name n =
   try
-    n, find_struct n
+    find_struct n
   with
       Not_found -> error (Erecord_type_expected (Tid n))
 
@@ -403,7 +391,8 @@ let struct_info ty = match ty with
     [loc] is the location used for error reporting.*)
 let struct_info_from_field f =
   try
-    struct_info_from_name (find_field f)
+    let t = find_field f in
+    t, struct_info_from_name t
   with
       Not_found -> error (Eundefined (fullname f))
 
@@ -456,7 +445,7 @@ and typing_static_exp const_env se =
         let q, fields =
           (match f_se_list with
              | [] -> error (Eempty_record)
-             | (f,_)::l -> struct_info_from_field f
+             | (f,_)::_ -> struct_info_from_field f
           ) in
 
           if List.length f_se_list <> List.length fields then
@@ -523,7 +512,7 @@ let rec typing const_env h e =
           let q, fields =
             (match l with
                | [] -> message e.e_loc (Eempty_record)
-               | (f,_)::l -> struct_info_from_field f
+               | (f,_)::_ -> struct_info_from_field f
             ) in
 
           if List.length l <> List.length fields then
@@ -553,7 +542,6 @@ let rec typing const_env h e =
                    n, e_list, reset) ->
           let ty_desc = find_value f in
           let op, expected_ty_list, result_ty_list = kind f ty_desc in
-(*TODO verifier....*)
           let node_params =
             List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
           let m = build_subst node_params params in
@@ -620,7 +608,6 @@ and typing_app const_env h op e_list =
     | { a_op = (Efun f | Enode f); a_params = params } as app ->
         let ty_desc = find_value f in
         let op, expected_ty_list, result_ty_list = kind f ty_desc in
-(*TODO verifier....*)
         let node_params =
           List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
         let m = build_subst node_params params in
@@ -658,7 +645,7 @@ and typing_app const_env h op e_list =
              | Sfield fn -> fn
              | _ -> assert false) in
         let typed_e, t1 = typing const_env h e in
-        let q, fields = struct_info t1 in
+        let fields = struct_info t1 in
         let t2 = field_type const_env fn fields t1 e.e_loc in
           t2, op, [typed_e]
 
@@ -666,7 +653,7 @@ and typing_app const_env h op e_list =
         let e1, e2 = assert_2 e_list in
         let f = assert_1 params in
         let typed_e1, t1 = typing const_env h e1 in
-        let q, fields = struct_info t1 in
+        let fields = struct_info t1 in
         let fn =
           (match f.se_desc with
              | Sfield fn -> fn
@@ -803,7 +790,7 @@ and typing_array_subscript const_env h idx_list ty  =
 and typing_array_subscript_dyn const_env h idx_list ty =
   match unalias_type ty, idx_list with
     | ty, [] -> ty, []
-    | Tarray(ty, exp), idx::idx_list ->
+    | Tarray(ty, _), idx::idx_list ->
         let typed_idx = expect const_env h (Tid Initial.pint) idx in
         let ty, typed_idx_list =
           typing_array_subscript_dyn const_env h idx_list ty in
@@ -890,7 +877,7 @@ and typing_automaton_handlers const_env h acc state_handlers =
     let typed_e = expect const_env h (Tid Initial.pbool) e in
     { esc with e_cond = typed_e } in
 
-  let handler ({ s_state = n; s_block = b; s_until = e_list1;
+  let handler ({ s_block = b; s_until = e_list1;
                  s_unless = e_list2 } as s) =
     let typed_b, defined_names, h0 = typing_block const_env h b in
     let typed_e_list1 = List.map (escape h0) e_list1 in
@@ -1018,8 +1005,7 @@ let build_node_params const_env l =
   in
     mapfold check_param const_env l
 
-let node ({ n_name = f; n_statefull = statefull;
-            n_input = i_list; n_output = o_list;
+let node ({ n_name = f; n_input = i_list; n_output = o_list;
             n_contract = contract;
             n_block = b; n_loc = loc;
             n_params = node_params; } as n) =
