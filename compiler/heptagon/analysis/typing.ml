@@ -180,15 +180,6 @@ let get_size_constraint () =
   l
 
 (** Helper functions to work with types *)
-let get_number_of_fields ty =
-  let tydesc =
-    match ty with
-      | Tid(f) -> find_type f
-      | _ -> assert false in
-  match tydesc with
-    | Tstruct l -> List.length l
-    | _ -> assert false
-
 let element_type ty =
   match unalias_type ty with
     | Tarray (ty, _) -> ty
@@ -249,13 +240,6 @@ let set_of_constr = function
   | Tabstract | Tstruct _ | Talias _ -> assert false
   | Tenum tag_list -> List.fold_right QualSet.add tag_list QualSet.empty
 
-let name_mem n env =
-  let check_one id _ acc =
-    ((name id) = n) or acc
-  in
-  Env.fold check_one env false
-
-
 let build_subst names values =
   if List.length names <> List.length values
   then error (Estatic_arity_clash (List.length values, List.length names));
@@ -266,11 +250,6 @@ let rec subst_type_vars m = function
   | Tarray(ty, e) -> Tarray(subst_type_vars m ty, simplify m e)
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
   | t -> t
-
-let equal expected_tag_list actual_tag_list =
-  if not (List.for_all
-            (fun tag -> List.mem tag actual_tag_list) expected_tag_list)
-  then error Enon_exaustive
 
 let add_distinct_env id ty env =
   if Env.mem id env then
@@ -807,11 +786,6 @@ and typing_args const_env h expected_ty_list e_list =
     unify (prod args_ty_list) (prod expected_ty_list));
     typed_e_list
 
-    (*try
-      List.map2 (expect const_env h) expected_ty_list e_list
-  with Invalid_argument _ ->
-    error (Earity_clash(List.length e_list, List.length expected_ty_list)) *)
-
 and typing_node_params const_env params_sig params =
   List.map2 (fun p_sig p -> expect_static_exp const_env
                p_sig.p_type p) params_sig params
@@ -1044,6 +1018,7 @@ let typing_const_dec cd =
   let ty = check_type QualEnv.empty cd.c_type in
   let se = expect_static_exp QualEnv.empty ty cd.c_value in
     { cd with c_value = se; c_type = ty }
+
 let program
     ({ p_opened = opened; p_types = p_type_list;
        p_nodes = p_node_list; p_consts = p_consts_list } as p) =
