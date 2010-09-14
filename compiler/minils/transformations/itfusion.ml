@@ -39,9 +39,9 @@ match l with
   | _ -> Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) l)
 
 let tuple_of_vd_list l =
-  let el = List.map (fun vd -> mk_exp ~exp_ty:vd.v_type (Evar vd.v_ident)) l in
+  let el = List.map (fun vd -> mk_exp ~ty:vd.v_type (Evar vd.v_ident)) l in
   let ty = Types.prod (List.map (fun vd -> vd.v_type) l) in
-    mk_exp ~exp_ty:ty (Eapp (mk_app Etuple, el, None))
+    mk_exp ~ty:ty (Eapp (mk_app Etuple, el, None))
 
 let vd_of_arg ad =
   let n = match ad.a_name with None -> "_v" | Some n -> n in
@@ -68,10 +68,10 @@ let get_node_inp_outp app = match app.a_op with
     added equations. *)
 let mk_call app acc_eq_list =
   let new_inp, new_outp = get_node_inp_outp app in
-  let args = List.map (fun vd -> mk_exp ~exp_ty:vd.v_type
+  let args = List.map (fun vd -> mk_exp ~ty:vd.v_type
                          (Evar vd.v_ident)) new_inp in
   let out_ty = Types.prod (List.map (fun vd -> vd.v_type) new_outp) in
-  let e = mk_exp ~exp_ty:out_ty (Eapp (app, args, None)) in
+  let e = mk_exp ~ty:out_ty (Eapp (app, args, None)) in
   match List.length new_outp with
     | 1 -> new_inp, e, acc_eq_list
     | _ ->

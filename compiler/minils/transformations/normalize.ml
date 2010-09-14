@@ -36,7 +36,7 @@ let equation (d_list, eq_list) e =
           let pat_list = List.map (fun n -> Evarpat n) var_list in
           let eq_list = (mk_equation (Etuplepat pat_list) e) :: eq_list in
           let e_list = List.map2
-            (fun n ty -> mk_exp ~exp_ty:ty (Evar n)) var_list ty_list in
+            (fun n ty -> mk_exp ~ty:ty (Evar n)) var_list ty_list in
           let e = Eapp(mk_app Etuple, e_list, None) in
             (d_list, eq_list), e
       | _ ->
@@ -287,9 +287,9 @@ and translate_list kind context e_list =
 
 and fby kind context e v e1 =
   let mk_fby c e =
-    mk_exp ~exp_ty:e.e_ty ~loc:e.e_loc (Efby(Some c, e)) in
+    mk_exp ~ty:e.e_ty ~loc:e.e_loc (Efby(Some c, e)) in
   let mk_pre e =
-    mk_exp ~exp_ty:e.e_ty ~loc:e.e_loc (Efby(None, e)) in
+    mk_exp ~ty:e.e_ty ~loc:e.e_loc (Efby(None, e)) in
   match e1.e_desc, v with
     | Eapp({ a_op = Etuple } as app, e_list, r),
       Some { se_desc = Stuple se_list } ->

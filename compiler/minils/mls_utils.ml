@@ -58,7 +58,7 @@ let is_op = function
 
 let exp_list_of_static_exp_list se_list =
   let mk_one_const se =
-    Minils.mk_exp ~exp_ty:se.se_ty (Minils.Econst se)
+    Minils.mk_exp ~ty:se.se_ty (Minils.Econst se)
   in
     List.map mk_one_const se_list
 
