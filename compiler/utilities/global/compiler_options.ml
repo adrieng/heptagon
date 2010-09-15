@@ -81,3 +81,25 @@ let add_inlined_node s = inline := s :: !inline
 let flatten = ref false
 
 let nodes_to_inline : string list ref = ref []
+
+
+let doc_verbose = "\t\t\tSet verbose mode"
+and doc_version = "\t\tThe version of the compiler"
+and doc_print_types = "\t\t\tPrint types"
+and doc_include = "<dir>\t\tAdd <dir> to the list of include directories"
+and doc_stdlib = "<dir>\t\tDirectory for the standard library"
+and doc_object_file = "\t\tOnly generate a .epo object file"
+and doc_sim = "<node>\t\tCreate simulation for node <node>"
+and doc_locate_stdlib = "\t\tLocate standard libray"
+and doc_no_pervasives = "\tDo not load the pervasives module"
+and doc_flatten = "\t\tInline everything."
+and doc_target =
+  "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
+  ^ " java or z3z)"
+and doc_full_type_info = "\t\t\tPrint full type information"
+and doc_target_path =
+  "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
+  ^ " cleaned)"
+and doc_noinit = "\t\tDisable initialization analysis"
+and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
+and doc_inline = "<node>\t\tInline node <node>"
