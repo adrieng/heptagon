@@ -82,6 +82,7 @@ let flatten = ref false
 
 let nodes_to_inline : string list ref = ref []
 
+let do_iterator_fusion = ref false
 
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
@@ -103,3 +104,4 @@ and doc_target_path =
 and doc_noinit = "\t\tDisable initialization analysis"
 and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
 and doc_inline = "<node>\t\tInline node <node>"
+and doc_itfusion = "\t\tEnable iterator fusion."

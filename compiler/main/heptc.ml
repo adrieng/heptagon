@@ -85,6 +85,7 @@ let main () =
         "-targetpath", Arg.String set_target_path, doc_target_path;
         "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
+        "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
       ]
       (compile compile_impl)
       errmsg;

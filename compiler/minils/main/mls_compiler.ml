@@ -37,7 +37,7 @@ let compile pp p =
   (*let p = silent_pass "Initialization check" !init Init.program p in *)
 
   (* Iterator fusion *)
-  (*let p = pass "Iterator fusion" false Itfusion.program  p pp in*)
+  let p = pass "Iterator fusion" !do_iterator_fusion Itfusion.program  p pp in
 
   (* Normalization to maximize opportunities *)
   let p = pass "Normalization" true Normalize.program p pp in
