@@ -231,7 +231,7 @@ and apply h op e_list =
     | Etuple, _ -> assert false
     (** TODO: init of safe/unsafe nodes
         This is a tmp fix so that pre x + 1 works.*)
-    | (Eequal | Efun (Modname { qual = "Pervasives" })), e_list ->
+    | (Eequal | Efun { qual = "Pervasives" }), e_list ->
         List.fold_left (fun acc e -> itype (typing h e)) izero e_list
     | _ , e_list ->
         List.iter (fun e -> initialized_exp h e) e_list; izero

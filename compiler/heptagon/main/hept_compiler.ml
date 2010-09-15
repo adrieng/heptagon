@@ -44,8 +44,8 @@ let compile_impl pp p =
   (* Causality check *)
   let p = silent_pass "Causality check" true Causality.program p in
 
-  (* Initialization check *)(*
-  let p = silent_pass "Initialization check" !init Initialization.program p in*)
+  (* Initialization check *)
+  let p = silent_pass "Initialization check" !init Initialization.program p in
 
   (* Completion of partial definitions *)
   let p = pass "Completion" true Completion.program p pp in
