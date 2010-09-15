@@ -54,7 +54,7 @@ let print_local_vars ff = function
   | l -> fprintf ff "@[<4>%a@]@\n" (print_list_r print_vd "var "";"";") l
 
 let print_const_dec ff c =
-  if !Misc.full_type_info then
+  if !Compiler_options.full_type_info then
     fprintf ff "const %a : %a = %a"
       print_qualname c.c_name print_type c.c_type print_static_exp c.c_value
   else
@@ -85,7 +85,7 @@ and print_exps ff e_list =
   print_list_r print_exp "(" "," ")" ff e_list
 
 and print_exp ff e =
- if !Misc.full_type_info then
+ if !Compiler_options.full_type_info then
     fprintf ff "(%a : %a)"
       print_exp_desc e.e_desc print_type e.e_ty
   else fprintf ff "%a" print_exp_desc e.e_desc

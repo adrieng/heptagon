@@ -30,7 +30,7 @@ let compile_impl modname filename =
   in
 
   try
-    init_compiler modname;
+    Initial.initialize modname;
 
     (* Set pretty printer to the Minils one *)
     let pp = Mls_compiler.pp in
@@ -83,6 +83,6 @@ let main () =
       compile
       errmsg;
   with
-    | Misc.Error -> exit 2;;
+    | Errors.Error -> exit 2;;
 
 main ()

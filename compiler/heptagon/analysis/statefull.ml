@@ -9,7 +9,6 @@
 (* Checks that a node declared stateless is stateless *)
 open Names
 open Location
-open Misc
 open Signature
 open Modules
 open Heptagon
@@ -29,7 +28,7 @@ let message loc kind =
         Format.eprintf "%aThis expression should be stateless.@."
           print_location loc
   end;
-  raise Error
+  raise Errors.Error
 
 (** @returns whether the exp is statefull. Replaces node calls with
     the correct Efun or Enode depending on the node signature. *)

@@ -35,6 +35,7 @@ let mk_static_bool b =
 
 
 (* build the initial environment *)
-let initialize () =
+let initialize modname =
+  Modules.initialize modname;
   List.iter (fun (f, ty) -> Modules.add_type f ty) tglobal;
   List.iter (fun (f, ty) -> Modules.add_constrs f ty) cglobal

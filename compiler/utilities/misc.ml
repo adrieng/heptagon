@@ -8,102 +8,6 @@
 (**************************************************************************)
 (* useful stuff *)
 
-(* version of the compiler *)
-let version = "0.4"
-let date = "DATE"
-
-(* standard module *)
-let pervasives_module = "Pervasives"
-let standard_lib = "STDLIB"
-let standard_lib = try Sys.getenv "HEPTLIB" with Not_found -> standard_lib
-
-(* list of modules initially opened *)
-let default_used_modules = ref [pervasives_module]
-let set_no_pervasives () = default_used_modules := []
-
-(* load paths *)
-let load_path = ref ([standard_lib])
-
-let set_stdlib p =
-  load_path := [p]
-and add_include d =
-  load_path := d :: !load_path;;
-
-(* where is the standard library *)
-let locate_stdlib () =
-  let stdlib = try
-    Sys.getenv "HEPTLIB"
-  with
-      Not_found -> standard_lib in
-  Format.printf "Standard library in %s@." stdlib
-
-let show_version () =
-  Format.printf "The Heptagon compiler, version %s (%s)@."
-    version date;
-  locate_stdlib ()
-
-(* other options of the compiler *)
-let verbose = ref false
-let print_types = ref false
-
-let assert_nodes = ref []
-let add_assert nd = assert_nodes := nd :: !assert_nodes
-
-let simulation = ref false
-let simulation_node : string option ref = ref None
-let set_simulation_node s =
-  simulation := true;
-  simulation_node := Some s
-
-let create_object_file = ref false
-
-(* Target languages list for code generation *)
-let target_languages : string list ref = ref []
-
-let add_target_language s =
-  target_languages := s :: !target_languages
-
-(* Optional path for generated files (C or Java) *)
-let target_path : string option ref = ref None
-
-let set_target_path path =
-  target_path := Some path
-
-let full_type_info = ref false
-
-let boolean = ref false
-
-let deadcode = ref false
-
-let init = ref true
-
-let cse = ref false
-
-let tomato = ref false
-
-let inline = ref []
-
-let add_inlined_node s = inline := s :: !inline
-
-let flatten = ref false
-
-(* Backward compatibility *)
-let set_sigali () = add_target_language "z3z";;
-
-let intermediate = ref false
-
-let nodes_to_inline : string list ref = ref []
-
-let nodes_to_display : string list ref = ref []
-
-let node_to_flatten : string option ref = ref None
-
-let no_mem_alloc = ref false
-
-let use_interf_scheduler = ref false
-
-let use_new_reset_encoding = ref false
-
 let optional f = function
   | None -> None
   | Some x -> Some (f x)
@@ -125,30 +29,12 @@ let rec split_string s c =
     String.sub s 0 id :: split_string rest c
   with Not_found -> [s]
 
-(* error during the whole process *)
-exception Error
 
 (* creation of names. Ensure unicity for the whole compilation chain *)
 let symbol = ref 0
 
 let gen_symbol () = incr symbol; "_"^(string_of_int !symbol)
 let reset_symbol () = symbol := (*!min_symbol*) 0
-
-open Format
-open Unix
-
-let print_header_info ff cbeg cend =
-  let tm = Unix.localtime (Unix.time ()) in
-  fprintf ff "%s --- Generated the %d/%d/%d at %d:%d --- %s@\n"
-    cbeg tm.tm_mday (tm.tm_mon+1) (tm.tm_year + 1900) tm.tm_hour tm.tm_min cend;
-  fprintf ff "%s --- heptagon compiler, version %s (compiled %s) --- %s@\n"
-    cbeg version date cend;
-  fprintf ff "%s --- Command line: %a--- %s@\n@\n"
-    cbeg
-    (fun ff a ->
-       Array.iter (fun arg -> fprintf ff "%s " arg) a)
-    Sys.argv
-    cend
 
 let unique l =
   let tbl = Hashtbl.create (List.length l) in
@@ -217,7 +103,6 @@ let rec assocd value = function
 
 
 (** { 3 Compiler iterators } *)
-exception Fallback
 
 (** Mapfold *)
 let mapfold f acc l =
@@ -293,18 +178,3 @@ let assert_2min = function
 let assert_3 = function
   | [v1; v2; v3] -> v1, v2, v3
   | l -> _arity_error 3 l
-
-exception Cannot_find_file of string
-
-let findfile filename =
-  if Sys.file_exists filename then
-    filename
-  else if not(Filename.is_implicit filename) then
-    raise(Cannot_find_file filename)
-  else
-    let rec find = function
-      | [] -> raise(Cannot_find_file filename)
-      | a::rest ->
-          let b = Filename.concat a filename in
-          if Sys.file_exists b then b else find rest in
-    find !load_path

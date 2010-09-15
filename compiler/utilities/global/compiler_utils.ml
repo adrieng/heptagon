@@ -6,9 +6,10 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-open Misc
 open Location
-open Minils
+open Format
+open Unix
+open Compiler_options
 
 type lexical_error =
   | Illegal_character
@@ -23,11 +24,11 @@ let lexical_error err loc =
     | Bad_char_constant -> "%aBad char constant.@."
     | Unterminated_string -> "%aUnterminated string.@."
      ) print_location loc;
-  raise Error
+  raise Errors.Error
 
 let syntax_error loc =
   Format.eprintf "%aSyntax error.@." print_location loc;
-  raise Error
+  raise Errors.Error
 
 let language_error lang =
   Format.eprintf "Unknown language: '%s'.@." lang
@@ -73,9 +74,20 @@ let clean_dir dir =
   end else Unix.mkdir dir 0o740;
   dir
 
-let init_compiler modname =
-  Modules.initialize modname;
-  Initial.initialize ()
+exception Cannot_find_file of string
+
+let findfile filename =
+  if Sys.file_exists filename then
+    filename
+  else if not(Filename.is_implicit filename) then
+    raise(Cannot_find_file filename)
+  else
+    let rec find = function
+      | [] -> raise(Cannot_find_file filename)
+      | a::rest ->
+          let b = Filename.concat a filename in
+          if Sys.file_exists b then b else find rest in
+    find !load_path
 
 let lexbuf_from_file file_name =
   let ic = open_in file_name in
@@ -84,6 +96,18 @@ let lexbuf_from_file file_name =
       { lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = file_name };
   ic, lexbuf
 
+let print_header_info ff cbeg cend =
+  let tm = Unix.localtime (Unix.time ()) in
+  fprintf ff "%s --- Generated the %d/%d/%d at %d:%d --- %s@\n"
+    cbeg tm.tm_mday (tm.tm_mon+1) (tm.tm_year + 1900) tm.tm_hour tm.tm_min cend;
+  fprintf ff "%s --- heptagon compiler, version %s (compiled %s) --- %s@\n"
+    cbeg version date cend;
+  fprintf ff "%s --- Command line: %a--- %s@\n@\n"
+    cbeg
+    (fun ff a ->
+       Array.iter (fun arg -> fprintf ff "%s " arg) a)
+    Sys.argv
+    cend
 
 
 let doc_verbose = "\t\t\tSet verbose mode"

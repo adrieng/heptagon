@@ -158,7 +158,7 @@ let message loc kind =
           print_location loc
           print_type ty
   end;
-  raise Error
+  raise Errors.Error
 
 (** Add wrappers around Modules function to raise errors
     and display the correct location. *)

@@ -12,6 +12,7 @@ open Misc
 open Modules
 open Location
 open Compiler_utils
+open Compiler_options
 open Hept_compiler
 
 
@@ -33,7 +34,7 @@ let compile_impl modname filename =
     close_out mlsc in
 
   try
-    init_compiler modname;
+    Initial.initialize modname;
     add_include (Filename.dirname filename);
 
     (* Parsing of the file *)
@@ -88,6 +89,6 @@ let main () =
       (compile compile_impl)
       errmsg;
   with
-    | Misc.Error -> exit 2;;
+    | Errors.Error -> exit 2;;
 
 main ()

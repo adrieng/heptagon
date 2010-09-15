@@ -8,6 +8,7 @@
 (**************************************************************************)
 (* Generic mapred over Minils Ast *)
 open Misc
+open Errors
 open Global_mapfold
 open Minils
 

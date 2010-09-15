@@ -28,13 +28,13 @@ struct
         let add deps (ln, _) = deps_longname deps ln in
         (sedesc, List.fold_left add deps fnel)
       | Sop (ln, _) -> (sedesc, deps_longname deps ln)
-      | _ -> raise Fallback
+      | _ -> raise Errors.Fallback
 
   let deps_lhsdesc funs deps ldesc =
     let (ldesc, deps) = Obc_mapfold.lhsdesc funs deps ldesc in
     match ldesc with
       | Lfield (_, ln) -> (ldesc, deps_longname deps ln)
-      | _ -> raise Fallback
+      | _ -> raise Errors.Fallback
 
   let deps_edesc funs deps edesc =
     let (edesc, deps) = Obc_mapfold.edesc funs deps edesc in
@@ -43,7 +43,7 @@ struct
       | Estruct (ln, fnel) ->
         let add deps (ln, _) = deps_longname deps ln in
         (edesc, List.fold_left add (deps_longname deps ln) fnel)
-      | _ -> raise Fallback
+      | _ -> raise Errors.Fallback
 
   let deps_act funs deps act =
     let (act, deps) = Obc_mapfold.act funs deps act in
@@ -51,7 +51,7 @@ struct
       | Acase (_, cbl) ->
         let add deps (ln, _) = deps_longname deps ln in
         (act, List.fold_left add deps cbl)
-      | _ -> raise Fallback
+      | _ -> raise Errors.Fallback
 
   let deps_obj_dec funs deps od =
     let (od, deps) = Obc_mapfold.obj_dec funs deps od in

@@ -7,128 +7,12 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
-(* Version and date of compilation *)
-val version : string
-val date : string
-
-(* List of modules initially opened *)
-val default_used_modules : string list ref
-
-(* Void the list of modules initially opened *)
-val set_no_pervasives : unit -> unit
-
-(* Path list to libraries *)
-val load_path : string list ref
-
-(* Set path to standard library *)
-val set_stdlib : string -> unit
-
-(* Add path to libraries *)
-val add_include : string -> unit
-
-(* Print the path to standard library *)
-val locate_stdlib : unit -> unit
-
-(* Print the compiler version and its compilation date *)
-val show_version : unit -> unit
-
-(* Verbose option *)
-val verbose : bool ref
-
-(* Print types option *)
-val print_types : bool ref
-
-(* Nodes to check at run-time *)
-val assert_nodes : string list ref
-
-(* Add node (name) to the list of nodes to be checked. *)
-val add_assert : string -> unit
-
-(* Simulation mode *)
-val simulation : bool ref
-(* Simulated node *)
-val simulation_node : string option ref
-(* Set the simulation mode on *)
-val set_simulation_node : string -> unit
-
-(* If it is true, the compiler will only generate an object file (.epo).
-   Otherwise, it will generate obc code and possibily other targets.*)
-val create_object_file : bool ref
-(* List of target languages *)
-val target_languages : string list ref
-(* Add target language to the list *)
-val add_target_language : string -> unit
-
-(* Optional path for generated files (C or Java) *)
-val target_path : string option ref
-(* Set the optional target path *)
-val set_target_path : string -> unit
-
-(* Print full type information when pretty-printing MiniLS code. *)
-val full_type_info : bool ref
-
-(* Boolean transformation of enumerated types *)
-val boolean : bool ref
-
-(* Deadcode removal *)
-val deadcode : bool ref
-
-(* Initialization analysis (enabled by default) *)
-val init : bool ref
-
-(* Common sub-expression elimination *)
-val cse : bool ref
-
-(* Automata minimization *)
-val tomato : bool ref
-
-(* List of nodes to inline *)
-val inline : string list ref
-(* Add a new node name to the list of nodes to inline. *)
-val add_inlined_node : string -> unit
-(* Inline every node. *)
-val flatten : bool ref
-
-(* Z/3Z back-end mode *)
-val set_sigali : unit -> unit
-
-(* Intermediate-equations removal *)
-val intermediate : bool ref
-
-(* Nodes to be inlined *)
-val nodes_to_inline : string list ref
-
-(* Nodes which dependency graphics will be serialized to .dot file. *)
-val nodes_to_display : string list ref
-
-(* Node to flatten *)
-val node_to_flatten : string option ref
-
-(* Disable the memory allocation phase*)
-val no_mem_alloc : bool ref
-
-(* Whether to use the interference aware scheduler*)
-val use_interf_scheduler : bool ref
-
-(* Use the new encoding of resets using reset_mem. *)
-val use_new_reset_encoding : bool ref
-
 (* Misc. functions *)
 val optional : ('a -> 'b) -> 'a option -> 'b option
 (** Optional with accumulator *)
 val optional_wacc : ('a -> 'b -> 'c*'a) -> 'a -> 'b option -> ('c option * 'a)
 val optunit : ('a -> unit) -> 'a option -> unit
 val split_string : string -> char -> string list
-
-(* Printing header informations (compiler version, generation date...) *)
-(* [print_header_info ff cbeg cend] prints header info, where [ff] is
-   the formatter used, [cbeg] and [cend] the string of begin and end
-   of commentaries in the target language *)
-val print_header_info : Format.formatter -> string -> string -> unit
-
-(* Error during the whole process *)
-exception Error
 
 (* Generation of unique names. Mandatory call of reset_symbol between
    set_min_symbol and gen_symbol *)
@@ -169,12 +53,6 @@ val assocd : 'b -> ('a * 'b) list -> 'a
     induced by [c] *)
 val make_list_compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
 
-
-
-(** Ast iterators *)
-exception Fallback
-
-
 (** Mapfold *)
 val mapfold: ('a -> 'b -> 'c * 'a) -> 'a -> 'b list -> 'c list * 'a
 
@@ -196,5 +74,3 @@ val assert_2 : 'a list -> 'a * 'a
 val assert_2min : 'a list -> 'a * 'a * 'a list
 val assert_3 : 'a list -> 'a * 'a * 'a
 
-exception Cannot_find_file of string
-val findfile : string -> string

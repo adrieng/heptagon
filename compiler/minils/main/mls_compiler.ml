@@ -9,6 +9,7 @@
 open Misc
 open Location
 open Compiler_utils
+open Compiler_options
 
 let pp p = if !verbose then Mls_printer.print stdout p
 (*

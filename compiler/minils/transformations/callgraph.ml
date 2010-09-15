@@ -27,7 +27,7 @@ struct
             print_location se.se_loc
             print_static_exp se
     end;
-    raise Misc.Error
+    raise Errors.Error
 end
 
 module Param_instances :
@@ -213,7 +213,7 @@ let load_object_file modname =
   Modules.open_module modname;
   let name = String.uncapitalize modname in
     try
-      let filename = Misc.findfile (name ^ ".epo") in
+      let filename = Compiler_utils.findfile (name ^ ".epo") in
       let ic = open_in_bin filename in
         try
           let p:program = input_value ic in
@@ -221,7 +221,7 @@ let load_object_file modname =
               Format.eprintf "The file %s was compiled with \
                        an older version of the compiler.@\n\
                        Please recompile %s.ept first.@." filename name;
-              raise Error
+              raise Errors.Error
             );
             close_in ic;
             info.opened <- NamesEnv.add p.p_modname p info.opened
@@ -230,12 +230,12 @@ let load_object_file modname =
               close_in ic;
               Format.eprintf "Corrupted object file %s.@\n\
                         Please recompile %s.ept first.@." filename name;
-              raise Error
+              raise Errors.Error
     with
-      | Misc.Cannot_find_file(filename) ->
+      | Compiler_utils.Cannot_find_file(filename) ->
           Format.eprintf "Cannot find the object file '%s'.@."
             filename;
-          raise Error
+          raise Errors.Error
 
 (** @return the node with name [ln], loading the corresponding
     object file if necessary. *)
@@ -265,7 +265,7 @@ let collect_node_calls ln =
     | Eiterator(_, { a_op = (Enode ln | Efun ln); a_params = params },
                 _, _, _) ->
         ed, add_called_node ln params acc
-    | _ -> raise Misc.Fallback
+    | _ -> raise Errors.Fallback
   in
   let funs = { Mls_mapfold.defaults with edesc = edesc } in
   let n = node_by_longname ln in

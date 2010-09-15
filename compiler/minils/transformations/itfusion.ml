@@ -119,7 +119,7 @@ let edesc funs acc ed =
             ed, acc
 
 
-    | _ -> raise Misc.Fallback
+    | _ -> raise Errors.Fallback
 
 
 let program p =

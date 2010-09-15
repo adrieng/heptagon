@@ -53,7 +53,7 @@ struct
                     reset are not supported (found '%s').@."
           print_location loc
           s);
-    raise Misc.Error
+    raise Errors.Error
 end
 
 let rec struct_name ty =

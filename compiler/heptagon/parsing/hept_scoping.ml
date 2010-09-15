@@ -74,7 +74,7 @@ struct
           eprintf "%aA static expression was expected.@."
             print_location loc
     end;
-    raise Misc.Error
+    raise Errors.Error
 
   exception ScopingError of error
 

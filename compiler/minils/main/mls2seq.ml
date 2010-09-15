@@ -8,6 +8,7 @@
 (**************************************************************************)
 
 open Compiler_utils
+open Compiler_options
 open Obc
 open Minils
 open Misc
@@ -45,11 +46,12 @@ let targets = [ "c", Obc_no_params Cmain.program;
 let generate_target p s =
   let print_unfolded p_list =
     comment "Unfolding";
-    if !Misc.verbose then List.iter (Mls_printer.print stderr) p_list in
+    if !Compiler_options.verbose then
+      List.iter (Mls_printer.print stderr) p_list in
 
   let target =
     (try List.assoc s targets
-    with Not_found -> language_error s; raise Error) in
+    with Not_found -> language_error s; raise Errors.Error) in
     match target with
       | Minils convert_fun ->
           convert_fun p
@@ -64,7 +66,7 @@ let generate_target p s =
           let o_list = List.map Mls2obc.program p_list in
           print_unfolded p_list;
           comment "Translation to Obc";
-          if !Misc.verbose then
+          if !verbose then
             List.iter (Obc_printer.print stdout) o_list;
           List.iter convert_fun o_list
 

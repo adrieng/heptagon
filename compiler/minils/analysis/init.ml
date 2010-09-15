@@ -192,7 +192,7 @@ struct
               but is expected to have type %a@."
               print_location loc Printer.output_typ left_ty Printer.
               output_typ right_ty);
-     raise Misc.Error)
+     raise Errors.Error)
 
 end
 

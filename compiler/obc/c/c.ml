@@ -291,7 +291,7 @@ let pp_cfile_desc fmt filen cfile =
   match cfile with
     | Cheader (deps, cdecls) ->
         let headern_macro = String.uppercase filen_wo_ext in
-        Misc.print_header_info fmt "/*" "*/";
+        Compiler_utils.print_header_info fmt "/*" "*/";
         fprintf fmt "#ifndef %s_H@\n" headern_macro;
         fprintf fmt "#define %s_H@\n@\n" headern_macro;
         iter (fun d -> fprintf fmt "#include \"%s.h\"@\n" d)
@@ -300,7 +300,7 @@ let pp_cfile_desc fmt filen cfile =
         fprintf fmt "#endif // %s_H@\n@?" headern_macro
     | Csource cdefs ->
         let headern = filen_wo_ext ^ ".h" in
-        Misc.print_header_info fmt "/*" "*/";
+        Compiler_utils.print_header_info fmt "/*" "*/";
         fprintf fmt "#include <stdio.h>@\n";
         fprintf fmt "#include <string.h>@\n";
         fprintf fmt "#include <stdlib.h>@\n";
@@ -313,7 +313,8 @@ let pp_cfile_desc fmt filen cfile =
 (** [output_cfile dir cfile] pretty-prints the content of [cfile] to the
     corresponding file in the [dir] directory. *)
 let output_cfile dir (filen, cfile_desc) =
-  if !Misc.verbose then Format.printf "C-NG generating %s/%s@." dir filen;
+  if !Compiler_options.verbose then
+    Format.printf "C-NG generating %s/%s@." dir filen;
   let buf = Buffer.create 20000 in
   let oc = open_out (Filename.concat dir filen) in
   let fmt = Format.formatter_of_buffer buf in

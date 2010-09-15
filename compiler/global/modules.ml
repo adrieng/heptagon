@@ -11,6 +11,7 @@
 
 
 open Misc
+open Compiler_options
 open Signature
 open Types
 open Names
@@ -91,7 +92,7 @@ let _load_module modname =
   else
     let name = String.uncapitalize modname in
     try
-      let filename = Misc.findfile (name ^ ".epci") in
+      let filename = Compiler_utils.findfile (name ^ ".epci") in
       let ic = open_in_bin filename in
       let mo:module_object =
         try
@@ -101,18 +102,18 @@ let _load_module modname =
               close_in ic;
               Format.eprintf "Corrupted compiled interface file %s.@\n\
                               Please recompile %s.ept first.@." filename name;
-              raise Error in
+              raise Errors.Error in
       if mo.m_format_version <> interface_format_version
       then (
         Format.eprintf "The file %s was compiled with an older version \
                         of the compiler.@\nPlease recompile %s.ept first.@."
                        filename name;
-        raise Error );
+        raise Errors.Error );
       _append_module mo
     with
-      | Misc.Cannot_find_file(f) ->
+      | Compiler_utils.Cannot_find_file(f) ->
           Format.eprintf "Cannot find the compiled interface file %s.@." f;
-          raise Error
+          raise Errors.Error
 
 
 
@@ -285,6 +286,4 @@ let current_module () =
       m_constrs = unqualify_all g_env.constrs;
       m_fields = unqualify_all g_env.fields;
       m_format_version = g_env.format_version }
-
-
 

@@ -175,7 +175,7 @@ module Error = struct
             Printer.print_type left_ty
             Printer.print_type right_ty
     end;
-    raise Misc.Error
+    raise Errors.Error
 end
 
 let less_exp e actual_ty expected_ty =

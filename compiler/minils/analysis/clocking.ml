@@ -28,7 +28,7 @@ let error_message loc = function
         print_location loc
         print_clock actual_ct
         print_clock expected_ct;
-      raise Error
+      raise Errors.Error
 
 
 let typ_of_name h x = Env.find x h
@@ -119,11 +119,11 @@ let typing_eqs h eq_list = (*TODO FIXME*)
   let typing_eq { eq_lhs = pat; eq_rhs = e } =
     let ty_pat = typing_pat h pat in
     (try expect h ty_pat e with
-      | Error -> (* DEBUG *)
+      | Errors.Error -> (* DEBUG *)
           Format.eprintf "Complete expression: %a@\nClock pattern: %a@."
             Mls_printer.print_exp e
             Mls_printer.print_clock ty_pat;
-          raise Error)
+          raise Errors.Error)
   in List.iter typing_eq eq_list
 
 let build h dec =

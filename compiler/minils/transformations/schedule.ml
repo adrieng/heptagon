@@ -84,7 +84,7 @@ let edesc _ () = function
     let nd = { nd with n_equs = schedule nd.n_equs } in
       Itfusion.replace_anon_node f nd;
       Eiterator(it, app, n, e_list, r), ()
-  | _ -> raise Fallback
+  | _ -> raise Errors.Fallback
 
 let program p =
   let p, () = Mls_mapfold.program_it

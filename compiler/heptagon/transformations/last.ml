@@ -30,7 +30,7 @@ let extend_env env v = List.fold_left last ([], env, []) v
 let edesc _ env ed = match ed with
   | Elast x ->
       let lx = Env.find x env in Evar lx, env
-  | _ -> raise Misc.Fallback
+  | _ -> raise Errors.Fallback
 
 let block funs env b =
   let eq_lastn_n_list, env, last_v = extend_env env b.b_local in

@@ -7,8 +7,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-
-open Misc
+open Compiler_options
 open Compiler_utils
 open Location
 open Global_printer
@@ -86,7 +85,7 @@ let compile_interface modname filename =
     close_out itc in
 
   try
-    init_compiler modname;
+    Initial.initialize modname;
 
     (* Parsing of the file *)
     let l = do_silent_pass "Parsing" parse_interface lexbuf in

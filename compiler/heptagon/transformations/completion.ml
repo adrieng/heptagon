@@ -66,7 +66,7 @@ let eqdesc funs _ ed = match ed with
         Hept_mapfold.eqdesc funs_collect Env.empty ed in
       (* add missing defnames *)
       Hept_mapfold.eqdesc funs defnames ed
-  | _ -> raise Misc.Fallback
+  | _ -> raise Errors.Fallback
 
 let funs = { Hept_mapfold.defaults with eqdesc = eqdesc; block = block; }
 

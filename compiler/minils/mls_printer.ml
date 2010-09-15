@@ -40,7 +40,7 @@ let rec print_clock ff = function
       fprintf ff "@[<2>(%a)@]" (print_list_r print_clock """ *""") ct_list
 
 let print_vd ff { v_ident = n; v_type = ty; v_clock = ck } =
-  if !Misc.full_type_info then
+  if !Compiler_options.full_type_info then
     fprintf ff "%a : %a :: %a" print_ident n print_type ty print_ck ck
   else fprintf ff "%a : %a" print_ident n print_type ty
 
@@ -49,7 +49,7 @@ let print_local_vars ff = function
   | l -> fprintf ff "@[<4>%a@]@\n" (print_list_r print_vd "var "";"";") l
 
 let print_const_dec ff c =
-  if !Misc.full_type_info then
+  if !Compiler_options.full_type_info then
     fprintf ff "const %a : %a = %a"
       print_qualname c.c_name print_type c.c_type print_static_exp c.c_value
   else
@@ -77,7 +77,7 @@ and print_dyn_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_exp "[""][""]") idx
 
 and print_exp ff e =
-  if !Misc.full_type_info then
+  if !Compiler_options.full_type_info then
     fprintf ff "(%a : %a :: %a)"
       print_exp_desc e.e_desc print_type e.e_ty print_ck e.e_ck
   else fprintf ff "%a" print_exp_desc e.e_desc
@@ -164,7 +164,7 @@ and print_tag_e_list ff tag_e_list =
 
 
 and print_eq ff { eq_lhs = p; eq_rhs = e } =
-  if !Misc.full_type_info
+  if !Compiler_options.full_type_info
   then fprintf ff "@[<2>%a :: %a =@ %a@]"
     print_pat p  print_ck e.e_ck  print_exp e
   else fprintf ff "@[<2>%a =@ %a@]" print_pat p  print_exp e

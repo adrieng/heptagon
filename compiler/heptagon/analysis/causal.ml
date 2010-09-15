@@ -90,7 +90,7 @@ let message loc kind =
           print_location loc
           output_ac ac
   end;
-  raise Misc.Error
+  raise Errors.Error
 
 let cor nc1 nc2 =
   match nc1, nc2 with

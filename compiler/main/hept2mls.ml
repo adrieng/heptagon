@@ -37,7 +37,7 @@ struct
           eprintf "%aThis construct is not supported by MiniLS.@."
             print_location loc
     end;
-    raise Misc.Error
+    raise Errors.Error
 end
 
 module Env =

@@ -253,9 +253,10 @@ let main_skel var_list prologue body =
     }
   }
 
-let mk_main name p = match (!Misc.simulation_node, !Misc.assert_nodes) with
-  | (None, []) -> []
-  | (_, n_names) ->
+let mk_main name p =
+  match (!Compiler_options.simulation_node, !Compiler_options.assert_nodes) with
+    | (None, []) -> []
+    | (_, n_names) ->
       let find_class n =
         try List.find (fun cd -> cd.cd_name.name = n) p.p_defs
         with Not_found ->
@@ -271,7 +272,7 @@ let mk_main name p = match (!Misc.simulation_node, !Misc.assert_nodes) with
         List.fold_right add a_classes ([], [], []) in
 
       let (_, var_l, res_l, step_l) =
-        (match !Misc.simulation_node with
+        (match !Compiler_options.simulation_node with
            | None -> (n_names, var_l, res_l, step_l)
            | Some n ->
                let (nvar_l, res, nstep_l) =

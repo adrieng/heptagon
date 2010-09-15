@@ -18,7 +18,7 @@ let err_message ?(exp=void) ?(loc=exp.e_loc) = function
       Format.eprintf "%aThe expression %a should be a static_exp.@."
         print_location loc
         print_exp exp;
-      raise Error
+      raise Errors.Error
 
 let rec static_exp_of_exp e =
   match e.e_desc with

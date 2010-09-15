@@ -1,4 +1,5 @@
 open Misc
+open Errors
 open Types
 (*open Clocks*)
 open Signature

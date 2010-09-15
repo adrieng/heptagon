@@ -49,6 +49,7 @@
    provided in this file. Trespassers will loop infinitely! /!\ *)
 
 open Misc
+open Errors
 open Global_mapfold
 open Heptagon
 

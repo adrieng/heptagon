@@ -25,7 +25,7 @@ let check_implementation modname filename =
   in
 
   try
-    init_compiler modname;
+    Initial.initialize modname;
     add_include (Filename.dirname filename);
 
     (* Parsing of the file *)
@@ -59,7 +59,7 @@ let main () =
       (compile check_implementation)
       errmsg;
   with
-    | Misc.Error -> exit 2;;
+    | Errors.Error -> exit 2;;
 
 main ()
 
