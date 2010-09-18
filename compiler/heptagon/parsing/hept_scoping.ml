@@ -7,7 +7,7 @@
   It is built with [build_const].
   When qualifying a constant var,
   it is first check in the local_const env, so qualified with [local_qn]
-  if not found we try to qualify with the global env. *)
+  if not found we try to qualify it with the global env. *)
 
 (* The global environement is initialized by the scoping pass.
    This allow at the same time
@@ -18,10 +18,12 @@
    used to map a var name to a var ident.
    It is initialized at node declaration level with the inputs and outputs,
    and then appended with the local var declarations at each block level
-   with the [build] function. *)
+   with the [build] function.
+   It checks that if a var is used with a last, it is declared as a last.*)
 
-(* convention : static params are set as the first static args,
-    op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
+(* convention : Static operators get static params and static args.
+   This scoping set the static params as the first static args :
+    op<a1,a2> (a3) ==> op <a1> (a2,a3) ==> op (a1,a2,a3) *)
 
 open Location
 open Types

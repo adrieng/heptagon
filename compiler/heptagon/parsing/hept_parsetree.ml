@@ -193,7 +193,8 @@ and interface_desc =
   | Iconstdef of const_dec
   | Isignature of signature
 
-(* Helper functions to create AST. *)
+(* {3 Helper functions to create AST} *)
+
 let mk_exp desc loc =
   { e_desc = desc; e_loc = loc }
 
