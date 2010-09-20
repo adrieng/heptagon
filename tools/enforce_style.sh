@@ -1,4 +1,2 @@
 #!/bin/sh
-
-find . \( -iname "*.ml" -or -iname "*.mli" \) -exec perl -pi -e 's/( |\t)+$//g' {} \;
-find . \( -iname "*.ml" -or -iname "*.mli" \) -exec perl -pi -e 's/\t/  /g' {} \;
+find . \! -path "*_build*" -and \( -iname "*.ml" -or -iname "*.mli" \) -exec perl -pi -e 's/( |\t)+$//gi; s/\t/  /g' {} \;
