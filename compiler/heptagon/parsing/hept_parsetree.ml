@@ -8,23 +8,30 @@
 (**************************************************************************)
 
 
-open Names
 open Location
 open Signature
-open Types
+
+(** var_names will be converted to idents *)
+type var_name = Names.name
+
+(** dec_names are locally declared qualified names *)
+type dec_name = Names.name
+
+(** state_names, [automata] translate them in constructors with a fresh type. *)
+type state_name = Names.name
+
 
 type qualname =
   | Q of Names.qualname (* already qualified name *)
-  | ToQ of name (* name to qualify in the scoping process *)
+  | ToQ of Names.name (* name to qualify in the scoping process *)
 
 type type_name = qualname
 type fun_name = qualname
 type field_name = qualname
 type constructor_name = qualname
 type constant_name = qualname
-type module_name = name
 
-type static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
+type static_exp = { se_desc: static_exp_desc; se_loc: location }
 
 and static_exp_desc =
   | Svar of constant_name
@@ -51,13 +58,13 @@ type ty =
   | Tarray of ty * exp
 
 and exp =
-    { e_desc: desc;
-      e_loc: location }
+  { e_desc : edesc;
+    e_loc  : location }
 
-and desc =
+and edesc =
   | Econst of static_exp
-  | Evar of name
-  | Elast of name
+  | Evar of var_name
+  | Elast of var_name
   | Epre of exp option * exp
   | Efby of exp * exp
   | Estruct of (qualname * exp) list
@@ -85,11 +92,11 @@ and op =
 
 and pat =
   | Etuplepat of pat list
-  | Evarpat of name
+  | Evarpat of var_name
 
 type eq =
     { eq_desc : eqdesc;
-      eq_loc : location }
+      eq_loc  : location }
 
 and eqdesc =
   | Eautomaton of state_handler list
@@ -99,96 +106,97 @@ and eqdesc =
   | Eeq of pat * exp
 
 and block =
-    { b_local: var_dec list;
-      b_equs: eq list;
-      b_loc: location; }
+  { b_local : var_dec list;
+    b_equs  : eq list;
+    b_loc   : location; }
 
 and state_handler =
-    { s_state : name;
-      s_block : block;
-      s_until : escape list;
-      s_unless : escape list; }
+  { s_state  : state_name;
+    s_block  : block;
+    s_until  : escape list;
+    s_unless : escape list; }
 
 and escape =
-    { e_cond : exp;
-      e_reset : bool;
-      e_next_state : name; }
+  { e_cond       : exp;
+    e_reset      : bool;
+    e_next_state : state_name; }
 
 and switch_handler =
-    { w_name : constructor_name;
-      w_block : block; }
+  { w_name  : constructor_name;
+    w_block : block; }
 
 and present_handler =
-    { p_cond : exp;
-      p_block : block; }
+  { p_cond  : exp;
+    p_block : block; }
 
 and var_dec =
-    { v_name : name;
-      v_type : ty;
-      v_last : last;
-      v_loc  : location; }
+  { v_name : var_name;
+    v_type : ty;
+    v_last : last;
+    v_loc  : location; }
 
 and last = Var | Last of exp option
 
 type type_dec =
-    { t_name : name;
-      t_desc : type_desc;
-      t_loc  : location }
+  { t_name : dec_name;
+    t_desc : type_desc;
+    t_loc  : location }
 
 and type_desc =
   | Type_abs
   | Type_alias of ty
-  | Type_enum of name list
-  | Type_struct of (name * ty) list
+  | Type_enum of dec_name list
+  | Type_struct of (dec_name * ty) list
 
 type contract =
-    { c_assume : exp;
-      c_enforce : exp;
-      c_block : block
-    }
+  { c_assume  : exp;
+    c_enforce : exp;
+    c_block   : block }
 
 type node_dec =
-    { n_name      : name;
-      n_statefull : bool;
-      n_input     : var_dec list;
-      n_output    : var_dec list;
-      n_contract  : contract option;
-      n_block     : block;
-      n_loc       : location;
-      n_params : var_dec list; }
+  { n_name      : dec_name;
+    n_statefull : bool;
+    n_input     : var_dec list;
+    n_output    : var_dec list;
+    n_contract  : contract option;
+    n_block     : block;
+    n_loc       : location;
+    n_params    : var_dec list; }
 
 type const_dec =
-    { c_name : name;
-      c_type : ty;
-      c_value : exp;
-      c_loc  : location; }
+  { c_name  : dec_name;
+    c_type  : ty;
+    c_value : exp;
+    c_loc   : location; }
 
 type program =
-    { p_modname : name;
-      p_pragmas: (name * string) list;
-      p_opened : name list;
-      p_types  : type_dec list;
-      p_nodes  : node_dec list;
-      p_consts : const_dec list; }
+  { p_modname : dec_name;
+    p_pragmas : (var_name * string) list;
+    p_opened  : dec_name list;
+    p_types   : type_dec list;
+    p_nodes   : node_dec list;
+    p_consts  : const_dec list; }
 
-type arg = { a_type : ty; a_name : name option }
+type arg =
+  { a_type : ty;
+    a_name : var_name option }
 
 type signature =
-    { sig_name      : name;
-      sig_inputs    : arg list;
-      sig_statefull : bool;
-      sig_outputs   : arg list;
-      sig_params    : var_dec list;
-      sig_loc       : location }
+  { sig_name      : dec_name;
+    sig_inputs    : arg list;
+    sig_statefull : bool;
+    sig_outputs   : arg list;
+    sig_params    : var_dec list;
+    sig_loc       : location }
 
 type interface = interface_decl list
 
 and interface_decl =
-    { interf_desc : interface_desc;
-      interf_loc  : location }
+  { interf_desc : interface_desc;
+    interf_loc  : location }
 
 and interface_desc =
-  | Iopen of name
+  | Iopen of dec_name
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
@@ -206,13 +214,13 @@ let mk_call ?(params=[]) op exps =
 
 let mk_op_call ?(params=[]) s exps =
   mk_call ~params:params
-    (Efun (Q { qual = "Pervasives"; name = s })) exps
+    (Efun (Q { Names.qual = "Pervasives"; Names.name = s })) exps
 
 let mk_iterator_call it ln params n exps =
   Eiterator (it, mk_app (Enode ln) params, n, exps)
 
-let mk_static_exp ?(ty = invalid_type) desc loc =
-  { se_desc = desc; se_ty = ty; se_loc = loc }
+let mk_static_exp desc loc =
+  { se_desc = desc; se_loc = loc }
 
 let mk_constructor_exp f loc =
   mk_exp (Econst (mk_static_exp (Sconstructor f) loc)) loc
@@ -242,8 +250,6 @@ let mk_const_dec id ty e loc =
 
 let mk_arg name ty =
   { a_type = ty; a_name = name }
-
-
 
 let ptrue = Q Initial.ptrue
 let pfalse = Q Initial.pfalse
