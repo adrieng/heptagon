@@ -63,7 +63,8 @@ let rec typing h e =
 
 and typing_op op e_list h e ck = match op with
   | (Eequal | Efun _ | Enode _) ->
-      (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
+      List.iter (fun e -> expect h (skeleton ck e.e_ty) e) e_list;
+      skeleton ck e.e_ty
   | Etuple ->
       Cprod (List.map (typing h) e_list)
   | Eifthenelse ->

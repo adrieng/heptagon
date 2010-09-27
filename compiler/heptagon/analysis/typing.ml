@@ -195,11 +195,8 @@ let unalias_type ty =
   with Undefined_type ln -> error (Eundefined (fullname ln))
 
 let flatten_ty_list l =
-  let flatten = function
-    | Tprod l -> l
-    | ty -> [ty]
-  in
-    List.flatten (List.map flatten l)
+  List.fold_right
+    (fun arg args -> match arg with Tprod l -> l@args | a -> a::args ) l []
 
 let rec unify t1 t2 =
   match t1, t2 with
