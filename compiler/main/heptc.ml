@@ -78,6 +78,9 @@ let main () =
         "-stdlib", Arg.String set_stdlib, doc_stdlib;
         "-c", Arg.Set create_object_file, doc_object_file;
         "-s", read_qualname set_simulation_node, doc_sim;
+        "-tomato", Arg.Set tomato, doc_tomato;
+        "-tomanode", read_qualname add_tomato_node, doc_tomato;
+        "-tomacheck", read_qualname add_tomato_check, "";
         "-inline", read_qualname add_inlined_node, doc_inline;
         "-flatten", Arg.Set flatten, doc_flatten;
         "-assert", read_qualname add_assert, doc_assert;

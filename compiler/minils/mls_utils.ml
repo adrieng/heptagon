@@ -56,7 +56,6 @@ let is_record_type ty = match ty with
 let is_op = function
   | { qual = "Pervasives"; name = _ } -> true | _ -> false
 
-
 let exp_list_of_static_exp_list se_list =
   let mk_one_const se =
     Minils.mk_exp ~ty:se.se_ty (Minils.Econst se)
@@ -164,3 +163,5 @@ module AllDep = Dep.Make
      let def = Vars.def
      let antidep _ = false
    end)
+
+let eq_find id = List.find (fun eq -> List.mem id (Vars.def [] eq))

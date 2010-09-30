@@ -82,6 +82,15 @@ let add_inlined_node s = inline := s :: !inline
 
 let flatten = ref false
 
+let tomato = ref false
+
+let tomato_nodes : qualname list ref = ref []
+
+let add_tomato_node s = tomato_nodes := s :: !tomato_nodes
+
+let tomato_check : qualname list ref = ref []
+
+let add_tomato_check s = tomato_check := s :: !tomato_check
 
 let do_iterator_fusion = ref false
 
@@ -106,3 +115,4 @@ and doc_noinit = "\t\tDisable initialization analysis"
 and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
 and doc_inline = "<node>\t\tInline node <node>"
 and doc_itfusion = "\t\tEnable iterator fusion."
+and doc_tomato = "\t\tEnable automata minimization."

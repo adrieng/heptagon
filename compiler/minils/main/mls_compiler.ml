@@ -39,6 +39,14 @@ let compile pp p =
   (* Iterator fusion *)
   let p = pass "Iterator fusion" !do_iterator_fusion Itfusion.program  p pp in
 
+  (* Automata minimization *)
+  let p =
+    let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
+    pass "Automata minimization" call_tomato Tomato.program p pp in
+
+  let p =
+    pass "Automata minimization checks" true Tomato.tomato_checks p pp in
+
   (* Normalization to maximize opportunities *)
   let p = pass "Normalization" true Normalize.program p pp in
 
