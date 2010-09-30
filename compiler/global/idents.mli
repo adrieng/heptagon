@@ -10,6 +10,9 @@ type ident
 (** Type to be used for local variables *)
 type var_ident = ident
 
+(** Comparision on idents with the same properties as [Pervasives.compare] *)
+val ident_compare : ident -> ident -> int
+
 (** Get the source name from an identifier*)
 val sourcename : ident -> string
 (** Get the full name of an identifier (it is guaranteed to be unique) *)

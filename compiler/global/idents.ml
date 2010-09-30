@@ -20,7 +20,7 @@ type var_ident = ident
 
 let num = ref 0
 
-let compare id1 id2 = compare id1.num id2.num
+let ident_compare id1 id2 = compare id1.num id2.num
 let sourcename id = id.source
 let name id =
   if id.is_generated then
@@ -35,7 +35,7 @@ let fprint_t ff id = Format.fprintf ff "%s" (name id)
 
 module M = struct
   type t = ident
-  let compare = compare
+  let compare = ident_compare
   let fprint = fprint_t
 end
 
