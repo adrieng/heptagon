@@ -8,6 +8,8 @@
 (**************************************************************************)
 (* Compiler options *)
 
+open Names
+
 (* version of the compiler *)
 let version = "0.4"
 let date = "DATE"
@@ -48,11 +50,11 @@ let show_version () =
 let verbose = ref false
 let print_types = ref false
 
-let assert_nodes:string list ref = ref []
+let assert_nodes : qualname list ref = ref []
 let add_assert nd = assert_nodes := nd :: !assert_nodes
 
 let simulation = ref false
-let simulation_node : string option ref = ref None
+let simulation_node : qualname option ref = ref None
 let set_simulation_node s =
   simulation := true;
   simulation_node := Some s
@@ -75,12 +77,11 @@ let full_type_info = ref false
 
 let init = ref true
 
-let inline:string list ref = ref []
+let inline : qualname list ref = ref []
 let add_inlined_node s = inline := s :: !inline
 
 let flatten = ref false
 
-let nodes_to_inline : string list ref = ref []
 
 let do_iterator_fusion = ref false
 
