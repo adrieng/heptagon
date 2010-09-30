@@ -52,7 +52,7 @@ struct
   (** two instances are equal if the desc of keys are equal *)
   let compare_instances =
     let compare se1 se2 = compare se1.se_desc se2.se_desc in
-    Misc.make_list_compare compare
+    Misc.list_compare compare
 
   module S = (** Instances set *)
     Set.Make(

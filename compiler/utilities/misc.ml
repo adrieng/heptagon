@@ -65,7 +65,7 @@ let rec split_last = function
 let remove x l =
   List.filter (fun y -> x <> y) l
 
-let make_list_compare c l1 l2 =
+let list_compare c l1 l2 =
   let rec aux l1 l2 = match (l1, l2) with
     | (h1::t1, h2::t2) ->
         let result = c h1 h2 in
@@ -74,6 +74,12 @@ let make_list_compare c l1 l2 =
     | (_,      []    ) -> 1
     | ([],     _     ) -> -1
   in aux l1 l2
+
+let option_compare f ox1 ox2 = match ox1, ox2 with
+  | None, None -> 0
+  | Some x1, Some x2 -> f x1 x2
+  | None, _ -> -1
+  | _, None -> 1
 
 let is_empty = function
   | [] -> true
@@ -143,6 +149,12 @@ let mapi3 f l1 l2 l3 =
           (f i v1 v2 v3)::(aux (i+1) l1 l2 l3)
   in
     aux 0 l1 l2 l3
+
+let fold_righti f l acc =
+  let rec aux i l acc = match l with
+    | [] -> acc
+    | h :: l -> f i h (aux (i + 1) l acc) in
+  aux 0 l acc
 
 (* Functions to decompose a list into a tuple *)
 let _arity_error i l =

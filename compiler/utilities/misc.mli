@@ -49,9 +49,11 @@ val memd_assoc : 'b -> ('a * 'b) list -> bool
 (** Same as List.assoc but searching for a data and returning the key. *)
 val assocd : 'b -> ('a * 'b) list -> 'a
 
-(** [make_compare c] generates the lexicographical compare function on lists
-    induced by [c] *)
-val make_list_compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
+(** [list_compare c l1 l2] compares the lists [l1] and [l2] according to
+    lexicographical order induced by [c]. *)
+val list_compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
+
+val option_compare : ('a -> 'a -> int) -> 'a option -> 'a option -> int
 
 (** Mapfold *)
 val mapfold: ('a -> 'b -> 'c * 'a) -> 'a -> 'b list -> 'c list * 'a
@@ -65,6 +67,7 @@ val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
 val mapi2: (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->
   'a list -> 'b list -> 'c list -> 'd list
+val fold_righti : (int -> 'a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 
 (** Functions to decompose a list into a tuple *)
 val assert_empty : 'a list -> unit
@@ -73,4 +76,3 @@ val assert_1min : 'a list -> 'a * 'a list
 val assert_2 : 'a list -> 'a * 'a
 val assert_2min : 'a list -> 'a * 'a * 'a list
 val assert_3 : 'a list -> 'a * 'a * 'a
-
