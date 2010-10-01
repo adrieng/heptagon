@@ -242,14 +242,16 @@ let rec translate_type loc local_const ty =
 
 
 and translate_exp local_const env e =
-  let desc =
-    (*try (* try to see if the exp is a constant *)
-      Heptagon.Econst (static_exp_of_exp local_const e)
-    with
+  try
+    let desc =
+      (*try (* try to see if the exp is a constant *)
+        Heptagon.Econst (static_exp_of_exp local_const e)
+        with
         Not_static -> *) translate_desc e.e_loc local_const env e.e_desc in
-  { Heptagon.e_desc = desc;
-    Heptagon.e_ty = Types.invalid_type;
-    Heptagon.e_loc = e.e_loc }
+    { Heptagon.e_desc = desc;
+      Heptagon.e_ty = Types.invalid_type;
+      Heptagon.e_loc = e.e_loc }
+  with ScopingError(error) -> message e.e_loc error
 
 and translate_desc loc local_const env = function
   | Econst c -> Heptagon.Econst (translate_static_exp local_const c)
@@ -257,7 +259,7 @@ and translate_desc loc local_const env = function
       try (* First check if it is a const var *)
         Heptagon.Econst
           (Types.mk_static_exp
-            ~loc:loc (Types.Svar (qualify_var_as_const local_const x)))
+             ~loc:loc (Types.Svar (qualify_var_as_const local_const x)))
       with Not_found -> Heptagon.Evar (Rename.var loc env x))
   | Elast x -> Heptagon.Elast (Rename.last loc env x)
   | Epre (None, e) -> Heptagon.Epre (None, translate_exp local_const env e)
@@ -269,13 +271,13 @@ and translate_desc loc local_const env = function
   | Estruct f_e_list ->
       let f_e_list =
         List.map (fun (f,e) -> qualify_field f, translate_exp local_const env e)
-                 f_e_list in
+          f_e_list in
       Heptagon.Estruct f_e_list
   | Eapp ({ a_op = op; a_params = params }, e_list) ->
       let e_list = List.map (translate_exp local_const env) e_list in
       let params = List.map (expect_static_exp local_const) params in
       let app = Heptagon.mk_op ~params:params (translate_op op) in
-        Heptagon.Eapp (app, e_list, None)
+      Heptagon.Eapp (app, e_list, None)
   | Eiterator (it, { a_op = op; a_params = params }, n, e_list) ->
       let e_list = List.map (translate_exp local_const env) e_list in
       let n = expect_static_exp local_const n in
