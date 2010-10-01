@@ -260,7 +260,7 @@ let mk_main name p =
       let find_class qn =
         try List.find (fun cd -> cd.cd_name = qn) p.p_defs
         with Not_found ->
-          Format.eprintf "Unknown node %a.\n" Global_printer.print_qualname qn;
+          Format.eprintf "Unknown node %a.@." Global_printer.print_qualname qn;
           exit 1 in
 
       let a_classes = List.map find_class n_names in
