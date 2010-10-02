@@ -29,7 +29,7 @@ and subst_lhs map lhs =
     | Cvar n ->
         if NamesEnv.mem n map then NamesEnv.find n map else lhs
     | Cfield (lhs, s) -> Cfield (subst_lhs map lhs, s)
-    | Carray (lhs, n) -> Carray (subst_lhs map lhs, n)
+    | Carray (lhs, n) -> Carray (subst_lhs map lhs, subst_exp map n)
     | Cderef lhs -> Cderef (subst_lhs map lhs)
 
 and subst_exp map = function
