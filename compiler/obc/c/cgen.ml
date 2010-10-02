@@ -397,6 +397,9 @@ let generate_function_call var_env obj_env outvl objn args =
 (** Create the statement dest = c where c = v^n^m... *)
 let rec create_affect_const var_env dest c =
   match c.se_desc with
+    | Svar ln ->
+        let se = Static.simplify QualEnv.empty (find_const ln).c_value in
+        create_affect_const var_env dest se
     | Sarray_power(c, n) ->
         let x = gen_symbol () in
         [Cfor(x, 0, int_of_static_exp n,
