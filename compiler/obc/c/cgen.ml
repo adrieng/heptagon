@@ -212,6 +212,15 @@ and create_affect_stm dest src ty =
                        (Clhs (Carray (src, Clhs (Cvar x)))) bty)]
            | _ -> assert false (** TODO: add missing cases eg for records *)
         )
+    | Cty_id ln ->
+        (match src with
+          | Cstructlit (_, ce_list) ->
+              let create_affect { f_name = f_name;
+                                  Signature.f_type = f_type; } e stm_list =
+                let cty = ctype_of_otype f_type in
+                create_affect_stm (Cfield (dest, f_name)) e cty @ stm_list in
+              List.fold_right2 create_affect (find_struct ln) ce_list []
+          | _ -> [Caffect (dest, src)])
     | _ -> [Caffect (dest, src)]
 
 (** Returns the expression to use e as an argument of
