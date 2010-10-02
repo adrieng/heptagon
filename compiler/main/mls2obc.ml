@@ -46,7 +46,7 @@ let rec bound_check_expr idx_list bounds =
   match (idx_list, bounds) with
     | [idx], [n] ->
         mk_exp (Eop (op_from_string "<",
-                     [ idx; mk_exp (Econst n)]))
+                     [idx; mk_exp (Econst n)]))
     | (idx :: idx_list, n :: bounds) ->
         let e = mk_exp (Eop (op_from_string "<",
                              [idx; mk_exp (Econst n)])) in

@@ -115,7 +115,7 @@ let copname = function
   | "-" -> "-" | "*" -> "*" | "/" -> "/" | "*." -> "*" | "/." -> "/"
   | "+." -> "+" | "-." -> "-" | "<"  -> "<" | ">"  -> ">" | "<=" -> "<="
   | ">=" -> ">="
-  | "~-" -> "-" | "not" -> "!"
+  | "~-" -> "-" | "not" -> "!" | "%" -> "%"
   | op   -> op
 
 (** Translates an Obc var_dec to a tuple (name, cty). *)
@@ -201,7 +201,7 @@ let rec create_affect_lit dest l ty =
 
 (** Creates the expression dest <- src (copying arrays if necessary). *)
 and create_affect_stm dest src ty =
-  match ty  with
+  match ty with
     | Cty_arr (n, bty) ->
         (match src with
            | Carraylit l -> create_affect_lit dest l bty
@@ -240,7 +240,7 @@ let rec cexpr_of_static_exp se =
     | Svar ln ->
         (try
           let cd = find_const ln in
-            cexpr_of_static_exp (Static.simplify QualEnv.empty cd.c_value)
+          cexpr_of_static_exp (Static.simplify QualEnv.empty cd.c_value)
         with Not_found -> assert false)
     | Sop _ ->
         let se' = Static.simplify QualEnv.empty se in
@@ -283,7 +283,7 @@ and cop_of_op_aux op_name cexps = match op_name with
               "=" | "<>"
             | "&" | "or"
             | "+" | "-" | "*" | "/"
-            | "*." | "/." | "+." | "-."
+            | "*." | "/." | "+." | "-." | "%"
             | "<" | ">" | "<=" | ">="), [el;er] ->
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)

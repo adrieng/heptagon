@@ -7,6 +7,7 @@ type float
 val fun (&)(bool;bool) returns (bool)
 val fun ( * )(int;int) returns (int)
 val fun ( *. )(float;float) returns (float)
+val fun (%)(int;int) returns (int)
 val fun (+)(int;int) returns (int)
 val fun (+.)(float;float) returns (float)
 val fun (-)(int;int) returns (int)
