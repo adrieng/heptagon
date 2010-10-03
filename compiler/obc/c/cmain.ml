@@ -257,10 +257,10 @@ let mk_main name p =
   match (!Compiler_options.simulation_node, !Compiler_options.assert_nodes) with
     | (None, []) -> []
     | (_, n_names) ->
-      let find_class qn =
-        try List.find (fun cd -> cd.cd_name = qn) p.p_defs
+      let find_class n =
+        try List.find (fun cd -> cd.cd_name.name = n) p.p_defs
         with Not_found ->
-          Format.eprintf "Unknown node %a.@." Global_printer.print_qualname qn;
+          Format.eprintf "Unknown node %s.@." n;
           exit 1 in
 
       let a_classes = List.map find_class n_names in

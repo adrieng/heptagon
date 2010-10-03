@@ -55,7 +55,7 @@ let add_check prefix pass nd nd_list =
         node_params = [];
         node_params_constraints = [] };
 
-    Compiler_options.add_assert nd_check.n_name;
+    Compiler_options.add_assert nd_check.n_name.name;
     nd :: nd' :: nd_check :: nd_list
 
 let add_checks pass prefix nnl p =

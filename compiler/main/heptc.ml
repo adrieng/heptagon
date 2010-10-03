@@ -77,13 +77,13 @@ let main () =
         "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
         "-stdlib", Arg.String set_stdlib, doc_stdlib;
         "-c", Arg.Set create_object_file, doc_object_file;
-        "-s", read_qualname set_simulation_node, doc_sim;
+        "-s", Arg.String set_simulation_node, doc_sim;
         "-tomato", Arg.Set tomato, doc_tomato;
         "-tomanode", read_qualname add_tomato_node, doc_tomato;
         "-tomacheck", read_qualname add_tomato_check, "";
         "-inline", read_qualname add_inlined_node, doc_inline;
         "-flatten", Arg.Set flatten, doc_flatten;
-        "-assert", read_qualname add_assert, doc_assert;
+        "-assert", Arg.String add_assert, doc_assert;
         "-nopervasives", Arg.Unit set_no_pervasives, doc_no_pervasives;
         "-target", Arg.String add_target_language, doc_target;
         "-targetpath", Arg.String set_target_path, doc_target_path;
