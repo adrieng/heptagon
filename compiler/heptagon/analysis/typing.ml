@@ -559,41 +559,41 @@ and expect const_env h expected_ty e =
     typed_e
   with TypingError(kind) -> message e.e_loc kind
 
-and typing_app const_env h op e_list =
-  match op with
-    | { a_op = Eequal } ->
+and typing_app const_env h app e_list =
+  match app.a_op with
+    | Eequal ->
         let e1, e2 = assert_2 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_e2 = expect const_env h t1 e2 in
-          Tid Initial.pbool, op, [typed_e1; typed_e2]
+          Tid Initial.pbool, app, [typed_e1; typed_e2]
 
-    | { a_op = Earrow } ->
+    | Earrow ->
         let e1, e2 = assert_2 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_e2 = expect const_env h t1 e2 in
-        t1, op, [typed_e1;typed_e2]
+        t1, app, [typed_e1;typed_e2]
 
-    | { a_op = Eifthenelse }->
+    | Eifthenelse ->
         let e1, e2, e3 = assert_3 e_list in
         let typed_e1 = expect const_env h
           (Tid Initial.pbool) e1 in
         let typed_e2, t1 = typing const_env h e2 in
         let typed_e3 = expect const_env h t1 e3 in
-        t1, op, [typed_e1; typed_e2; typed_e3]
+        t1, app, [typed_e1; typed_e2; typed_e3]
 
-    | { a_op = (Efun f | Enode f); a_params = params } as app ->
+    | (Efun f | Enode f) ->
         let ty_desc = find_value f in
         let op, expected_ty_list, result_ty_list = kind f ty_desc in
         let node_params =
           List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
-        let m = build_subst node_params params in
+        let m = build_subst node_params app.a_params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args const_env h
           expected_ty_list e_list in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         (* Type static parameters and generate constraints *)
         let typed_params = typing_node_params const_env
-          ty_desc.node_params params in
+          ty_desc.node_params app.a_params in
         let size_constrs =
           instanciate_constr m ty_desc.node_params_constraints in
         List.iter add_size_constraint size_constrs;
@@ -601,21 +601,21 @@ and typing_app const_env h op e_list =
         { app with a_op = op; a_params = typed_params },
          typed_e_list
 
-    | { a_op = Etuple } ->
+    | Etuple ->
         let typed_e_list,ty_list =
           List.split (List.map (typing const_env h) e_list) in
-         prod ty_list, op, typed_e_list
+         prod ty_list, app, typed_e_list
 
-    | { a_op = Earray } ->
+    | Earray ->
         let exp, e_list = assert_1min e_list in
         let typed_exp, t1 = typing const_env h exp in
         let typed_e_list = List.map (expect const_env h t1) e_list in
         let n = mk_static_int (List.length e_list + 1) in
-          Tarray(t1, n), op, typed_exp::typed_e_list
+          Tarray(t1, n), app, typed_exp::typed_e_list
 
-    | { a_op = Efield; a_params = params } ->
+    | Efield ->
         let e = assert_1 e_list in
-        let f = assert_1 params in
+        let f = assert_1 app.a_params in
         let fn =
           (match f.se_desc with
              | Sfield fn -> fn
@@ -623,11 +623,11 @@ and typing_app const_env h op e_list =
         let typed_e, t1 = typing const_env h e in
         let fields = struct_info t1 in
         let t2 = field_type const_env fn fields t1 e.e_loc in
-          t2, op, [typed_e]
+          t2, app, [typed_e]
 
-    | { a_op = Efield_update; a_params = params } ->
+    | Efield_update ->
         let e1, e2 = assert_2 e_list in
-        let f = assert_1 params in
+        let f = assert_1 app.a_params in
         let typed_e1, t1 = typing const_env h e1 in
         let fields = struct_info t1 in
         let fn =
@@ -636,42 +636,42 @@ and typing_app const_env h op e_list =
              | _ -> assert false) in
         let t2 = field_type const_env fn fields t1 e1.e_loc in
         let typed_e2 = expect const_env h t2 e2 in
-        t1, op, [typed_e1; typed_e2]
+        t1, app, [typed_e1; typed_e2]
 
-    | { a_op = Earray_fill; a_params = params } ->
-        let n = assert_1 params in
+    | Earray_fill ->
+        let n = assert_1 app.a_params in
         let e1 = assert_1 e_list in
         let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
         let typed_e1, t1 = typing const_env h e1 in
           add_size_constraint (Clequal (mk_static_int 1, typed_n));
-          Tarray (t1, typed_n), { op with a_params = [typed_n] }, [typed_e1]
+          Tarray (t1, typed_n), { app with a_params = [typed_n] }, [typed_e1]
 
-    | { a_op = Eselect; a_params = idx_list } ->
+    | Eselect ->
         let e1 = assert_1 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_idx_list, ty =
-          typing_array_subscript const_env h idx_list t1 in
-          ty, { op with a_params = typed_idx_list }, [typed_e1]
+          typing_array_subscript const_env h app.a_params t1 in
+          ty, { app with a_params = typed_idx_list }, [typed_e1]
 
-    | { a_op = Eselect_dyn } ->
+    | Eselect_dyn ->
         let e1, defe, idx_list = assert_2min e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_defe = expect const_env h (element_type t1) defe in
         let ty, typed_idx_list =
           typing_array_subscript_dyn const_env h idx_list t1 in
-        ty, op, typed_e1::typed_defe::typed_idx_list
+        ty, app, typed_e1::typed_defe::typed_idx_list
 
-    | { a_op = Eupdate } ->
+    | Eupdate ->
         let e1, e2, idx_list = assert_2min e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let ty, typed_idx_list =
           typing_array_subscript_dyn const_env h idx_list t1 in
         let typed_e2 = expect const_env h ty e2 in
-          t1, op, typed_e1::typed_e2::typed_idx_list
+          t1, app, typed_e1::typed_e2::typed_idx_list
 
-    | { a_op = Eselect_slice; a_params = params } ->
+    | Eselect_slice ->
         let e = assert_1 e_list in
-        let idx1, idx2 = assert_2 params in
+        let idx1, idx2 = assert_2 app.a_params in
         let typed_idx1 = expect_static_exp const_env (Tid Initial.pint) idx1 in
         let typed_idx2 = expect_static_exp const_env (Tid Initial.pint) idx2 in
         let typed_e, t1 = typing const_env h e in
@@ -682,9 +682,9 @@ and typing_app const_env h op e_list =
           mk_static_int_op (mk_pervasives "+") [e1;mk_static_int 1 ] in
         add_size_constraint (Clequal (mk_static_int 1, e2));
         Tarray (element_type t1, e2),
-        { op with a_params = [typed_idx1; typed_idx2] }, [typed_e]
+        { app with a_params = [typed_idx1; typed_idx2] }, [typed_e]
 
-    | { a_op = Econcat } ->
+    | Econcat ->
         let e1, e2 = assert_2 e_list in
         let typed_e1, t1 = typing const_env h e1 in
         let typed_e2, t2 = typing const_env h e2 in
@@ -695,7 +695,7 @@ and typing_app const_env h op e_list =
         end;
         let n =
           mk_static_int_op (mk_pervasives "+") [array_size t1; array_size t2] in
-        Tarray (element_type t1, n), op, [typed_e1; typed_e2]
+        Tarray (element_type t1, n), app, [typed_e1; typed_e2]
 
 and typing_iterator const_env h
     it n args_ty_list result_ty_list e_list = match it with
