@@ -7,10 +7,14 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* simple initialization analysis. This is almost trivial since   *)
-(* input/outputs of a node are forced to be initialized           *)
+(** {2 Simple initialization analysis}
+  The initialization analysis only deals with the first instant of flows.
+  Things are easy since input/outputs of a node are considered initialized.
+  It is allowed to have uninitialized inputs for safe nodes,
+   it will consider the result as unitialized.
+  [last x] is initialized when either it was declared with an initial value
+   or when [x] is defined in the initial state of an automaton. *)
 
-(* $Id: initialization.ml 615 2009-11-20 17:43:14Z pouzet $ *)
 
 open Misc
 open Names
@@ -24,71 +28,90 @@ type typ =
   | Iproduct of typ list
   | Ileaf of init
 
-and init =
-    { mutable i_desc: init_desc;
-      mutable i_index: int }
-
-and init_desc =
+and init = initr ref
+and initr =
   | Izero
   | Ione
-  | Ivar
+  | Ivar of int
   | Imax of init * init
   | Ilink of init
-
-type kind = | Last of init | Var
-
-type tenv = { i_kind : kind; i_typ : init }
 
 (* typing errors *)
 exception Unify
 
-let index = ref 0
-let gen_index () = incr index; !index
-let new_var () = { i_desc = Ivar; i_index = gen_index () }
-let izero = { i_desc = Izero; i_index = gen_index () }
-let ione = { i_desc = Ione; i_index = gen_index () }
-let imax i1 i2 = { i_desc = Imax(i1, i2); i_index = gen_index () }
-let product l = Iproduct(l)
-let leaf i = Ileaf(i)
-
-(* basic operation on initialization values *)
+(** unalias [init] type *)
 let rec irepr i =
-  match i.i_desc with
+  match !i with
     | Ilink(i_son) ->
         let i_son = irepr i_son in
-        i.i_desc <- Ilink(i_son);
+        i := Ilink(i_son); (* shorten path *)
         i_son
     | _ -> i
 
-(** Simplification rules for max. Nothing fancy here *)
-let max i1 i2 =
+let index = ref 0
+let gen_index () = incr index; !index
+let new_var () = ref (Ivar(gen_index ()))
+let izero = ref Izero
+let ione = ref Ione
+(** max between types with some basic simplifications *)
+let imax i1 i2 =
   let i1 = irepr i1 in
   let i2 = irepr i2 in
-  match i1.i_desc, i2.i_desc with
+  match !i1, !i2 with
     | (Izero, Izero) -> izero
     | (Izero, _) -> i2
     | (_, Izero) -> i1
     | (_, Ione) | (Ione, _) -> ione
-    | _ -> imax i1 i2
+    | _ -> ref (Imax(i1, i2))
 
+let product l = Iproduct(l)
+let leaf i = Ileaf(i)
+
+module IEnv =
+struct
+  type k = | Last of ident | Var of ident
+  type v = init
+  include (Map.Make (struct type t = k let compare = compare end))
+
+  let find_var x h = find (Var x) h
+  let find_last x h = find (Last x) h
+
+  let find_var_typ x h = leaf (find_var x h)
+  let find_last_typ x h = leaf (find_last x h)
+
+  let add_var x v h = add (Var x) v h
+  let add_last x v h = add (Last x) v h
+
+  let add_var_dec h vd =
+    let x = vd.v_ident in
+    match vd.v_last with
+      | Heptagon.Var -> add_var x (new_var ()) h
+      | Heptagon.Last None ->
+        let h = add_var x (new_var ()) h in
+        add_last x (new_var ()) h
+      | Heptagon.Last (Some _) ->
+        let h = add_var x (new_var ()) h in
+        add_last x izero h
+end
+
+(** return the representent of a [typ] ( the max ) *)
 let rec itype = function
-  | Iproduct(ty_list) -> itype_list ty_list
+  | Iproduct(ty_list) -> _max_list ty_list
   | Ileaf(i) -> i
+and _max_list ty_list =
+  List.fold_left (fun acc ty -> imax acc (itype ty)) izero ty_list
 
-and itype_list ty_list =
-  List.fold_left (fun acc ty -> max acc (itype ty)) izero ty_list
-
-(* saturate an initialization type. Every element must be initialized *)
+(** saturate an [init] type. Every element must be initialized *)
 let rec initialized i =
   let i = irepr i in
-  match i.i_desc with
+  match !i with
     | Izero -> ()
-    | Ivar -> i.i_desc <- Ilink(izero)
+    | Ivar _ -> i := Ilink(izero)
     | Imax(i1, i2) -> initialized i1; initialized i2
     | Ilink(i) -> initialized i
     | Ione -> raise Unify
 
-(* build an initialization type from a type *)
+(* build a [typ] from a type *)
 let rec skeleton i ty =
   match ty with
     | Tprod(ty_list) -> product (List.map (skeleton i) ty_list)
@@ -115,37 +138,36 @@ and iless left_i right_i =
     let right_i = irepr right_i in
     if left_i == right_i then ()
     else
-      match left_i.i_desc, right_i.i_desc with
-        | (Izero, _) | (_, Ione) -> ()
+      match !left_i, !right_i with
+        | Izero, _ | _, Ione -> ()
         | _, Izero -> initialized left_i
-        | Imax(i1, i2), _ ->
-            iless i1 right_i; iless i2 right_i
-        | _, Ivar ->
-            let left_i = occur_check right_i.i_index left_i in
-            right_i.i_desc <- Ilink(left_i)
-        | _, Imax(i1, i2) ->
-            let i1 = occur_check left_i.i_index i1 in
-            let i2 = occur_check left_i.i_index i2 in
-            right_i.i_desc <- Ilink(imax left_i (imax i1 i2))
+        | Imax(i1, i2), _ -> iless i1 right_i; iless i2 right_i
+        | _, Ivar id ->
+            let left_i = occur_check id left_i in
+            right_i := Ilink left_i
+        | Ivar id, Imax(i1, i2) ->
+            let i1 = occur_check id i1 in
+            let i2 = occur_check id i2 in
+            right_i := Ilink(imax left_i (imax i1 i2))
         | _ -> raise Unify
 
 (* an inequation [a < t[a]] becomes [a = t[0]] *)
 and occur_check index i =
-  match i.i_desc with
+  match !i with
     | Izero | Ione -> i
-    | Ivar -> if i.i_index = index then izero else i
-    | Imax(i1, i2) ->
-        max (occur_check index i1) (occur_check index i2)
+    | Ivar id -> if id = index then izero else i
+    | Imax(i1, i2) -> imax (occur_check index i1) (occur_check index i2)
     | Ilink(i) -> occur_check index i
+
 
 module Printer = struct
   open Format
   open Pp_tools
 
-  let rec print_init ff i = match i.i_desc with
+  let rec print_init ff i = match !i with
     | Izero -> fprintf ff "0"
     | Ione -> fprintf ff "1"
-    | Ivar -> fprintf ff "0"
+    | Ivar(i) -> fprintf ff "ivar_%i" i
     | Imax(i1, i2) -> fprintf ff "@[%a\\/%a@]" print_init i1 print_init i2
     | Ilink(i) -> print_init ff i
 
@@ -187,7 +209,8 @@ let less_exp e actual_ty expected_ty =
 let rec typing h e =
   match e.e_desc with
     | Econst c -> const_skeleton izero c
-    | Evar(x) | Elast(x) -> let { i_typ = i } = Env.find x h in leaf i
+    | Evar(x) -> IEnv.find_var_typ x h
+    | Elast(x) -> IEnv.find_last_typ x h
     | Epre(None, e) ->
         initialized_exp h e;
         skeleton ione e.e_ty
@@ -199,42 +222,33 @@ let rec typing h e =
         skeleton (itype (typing h e1)) e.e_ty
     | Eapp({ a_op = Etuple }, e_list, _) ->
         product (List.map (typing h) e_list)
-    | Eapp({ a_op = op }, e_list, _) ->
-        let i = apply h op e_list in
+    | Eapp(app, e_list, _) ->
+        let i = apply h app e_list in
         skeleton i e.e_ty
     | Estruct(l) ->
         let i =
           List.fold_left
-            (fun acc (_, e) -> max acc (itype (typing h e))) izero l in
+            (fun acc (_, e) -> imax acc (itype (typing h e))) izero l in
         skeleton i e.e_ty
     | Eiterator (_, _, _, e_list, _) ->
         List.iter (fun e -> initialized_exp h e) e_list;
         skeleton izero e.e_ty
 
 (** Typing an application *)
-and apply h op e_list =
-  match op, e_list with
-    | Earrow, [e1;e2] ->
+and apply h app e_list =
+  match app.a_op with
+    | Earrow ->
+        let e1,e2 = assert_2 e_list in
         let ty1 = typing h e1 in
         let _ = typing h e2 in
         itype ty1
-    | Efield, [e1] ->
-        itype (typing h e1)
-    | Earray, e_list ->
-        List.fold_left
-          (fun acc e -> max acc (itype (typing h e))) izero e_list
-    | Eifthenelse, [e1; e2; e3] ->
-        let i1 = itype (typing h e1) in
-        let i2 = itype (typing h e2) in
-        let i3 = itype (typing h e3) in
-        max i1 (max i2 i3)
-    | Etuple, _ -> assert false
-    (** TODO: init of safe/unsafe nodes
-        This is a tmp fix so that pre x + 1 works.*)
-    | (Eequal | Efun { qual = "Pervasives" }), e_list ->
-        List.fold_left (fun acc e -> itype (typing h e)) izero e_list
-    | _ , e_list ->
-        List.iter (fun e -> initialized_exp h e) e_list; izero
+    | _ ->
+      if app.a_unsafe
+      then ( (* when unsafe force all inputs to be initialized *)
+        List.iter (fun e -> initialized_exp h e) e_list; izero )
+      else (
+        List.fold_left (fun acc e -> max acc (itype (typing h e))) izero e_list)
+
 
 and expect h e expected_ty =
   let actual_ty = typing h e in
@@ -243,7 +257,7 @@ and expect h e expected_ty =
 and initialized_exp h e = expect h e (skeleton izero e.e_ty)
 
 let rec typing_pat h = function
-  | Evarpat(x) -> let { i_typ = i } = Env.find x h in leaf i
+  | Evarpat(x) -> IEnv.find_var_typ x h
   | Etuplepat(pat_list) ->
       product (List.map (typing_pat h) pat_list)
 
@@ -279,17 +293,14 @@ and typing_automaton h state_handlers =
   let weak { s_unless = sunless } =
     match sunless with | [] -> true | _ -> false in
 
-  (* the set of variables which do have an initial value in the other states *)
+  (* Set in the env [last x] as initialized if [x] is initialized here *)
   let initialized h { s_block = { b_defnames = l } } =
-    Env.fold
-      (fun elt _ h ->
-         let { i_kind = k; i_typ = i } = Env.find elt h in
-         match k with
-           | Last _ ->
-               let h = Env.remove elt h in
-               Env.add elt { i_kind = Last(izero); i_typ = izero } h
-           | _ -> h)
-      l h in
+    let env_update x h =
+      try
+        let xl = IEnv.find_last x h in (* it's a last in the env, good. *)
+        IEnv.add_last x (max xl (IEnv.find_var x h)) h
+      with Not_found -> h (* nothing to do *) in
+    Env.fold (fun x _ h -> env_update x h) l h in
 
   (* typing the body of the automaton *)
   let handler h
@@ -307,8 +318,8 @@ and typing_automaton h state_handlers =
       (* are defined in the initial state if it cannot be immediately *)
       (* exited *)
     | initial :: other_handlers when weak initial ->
-        let h = initialized h initial in
-        handler h initial;
+        handler h initial; (* first type it *)
+        let h = initialized h initial in (* then update for the orthers *)
         List.iter (handler h) other_handlers
     | _ -> List.iter (handler h) state_handlers
 
@@ -317,18 +328,13 @@ and typing_block h { b_local = dec; b_equs = eq_list } =
   typing_eqs h_extended eq_list;
   h_extended
 
-(* build an typing environment of initialization types *)
-and build h dec =
-  let kind = function
-    | Heptagon.Var -> { i_kind = Var; i_typ = new_var () }
-    | Heptagon.Last(Some _) -> { i_kind = Last(izero); i_typ = izero }
-    | Heptagon.Last(None) -> { i_kind = Last(ione); i_typ = new_var () } in
-  List.fold_left
-    (fun h { v_ident = n; v_last = last } -> Env.add n (kind last) h) h dec
+(* add var_decs to a typing environment *)
+and build h vdecs =
+  List.fold_left IEnv.add_var_dec h vdecs
 
-let sbuild h dec =
-  List.fold_left
-    (fun h { v_ident = n } -> Env.add n { i_kind = Var; i_typ = izero } h) h dec
+(* add var_decs as initialized to a typing environement *)
+let build_initialized h vdecs =
+  List.fold_left (fun h { v_ident = x } -> IEnv.add_var x izero h) h vdecs
 
 let typing_contract h contract =
   match contract with
@@ -343,10 +349,10 @@ let typing_contract h contract =
         expect h' e_g (skeleton izero e_g.e_ty);
         h
 
-let typing_node { n_name = f; n_input = i_list; n_output = o_list;
+let typing_node { n_input = i_list; n_output = o_list;
                   n_contract = contract; n_block = b } =
-  let h = sbuild Env.empty i_list in
-  let h = sbuild h o_list in
+  let h = build_initialized IEnv.empty i_list in
+  let h = build_initialized h o_list in
   let h = typing_contract h contract in
     ignore (typing_block h b)
 
