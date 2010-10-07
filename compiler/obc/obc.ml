@@ -75,7 +75,7 @@ and block =
 
 and var_dec =
     { v_ident : var_ident;
-      v_type : ty; (* TODO should be here, v_controllable : bool*)
+      v_type : ty; (* TODO GD should be here, v_controllable : bool *)
       v_loc : location }
 
 type obj_dec =
