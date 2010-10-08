@@ -58,8 +58,28 @@ let rec exp_compare e1 e2 =
                 if cr <> 0 then cr else
                   let cr = option_compare ident_compare vio1 vio2 in
                   if cr <> 0 then cr else list_compare exp_compare el1 el2
-        | (Econst _ | Evar _ | Efby _ | Eapp _), _ -> 1
-        | (Ewhen _ | Emerge _ | Estruct _ | Eiterator _), _ -> -1
+
+        | Econst _, _ -> 1
+
+        | Evar _, Econst _ -> -1
+        | Evar _, _ -> 1
+
+        | Efby _, (Econst _ | Evar _) -> -1
+        | Efby _, _ -> 1
+
+        | Eapp _, (Econst _ | Evar _ | Efby _) -> -1
+        | Eapp _, _ -> 1
+
+        | Ewhen _, (Estruct _ | Eiterator _ | Emerge _) -> 1
+        | Ewhen _, _ -> -1
+
+        | Emerge _, (Estruct _ | Eiterator _) -> 1
+        | Emerge _, _ -> -1
+
+        | Estruct _, Eiterator _ -> 1
+        | Estruct _, _ -> -1
+
+        | Eiterator _, _ -> -1
 
 and app_compare app1 app2 =
   let cr = Pervasives.compare app1.a_unsafe app2.a_unsafe in

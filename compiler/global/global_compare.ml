@@ -22,14 +22,18 @@ let rec clock_compare ck1 ck2 = match ck1, ck2 with
       if cr1 <> 0 then cr1 else
         let cr2 = ident_compare vi1 vi2 in
         if cr2 <> 0 then cr2 else clock_compare ck1 ck2
-  | (Cbase | Cvar _), _ -> 1
-  | (Con _), _ -> -1
+  | Cbase _, _ -> 1
+
+  | Cvar _, Cbase _ -> -1
+  | Cvar _, _ -> 1
+
+  | Con _, _ -> -1
 
 and link_compare li1 li2 = match li1, li2 with
-  | Cindex i1, Cindex i2 -> 0 (* Pervasives.compare i1 i2 *)
+  | Cindex _, Cindex _ -> 0
   | Clink ck1, Clink ck2 -> clock_compare ck1 ck2
-  | (Cindex _), _ -> 1
-  | (Clink _), _ -> -1
+  | Cindex _, _ -> 1
+  | Clink _, _ -> -1
 
 let rec static_exp_compare se1 se2 =
   let cr = type_compare se1.se_ty se2.se_ty in
@@ -58,9 +62,37 @@ let rec static_exp_compare se1 se2 =
       | Sop (fn1, sel1), Sop (fn2, sel2) ->
           let cr = c fn1 fn2 in
           if cr <> 0 then cr else list_compare static_exp_compare sel1 sel2
-      | (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _), _
-          -> 1
-      | (Stuple _ | Sarray_power _ | Sarray _ | Srecord _ | Sop _), _ -> -1
+
+      | Svar _, _ -> 1
+
+      | Sint _, Svar _ -> -1
+      | Sint _, _ -> 1
+
+      | Sfloat _, (Svar _ | Sint _) -> -1
+      | Sfloat _, _ -> 1
+
+      | Sbool _, (Svar _ | Sint _ | Sfloat _) -> -1
+      | Sbool _, _ -> 1
+
+      | Sconstructor _, (Svar _ | Sint _ | Sfloat _ | Sbool _) -> -1
+      | Sconstructor _, _ -> 1
+
+      | Sfield _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _) -> -1
+      | Sfield _, _ -> 1
+
+      | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _) -> 1
+      | Stuple _, _ -> -1
+
+      | Sarray_power _, (Srecord _ | Sop _ | Sarray _) -> -1
+      | Sarray_power _, _ -> 1
+
+      | Sarray _, (Srecord _ | Sop _) -> 1
+      | Sarray _, _ -> -1
+
+      | Srecord _, Sop _ -> 1
+      | Srecord _, _ -> -1
+
+      | Sop _, _ -> -1
 
 and type_compare ty1 ty2 = match ty1, ty2 with
   | Tprod tyl1, Tprod tyl2 -> list_compare type_compare tyl1 tyl2
