@@ -18,11 +18,11 @@ node mm(x: int) returns (o: int)
   tel
 
 node mmm(x: int) returns (o': int)
-  var last m: int; o: int;
+  var last m: int = 1; o: int;
   let
     automaton
       state I
-        do m = 1; o = last m + 2 until (o = 1) then J
+        do m = 0; o = last m + 1 until (o = 1) then J
       state J
         do m = last m + 1; o = 0
     end;

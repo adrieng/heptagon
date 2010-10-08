@@ -1,0 +1,12 @@
+node toto() returns (o : int)
+var last x : int; y,z : int;
+let
+  y = 0;
+  automaton
+    state S1
+    do x = pre y; z = 0 -> x until true then S2
+    state S2
+    do x = last x; z = x until false then S1
+  end;
+  o = z;
+tel

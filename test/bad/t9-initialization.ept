@@ -1,0 +1,6 @@
+node toto() returns (o : int)
+var last x : int;
+let
+  o = x;
+  x = last x;
+tel
