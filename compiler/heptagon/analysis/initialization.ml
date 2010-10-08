@@ -88,10 +88,10 @@ struct
       | Heptagon.Var -> add_var x (new_var ()) h
       | Heptagon.Last None ->
         let h = add_var x (new_var ()) h in
-        add_last x (new_var ()) h
+        add_last x ione h (* last is not initialized *)
       | Heptagon.Last (Some _) ->
         let h = add_var x (new_var ()) h in
-        add_last x izero h
+        add_last x izero h (* last is initialized *)
 end
 
 (** return the representent of a [typ] ( the max ) *)
