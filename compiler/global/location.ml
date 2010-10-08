@@ -58,7 +58,7 @@ let copy_lines nl ic ff prompt =
     pp_print_string ff prompt;
     (try pp_print_string ff (input_line ic)
      with End_of_file -> pp_print_string ff "<EOF>");
-    pp_print_char ff '\n'
+    fprintf ff "@\n"
   done
 
 let copy_chunk p1 p2 ic ff =
@@ -118,11 +118,11 @@ let print_location ff (Loc(p1,p2)) =
         else (
           (* sum up the middle lines to 6 *)
           copy_lines 3 ic ff ">";
-          pp_print_string ff "..........\n";
+          fprintf ff "..........@\n";
           skip_lines (l2-l1-7) ic; (* skip middle lines *)
           copy_lines 3 ic ff ">"
         );
-        pp_print_string ff ">";
+        fprintf ff ">";
         copy_chunk lp2 np2 ic ff; (* copy interesting begining of l2 *)
       )
     with Sys_error _ -> ();
