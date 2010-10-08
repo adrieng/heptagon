@@ -7,6 +7,26 @@
 (*                                                                        *)
 (**************************************************************************)
 
+(* This module recursively introduces intermediate variables for each equation
+   of a node. The resulting node's equations bodies are no deeper than 1 level
+   in terms of expression depth.
+
+   x = 1 + (2 + 3);
+
+   ->
+
+   x = _1 + _2;
+   _1 = 1;
+   _2 = _3 + _4;
+   _3 = 2;
+   _4 = 3;
+
+   Note that the identifiers of the introduced should begin with a specific
+   prefix that is not usable by user variables; this information is used by the
+   automata minimization pass to distinguish variables introduced here from
+   original ones.
+*)
+
 open Misc
 open Names
 open Idents
@@ -19,6 +39,13 @@ open Clocks
 open Pp_tools
 
 let debug_tomato = false
+
+let prefix = "_t"
+
+let was_generated s =
+  let ivars_re = Str.regexp_string prefix in
+  try Str.search_forward ivars_re s 0 = 0
+  with Not_found -> false
 
 let debug_do f = if debug_tomato then f () else ()
 
@@ -66,7 +93,7 @@ and intro_var e (eq_list, var_list) =
   match e.e_desc with
     | Evar _ -> (e, eq_list, var_list)
     | _ ->
-        let id = Idents.fresh "t" in
+        let id = Idents.fresh prefix in
         let new_eq = mk_equation (Evarpat id) e
         and var_dc = mk_var_dec id e.e_ty in
         (mk_exp ~ty:e.e_ty (Evar id), new_eq :: eq_list, var_dc :: var_list)

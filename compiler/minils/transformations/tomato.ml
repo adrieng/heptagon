@@ -41,6 +41,14 @@ type cl_id =
   | Var of int
   | Pattern of pat * int list
 
+let print_cl_id fmt cl_id = match cl_id with
+  | Input ident -> Format.fprintf fmt "in %a" print_ident ident
+  | Var i -> Format.fprintf fmt "%d" i
+  | Pattern (pat, il) ->
+      Format.fprintf fmt "%a: %a"
+        print_pat pat
+        (print_list_r (fun fmt d -> Format.fprintf fmt "%d" d) "" "," "") il
+
 let cl_id_compare id1 id2 = match id1, id2 with
   | Input id1, Input id2 -> ident_compare id1 id2
   | Var i1, Var i2 -> compare i1 i2
@@ -93,7 +101,7 @@ module PatEnv =
           (print_list_l print_ident "" "," "") children
 
       and print_pat_link ident (pat, i) =
-        Format.fprintf fmt "@[<v 2>%a => %a, %a@]@\n"
+        Format.fprintf fmt " @[<v 2>%a => %a, %a@]@\n"
           print_ident ident
           print_pat pat
           (print_list_r (fun fmt i -> Format.fprintf fmt "%d" i) "" "," "") i in
@@ -264,6 +272,8 @@ let compute_initial_env env eq =
   let env = fst (PatEnv.add eq.eq_lhs (1, e, children) env) in
   (env, penv)
 
+(* Idea: we put the classes in a big map, grouped by class_id = description x
+   children ids. *)
 let rec compute_classes (env : PatEnv.t) =
   (* Perform potential optimization, e.g. replace
      x = merge ... (true -> y) (false -> y);
@@ -311,17 +321,38 @@ let factor_classes (env : PatEnv.t) =
     let add_to_env ident (cl_id, _, _) (subst, classes) =
       (* New identifier for [pat] : either the concatenation of the
          equivalence class patterns with a unique number appended OR *)
-      let new_ident = (* TODO: O(n2) *)
+      let new_pattern = (* TODO: O(n2) *)
         let gather pat (cl_id', _, _) pat_list =
           if cl_id = cl_id' then pat :: pat_list else pat_list in
-        match PatEnv.fold gather env [] with
+
+        let rec filter_pattern pat acc = match pat with
+          | Evarpat id ->
+              if Introvars.was_generated (Idents.name id)
+              then acc else pat :: acc
+          | Etuplepat pat_list ->
+              (match filter_patterns pat_list with
+                 | [] -> acc
+                 | pat_list -> Etuplepat pat_list :: acc)
+
+        and filter_patterns pat_list =
+          List.fold_right filter_pattern pat_list [] in
+
+        match filter_patterns (PatEnv.fold gather env []) with
+          | [] -> Evarpat (Idents.fresh "tom")
           | [pat] -> pat
           | pat_list ->
-              let concat pat prefix = (pat_name pat) ^ "_" ^ prefix in
+              let concat pat prefix =
+                let pn = pat_name pat in
+                if Introvars.was_generated pn
+                then prefix
+                else pn ^ "_" ^ prefix in
               let prefix = List.fold_right concat pat_list "" in
-              let prefix = String.sub prefix 0 (String.length prefix - 1) in
+              let prefix = (* chops trailing _ if needed *)
+                if prefix = ""
+                then "tom"
+                else String.sub prefix 0 (String.length prefix - 1) in
               Evarpat (ident_of_int prefix cl_id) in
-      (PatEnv.P.add ident new_ident subst,
+      (PatEnv.P.add ident new_pattern subst,
        IntMap.add cl_id ident classes) in
     PatEnv.fold add_to_env env (PatEnv.P.empty, IntMap.empty) in
 
