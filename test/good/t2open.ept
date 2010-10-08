@@ -31,7 +31,7 @@ node h(x,z,m:int) returns (o:int)
         until (1 = 0) then S2
     end;
     present
-      | (x = 0) do o = pre o + 2
+      | (x = 0) do o = 2 -> pre o + 2
       | (x = 2) do o = 4
     default do o = 2
     end
