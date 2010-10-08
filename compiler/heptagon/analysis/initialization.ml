@@ -16,6 +16,8 @@
    or when [x] is defined in the initial state of an automaton. *)
 
 
+(* Requis : typage *)
+
 open Misc
 open Names
 open Idents
@@ -31,13 +33,19 @@ type typ =
 and init = initr ref
 and initr =
   | Izero
-  | Ione
+  | Ione of root
   | Ivar of int
   | Imax of init * init
   | Ilink of init
 
+(* try to keep track of the root of the uninitialized state *)
+and root =
+  | RLast_none of ident
+  | RExp of exp
+  | ROr of root * root
+
 (* typing errors *)
-exception Unify
+exception Unify of root
 
 (** unalias [init] type *)
 let rec irepr i =
@@ -48,11 +56,14 @@ let rec irepr i =
         i_son
     | _ -> i
 
-let index = ref 0
-let gen_index () = incr index; !index
-let new_var () = ref (Ivar(gen_index ()))
+let _index = ref 0
+let new_var () =
+  let gen_index () = incr _index; !_index in
+  ref (Ivar(gen_index ()))
+
 let izero = ref Izero
-let ione = ref Ione
+let ione root = ref (Ione root)
+
 (** max between types with some basic simplifications *)
 let imax i1 i2 =
   let i1 = irepr i1 in
@@ -61,12 +72,14 @@ let imax i1 i2 =
     | (Izero, Izero) -> izero
     | (Izero, _) -> i2
     | (_, Izero) -> i1
-    | (_, Ione) | (Ione, _) -> ione
+    | (Ione r1, Ione r2) -> ione (ROr(r1, r2))
+    | (_, Ione r) | (Ione r, _) -> ione r
     | _ -> ref (Imax(i1, i2))
 
 let product l = Iproduct(l)
 let leaf i = Ileaf(i)
 
+(** Typing Environment *)
 module IEnv =
 struct
   type k = | Last of ident | Var of ident
@@ -88,7 +101,7 @@ struct
       | Heptagon.Var -> add_var x (new_var ()) h
       | Heptagon.Last None ->
         let h = add_var x (new_var ()) h in
-        add_last x ione h (* last is not initialized *)
+        add_last x (ione (RLast_none x)) h (* last is not initialized *)
       | Heptagon.Last (Some _) ->
         let h = add_var x (new_var ()) h in
         add_last x izero h (* last is initialized *)
@@ -96,68 +109,61 @@ end
 
 (** return the representent of a [typ] ( the max ) *)
 let rec itype = function
-  | Iproduct(ty_list) -> _max_list ty_list
+  | Iproduct(ty_list) ->
+      List.fold_left (fun acc ty -> imax acc (itype ty)) izero ty_list
   | Ileaf(i) -> i
-and _max_list ty_list =
-  List.fold_left (fun acc ty -> imax acc (itype ty)) izero ty_list
 
 (** saturate an [init] type. Every element must be initialized *)
-let rec initialized i =
+let rec force_initialized i =
   let i = irepr i in
   match !i with
     | Izero -> ()
     | Ivar _ -> i := Ilink(izero)
-    | Imax(i1, i2) -> initialized i1; initialized i2
-    | Ilink(i) -> initialized i
-    | Ione -> raise Unify
+    | Imax(i1, i2) -> force_initialized i1; force_initialized i2
+    | Ilink(i) -> force_initialized i
+    | Ione r -> raise (Unify r)
 
-(* build a [typ] from a type *)
+(** build a [typ] from a [ty] *)
 let rec skeleton i ty =
   match ty with
     | Tprod(ty_list) -> product (List.map (skeleton i) ty_list)
     | _ -> leaf i
 
-let rec const_skeleton i se =
-  match se.se_desc with
-    | Stuple l -> product (List.map (const_skeleton i) l)
-    | _ -> leaf i
-
-(* sub-typing *)
+(** sub-typing *)
 let rec less left_ty right_ty =
-  if left_ty == right_ty then ()
-  else
-    match left_ty, right_ty with
-      | Iproduct(l1), Iproduct(l2) -> List.iter2 less l1 l2
-      | Ileaf(i1), Ileaf(i2) -> iless i1 i2
-      | _ -> raise Unify
-
-and iless left_i right_i =
-  if left_i == right_i then ()
-  else
+  (* an inequation [a < t[a]] becomes [a = t[0]] *)
+  let rec occur_check index i =
+    match !i with
+      | Izero | Ione _ -> i
+      | Ivar id -> if id = index then izero else i
+      | Imax(i1, i2) -> imax (occur_check index i1) (occur_check index i2)
+      | Ilink(i) -> occur_check index i
+  in
+  (* sub-typing on [init] *)
+  let rec iless left_i right_i =
     let left_i = irepr left_i in
     let right_i = irepr right_i in
     if left_i == right_i then ()
-    else
-      match !left_i, !right_i with
-        | Izero, _ | _, Ione -> ()
-        | _, Izero -> initialized left_i
-        | Imax(i1, i2), _ -> iless i1 right_i; iless i2 right_i
-        | _, Ivar id ->
-            let left_i = occur_check id left_i in
-            right_i := Ilink left_i
-        | Ivar id, Imax(i1, i2) ->
-            let i1 = occur_check id i1 in
-            let i2 = occur_check id i2 in
-            right_i := Ilink(imax left_i (imax i1 i2))
-        | _ -> raise Unify
-
-(* an inequation [a < t[a]] becomes [a = t[0]] *)
-and occur_check index i =
-  match !i with
-    | Izero | Ione -> i
-    | Ivar id -> if id = index then izero else i
-    | Imax(i1, i2) -> imax (occur_check index i1) (occur_check index i2)
-    | Ilink(i) -> occur_check index i
+    else match !left_i, !right_i with
+      | Izero, _ -> ()
+      | _, Ione _ -> ()
+      | _, Izero -> force_initialized left_i
+      | Imax(i1, i2), _ -> iless i1 right_i; iless i2 right_i
+      | _, Ivar id ->
+          let left_i = occur_check id left_i in
+          right_i := Ilink left_i
+      | Ivar id, Imax(i1, i2) ->
+          let i1 = occur_check id i1 in
+          let i2 = occur_check id i2 in
+          right_i := Ilink(imax left_i (imax i1 i2))
+      | Ione r, Imax _ -> raise (Unify r)
+      | Ilink _, _ | _, Ilink _ -> assert false
+  in
+  if left_ty == right_ty then ()
+  else match left_ty, right_ty with
+    | Iproduct(l1), Iproduct(l2) -> List.iter2 less l1 l2
+    | Ileaf(i1), Ileaf(i2) -> iless i1 i2
+    | _ -> assert false
 
 
 module Printer = struct
@@ -165,10 +171,10 @@ module Printer = struct
   open Pp_tools
 
   let rec print_init ff i = match !i with
-    | Izero -> fprintf ff "0"
-    | Ione -> fprintf ff "1"
+    | Izero -> fprintf ff "initialized"
+    | Ione _ -> fprintf ff "not initialized"
     | Ivar(i) -> fprintf ff "ivar_%i" i
-    | Imax(i1, i2) -> fprintf ff "@[%a\\/%a@]" print_init i1 print_init i2
+    | Imax(i1, i2) -> fprintf ff "@[<4>max %a@ %a@]" print_init i1 print_init i2
     | Ilink(i) -> print_init ff i
 
   let rec print_type ff = function
@@ -176,12 +182,19 @@ module Printer = struct
     | Iproduct(ty_list) ->
         fprintf ff "@[%a@]" (print_list_r print_type "("" *"")") ty_list
 
+  let rec print_root ff = function
+    | RLast_none(i) ->
+        fprintf ff "that last %a should be initialized" print_ident i
+    | RExp(e) ->
+        fprintf ff "the expression :@\n  @[%a@]" print_location e.e_loc
+    | ROr(r1,r2) ->
+        fprintf ff "@\n- %a@\n- or %a" print_root r1 print_root r2
 end
 
 module Error = struct
   open Location
 
-  type error = | Eclash of typ * typ
+  type error = | Eclash of root * typ * typ
 
   exception Error of location * error
 
@@ -189,13 +202,15 @@ module Error = struct
 
   let message loc kind =
     begin match kind with
-      | Eclash(left_ty, right_ty) ->
-          Format.eprintf "%aInitialization error: this expression has type \
-              %a, @\n\
-              but is expected to have type %a@."
+      | Eclash(root, left_ty, right_ty) ->
+          Format.eprintf
+            "Initialization error :@\n%a\
+             this expression is %a,@ but is expected to be %a,\
+             @ the root of the conflict is %a.@."
             print_location loc
             Printer.print_type left_ty
             Printer.print_type right_ty
+            Printer.print_root root
     end;
     raise Errors.Error
 end
@@ -203,17 +218,17 @@ end
 let less_exp e actual_ty expected_ty =
   try
     less actual_ty expected_ty
-  with | Unify -> Error.message e.e_loc (Error.Eclash(actual_ty, expected_ty))
+  with Unify r -> Error.message e.e_loc (Error.Eclash(r,actual_ty, expected_ty))
 
 (** Main typing function *)
 let rec typing h e =
   match e.e_desc with
-    | Econst c -> const_skeleton izero c
+    | Econst c -> skeleton izero e.e_ty
     | Evar(x) -> IEnv.find_var_typ x h
     | Elast(x) -> IEnv.find_last_typ x h
-    | Epre(None, e) ->
-        initialized_exp h e;
-        skeleton ione e.e_ty
+    | Epre(None, e1) ->
+        initialized_exp h e1;
+        skeleton (ione (RExp e)) e1.e_ty
     | Epre(Some _, e) ->
         initialized_exp h e;
         skeleton izero e.e_ty
