@@ -33,7 +33,7 @@ let index = ref 0
 let gen_index () = (incr index; !index)
 
 (** returns a new clock variable *)
-let new_var () = Cvar { contents = Cindex (gen_index ()); }
+let fresh_clock () = Cvar { contents = Cindex (gen_index ()); }
 
 (** returns the canonic (short) representant of a [ck]
     and update it to this value. *)

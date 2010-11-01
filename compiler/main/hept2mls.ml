@@ -247,6 +247,11 @@ let rec translate env
     | Heptagon.Efby _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
+    | Heptagon.Ewhen (e, c, n) ->
+        mk_exp ~loc:loc ~ty:ty (Ewhen (translate env e, c, n))
+    | Heptagon.Emerge (n, c_e_list) ->
+        mk_exp ~loc:loc ~ty:ty
+          (Emerge (n, List.map (fun (c,e) -> c, translate env e) c_e_list))
 
 let rec translate_pat = function
   | Heptagon.Evarpat(n) -> Evarpat n

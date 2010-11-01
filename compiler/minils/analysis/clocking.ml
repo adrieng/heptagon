@@ -35,17 +35,17 @@ let typ_of_name h x = Env.find x h
 
 let rec typing h e =
   let ct = match e.e_desc with
-    | Econst se -> skeleton (new_var ()) se.se_ty
+    | Econst se -> skeleton (fresh_clock ()) se.se_ty
     | Evar x -> Ck (typ_of_name h x)
     | Efby (_, e) -> typing h e
     | Eapp({a_op = op}, args, r) ->
         let ck = match r with
-          | None -> new_var ()
+          | None -> fresh_clock ()
           | Some(reset) -> typ_of_name h reset in
         typing_op op args h e ck
     | Eiterator (_, _, _, args, r) -> (* Typed exactly as a fun or a node... *)
         let ck = match r with
-          | None -> new_var()
+          | None -> fresh_clock()
           | Some(reset) -> typ_of_name h reset
         in (List.iter (expect h (Ck ck)) args; skeleton ck e.e_ty)
     | Ewhen (e, c, n) ->
@@ -55,14 +55,14 @@ let rec typing h e =
         let ck_c = typ_of_name h n in
         (typing_c_e_list h ck_c n c_e_list; skeleton ck_c e.e_ty)
     | Estruct l ->
-        let ck = new_var () in
+        let ck = fresh_clock () in
         (List.iter
            (fun (_, e) -> let ct = skeleton ck e.e_ty in expect h ct e) l;
          Ck ck)
   in (e.e_ck <- ckofct ct; ct)
 
 and typing_op op e_list h e ck = match op with
-  | (Eequal | Efun _ | Enode _) ->
+  | (Eequal | Efun _ | Enode _) -> (*LA*)
       List.iter (fun e -> expect h (skeleton ck e.e_ty) e) e_list;
       skeleton ck e.e_ty
   | Etuple ->
@@ -128,7 +128,7 @@ let typing_eqs h eq_list = (*TODO FIXME*)
   in List.iter typing_eq eq_list
 
 let build h dec =
-  List.fold_left (fun h { v_ident = n } -> Env.add n (new_var ()) h) h dec
+  List.fold_left (fun h { v_ident = n } -> Env.add n (fresh_clock ()) h) h dec
 
 let sbuild h dec base =
   List.fold_left (fun h { v_ident = n } -> Env.add n base h) h dec

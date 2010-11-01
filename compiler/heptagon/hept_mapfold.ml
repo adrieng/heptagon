@@ -135,6 +135,16 @@ and edesc funs acc ed = match ed with
       let args, acc = mapfold (exp_it funs) acc args in
       let reset, acc = optional_wacc (exp_it funs) acc reset in
       Eiterator (i, app, param, args, reset), acc
+  | Ewhen (e, c, n) ->
+      let e, acc = exp_it funs acc e in
+      Ewhen (e, c, n), acc
+  | Emerge (n, c_e_list) ->
+      let aux acc (c,e) =
+        let e, acc = exp_it funs acc e in
+        (c,e), acc in
+      let c_e_list, acc = mapfold aux acc c_e_list in
+      Emerge (n, c_e_list), acc
+
 
 
 and app_it funs acc a = funs.app funs acc a

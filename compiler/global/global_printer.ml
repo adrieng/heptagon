@@ -1,4 +1,5 @@
 open Names
+open Idents
 open Signature
 open Types
 open Clocks
@@ -106,4 +107,18 @@ let print_interface ff =
   NamesEnv.iter
     (fun key sigtype -> print_interface_value ff key sigtype) m.m_values;
   Format.fprintf ff "@."
+
+let print_ident ff id = Format.fprintf ff "%s" (name id)
+
+ let rec print_ck ff = function
+  | Cbase -> fprintf ff "base"
+  | Con (ck, c, n) ->
+      fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
+  | Cvar { contents = Cindex _ } -> fprintf ff "base"
+  | Cvar { contents = Clink ck } -> print_ck ff ck
+
+let rec print_clock ff = function
+  | Ck ck -> print_ck ff ck
+  | Cprod ct_list ->
+      fprintf ff "@[<2>(%a)@]" (print_list_r print_clock """ *""") ct_list
 

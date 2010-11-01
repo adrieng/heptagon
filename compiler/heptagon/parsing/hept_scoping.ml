@@ -368,6 +368,7 @@ and translate_var_dec local_const env vd =
     { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
       Heptagon.v_type = translate_type vd.v_loc local_const vd.v_type;
       Heptagon.v_last = translate_last local_const vd.v_last;
+      Heptagon.v_clock = Clocks.fresh_clock(); (* TODO add clock annotations *)
       Heptagon.v_loc = vd.v_loc }
 
 and translate_vd_list local_const env =

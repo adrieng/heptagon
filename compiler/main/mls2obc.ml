@@ -422,8 +422,6 @@ let translate_contract map mem_vars =
         {
           Minils.c_eq = eq_list;
           Minils.c_local = d_list;
-          Minils.c_assume = e_a;
-          Minils.c_enforce = e_c
         } ->
         let (v, si, j, s_list) = translate_eq_list map
           empty_call_context eq_list in

@@ -169,6 +169,7 @@ let rec less left_ty right_ty =
 module Printer = struct
   open Format
   open Pp_tools
+  open Global_printer
 
   let rec print_init ff i = match !i with
     | Izero -> fprintf ff "initialized"
@@ -223,7 +224,7 @@ let less_exp e actual_ty expected_ty =
 (** Main typing function *)
 let rec typing h e =
   match e.e_desc with
-    | Econst c -> skeleton izero e.e_ty
+    | Econst _ -> skeleton izero e.e_ty
     | Evar(x) -> IEnv.find_var_typ x h
     | Elast(x) -> IEnv.find_last_typ x h
     | Epre(None, e1) ->
@@ -248,6 +249,16 @@ let rec typing h e =
     | Eiterator (_, _, _, e_list, _) ->
         List.iter (fun e -> initialized_exp h e) e_list;
         skeleton izero e.e_ty
+    | Ewhen (e, _, n) ->
+        let i = imax (itype (IEnv.find_var_typ n h)) (itype (typing h e)) in
+        skeleton i e.e_ty
+    | Emerge (n, c_e_list) ->
+        let i =
+          List.fold_left
+            (fun acc (_, e) -> imax acc (itype (typing h e))) izero c_e_list in
+        let i = imax (itype (IEnv.find_var_typ n h)) i in
+        skeleton i e.e_ty
+
 
 (** Typing an application *)
 and apply h app e_list =

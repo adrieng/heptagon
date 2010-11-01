@@ -14,6 +14,7 @@ open Idents
 open Static
 open Signature
 open Types
+open Clocks
 open Initial
 
 type state_name = name
@@ -36,6 +37,10 @@ and desc =
   | Epre of static_exp option * exp
   | Efby of exp * exp
   | Estruct of (field_name * exp) list
+  | Ewhen of exp * constructor_name * var_ident
+    (** exp when Constructor(ident) *)
+  | Emerge of var_ident * (constructor_name * exp) list
+    (** merge ident (Constructor -> exp)+ *)
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp * exp list * exp option
 
@@ -106,6 +111,7 @@ and present_handler = {
 and var_dec = {
   v_ident : var_ident;
   v_type  : ty;
+  v_clock : ck;
   v_last  : last;
   v_loc   : location }
 
@@ -187,16 +193,18 @@ let mk_type_dec name desc =
 let mk_equation ?(statefull = true) desc =
   { eq_desc = desc; eq_statefull = statefull; eq_loc = no_location; }
 
-let mk_var_dec ?(last = Var) name ty  =
-  { v_ident = name; v_type = ty;
+let mk_var_dec ?(last = Var) ?(ck = fresh_clock()) name ty =
+  { v_ident = name; v_type = ty; v_clock = ck;
     v_last = last; v_loc = no_location }
 
 let mk_block ?(statefull = true) ?(defnames = Env.empty) eqs =
   { b_local = []; b_equs = eqs; b_defnames = defnames;
     b_statefull = statefull; b_loc = no_location }
 
-let dfalse = mk_exp (Econst (mk_static_bool false)) (Tid Initial.pbool)
-let dtrue = mk_exp (Econst (mk_static_bool true)) (Tid Initial.pbool)
+let dfalse =
+  mk_exp (Econst (mk_static_bool false)) (Tid Initial.pbool)
+let dtrue =
+  mk_exp (Econst (mk_static_bool true)) (Tid Initial.pbool)
 
 let mk_ifthenelse e1 e2 e3 =
   { e3 with e_desc = mk_op_app Eifthenelse [e1; e2; e3] }

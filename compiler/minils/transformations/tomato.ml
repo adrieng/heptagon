@@ -14,6 +14,7 @@ open Signature
 open Minils
 open Mls_utils
 open Mls_printer
+open Global_printer
 open Types
 open Clocks
 open Pp_tools

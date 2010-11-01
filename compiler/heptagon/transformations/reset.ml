@@ -45,10 +45,8 @@ open Initial
    e1 -> e2 is translated into if (true fby false) then e1 else e2
 *)
 
-let mk_bool_var n =
-  mk_exp (Evar n) (Tid Initial.pbool)
-let mk_bool_param n =
-  mk_var_dec n (Tid Initial.pbool)
+let mk_bool_var n = mk_exp (Evar n) (Tid Initial.pbool)
+let mk_bool_param n = mk_var_dec n (Tid Initial.pbool)
 
 let or_op_call e_list = mk_op_app (Efun Initial.por) e_list
 

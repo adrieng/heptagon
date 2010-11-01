@@ -50,6 +50,7 @@ and static_exp_desc funs acc sd = match sd with
       let f_se_l, acc = mapfold aux acc f_se_l in
       Srecord f_se_l, acc
 
+
 and ty_it funs acc t = try funs.ty funs acc t with Fallback -> ty funs acc t
 and ty funs acc t = match t with
   | Tid _ -> t, acc
@@ -58,7 +59,6 @@ and ty funs acc t = match t with
       let t, acc = ty_it funs acc t in
       let se, acc = static_exp_it funs acc se in
       Tarray (t, se), acc
-
 (*
 and ct_it funs acc c = try funs.ct funs acc c with Fallback -> ct funs acc t
 and ct funs acc c = match c with

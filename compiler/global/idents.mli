@@ -46,6 +46,3 @@ sig
   include (Set.S with type elt = ident)
   val fprint_t : Format.formatter -> t -> unit
 end
-
-
-val print_ident : Format.formatter -> ident -> unit

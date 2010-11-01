@@ -108,6 +108,13 @@ let rec typing e =
         candlist l
     | Eiterator (_, _, _, e_list, _) ->
         ctuplelist (List.map typing e_list)
+    | Ewhen (e, c, n) ->
+        let t = typing e in
+        cseq (read n) t
+    | Emerge (n, c_e_list) ->
+        let tl = List.map (fun (_,e) -> typing e) c_e_list in
+        cseq (read n) (candlist tl)
+
 
 (** Typing an application *)
 and apply op e_list =

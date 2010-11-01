@@ -36,8 +36,8 @@ let parse_interface lexbuf =
 
 let compile_impl pp p =
   (* Typing *)
-  let p = pass "Typing" true Typing.program p pp in
   let p = silent_pass "Statefullness check" true Statefull.program p in
+  let p = pass "Typing" true Typing.program p pp in
 
   if !print_types then print_interface Format.std_formatter;
 

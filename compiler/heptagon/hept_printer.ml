@@ -96,14 +96,14 @@ and print_exp_desc ff = function
   | Econst c -> print_static_exp ff c
   | Epre(None, e) -> fprintf ff "pre %a" print_exp e
   | Epre(Some c, e) ->
-    fprintf ff "@[<2>%a fby@ %a@]" print_static_exp c  print_exp e
+      fprintf ff "@[<2>%a fby@ %a@]" print_static_exp c  print_exp e
   | Efby(e1, e2) ->
-    fprintf ff "@[<2>%a fby@ %a@]" print_exp e1  print_exp e2
+      fprintf ff "@[<2>%a fby@ %a@]" print_exp e1  print_exp e2
   | Eapp(app, args, reset) ->
-    fprintf ff "@[<2>%a@,%a@]"
+      fprintf ff "@[<2>%a@,%a@]"
         print_app (app, args) print_every reset
   | Estruct(f_e_list) ->
-    print_record (print_couple print_qualname print_exp """ = """) ff f_e_list
+      print_record (print_couple print_qualname print_exp """ = """) ff f_e_list
   | Eiterator (it, f, param, args, reset) ->
       fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
         (iterator_to_string it)
@@ -111,6 +111,18 @@ and print_exp_desc ff = function
         print_static_exp param
         print_exp_tuple args
         print_every reset
+  | Ewhen (e, c, n) ->
+      fprintf ff "@[<2>(%a@ when %a(%a))@]"
+        print_exp e print_qualname c print_ident n
+  | Emerge (x, tag_e_list) ->
+      fprintf ff "@[<2>merge %a@ %a@]"
+        print_ident x print_tag_e_list tag_e_list
+
+and print_handler ff c =
+  fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c
+
+and print_tag_e_list ff tag_e_list =
+  fprintf ff "@[%a@]" (print_list print_handler """""") tag_e_list
 
 and print_every ff reset =
   print_opt (fun ff id -> fprintf ff " every %a" print_exp id) ff reset

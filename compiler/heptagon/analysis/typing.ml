@@ -20,6 +20,7 @@ open Types
 open Global_printer
 open Heptagon
 open Hept_mapfold
+open Pp_tools
 
 type value = { ty: ty; mutable last: bool }
 
@@ -46,6 +47,9 @@ type error =
   | Eempty_record
   | Eempty_array
   | Efoldi_bad_args of ty
+  | Emerge_missing_constrs of qualname list
+  | Emerge_not_enum of name * ty
+  | Emerge_unexpected_constr of qualname
 
 exception Unify
 exception TypingError of error
@@ -91,6 +95,21 @@ let message loc kind =
         Format.eprintf "%aThe name %s is already defined.@."
           print_location loc
           s
+    | Emerge_missing_constrs cl ->
+        Format.eprintf "%aSome constructors are missing in this merge :@\n\
+            @[%a@]@."
+          print_location loc
+          (print_list_r print_qualname """,""") cl
+    | Emerge_not_enum (n,t) ->
+        Format.eprintf
+          "%aThe merge variable %a should be of an enum type (found %a)@."
+          print_location loc
+          print_name n
+          print_type t
+    | Emerge_unexpected_constr c ->
+        Format.eprintf "%aThe constructor %a is unexpected.@."
+          print_location loc
+          print_qualname c
     | Enon_exaustive ->
         Format.eprintf "%aSome constructors are missing in this \
                         pattern/matching.@."
@@ -166,9 +185,9 @@ let find_with_error find_fun f =
   try find_fun f
   with Not_found -> error (Eundefined(fullname f))
 
-let find_value = find_with_error find_value
-let find_constrs = find_with_error find_constrs
-let find_field = find_with_error find_field
+let find_value v = find_with_error find_value v
+let find_constrs c = Tid (find_with_error find_constrs c)
+let find_field f = find_with_error find_field f
 
 (** Constraints related functions *)
 let (curr_size_constr : size_constraint list ref) = ref []
@@ -393,7 +412,7 @@ and typing_static_exp const_env se =
              Svar ln, cd.Signature.c_type
          with Not_found -> (* or a static parameter *)
            Svar ln, QualEnv.find ln const_env)
-    | Sconstructor c -> Sconstructor c, Tid (find_constrs c)
+    | Sconstructor c -> Sconstructor c, find_constrs c
     | Sfield c -> Sfield c, Tid (find_field c)
     | Sop (op, se_list) ->
         let ty_desc = find_value op in
@@ -423,10 +442,9 @@ and typing_static_exp const_env se =
              | [] -> error (Eempty_record)
              | (f,_)::_ -> struct_info_from_field f
           ) in
-
+          check_static_field_unicity f_se_list;
           if List.length f_se_list <> List.length fields then
             message se.se_loc Esome_fields_are_missing;
-          check_static_field_unicity f_se_list;
           let f_se_list =
             List.map (typing_static_field const_env fields
                         (Tid q)) f_se_list in
@@ -539,6 +557,40 @@ let rec typing const_env h e =
                         , typed_n, typed_e_list, reset), ty
 
       | Eiterator _ -> assert false
+
+      | Ewhen (e, c, n) ->
+          let typed_e, t = typing const_env h e in
+          let tn_expected = find_constrs c in
+          let tn_actual = typ_of_name h n in
+          unify tn_actual tn_expected;
+          Ewhen (typed_e, c, n), t
+
+      | Emerge (n, (c1,e1)::c_e_list) ->
+          let tn_actual = typ_of_name h n in
+          unify tn_actual (find_constrs c1);
+          let typed_e1, t = typing const_env h e1 in
+          let expected_c_list = (* constructors from the type of n *)
+            (match tn_actual with
+              | Tid tc ->
+                  (match find_type tc with
+                    | Tenum cl -> cl
+                    | _ -> message e.e_loc (Emerge_not_enum (name n,tn_actual)))
+              | _ -> message e.e_loc (Emerge_not_enum (name n,tn_actual))) in
+          let expected_c_set =
+            List.fold_left
+              (fun acc c -> QualSet.add c acc) QualSet.empty expected_c_list in
+          let typed_c_e_list, left_c_set =
+            let check_c_e expected_c_set (c,e) =
+              if not (QualSet.mem c expected_c_set)
+              then message e.e_loc (Emerge_unexpected_constr c);
+              (c, expect const_env h t e), QualSet.remove c expected_c_set in
+            mapfold check_c_e expected_c_set c_e_list in
+          if not (QualSet.is_empty left_c_set)
+          then message e.e_loc
+                       (Emerge_missing_constrs (QualSet.elements left_c_set));
+          Emerge (n, (c1,typed_e1)::typed_c_e_list), t
+      | Emerge (_, []) -> assert false
+
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
   with
@@ -1017,8 +1069,7 @@ let typing_const_dec cd =
     { cd with c_value = se; c_type = ty }
 
 let program
-    ({ p_opened = opened; p_types = p_type_list;
-       p_nodes = p_node_list; p_consts = p_consts_list } as p) =
+    ({ p_nodes = p_node_list; p_consts = p_consts_list } as p) =
   let typed_cd_list = List.map typing_const_dec p_consts_list in
   let typed_node_list = List.map node p_node_list in
     { p with p_nodes = typed_node_list; p_consts = typed_cd_list }
