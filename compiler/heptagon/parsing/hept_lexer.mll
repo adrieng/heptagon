@@ -51,6 +51,8 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "assume", ASSUME;
  "enforce", ENFORCE;
  "with", WITH;
+ "when", WHEN;
+ "merge", MERGE;
  "map", MAP;
  "fold", FOLD;
  "foldi", FOLDI;
@@ -146,10 +148,10 @@ rule token = parse
   | (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       { let s = Lexing.lexeme lexbuf in
           begin try
-	    Hashtbl.find keyword_table s
+      Hashtbl.find keyword_table s
           with
-	      Not_found -> IDENT id
-	  end
+        Not_found -> IDENT id
+    end
       }
   | ['0'-'9']+
   | '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
@@ -160,14 +162,14 @@ rule token = parse
       { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
   | "(*@ " (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {
-	reset_string_buffer();
+  reset_string_buffer();
   let l1 = lexbuf.lex_curr_p in
-	begin try
-	  pragma lexbuf
-	with Lexical_error(Unterminated_comment, Loc(_, l2)) ->
-	  raise(Lexical_error(Unterminated_comment, Loc (l1, l2)))
-	end;
-	PRAGMA(id,get_stored_string())
+  begin try
+    pragma lexbuf
+  with Lexical_error(Unterminated_comment, Loc(_, l2)) ->
+    raise(Lexical_error(Unterminated_comment, Loc (l1, l2)))
+  end;
+  PRAGMA(id,get_stored_string())
       }
   | "(*"
       { let comment_start = lexbuf.lex_curr_p in
@@ -181,32 +183,32 @@ rule token = parse
         token lexbuf }
    | ['!' '?' '~']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':'
-	  '<' '=' '>' '?' '@' '^' '|' '~'] *
+    '<' '=' '>' '?' '@' '^' '|' '~'] *
       { PREFIX(Lexing.lexeme lexbuf) }
   | ['=' '<' '>' '&'  '|' '&' '$']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX0(Lexing.lexeme lexbuf) }
   | ['@' '^']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX1(Lexing.lexeme lexbuf) }
   | ['+' '-']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX2(Lexing.lexeme lexbuf) }
   | "**"
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX4(Lexing.lexeme lexbuf) }
   | ['*' '/' '%']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX3(Lexing.lexeme lexbuf) }
   | eof            {EOF}
   | _              {raise (Lexical_error (Illegal_character,
-					  Loc (Lexing.lexeme_start_p lexbuf,
-					  Lexing.lexeme_end_p lexbuf)))}
+            Loc (Lexing.lexeme_start_p lexbuf,
+            Lexing.lexeme_end_p lexbuf)))}
 
 and pragma = parse
   | newline         { new_line lexbuf; pragma lexbuf }
@@ -228,7 +230,7 @@ and pragma = parse
 
   | _
       { store_string_char(Lexing.lexeme_char lexbuf 0);
-	pragma lexbuf }
+  pragma lexbuf }
 
 and comment = parse
   | newline         { new_line lexbuf; comment lexbuf }

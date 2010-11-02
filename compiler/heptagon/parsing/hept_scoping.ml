@@ -285,6 +285,20 @@ and translate_desc loc local_const env = function
       let app = Heptagon.mk_op ~params:params (translate_op op) in
       Heptagon.Eiterator (translate_iterator_type it,
                           app, n, e_list, None)
+  | Ewhen (e, c, n) ->
+      let e = translate_exp local_const env e in
+      let c = qualify_constrs c in
+      let n = Rename.var loc env n in
+      Heptagon.Ewhen (e, c, n)
+  | Emerge (n, c_e_list) ->
+      let n = Rename.var loc env n in
+      let c_e_list =
+        let fun_c_e (c, e) =
+          let e = translate_exp local_const env e in
+          let c = qualify_constrs c in
+          (c, e) in
+        List.map fun_c_e c_e_list in
+      Heptagon.Emerge (n, c_e_list)
 
 and translate_op = function
   | Eequal -> Heptagon.Eequal

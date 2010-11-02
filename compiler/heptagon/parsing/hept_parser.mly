@@ -39,6 +39,7 @@ open Hept_parsetree
 %token ASSUME
 %token ENFORCE
 %token WITH
+%token WHEN MERGE
 %token POWER
 %token LBRACKET
 %token RBRACKET
@@ -65,6 +66,7 @@ open Hept_parsetree
 %left AMPERSAND
 %left INFIX0 EQUAL LESS_GREATER
 %right INFIX1
+%right WHEN
 %left INFIX2 SUBTRACTIVE
 %left STAR INFIX3
 %left INFIX4
@@ -76,6 +78,7 @@ open Hept_parsetree
 %right PREFIX
 %left DOT
 
+
 %start program
 %type <Hept_parsetree.program> program
 
@@ -84,14 +87,22 @@ open Hept_parsetree
 
 %%
 
+/** Tools **/
+%inline slist(S, x)        : l=separated_list(S, x)                    {l}
+%inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
+%inline tuple(x)           : LPAREN h=x COMMA t=snlist(COMMA,x) RPAREN { h::t }
+%inline soption(P,x):
+  |/* empty */    { None }
+  | P v=x         { Some(v) }
+
 program:
   | pragma_headers open_modules const_decs type_decs node_decs EOF
       {{ p_modname = "";
          p_pragmas = $1;
-	       p_opened = List.rev $2;
+         p_opened = List.rev $2;
          p_types = $4;
          p_nodes = $5;
-	       p_consts = $3; }}
+         p_consts = $3; }}
 ;
 
 pragma_headers:
@@ -159,13 +170,13 @@ node_dec:
     RETURNS LPAREN out_params RPAREN
     contract b=block(LET) TEL
       {{ n_name = $2;
-			   n_statefull = $1;
-			   n_input  = $5;
-			   n_output = $9;
-			   n_contract = $11;
-			   n_block = b;
-			   n_params = $3;
-			   n_loc = (Loc($startpos,$endpos)) }}
+         n_statefull = $1;
+         n_input  = $5;
+         n_output = $9;
+         n_contract = $11;
+         n_block = b;
+         n_params = $3;
+         n_loc = (Loc($startpos,$endpos)) }}
 ;
 
 node_or_fun:
@@ -211,8 +222,8 @@ contract:
   | /* empty */ {None}
   | CONTRACT b=block(LET) TEL? opt_assume enforce
       { Some{ c_block = b;
-	            c_assume = $4;
-	            c_enforce = $5 } }
+              c_assume = $4;
+              c_enforce = $5 } }
 ;
 
 opt_assume:
@@ -402,6 +413,10 @@ _simple_exp:
 node_name:
   | qualname call_params { mk_app (Enode $1) $2 }
 
+merge_handlers:
+  | hs=nonempty_list(merge_handler) { hs }
+merge_handler:
+  | LPAREN c=constructor_or_bool ARROW e=exp RPAREN { (c,e) }
 
 exp:
   | e=simple_exp { e }
@@ -421,6 +436,10 @@ _exp:
       { mk_op_call $2 [$1; $3] }
   | exp INFIX2 exp
       { mk_op_call $2 [$1; $3] }
+  | e=exp WHEN c=constructor_or_bool LPAREN n=IDENT RPAREN
+      { Ewhen (e, c, n) }
+  | MERGE n=IDENT hs=merge_handlers
+      { Emerge (n, hs) }
   | exp INFIX1 exp
       { mk_op_call $2 [$1; $3] }
   | exp INFIX0 exp

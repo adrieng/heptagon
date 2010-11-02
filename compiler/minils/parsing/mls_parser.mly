@@ -69,21 +69,21 @@ open Mls_utils
 %%
 
 /** Tools **/
-%inline slist(S, x)        : l=separated_list(S, x)                    {l} 
+%inline slist(S, x)        : l=separated_list(S, x)                    {l}
 %inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
 %inline tuple(x)           : LPAREN h=x COMMA t=snlist(COMMA,x) RPAREN { h::t }
 %inline option(P,x):
-  |/* empty */    { None }    
+  |/* empty */    { None }
   | P v=x         { Some(v) }
 
 qualified(x) :
   | n=x { Modules.qualname n }
   | m=CONSTRUCTOR DOT n=x { { qual = m; name = n } }
- 
+
 structure(field): LBRACE s=snlist(SEMICOL,field) RBRACE {s}
 
 localize(x): y=x { y, (Loc($startpos(y),$endpos(y))) }
- 
+
 
 program:
   | o=open_modules c=const_decs t=type_decs n=node_decs EOF
@@ -118,10 +118,10 @@ node_dec:
   NODE n=qualname p=params(n_param) LPAREN args=args RPAREN
   RETURNS LPAREN out=args RPAREN vars=loc_vars eqs=equs
       { mk_node p args out vars eqs ~loc:(Loc ($startpos,$endpos)) n }
-        
+
 
 args_t: SEMICOL p=args {p}
-args: 
+args:
   | /* empty */ { [] }
   | h=var t=loption(args_t) {h@t}
 
@@ -155,7 +155,7 @@ pat:
   | LPAREN p=snlist(COMMA, pat) RPAREN {Etuplepat p}
 
 longname: l=qualified(name) {l}
-  
+
 constructor: /* of type longname */
   | ln=qualified(CONSTRUCTOR) { ln }
   | b=BOOL                    { if b then Initial.ptrue else Initial.pfalse }

@@ -149,7 +149,7 @@ rule token = parse
       { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
 (*  | "(*@ " (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {
-	reset_string_buffer();
+  reset_string_buffer();
   let l1 = lexbuf.lex_curr_p in
     begin try
       pragma lexbuf
@@ -170,27 +170,27 @@ rule token = parse
         token lexbuf }
    | ['!' '?' '~']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':'
-	  '<' '=' '>' '?' '@' '^' '|' '~'] *
+    '<' '=' '>' '?' '@' '^' '|' '~'] *
       { PREFIX(Lexing.lexeme lexbuf) }
   | ['=' '<' '>' '&'  '|' '&' '$']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX0(Lexing.lexeme lexbuf) }
   | ['@' '^']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX1(Lexing.lexeme lexbuf) }
   | ['+' '-']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX2(Lexing.lexeme lexbuf) }
   | "**"
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX4(Lexing.lexeme lexbuf) }
   | ['*' '/' '%']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':' '<' '=' '>'
-	  '?' '@' '^' '|' '~'] *
+    '?' '@' '^' '|' '~'] *
       { INFIX3(Lexing.lexeme lexbuf) }
   | eof            {EOF}
   | _              {raise (Lexical_error (Illegal_character,

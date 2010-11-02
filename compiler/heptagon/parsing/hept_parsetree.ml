@@ -63,13 +63,15 @@ and exp =
 
 and edesc =
   | Econst of static_exp
-  | Evar of var_name
+  | Evar of var_name (* can be a constant_name *)
   | Elast of var_name
   | Epre of exp option * exp
   | Efby of exp * exp
   | Estruct of (qualname * exp) list
   | Eapp of app * exp list
   | Eiterator of iterator_type * app * exp * exp list
+  | Ewhen of exp * constructor_name * var_name
+  | Emerge of var_name * (constructor_name * exp) list
 
 and app = { a_op: op; a_params: exp list; }
 
