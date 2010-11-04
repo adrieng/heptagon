@@ -21,6 +21,7 @@ open Global_printer
 open Heptagon
 open Hept_mapfold
 open Pp_tools
+open Format
 
 type value = { ty: ty; mutable last: bool }
 
@@ -47,9 +48,9 @@ type error =
   | Eempty_record
   | Eempty_array
   | Efoldi_bad_args of ty
-  | Emerge_missing_constrs of qualname list
-  | Emerge_not_enum of name * ty
-  | Emerge_unexpected_constr of qualname
+  | Emerge_missing_constrs of QualSet.t
+  | Emerge_uniq of qualname
+  | Emerge_mix of qualname
 
 exception Unify
 exception TypingError of error
@@ -59,119 +60,103 @@ let error kind = raise (TypingError(kind))
 let message loc kind =
   begin match kind with
     | Emissing(s) ->
-        Format.eprintf "%aNo equation is given for name %s.@."
+        eprintf "%aNo equation is given for name %s.@."
           print_location loc
           s;
     | Emissingcase(s) ->
-        Format.eprintf "%aCase %s not defined.@."
+        eprintf "%aCase %s not defined.@."
           print_location loc
           s;
     | Eundefined(s) ->
-        Format.eprintf "%aThe name %s is unbound.@."
+        eprintf "%aThe name %s is unbound.@."
           print_location loc
           s;
     | Elast_undefined(s) ->
-        Format.eprintf "%aThe name %s does not have a last value.@."
+        eprintf "%aThe name %s does not have a last value.@."
           print_location loc
           s;
     | Etype_clash(actual_ty, expected_ty) ->
-        Format.eprintf "%aType Clash: this expression has type %a, @\n\
+        eprintf "%aType Clash: this expression has type %a, @\n\
             but is expected to have type %a.@."
           print_location loc
           print_type actual_ty
           print_type expected_ty
     | Earity_clash(actual_arit, expected_arit) ->
-        Format.eprintf "%aType Clash: this expression expects %d arguments,@\n\
+        eprintf "%aType Clash: this expression expects %d arguments,@\n\
             but is expected to have %d.@."
           print_location loc
           expected_arit actual_arit
     | Estatic_arity_clash(actual_arit, expected_arit) ->
-        Format.eprintf
-          "%aType Clash: this node expects %d static parameters,@\n\
-           but was given %d.@."
+        eprintf "%aType Clash: this node expects %d static parameters,@\n\
+            but was given %d.@."
           print_location loc
           expected_arit actual_arit
     | Ealready_defined(s) ->
-        Format.eprintf "%aThe name %s is already defined.@."
+        eprintf "%aThe name %s is already defined.@."
           print_location loc
           s
-    | Emerge_missing_constrs cl ->
-        Format.eprintf "%aSome constructors are missing in this merge :@\n\
-            @[%a@]@."
+    | Emerge_missing_constrs c_set ->
+        eprintf "%aSome constructors are missing in this merge : @[%a@]@."
           print_location loc
-          (print_list_r print_qualname """,""") cl
-    | Emerge_not_enum (n,t) ->
-        Format.eprintf
-          "%aThe merge variable %a should be of an enum type (found %a)@."
+          (print_list_r print_qualname """,""") (QualSet.elements c_set)
+    | Emerge_uniq c ->
+        eprintf "%aThe constructor %a is matched more than one time.@."
           print_location loc
-          print_name n
-          print_type t
-    | Emerge_unexpected_constr c ->
-        Format.eprintf "%aThe constructor %a is unexpected.@."
+          print_qualname c
+    | Emerge_mix c ->
+        eprintf "%aYou can't mix constructors from different types.@\n\
+          The constructor %a is unexpected.@."
           print_location loc
           print_qualname c
     | Enon_exaustive ->
-        Format.eprintf "%aSome constructors are missing in this \
-                        pattern/matching.@."
+        eprintf "%aSome constructors are missing in this pattern/matching.@."
           print_location loc
     | Epartial_switch(s) ->
-        Format.eprintf
-          "%aThe case %s is missing.@."
+        eprintf "%aThe case %s is missing.@."
           print_location loc
           s
     | Etoo_many_outputs ->
-        Format.eprintf
-          "%aA function may only returns a basic value.@."
+        eprintf "%aA function may only returns a basic value.@."
           print_location loc
     | Esome_fields_are_missing ->
-        Format.eprintf
-          "%aSome fields are missing.@."
+        eprintf "%aSome fields are missing.@."
           print_location loc
     | Esubscripted_value_not_an_array  ty ->
-        Format.eprintf
-          "%aSubscript used on a non array type : %a.@."
+        eprintf "%aSubscript used on a non array type : %a.@."
           print_location loc
           Global_printer.print_type ty
     | Earray_subscript_should_be_const ->
-        Format.eprintf
-          "%aSubscript has to be a static value.@."
+        eprintf "%aSubscript has to be a static value.@."
           print_location loc
     | Eundefined_const ln ->
-        Format.eprintf
-          "%aThe const name '%s' is unbound.@."
+        eprintf "%aThe const name '%s' is unbound.@."
           print_location loc
           (fullname ln)
     | Econstraint_solve_failed c ->
-        Format.eprintf
-          "%aThe following constraint cannot be satisified:@\n%a.@."
+        eprintf "%aThe following constraint cannot be satisified:@\n%a.@."
           print_location loc
           print_size_constraint c
     | Etype_should_be_static ty ->
-        Format.eprintf
-          "%aThis type should be static : %a.@."
+        eprintf "%aThis type should be static : %a.@."
           print_location loc
           print_type ty
     | Erecord_type_expected ty ->
-        Format.eprintf
-          "%aA record was expected (found %a).@."
+        eprintf "%aA record was expected (found %a).@."
           print_location loc
           print_type ty
     | Eno_such_field (ty, f) ->
-        Format.eprintf
-          "%aThe record type '%a' does not have a '%s' field.@."
+        eprintf "%aThe record type '%a' does not have a '%s' field.@."
           print_location loc
           print_type ty
           (shortname f)
     | Eempty_record ->
-        Format.eprintf
-          "%aThe record is empty.@."
+        eprintf "%aThe record is empty.@."
           print_location loc
     | Eempty_array ->
-        Format.eprintf
-          "%aThe array is empty.@."
+        eprintf "%aThe array is empty.@."
           print_location loc
     | Efoldi_bad_args  ty ->
-        Format.eprintf
+        eprintf
           "%aThe function given to foldi should expect an integer \
                as the last but one argument (found: %a).@."
           print_location loc
@@ -555,7 +540,6 @@ let rec typing const_env h e =
             (* return the type *)
             Eiterator(it, { app with a_op = op; a_params = typed_params }
                         , typed_n, typed_e_list, reset), ty
-
       | Eiterator _ -> assert false
 
       | Ewhen (e, c, n) ->
@@ -566,31 +550,38 @@ let rec typing const_env h e =
           Ewhen (typed_e, c, n), t
 
       | Emerge (n, (c1,e1)::c_e_list) ->
-          let tn_actual = typ_of_name h n in
-          unify tn_actual (find_constrs c1);
-          let typed_e1, t = typing const_env h e1 in
-          let expected_c_list = (* constructors from the type of n *)
-            (match tn_actual with
-              | Tid tc ->
-                  (match find_type tc with
-                    | Tenum cl -> cl
-                    | _ -> message e.e_loc (Emerge_not_enum (name n,tn_actual)))
-              | _ -> message e.e_loc (Emerge_not_enum (name n,tn_actual))) in
+          (* verify the constructors : they should be unique,
+               all of the same type and cover all the possibilities *)
+          let c_type = find_constrs c1 in
+          let c_set = QualSet.singleton c1 in
+          let c_set =
+            List.fold_left
+              (fun c_set (c, _) ->
+                if QualSet.mem c c_set then message e.e_loc (Emerge_uniq c);
+                (try unify c_type (find_constrs c)
+                with
+                  TypingError(Etype_clash _) -> message e.e_loc (Emerge_mix c));
+                QualSet.add c c_set) c_set c_e_list in
           let expected_c_set =
+            let expected_c_list =
+              match c_type with
+                | Tid tc ->
+                    (match find_type tc with Tenum cl-> cl | _ -> assert false)
+                | _ -> assert false (* type of constrs are Tenum *) in
             List.fold_left
               (fun acc c -> QualSet.add c acc) QualSet.empty expected_c_list in
-          let typed_c_e_list, left_c_set =
-            let check_c_e expected_c_set (c,e) =
-              if not (QualSet.mem c expected_c_set)
-              then message e.e_loc (Emerge_unexpected_constr c);
-              (c, expect const_env h t e), QualSet.remove c expected_c_set in
-            mapfold check_c_e expected_c_set c_e_list in
-          if not (QualSet.is_empty left_c_set)
-          then message e.e_loc
-                       (Emerge_missing_constrs (QualSet.elements left_c_set));
+          let c_set_diff = QualSet.diff expected_c_set c_set in
+          if not (QualSet.is_empty c_set_diff)
+          then message e.e_loc (Emerge_missing_constrs c_set_diff);
+          (* verify [n] is of the right type *)
+          let n_type = typ_of_name h n in
+          unify n_type c_type;
+          (* type *)
+          let typed_e1, t = typing const_env h e1 in
+          let typed_c_e_list =
+            List.map (fun (c, e) -> (c, expect const_env h t e)) c_e_list in
           Emerge (n, (c1,typed_e1)::typed_c_e_list), t
       | Emerge (_, []) -> assert false
-
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
   with
