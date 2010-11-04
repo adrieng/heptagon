@@ -2,6 +2,11 @@ open Heptagon
 open Hept_mapfold
 open Reset
 
+
+(* Transform [f (...) every e]
+   into [f (...) every r] and add an equation [r=e] *)
+
+
 let statefull eq_list = List.exists (fun eq -> eq.eq_statefull) eq_list
 
 let is_var = function

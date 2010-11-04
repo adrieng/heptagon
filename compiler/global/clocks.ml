@@ -11,6 +11,7 @@ open Names
 open Idents
 open Types
 
+
 type ct =
   | Ck of ck
   | Cprod of ct list
@@ -98,7 +99,9 @@ let rec skeleton ck = function
         | _ -> Cprod (List.map (skeleton ck) ty_list))
   | Tarray _ | Tid _ -> Ck ck
 
-let ckofct = function | Ck ck -> ck_repr ck | Cprod _ -> Cbase (*TODO bug ?*)
+(* TODO here it implicitely says that the base clock is Cbase
+    and that all tuple is on Cbase *)
+let ckofct = function | Ck ck -> ck_repr ck | Cprod _ -> Cbase
 
 
 
