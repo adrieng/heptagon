@@ -240,8 +240,8 @@ and pp_cexpr fmt ce = match ce with
       fprintf fmt "%a(@[%a@])"  pp_string s  (pp_list1 pp_cexpr ",") el
   | Cconst (Ccint i) -> fprintf fmt "%d" i
   | Cconst (Ccfloat f) -> fprintf fmt "%f" f
-  | Cconst (Ctag "true") -> fprintf fmt "TRUE"
-  | Cconst (Ctag "false") -> fprintf fmt "FALSE"
+  | Cconst (Ctag "true") -> fprintf fmt "true"
+  | Cconst (Ctag "false") -> fprintf fmt "false"
   | Cconst (Ctag t) -> pp_string fmt t
   | Cconst (Cstrlit t) -> fprintf fmt "\"%s\"" t
   | Clhs lhs -> fprintf fmt "%a" pp_clhs lhs
@@ -305,7 +305,6 @@ let pp_cfile_desc fmt filen cfile =
         fprintf fmt "#include <string.h>@\n";
         fprintf fmt "#include <stdlib.h>@\n";
         fprintf fmt "#include \"%s\"@\n@\n" headern;
-        fprintf fmt "#define FALSE 0@\n#define TRUE 1@\n@\n";
         iter (pp_cdef fmt) cdefs
 
 (******************************)

@@ -239,7 +239,7 @@ let rec cexpr_of_static_exp se =
   match se.se_desc with
     | Sint i -> Cconst (Ccint i)
     | Sfloat f -> Cconst (Ccfloat f)
-    | Sbool b -> Cconst (Ctag (if b then "TRUE" else "FALSE"))
+    | Sbool b -> Cconst (Ctag (if b then "true" else "false"))
     | Sfield _ -> assert false
     | Sconstructor c -> Cconst (Ctag (cname_of_qn c))
     | Sarray sl -> Carraylit (List.map cexpr_of_static_exp sl)
@@ -425,13 +425,24 @@ let rec create_affect_const var_env dest c =
     class names.  *)
 let rec cstm_of_act var_env obj_env act =
   match act with
-      (** Case on boolean values are converted to if instead of switch! *)
+      (** Cosmetic : cases on boolean values are converted to if statements. *)
     | Acase (c, [({name = "true"}, te); ({ name = "false" }, fe)])
     | Acase (c, [({name = "false"}, fe); ({ name = "true"}, te)]) ->
         let cc = cexpr_of_exp var_env c in
         let cte = cstm_of_act_list var_env obj_env te in
         let cfe = cstm_of_act_list var_env obj_env fe in
         [Cif (cc, cte, cfe)]
+    | Acase (c, [({name = "true"}, te)]) ->
+        let cc = cexpr_of_exp var_env c in
+        let cte = cstm_of_act_list var_env obj_env te in
+        let cfe = [] in
+        [Cif (cc, cte, cfe)]
+    | Acase (c, [({name = "false"}, fe)]) ->
+        let cc = Cuop ("!", (cexpr_of_exp var_env c)) in
+        let cte = cstm_of_act_list var_env obj_env fe in
+        let cfe = [] in
+        [Cif (cc, cte, cfe)]
+
 
     (** Translation of case into a C switch statement is simple enough: we
         just recursively translate obj expressions and statements to
