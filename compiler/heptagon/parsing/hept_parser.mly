@@ -141,7 +141,7 @@ type_dec:
 ;
 
 enum_ty_desc:
-  | Constructor BAR Constructor   {[$1;$3]}
+  | Constructor                   {[$1]}
   | BOOL BAR BOOL                 {[(if $1 then "true" else "false");
                                     (if $3 then "true" else "false")]}
   | Constructor BAR enum_ty_desc  {$1 :: $3}
