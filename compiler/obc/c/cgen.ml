@@ -303,7 +303,7 @@ and cop_of_op var_env op_name exps =
   let cexps = cexprs_of_exps var_env exps in
   cop_of_op_aux op_name cexps
 
-and clhs_of_lhs var_env l = match l.l_desc with
+and clhs_of_lhs var_env l = match l.pat_desc with
   (** Each Obc variable corresponds to a real local C variable. *)
   | Lvar v ->
       let n = name v in
@@ -339,7 +339,7 @@ let rec assoc_obj instance obj_env =
         else assoc_obj instance t
 
 let assoc_cn instance obj_env =
-  (assoc_obj (obj_call_name instance) obj_env).o_class
+  (assoc_obj (obj_ref_name instance) obj_env).o_class
 
 let is_op = function
   | { qual = "Pervasives"; name = _ } -> true
@@ -467,7 +467,7 @@ let rec cstm_of_act var_env obj_env act =
     | Acall (name_list, o, Mreset, args) ->
         assert_empty name_list;
         assert_empty args;
-        let on = obj_call_name o in
+        let on = obj_ref_name o in
         let obj = assoc_obj on obj_env in
         let classn = cname_of_qn obj.o_class in
         (match obj.o_size with
@@ -504,7 +504,7 @@ let rec cstm_of_act var_env obj_env act =
         generate_function_call var_env obj_env outvl objn args
 
     | Acall(_, o, Mmethod s, _) ->
-        let on = obj_call_name o in
+        let on = obj_ref_name o in
         let obj = assoc_obj on obj_env in
           Error.message obj.o_loc (Error.Eunknown_method s)
 

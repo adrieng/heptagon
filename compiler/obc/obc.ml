@@ -37,26 +37,26 @@ type const_dec = {
   c_type : ty;
   c_loc : location }
 
-type lhs = { l_desc : lhs_desc; l_ty : ty; l_loc : location }
+type pattern = { pat_desc : pat_desc; pat_ty : ty; pat_loc : location }
 
-and lhs_desc =
+and pat_desc =
   | Lvar of var_ident
   | Lmem of var_ident
-  | Lfield of lhs * field_name
-  | Larray of lhs * exp
+  | Lfield of pattern * field_name
+  | Larray of pattern * exp
 
 and exp = { e_desc : exp_desc; e_ty : ty; e_loc : location }
 
 and exp_desc =
-  | Elhs of lhs
+  | Elhs of pattern
   | Econst of static_exp
   | Eop of op_name * exp list
   | Estruct of type_name * (field_name * exp) list
   | Earray of exp list
 
-type obj_call =
+type obj_ref =
   | Oobj of obj_name
-  | Oarray of obj_name * lhs
+  | Oarray of obj_name * pattern
 
 type method_name =
   | Mreset
@@ -64,8 +64,8 @@ type method_name =
   | Mmethod of name
 
 type act =
-  | Aassgn of lhs * exp
-  | Acall of lhs list * obj_call * method_name * exp list
+  | Aassgn of pattern * exp
+  | Acall of pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
   | Afor of var_ident * static_exp * static_exp * block
 
@@ -113,7 +113,7 @@ let mk_exp ?(ty=invalid_type) ?(loc=no_location) desc =
   { e_desc = desc; e_ty = ty; e_loc = loc }
 
 let mk_lhs ?(ty=invalid_type) ?(loc=no_location) desc =
-  { l_desc = desc; l_ty = ty; l_loc = loc }
+  { pat_desc = desc; pat_ty = ty; pat_loc = loc }
 
 let mk_lhs_exp ?(ty=invalid_type) desc =
   let lhs = mk_lhs ~ty:ty desc in
@@ -127,7 +127,7 @@ let mk_block ?(locals=[]) eq_list =
     b_body = eq_list }
 
 let rec var_name x =
-  match x.l_desc with
+  match x.pat_desc with
     | Lvar x -> x
     | Lmem x -> x
     | Lfield(x,_) -> var_name x
@@ -155,7 +155,7 @@ let find_step_method cd =
 let find_reset_method cd =
   List.find (fun m -> m.m_name = Mreset) cd.cd_methods
 
-let obj_call_name o =
+let obj_ref_name o =
   match o with
     | Oobj obj
     | Oarray (obj, _) -> obj

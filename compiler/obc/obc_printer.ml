@@ -23,7 +23,7 @@ let print_obj ff o =
   fprintf ff "@]"
 
 let rec print_lhs ff e =
-  match e.l_desc with
+  match e.pat_desc with
     | Lvar x -> print_ident ff x
     | Lmem x -> fprintf ff "mem("; print_ident ff x; fprintf ff ")"
     | Lfield (l, f) -> print_lhs ff l; fprintf ff ".%s" (shortname f)

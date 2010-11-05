@@ -327,7 +327,7 @@ and mk_node_call map call_context app loc name_list args =
           Env.add vd.Minils.v_ident a env in
         let subst_act_list env act_list =
           let exp funs env e = match e.e_desc with
-            | Elhs { l_desc = Lvar x } ->
+            | Elhs { pat_desc = Lvar x } ->
                 let e =
                   (try Env.find x env
                   with Not_found -> e) in

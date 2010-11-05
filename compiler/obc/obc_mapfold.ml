@@ -15,8 +15,8 @@ open Obc
 type 'a obc_it_funs = {
   exp:        'a obc_it_funs -> 'a -> Obc.exp -> Obc.exp * 'a;
   edesc:      'a obc_it_funs -> 'a -> Obc.exp_desc -> Obc.exp_desc * 'a;
-  lhs:        'a obc_it_funs -> 'a -> Obc.lhs -> Obc.lhs * 'a;
-  lhsdesc:    'a obc_it_funs -> 'a -> Obc.lhs_desc -> Obc.lhs_desc * 'a;
+  lhs:        'a obc_it_funs -> 'a -> Obc.pattern -> Obc.pattern * 'a;
+  lhsdesc:    'a obc_it_funs -> 'a -> Obc.pat_desc -> Obc.pat_desc * 'a;
   act:        'a obc_it_funs -> 'a -> Obc.act -> Obc.act * 'a;
   block:      'a obc_it_funs -> 'a -> Obc.block -> Obc.block * 'a;
   var_dec:    'a obc_it_funs -> 'a -> Obc.var_dec -> Obc.var_dec * 'a;
@@ -66,8 +66,8 @@ and edesc funs acc ed = match ed with
 
 and lhs_it funs acc l = funs.lhs funs acc l
 and lhs funs acc l =
-  let ld, acc = lhsdesc_it funs acc l.l_desc in
-  { l with l_desc = ld }, acc
+  let ld, acc = lhsdesc_it funs acc l.pat_desc in
+  { l with pat_desc = ld }, acc
 
 
 and lhsdesc_it funs acc ld =
