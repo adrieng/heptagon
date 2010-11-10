@@ -338,7 +338,7 @@ let factor_classes (env : PatEnv.t) =
           List.fold_right filter_pattern pat_list [] in
 
         match filter_patterns (PatEnv.fold gather env []) with
-          | [] -> Evarpat (Idents.fresh "tom")
+          | [] -> Evarpat (ident_of_int "tom" cl_id)
           | [pat] -> pat
           | pat_list ->
               let concat pat prefix =
@@ -362,7 +362,11 @@ let factor_classes (env : PatEnv.t) =
       let remap ident =
         (* Inputs won't be present in env *)
         try match PatEnv.P.find (Evarpat ident) subst with
-          | Evarpat ident -> ident
+          | Evarpat ident' ->
+              Format.printf "Remapping %a to %a@."
+                print_ident ident
+                print_ident ident';
+              ident'
           | Etuplepat _ -> assert false
         with Not_found -> ident in
       List.map remap children in
@@ -497,7 +501,7 @@ let node nd =
       try
         (List.find (fun vd -> vd.v_ident = id) nd.n_input).v_type
       with Not_found ->
-        Format.printf "Could not find %a@." print_ident id;
+        Format.printf "Could not find input type for %a@." print_ident id;
         assert false in
     reconstruct input_type env in
   let var_list =

@@ -123,9 +123,6 @@ let eq eq (eq_list, var_list) =
   intro_vars_pat eq.eq_lhs eq.eq_rhs (eq_list, var_list)
 
 let node nd =
-  let nd = Elimtuples.node nd in
-  debug_do (fun _ ->
-              Format.printf "Detuplized node:@\n%a@." print_node nd);
   let (eq_list, var_list) = List.fold_right eq nd.n_equs ([], nd.n_local) in
   { nd with n_equs = eq_list; n_local = var_list; }
 

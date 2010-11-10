@@ -112,14 +112,15 @@ let node nd =
   let (eq_list, subst) =
     let add_to_subst eq (eq_list, subst) =
       match (eq.eq_lhs, eq.eq_rhs.e_desc) with
-        | Etuplepat _, Eapp ({ a_op = (Efun _ | Enode _); }, _, _) ->
-            (eq :: eq_list, subst) (* cannot factor out multi-ret fun calls *)
+        (* do not inline tuple patterns  *)
+        | Etuplepat _, _ -> (eq :: eq_list, subst)
         | _ ->
             let id_list = Vars.def [] eq in
             let e_list, rst, unsafe = match eq.eq_rhs.e_desc with
-              | Eapp ({ a_op = Etuple; a_unsafe = unsafe; }, e_list, rst) ->
-                  e_list, rst, unsafe
-              | _ -> [eq.eq_rhs], None, false in
+            (* | Eapp ({ a_op = Etuple; a_unsafe = unsafe; }, e_list, rst)
+               -> *)
+            (*     e_list, rst, unsafe *)
+               | _ -> [eq.eq_rhs], None, false in
 
             (* Walk over variables/exps couples of eq, gathering equations to
                be inlined.
