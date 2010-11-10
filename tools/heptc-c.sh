@@ -7,6 +7,12 @@ then
   exit 1
 fi
 
+if `which heptc.native` 2>/dev/null; then
+  HEPTC=heptc.native
+else
+  HEPTC=heptc.byte
+fi
+
 compile=1
 
 if [ $# -gt 2 ];
@@ -20,7 +26,7 @@ shift
 
 # Compile source file to VHDL, flattening node calls
 if [ $compile -eq 1 ]; then
-  heptc.native $@ -s main -target c $F $@ || exit 1
+  $HEPTC $@ -s main -target c $F $@ || exit 1
 fi
 
 # Compile it with GCC
