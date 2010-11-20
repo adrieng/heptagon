@@ -9,17 +9,23 @@
 (* Generic mapred over Heptagon Parsetree AST *)
 
 open Misc
+open Errors
 open Global_mapfold
 open Hept_parsetree
 
 type 'a hept_it_funs = {
   ty : 'a hept_it_funs -> 'a -> Hept_parsetree.ty -> Hept_parsetree.ty * 'a;
+  static_exp :
+    'a hept_it_funs -> 'a -> Hept_parsetree.static_exp -> static_exp * 'a;
+  static_exp_desc :
+    'a hept_it_funs -> 'a -> Hept_parsetree.static_exp_desc ->
+    Hept_parsetree.static_exp_desc * 'a;
   app:
     'a hept_it_funs -> 'a -> Hept_parsetree.app -> Hept_parsetree.app * 'a;
   block:
     'a hept_it_funs -> 'a -> Hept_parsetree.block -> Hept_parsetree.block * 'a;
   edesc:
-    'a hept_it_funs -> 'a -> Hept_parsetree.desc -> Hept_parsetree.desc * 'a;
+    'a hept_it_funs -> 'a -> Hept_parsetree.edesc -> Hept_parsetree.edesc * 'a;
   eq:
     'a hept_it_funs -> 'a -> Hept_parsetree.eq -> Hept_parsetree.eq * 'a;
   eqdesc:
@@ -60,11 +66,41 @@ type 'a hept_it_funs = {
         Hept_parsetree.const_dec * 'a;
   program:
     'a hept_it_funs -> 'a -> Hept_parsetree.program ->
-        Hept_parsetree.program * 'a;
-  global_funs: 'a Global_mapfold.global_it_funs }
+        Hept_parsetree.program * 'a; }
 
 
-let rec exp_it funs acc e = funs.exp funs acc e
+let rec static_exp_it funs acc se = funs.static_exp funs acc se
+and static_exp funs acc se =
+  let se_desc, acc = static_exp_desc_it funs acc se.se_desc in
+  { se with se_desc = se_desc }, acc
+
+and static_exp_desc_it funs acc sd =
+  try funs.static_exp_desc funs acc sd
+  with Fallback -> static_exp_desc funs acc sd
+
+and static_exp_desc funs acc sd = match sd with
+  | Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _ -> sd, acc
+  | Stuple se_l ->
+      let se_l, acc = mapfold (static_exp_it funs) acc se_l in
+      Stuple se_l, acc
+  | Sarray se_l ->
+      let se_l, acc = mapfold (static_exp_it funs) acc se_l in
+      Sarray se_l, acc
+  | Sop (n, se_l) ->
+      let se_l, acc = mapfold (static_exp_it funs) acc se_l in
+      Sop (n, se_l), acc
+  | Sarray_power (se1, se2) ->
+      let se1, acc = static_exp_it funs acc se1 in
+      let se2, acc = static_exp_it funs acc se2 in
+      Sarray_power(se1, se2), acc
+  | Srecord f_se_l ->
+      let aux acc (f,se) = let se,acc = static_exp_it funs acc se in
+        (f, se), acc in
+      let f_se_l, acc = mapfold aux acc f_se_l in
+      Srecord f_se_l, acc
+
+
+and exp_it funs acc e = funs.exp funs acc e
 and exp funs acc e =
   let e_desc, acc = edesc_it funs acc e.e_desc in
   { e with e_desc = e_desc }, acc
@@ -74,7 +110,7 @@ and edesc_it funs acc ed =
   with Fallback -> edesc funs acc ed
 and edesc funs acc ed = match ed with
   | Econst se ->
-      let se, acc = static_exp_it funs.global_funs acc se in
+      let se, acc = static_exp_it funs acc se in
       Econst se, acc
   | Evar _ | Elast _ -> ed, acc
   | Epre (se, e) ->
@@ -189,9 +225,9 @@ and present_handler funs acc ph =
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
-  (* v_type ??? *)
+  let v_type, acc = ty_it funs acc vd.v_type in
   let v_last, acc = last_it funs acc vd.v_last in
-  { vd with v_last = v_last }, acc
+  { vd with v_last = v_last; v_type = v_type }, acc
 
 
 and last_it funs acc l =
@@ -213,10 +249,12 @@ and contract funs acc c =
     c_assume = c_assume; c_enforce = c_enforce; c_block = c_block }
   , acc
 
+(*
 and param_it funs acc vd = funs.param funs acc vd
 and param funs acc vd =
   let v_last, acc = last_it funs acc vd.v_last in
-  { vd with v_last = v_last }, acc
+    { vd with v_last = v_last }, acc
+      *)
 
 and node_dec_it funs acc nd = funs.node_dec funs acc nd
 and node_dec funs acc nd =
@@ -259,6 +297,8 @@ and program funs acc p =
 
 let defaults = {
   ty = ty;
+  static_exp = static_exp;
+  static_exp_desc = static_exp_desc;
   app = app;
   block = block;
   edesc = edesc;
@@ -276,13 +316,14 @@ let defaults = {
   contract = contract;
   node_dec = node_dec;
   const_dec = const_dec;
-  program = program;
-  global_funs = Global_mapfold.defaults }
+  program = program }
 
 
 
 let defaults_stop = {
   ty = stop;
+  static_exp = stop;
+  static_exp_desc = stop;
   app = stop;
   block = stop;
   edesc = stop;
@@ -300,6 +341,5 @@ let defaults_stop = {
   contract = stop;
   node_dec = stop;
   const_dec = stop;
-  program = stop;
-  global_funs = Global_mapfold.defaults_stop }
+  program = stop }
 
