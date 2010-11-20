@@ -31,6 +31,9 @@ let check_implementation modname filename =
     (* Parsing of the file *)
     let p = do_silent_pass "Parsing" (parse_implementation modname) lexbuf in
 
+    (* Fuse static exps together *)
+    let p = do_silent_pass "Static Scoping"
+      Hept_static_scoping.program p in
     (* Convert the parse tree to Heptagon AST *)
     let p = do_pass "Scoping" Hept_scoping.translate_program p pp in
 

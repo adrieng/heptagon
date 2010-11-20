@@ -127,6 +127,15 @@ and edesc funs acc ed = match ed with
         (n,e), acc in
       let n_e_list, acc = mapfold aux acc n_e_list in
       Estruct n_e_list, acc
+  | Emerge (x, c_e_list) ->
+    let aux acc (c,e) =
+      let e, acc = exp_it funs acc e in
+        (c,e), acc in
+    let c_e_list, acc = mapfold aux acc c_e_list in
+      Emerge(x, c_e_list), acc
+  | Ewhen (e, c, x) ->
+    let e, acc = exp_it funs acc e in
+      Ewhen (e, c, x), acc
   | Eapp (app, args) ->
       let app, acc = app_it funs acc app in
       let args, acc = mapfold (exp_it funs) acc args in
