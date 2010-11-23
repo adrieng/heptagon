@@ -26,7 +26,11 @@ and static_exp_desc =
   | Srecord of (field_name * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
   | Sop of fun_name * static_exp list (** defined ops for now in pervasives *)
 
-and ty = | Tprod of ty list | Tid of type_name | Tarray of ty * static_exp
+and ty =
+  | Tprod of ty list
+  | Tid of type_name
+  | Tarray of ty * static_exp
+  | Tunit
 
 let invalid_type = Tprod []
 

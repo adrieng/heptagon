@@ -102,3 +102,5 @@ and type_compare ty1 ty2 = match ty1, ty2 with
       if cr <> 0 then cr else static_exp_compare se1 se2
   | (Tprod _ | Tid _), _ -> 1
   | (Tarray _), _ -> -1
+  | Tunit, Tunit -> 0
+  | Tunit, _ -> -1

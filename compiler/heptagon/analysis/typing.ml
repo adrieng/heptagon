@@ -384,6 +384,7 @@ let rec check_type const_env = function
   | Tid ty_name -> Tid ty_name
   | Tprod l ->
       Tprod (List.map (check_type const_env) l)
+  | Tunit -> Tunit
 
 and typing_static_exp const_env se =
   try

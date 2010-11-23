@@ -1,0 +1,10 @@
+
+Plus ou moins ordonné du plus urgent au moins urgent.
+
+*- (LG) Faire la passe de transformation des switchs dans heptagon avant le reset et ainsi simplifier le reset.
+
+*- (LG) Rajouter les annotations d'horloge dans le source (les mettres comme contrainte de sous typage en ck_base ?? voir avec lucy-n)
+
+*- Compléter la passe "static.ml" pour gérer l'ensemble des opérateurs de pervasives
+
+*- Optimiser le reset en utilisant un memcopy ?

@@ -28,6 +28,8 @@ and link =
 
 exception Unify
 
+let invalid_clock = Cprod []
+
 
 let index = ref 0
 
@@ -53,18 +55,8 @@ let rec occur_check index ck =
     | Con (ck, _, _) -> occur_check index ck
     | _ -> raise Unify
 
-
-let rec unify t1 t2 =
-  if t1 == t2
-  then ()
-  else
-    (match (t1, t2) with
-       | (Ck ck1, Ck ck2) -> unify_ck ck1 ck2
-       | (Cprod ct_list1, Cprod ct_list2) ->
-           (try List.iter2 unify ct_list1 ct_list2 with | _ -> raise Unify)
-       | _ -> raise Unify)
-
-and unify_ck ck1 ck2 =
+(** unify ck *)
+let rec unify_ck ck1 ck2 =
   let ck1 = ck_repr ck1 in
   let ck2 = ck_repr ck2 in
   if ck1 == ck2
@@ -82,22 +74,27 @@ and unify_ck ck1 ck2 =
            unify_ck ck1 ck2
        | _ -> raise Unify)
 
-
+(** unify ct *)
 let rec unify t1 t2 =
+  if t1 == t2 then () else
   match (t1, t2) with
     | (Ck ck1, Ck ck2) -> unify_ck ck1 ck2
     | (Cprod t1_list, Cprod t2_list) -> unify_list t1_list t2_list
     | _ -> raise Unify
 
 and unify_list t1_list t2_list =
-  try List.iter2 unify t1_list t2_list with | _ -> raise Unify
+  try List.iter2 unify t1_list t2_list
+  with _ -> raise Unify
+
 
 let rec skeleton ck = function
   | Tprod ty_list ->
       (match ty_list with
-        | [] -> Format.eprintf "Warning, an exp with void type@."; Ck ck
+        | [] ->
+            Format.eprintf "Internal error, an exp with invalid type@.";
+            assert false;
         | _ -> Cprod (List.map (skeleton ck) ty_list))
-  | Tarray _ | Tid _ -> Ck ck
+  | Tarray _ | Tid _ | Tunit -> Ck ck
 
 (* TODO here it implicitely says that the base clock is Cbase
     and that all tuple is on Cbase *)

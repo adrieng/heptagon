@@ -102,6 +102,7 @@ let rec ctype_of_otype oty =
     | Tarray(ty, n) -> Cty_arr(int_of_static_exp n,
                                ctype_of_otype ty)
     | Tprod _ -> assert false
+    | Tunit -> assert false
 
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =
