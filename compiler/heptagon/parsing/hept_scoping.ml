@@ -222,6 +222,7 @@ let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
       Heptagon.e_ty = Types.invalid_type;
+      Heptagon.e_ct_annot = e.e_ct_annot;
       Heptagon.e_loc = e.e_loc }
   with ScopingError(error) -> message e.e_loc error
 

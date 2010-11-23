@@ -39,10 +39,10 @@ and tdesc =
   | Type_struct of structure
 
 and exp = {
-  e_desc: edesc;
+  e_desc      : edesc;
   mutable e_ck: ck;
   mutable e_ty: ty;
-  e_loc: location }
+  e_loc       : location }
 
 and edesc =
   | Econst of static_exp

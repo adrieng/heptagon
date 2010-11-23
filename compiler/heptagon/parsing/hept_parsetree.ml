@@ -59,6 +59,7 @@ type ty =
 
 and exp =
   { e_desc : edesc;
+    e_ct_annot : Clocks.ct;
     e_loc  : location }
 
 and edesc =
@@ -206,8 +207,8 @@ and interface_desc =
 
 (* {3 Helper functions to create AST} *)
 
-let mk_exp desc loc =
-  { e_desc = desc; e_loc = loc }
+let mk_exp desc ?(ct_annot = Clocks.invalid_clock) loc =
+  { e_desc = desc; e_ct_annot = ct_annot; e_loc = loc }
 
 let mk_app op params =
   { a_op = op; a_params = params }

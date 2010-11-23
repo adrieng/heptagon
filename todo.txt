@@ -7,4 +7,8 @@ Plus ou moins ordonné du plus urgent au moins urgent.
 
 *- Compléter la passe "static.ml" pour gérer l'ensemble des opérateurs de pervasives
 
+*- Permettre les déclarations des types et des noeuds et des constantes dans un ordre quelconque.
+
+*- Permettre la définition de constantes locales.
+
 *- Optimiser le reset en utilisant un memcopy ?

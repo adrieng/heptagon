@@ -1,4 +1,4 @@
- (**************************************************************************)
+(**************************************************************************)
 (*                                                                        *)
 (*  Heptagon                                                              *)
 (*                                                                        *)
@@ -26,9 +26,10 @@ type iterator_type =
   | Imapfold
 
 type exp = {
-  e_desc : desc;
-  e_ty   : ty;
-  e_loc  : location }
+  e_desc      : desc;
+  e_ty        : ty;
+  e_ct_annot  : ct;
+  e_loc       : location }
 
 and desc =
   | Econst of static_exp
@@ -179,8 +180,8 @@ and interface_desc =
   | Isignature of signature
 
 (* Helper functions to create AST. *)
-let mk_exp desc ty =
-  { e_desc = desc; e_ty = ty; e_loc = no_location; }
+let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ty  =
+  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot; e_loc = no_location; }
 
 let mk_op ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }

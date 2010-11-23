@@ -63,7 +63,7 @@ let rec translate_pat map = function
       List.fold_right (fun pat acc -> (translate_pat map pat) @ acc)
         pat_list []
 
-let translate_var_dec l = (*TODO bug map unused ?*)
+let translate_var_dec l =
   let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
     mk_var_dec ~loc:loc x t
   in
