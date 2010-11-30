@@ -866,11 +866,9 @@ let rec typing_eq const_env h acc eq =
         acc
     | Ereset(b, e) ->
         let typed_e = expect const_env h (Tid Initial.pbool) e in
-        let typed_eq_list, acc = typing_eq_list
-          const_env h acc b.b_equs in
-        let typed_b = { b with b_equs = typed_eq_list } in
+        let typed_b, def_names, _ = typing_block const_env h b in
         Ereset(typed_b, typed_e),
-        acc
+        Env.union def_names acc
     | Eeq(pat, e) ->
         let acc, ty_pat = typing_pat h acc pat in
         let typed_e = expect const_env h ty_pat e in
