@@ -40,6 +40,7 @@ and tdesc =
 
 and exp = {
   e_desc      : edesc;
+  e_base_ck   : ck;
   mutable e_ck: ck;
   mutable e_ty: ty;
   e_loc       : location }
@@ -132,9 +133,10 @@ type program = {
 
 (*Helper functions to build the AST*)
 
-let mk_exp ?(ty = invalid_type)
-           ?(clock = fresh_clock()) ?(loc = no_location) desc =
-  { e_desc = desc; e_ty = ty; e_ck = clock; e_loc = loc }
+let mk_exp ?(ty = invalid_type) ?(clock = fresh_clock())
+           ?(loc = no_location) ?(base_clock = Cbase) desc =
+  { e_desc = desc; e_ty = ty;
+    e_base_ck = base_clock; e_ck = clock; e_loc = loc }
 
 let mk_var_dec ?(loc = no_location) ?(clock = fresh_clock()) ident ty =
   { v_ident = ident; v_type = ty; v_clock = clock; v_loc = loc }

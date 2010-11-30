@@ -29,6 +29,7 @@ type exp = {
   e_desc      : desc;
   e_ty        : ty;
   e_ct_annot  : ct;
+  e_base_ck   : ck;
   e_loc       : location }
 
 and desc =
@@ -181,7 +182,8 @@ and interface_desc =
 
 (* Helper functions to create AST. *)
 let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ty  =
-  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot; e_loc = no_location; }
+  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
+    e_base_ck = Cbase; e_loc = no_location; }
 
 let mk_op ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }
