@@ -52,11 +52,18 @@ and var_dec = {
   v_clock : ck;
   v_loc   : location }
 
+type contract =
+  { c_assume  : exp;
+    c_enforce : exp;
+    c_controllables : var_dec list;
+    c_local   : var_dec list;
+    c_equs    : eq list }
+
 type node_dec = {
   n_name     : qualname;
   n_input    : var_dec list;
   n_output   : var_dec list;
-  n_contract : Minils.contract option;
+  n_contract : contract option;
   n_local    : var_dec list;
   n_equs     : eq list;
   n_loc      : location;

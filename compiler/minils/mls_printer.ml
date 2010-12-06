@@ -188,12 +188,14 @@ let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
 
 
 let print_contract ff { c_local = l; c_eq = eqs;
-                        c_assume = e_a; c_enforce = e_g; } =
-  fprintf ff "@[<v2>contract@\n%a%a@ assume %a;@ enforce %a@]"
+                        c_assume = e_a; c_enforce = e_g;
+			c_controllables = c;} =
+  fprintf ff "@[<v2>contract@\n%a%a@ assume %a@ enforce %a@ with (%a)@]"
     print_local_vars l
     print_eqs eqs
     print_exp e_a
     print_exp e_g
+    print_vd_tuple c
 
 
 let print_node ff { n_name = n; n_input = ni; n_output = no;

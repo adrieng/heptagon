@@ -220,10 +220,11 @@ node_params:
 
 contract:
   | /* empty */ {None}
-  | CONTRACT b=block(LET) TEL? opt_assume enforce
+  | CONTRACT b=block(LET) TEL? opt_assume opt_enforce opt_with
       { Some{ c_block = b;
               c_assume = $4;
-              c_enforce = $5 } }
+              c_enforce = $5;
+	      c_controllables = $6 } }
 ;
 
 opt_assume:
@@ -231,8 +232,14 @@ opt_assume:
   | ASSUME exp { $2 }
 ;
 
-enforce:
+opt_enforce:
+  | /* empty */ { mk_constructor_exp ptrue (Loc($startpos,$endpos)) }
   | ENFORCE exp { $2 }
+;
+
+opt_with:
+  | /* empty */ { [] }
+  | WITH LPAREN params RPAREN { $3 }
 ;
 
 loc_vars:

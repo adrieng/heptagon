@@ -131,6 +131,7 @@ and type_dec_desc =
 type contract = {
   c_assume  : exp;
   c_enforce : exp;
+  c_controllables : var_dec list;
   c_block   : block }
 
 type node_dec = {

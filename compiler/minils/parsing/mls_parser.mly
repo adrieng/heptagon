@@ -116,9 +116,43 @@ type_dec:
 node_decs: ns=list(node_dec) {ns}
 node_dec:
   NODE n=qualname p=params(n_param) LPAREN args=args RPAREN
-  RETURNS LPAREN out=args RPAREN vars=loc_vars eqs=equs
-      { mk_node p args out vars eqs ~loc:(Loc ($startpos,$endpos)) n }
+  RETURNS LPAREN out=args RPAREN
+  contract=contract vars=loc_vars eqs=equs
+      { mk_node p args out vars eqs 
+	  ~loc:(Loc ($startpos,$endpos))
+	  ~contract:contract
+	  n }
 
+
+contract:
+  | /* empty */ {None}
+  | CONTRACT
+    locvars=loc_vars
+    eqs=opt_equs
+    assume=opt_assume 
+    enforce=opt_enforce 
+    withvar=opt_with
+      { Some{ c_local=locvars;
+	      c_equs=eqs;
+              c_assume = assume;
+              c_enforce = enforce;
+	      c_controllables = withvar } }
+;
+
+opt_assume:
+  | /* empty */ { mk_constructor_exp ptrue (Loc($startpos,$endpos)) }
+  | ASSUME exp { $2 }
+;
+
+opt_enforce:
+  | /* empty */ { mk_constructor_exp ptrue (Loc($startpos,$endpos)) }
+  | ENFORCE exp { $2 }
+;
+
+opt_with:
+  | /* empty */ { [] }
+  | WITH LPAREN params RPAREN { $3 }
+;
 
 args_t: SEMICOL p=args {p}
 args:
@@ -146,6 +180,10 @@ clock_annot:
 var:
   | ns=snlist(COMMA, NAME) COLON t=type_ident c=clock_annot
       { List.map (fun n -> mk_var_dec n t c (Loc ($startpos,$endpos))) ns }
+
+opt_equs: 
+  | /* empty */ { [] }
+  | LET e=slist(SEMICOL, equ) TEL { e }
 
 equs: LET e=slist(SEMICOL, equ) TEL { e }
 equ: p=pat EQUAL e=exp { mk_equation p e (Loc ($startpos,$endpos)) }

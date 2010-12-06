@@ -255,11 +255,13 @@ let rec print_type_def ff { t_name = name; t_desc = tdesc } =
   fprintf ff "@[<2>type %a%a@]@." print_qualname name print_type_desc tdesc
 
 let print_contract ff { c_block = b;
-                        c_assume = e_a; c_enforce = e_g; } =
-  fprintf ff "@[<v2>contract@\n%a@ assume %a;@ enforce %a@]"
+                        c_assume = e_a; c_enforce = e_g;
+			c_controllables = c} =
+  fprintf ff "@[<v2>contract@\n%a@ assume %a@ enforce %a@ with (%a)@]"
     print_block b
     print_exp e_a
     print_exp e_g
+    print_vd_tuple c
 
 let print_node ff
     { n_name = n; n_input = ni;
