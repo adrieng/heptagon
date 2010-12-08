@@ -75,6 +75,7 @@ let set_target_path path =
 
 let full_type_info = ref false
 
+let causality = ref true
 let init = ref true
 
 let inline : qualname list ref = ref []
@@ -111,6 +112,7 @@ and doc_full_type_info = "\t\t\tPrint full type information"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
   ^ " cleaned)"
+and doc_nocaus = "\t\tDisable causality analysis"
 and doc_noinit = "\t\tDisable initialization analysis"
 and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
 and doc_inline = "<node>\t\tInline node <node>"

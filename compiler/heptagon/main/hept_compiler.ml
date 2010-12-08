@@ -42,7 +42,7 @@ let compile_impl pp p =
   if !print_types then print_interface Format.std_formatter;
 
   (* Causality check *)
-  let p = silent_pass "Causality check" true Causality.program p in
+  let p = silent_pass "Causality check" !causality Causality.program p in
 
   (* Initialization check *)
   let p = silent_pass "Initialization check" !init Initialization.program p in
