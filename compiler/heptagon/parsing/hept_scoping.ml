@@ -364,6 +364,7 @@ let translate_contract env ct =
   let b, _ = translate_block env ct.c_block in
   { Heptagon.c_assume = translate_exp env ct.c_assume;
     Heptagon.c_enforce = translate_exp env ct.c_enforce;
+		Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
     Heptagon.c_block = b }
 
 let params_of_var_decs =

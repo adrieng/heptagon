@@ -990,7 +990,8 @@ let typing_contract const_env h contract =
     | None -> None,h
     | Some ({ c_block = b;
               c_assume = e_a;
-              c_enforce = e_g }) ->
+              c_enforce = e_g;
+							c_controllables = c }) ->
         let typed_b, defined_names, _ = typing_block const_env h b in
           (* check that the equations do not define other unexpected names *)
           included_env defined_names Env.empty;
@@ -1000,9 +1001,12 @@ let typing_contract const_env h contract =
         (* property *)
         let typed_e_g = expect const_env h (Tid Initial.pbool) e_g in
 
-          Some { c_block = typed_b;
-                 c_assume = typed_e_a;
-                 c_enforce = typed_e_g }, h
+        let typed_c, (c_names, h) = build const_env h c in
+				
+        Some { c_block = typed_b;
+               c_assume = typed_e_a;
+               c_enforce = typed_e_g;
+							 c_controllables = typed_c }, h
 
 let solve loc cl =
   try

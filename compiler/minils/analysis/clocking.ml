@@ -139,14 +139,15 @@ let typing_contract h contract base =
     | Some { c_local = l_list;
              c_eq = eq_list;
              c_assume = e_a;
-             c_enforce = e_g; } ->
+             c_enforce = e_g;
+						 c_controllables = c_list } ->
         let h' = build h l_list in
         (* assumption *)
         (* property *)
-        (typing_eqs h' eq_list;
-         expect h' (Ck base) e_a;
-         expect h' (Ck base) e_g;
-         h)
+        typing_eqs h' eq_list;
+        expect h' (Ck base) e_a;
+        expect h' (Ck base) e_g;
+        sbuild h c_list base
 
 let typing_node ({ n_input = i_list;
                    n_output = o_list;

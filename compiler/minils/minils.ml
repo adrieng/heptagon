@@ -144,11 +144,13 @@ let mk_equation ?(loc = no_location) pat exp =
 
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
-    ?(loc = no_location) ?(param = []) ?(constraints = []) ?(pinst = []) name =
+    ?(loc = no_location) ?(param = []) ?(constraints = []) 
+		?(pinst = ([],[])) name =
   { n_name = name;
     n_input = input;
     n_output = output;
     n_contract = contract;
+		n_controller_call = pinst;
     n_local = local;
     n_equs = eq;
     n_loc = loc;

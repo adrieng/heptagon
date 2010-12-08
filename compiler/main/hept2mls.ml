@@ -350,7 +350,8 @@ let translate_contract env contract =
     | Some { Heptagon.c_block = { Heptagon.b_local = v;
                                   Heptagon.b_equs = eq_list };
              Heptagon.c_assume = e_a;
-             Heptagon.c_enforce = e_g} ->
+             Heptagon.c_enforce = e_g;
+						 Heptagon.c_controllables = l_c } ->
         let env' = Env.add v env in
         let locals = translate_locals [] v in
         let locals, l_eqs, s_eqs =
@@ -358,10 +359,12 @@ let translate_contract env contract =
         let l_eqs, _ = add_locals IdentSet.empty l_eqs [] s_eqs in
         let e_a = translate env' e_a in
         let e_g = translate env' e_g in
+				let env = Env.add l_c env in
         Some { c_local = locals;
                c_eq = l_eqs;
                c_assume = e_a;
-               c_enforce = e_g },
+               c_enforce = e_g;
+							 c_controllables = List.map translate_var l_c },
         env
 
 
@@ -383,6 +386,7 @@ let node
     n_input = List.map translate_var i;
     n_output = List.map translate_var o;
     n_contract = contract;
+		n_controller_call = ([],[]);
     n_local = locals;
     n_equs = l_eqs;
     n_loc = loc ;
