@@ -82,6 +82,7 @@ and eqdesc =
   | Eswitch of exp * switch_handler list
   | Epresent of present_handler list * block
   | Ereset of block * exp
+  | Eblock of block
   | Eeq of pat * exp
 
 and block = {

@@ -300,6 +300,7 @@ let rec translate_eq env ni (locals, l_eqs, s_eqs)
         locals,
         (mk_equation ~loc:loc p' (translate env e)) :: l_eqs,
         s_eqs
+    | Heptagon.Eblock _
     | Heptagon.Epresent _ | Heptagon.Eautomaton _ | Heptagon.Ereset _ ->
         Error.message loc Error.Eunsupported_language_construct
 

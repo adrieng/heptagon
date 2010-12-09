@@ -313,6 +313,9 @@ and translate_eq_desc loc env = function
   | Ereset (b, e) ->
       let b, _ = translate_block env b in
       Heptagon.Ereset (b, translate_exp env e)
+  | Eblock b ->
+      let b, _ = translate_block env b in
+      Heptagon.Eblock b
 
 and translate_block env b =
   let env = Rename.append env b.b_local in

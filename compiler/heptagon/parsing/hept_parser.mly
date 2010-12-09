@@ -33,7 +33,7 @@ open Hept_parsetree
 %token THEN
 %token ELSE
 %token DEFAULT
-%token DO
+%token DO DONE IN
 %token CONTINUE
 %token CONTRACT
 %token ASSUME
@@ -313,8 +313,10 @@ _equ:
       { Eswitch($2,
                    [{ w_name = ptrue; w_block = tb };
                     { w_name = pfalse; w_block = fb }]) }
-  | RESET equs EVERY exp
+  | RESET equs EVERY exp (* LG TODO real blocks(IN)*)
       { Ereset(mk_block [] $2 (Loc($startpos,$endpos)), $4) }
+  | DO b=block(IN) DONE
+      { Eblock b }
 ;
 
 automaton_handler:

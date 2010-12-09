@@ -869,6 +869,10 @@ let rec typing_eq const_env h acc eq =
         let typed_b, def_names, _ = typing_block const_env h b in
         Ereset(typed_b, typed_e),
         Env.union def_names acc
+    | Eblock b ->
+        let typed_b, def_names, _ = typing_block const_env h b in
+        Eblock typed_b,
+        Env.union def_names acc
     | Eeq(pat, e) ->
         let acc, ty_pat = typing_pat h acc pat in
         let typed_e = expect const_env h ty_pat e in

@@ -166,6 +166,8 @@ and typing_eq eq =
         typing_present handlers b
     | Ereset(b, e) ->
         cseq (typing e) (typing_block b)
+    | Eblock b ->
+        typing_block b
     | Eeq(pat, e) ->
         cseq (typing e) (typing_pat pat)
 

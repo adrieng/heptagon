@@ -193,14 +193,16 @@ let rec print_eq ff eq =
         print_default b
     | Ereset(b, e) ->
       fprintf ff "@[<v>@[<hv 2>reset @ %a@]@,every %a@]"
-        print_block b   print_exp e
+        (print_block "in") b   print_exp e
+    | Eblock b ->
+      fprintf ff "@[<v>do@[<v>@ @[%a@]@]@ done@]" (print_block "in") b
 
 and print_state_handler_list ff tag_act_list =
   print_list
     (fun ff sh ->
        fprintf ff "@[<v 2>state %a:@ %a%a%a@]"
          print_name sh.s_state
-         print_block sh.s_block
+         (print_block "do") sh.s_block
          (print_escape_list "until") sh.s_until
          (print_escape_list "unless") sh.s_unless)
     "" "" "" ff tag_act_list
@@ -221,7 +223,7 @@ and print_switch_handler_list ff tag_act_list =
     (fun ff sh ->
        fprintf ff "@[<v 2>| %a:@ %a@]"
          print_qualname sh.w_name
-         print_block sh.w_block)
+         (print_block "do") sh.w_block)
     "" "" "" ff tag_act_list
 
 and print_present_handler_list ff present_act_list =
@@ -229,20 +231,24 @@ and print_present_handler_list ff present_act_list =
     (fun ff ph ->
        fprintf ff "@[<v 2>| %a:@ %a@]"
          print_exp ph.p_cond
-         print_block ph.p_block)
+         (print_block "do") ph.p_block)
     "" "" "" ff present_act_list
 
 and print_default ff b =
   match b.b_equs with
     | [] -> ()
-    | _ -> fprintf ff "@[<v 2>default@,%a@]" print_block b
+    | _ -> fprintf ff "@[<v 2>default@,%a@]" (print_block "do") b
 
 and print_eq_list ff = function
   | [] -> ()
   | l -> print_list_r print_eq """;""" ff l
 
-and print_block ff { b_local = v_list; b_equs = eqs } =
-  fprintf ff "%a@[<v2>do@ %a@]" print_local_vars v_list  print_eq_list eqs
+and print_block s ff { b_local = v_list; b_equs = eqs } =
+  fprintf ff "%a@[<v2>%s@ %a@]" print_local_vars v_list s print_eq_list eqs
+
+
+let print_inblock = print_block "in"
+
 
 let rec print_type_def ff { t_name = name; t_desc = tdesc } =
   let print_type_desc ff = function
@@ -258,7 +264,7 @@ let print_contract ff { c_block = b;
                         c_assume = e_a; c_enforce = e_g;
 			c_controllables = c} =
   fprintf ff "@[<v2>contract@\n%a@ assume %a@ enforce %a@ with (%a)@]"
-    print_block b
+    (print_block "let") b
     print_exp e_a
     print_exp e_g
     print_vd_tuple c

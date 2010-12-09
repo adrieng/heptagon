@@ -188,6 +188,9 @@ and eqdesc funs acc eqd = match eqd with
       let b, acc = block_it funs acc b in
       let e, acc = exp_it funs acc e in
       Ereset (b, e), acc
+  | Eblock b ->
+      let b, acc = block_it funs acc b in
+      Eblock b, acc
   | Eeq (p, e) ->
       let p, acc = pat_it funs acc p in
       let e, acc = exp_it funs acc e in

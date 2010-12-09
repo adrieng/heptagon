@@ -300,6 +300,8 @@ and typing_eq h eq =
         typing_present h handlers b
     | Ereset(b, e) ->
         initialized_exp h e; ignore (typing_block h b)
+    | Eblock b ->
+        ignore (typing_block h b)
     | Eeq(pat, e) ->
         let ty_pat = typing_pat h pat in
         expect h e ty_pat

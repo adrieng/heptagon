@@ -70,6 +70,9 @@ let compile_impl pp p =
   (* Every *)
   let p = pass "Every" true Every.program p pp in
 
+  (* Block flatten *)
+  let p = pass "Block" true Block.program p pp in
+
   (* Return the transformed AST *)
   p
 
