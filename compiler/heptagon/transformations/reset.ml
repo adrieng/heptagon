@@ -160,7 +160,7 @@ let eq funs (res, v, acc_eq_list) equ =
           switch_handlers funs (res, v, acc_eq_list) sh in
         equ, (res, v, { equ with eq_desc = Eswitch(e, sh) } :: acc_eq_list)
 
-    | Ereset(b, e) ->
+    | Ereset(b, e) -> (* LG TODO deal with real blocks, transform into a block*)
         let e, _ = exp_it funs (res, v, acc_eq_list) e in
         let res, v, acc_eq_list =
          (* if statefull eq_list then*)
@@ -177,9 +177,13 @@ let eq funs (res, v, acc_eq_list) equ =
         let equ, (res, v, acc_eq_list) = eq funs (res, v, acc_eq_list) equ in
           equ, (res, v, equ::acc_eq_list)
 
-let block funs _ b =
+(** throw away the old block and
+    reconstruct it from the accumulated eq_list
+    and add to the locals the new vars.
+    The acc_eq_list should contain all wanted equations, even old ones. *)
+let block funs acc b =
   let _, (_, v, eq_list) = Hept_mapfold.block funs (None, [], []) b in
-    { b with b_local = v @ b.b_local; b_equs = eq_list; }, (None, [], [])
+    { b with b_local = v @ b.b_local; b_equs = eq_list; }, acc
 
 let program p =
   let funs = { Hept_mapfold.defaults with
