@@ -64,6 +64,12 @@ type 'a hept_it_funs = {
   const_dec:
     'a hept_it_funs -> 'a -> Hept_parsetree.const_dec ->
         Hept_parsetree.const_dec * 'a;
+  type_dec:
+    'a hept_it_funs -> 'a -> Hept_parsetree.type_dec ->
+        Hept_parsetree.type_dec * 'a;
+  type_desc:
+    'a hept_it_funs -> 'a -> Hept_parsetree.type_desc ->
+        Hept_parsetree.type_desc * 'a;
   program:
     'a hept_it_funs -> 'a -> Hept_parsetree.program ->
         Hept_parsetree.program * 'a; }
@@ -300,11 +306,32 @@ and const_dec funs acc c =
   let c_value, acc = exp_it funs acc c.c_value in
   { c with c_value = c_value; c_type = c_type }, acc
 
+
+and type_dec_it funs acc td = funs.type_dec funs acc td
+and type_dec funs acc td =
+  let t_desc, acc = type_desc_it funs acc td.t_desc in
+  { td with t_desc = t_desc }, acc
+
+and type_desc_it funs acc td =
+  try funs.type_desc funs acc td with Fallback -> type_desc funs acc td
+and type_desc funs acc td = match td with
+  | Type_abs
+  | Type_enum _ -> td, acc
+  | Type_alias ty ->
+      let ty, acc = ty_it funs acc ty in
+        Type_alias ty, acc
+  | Type_struct c_t_list ->
+      let aux acc (f,ty) = let ty,acc = ty_it funs acc ty in
+        (f, ty), acc in
+      let c_t_list, acc = mapfold aux acc c_t_list in
+        Type_struct c_t_list, acc
+
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
   let cd_list, acc = mapfold (const_dec_it funs) acc p.p_consts in
+  let td_list, acc = mapfold (type_dec_it funs) acc p.p_types in
   let nd_list, acc = mapfold (node_dec_it funs) acc p.p_nodes in
-  { p with p_consts = cd_list; p_nodes = nd_list }, acc
+  { p with p_consts = cd_list; p_nodes = nd_list; p_types = td_list }, acc
 
 
 let defaults = {
@@ -328,6 +355,8 @@ let defaults = {
   contract = contract;
   node_dec = node_dec;
   const_dec = const_dec;
+  type_dec = type_dec;
+  type_desc = type_desc;
   program = program }
 
 
@@ -353,5 +382,7 @@ let defaults_stop = {
   contract = stop;
   node_dec = stop;
   const_dec = stop;
+  type_dec = stop;
+  type_desc = stop;
   program = stop }
 
