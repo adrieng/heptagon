@@ -753,7 +753,7 @@ and typing_iterator const_env h
 
   | Ifold ->
       let args_ty_list =
-        incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
+        map_butlast (fun ty -> Tarray (ty, n)) args_ty_list in
       let typed_e_list =
         typing_args const_env h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
@@ -769,7 +769,7 @@ and typing_iterator const_env h
         ( try unify idx_ty (Tid Initial.pint)
           with TypingError _ -> raise (TypingError (Efoldi_bad_args idx_ty)));
         let args_ty_list =
-        incomplete_map (fun ty -> Tarray (ty, n)) (args_ty_list@[acc_ty]) in
+        map_butlast (fun ty -> Tarray (ty, n)) (args_ty_list@[acc_ty]) in
       let typed_e_list =
         typing_args const_env h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
@@ -780,9 +780,9 @@ and typing_iterator const_env h
 
     | Imapfold ->
       let args_ty_list =
-        incomplete_map (fun ty -> Tarray (ty, n)) args_ty_list in
+        map_butlast (fun ty -> Tarray (ty, n)) args_ty_list in
       let result_ty_list =
-        incomplete_map (fun ty -> Tarray (ty, n)) result_ty_list in
+        map_butlast (fun ty -> Tarray (ty, n)) result_ty_list in
       let typed_e_list = typing_args const_env h
         args_ty_list e_list in
       (*check accumulator type matches in input and output*)

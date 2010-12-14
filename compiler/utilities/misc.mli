@@ -23,9 +23,9 @@ val reset_symbol : unit -> unit
 (** [unique l] returns the [l] list without duplicates. O([length l]). *)
 val unique : 'a list -> 'a list
 
-(** [incomplete_map f l] applies f to all the elements of
-  l except the last element. *)
-val incomplete_map : ('a -> 'a) -> 'a list -> 'a list
+(** [map_butlast f l] applies f to all the elements of
+    l except the last element. *)
+val map_butlast : ('a -> 'a) -> 'a list -> 'a list
 
 (** [last_element l] returns the last element of the list l.*)
 val last_element : 'a list -> 'a

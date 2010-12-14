@@ -52,11 +52,11 @@ let unique l =
   List.iter (fun i -> Hashtbl.replace tbl i ()) l;
   Hashtbl.fold (fun key _ accu -> key :: accu) tbl []
 
-let rec incomplete_map f l =
+let rec map_butlast f l =
   match l with
     | [] -> []
     | [a] -> [a]
-    | a::l -> (f a)::(incomplete_map f l)
+    | a::l -> (f a)::(map_butlast f l)
 
 let rec last_element l =
   match l with
