@@ -1,0 +1,184 @@
+(* pour debugger ../../compiler/hec.byte -i -v -I ../../lib t1.ept *)
+(* pour debugger
+   directory parsing global analysis dataflow sequential sigali simulation translation main
+   set arguments -v ../test/good/t1.ept *)
+
+type t = A | B
+
+node bool2int(b: bool) returns (o: int)
+  let
+    o = merge b (true -> 1) (false -> 0)
+  tel
+
+node t2bool(x: t) returns (b: bool)
+  let
+    b = merge x (A-> true) (B-> false)
+  tel
+
+(*
+node mm(x: int) returns (o: int)
+  var last m: int = 0;
+  let
+    switch (x = 0)
+      | true do m = last m + 1; o = m
+      | false do m = 2; o = m
+    end
+  tel
+
+node mmm(x: int) returns (o': int)
+  var last m: int = 1; o: int;
+  let
+    automaton
+      state I
+        do m = 0; o = last m + 1 until (o = 1) then J
+      state J
+        do m = last m + 1; o = 0
+    end;
+    o' = 1 -> pre o
+  tel
+
+node m(x: int) returns (o: int)
+  var last o' : int = 1;
+  let
+    automaton
+      state I
+        do o' = 1
+        unless (last o' = 2) then J
+      state J
+        do o' = 3
+        unless (last o' = 1) then I
+    end;
+    o = o';
+  tel
+
+node h(z: int; x, y: int) returns (o2: int)
+  var o1, o: int;
+  let
+    (o1, o2) = if z<0 then (1, 2) else (3, 4);
+    o = 0 -> pre o + 2
+  tel
+
+node i(x, y: int) returns (o: int)
+  var z, k: int;
+  let
+    reset
+      o = 0 + x + y;
+      reset
+        z = 1 + o + 3;
+        k = z + o + 2
+      every (x = x)
+    every (x = y)
+  tel
+
+node j(x, y: int) returns (o: int)
+  let
+    automaton
+      state I 
+         var z: int;
+         do o = 1; z = 2
+         until (o = 2) then J
+      state J
+         do o = 2
+         until (o = 1) then I
+    end     
+  tel
+
+node (++)(up, down: int) returns (o: int)
+  var last cpt: int = 42;
+  let
+    o = last cpt;
+    automaton
+      state Init
+         var k : int;
+         do k = 0 -> pre k + 2;
+            cpt = 0 
+         until 
+           (up = 1) then Up
+      state Up
+         do cpt = last cpt + 1
+         until (down = 1) then Down
+             | (down = 0) then Up 
+      state Down
+         do cpt = (last cpt) + 1
+         until (up = 1) then Up
+    end;
+  tel
+
+node f(x: bool) returns (y: bool)
+  var z: bool;
+  let 
+    y = x or x & x;
+    z = true -> if y then not (pre z) else pre z;
+ tel
+
+(*
+let increasing(x) returns (o)
+  do true -> x >= pre(x) + 1 done
+
+modes(v0) =
+  last o = v0
+  when up(x) returns (w)
+     assume (x >= 0) ensure (w >= 0)
+     do w = x + last o + 2; o = w + 4 done
+  when down(x) returns (w)
+     do w = x - last o + 2; o = w + 2 done
+  end
+
+val gain : int >
+  modes last o : int when up: int -> int when down: int -> int 
+  end with { up # down }
+
+let node gain(v0)(up, down) returns (o)
+  assume (v0 >= 0) & (increasing up)
+  guaranty (deacreasing o)
+  last o = 0 in
+  automaton
+    state Await
+      do
+      unless down then Down(1) | up then Up(1)
+    state Down(d)
+      let rec cpt = 1 -> pre cpt + 1 in
+      do o = last o - d
+      until (cpt >= 5) then Down(d-5)
+      until up then Up(1)
+    state Up(d)
+      let rec cpt = 1 -> pre cpt + 1 in
+      do o = last o + d
+      until (cpt >= 5) then Up(d+5)
+      until down then Down(1)
+    state Unreachable
+      let rec c = 0 + 2 in
+      var m in
+      do o = m + 2; m = 3 + c done
+   end
+
+node g(x, y: int) returns (o: int)
+  let
+    o = x ++ y;
+  tel
+
+node dfby(x)(y) returns (o)
+  let
+    o = x fby (x fby y)
+  tel
+
+node f(x)(y) returns (o)
+  var last o = x;
+  let
+    o = last o + y
+  tel
+
+val f : int > (int => int)
+
+static x = e in ...
+
+(if c then (fun x -> x + 2) else (fun k -> k + 3))(x+2)
+
+let M(x1,..., xn) =
+  let y1 = ... in ... let yk = ... in
+  modes
+   mem m1 = ...; mem ml = ...;
+   step (...) returns (...) ...
+   reset = ...
+  end
+*) *)

@@ -1,0 +1,17 @@
+
+node f(x,y : int; b : bool) returns (z : int)
+var t : int;
+let
+  do
+    var t2,t2' : int; in
+    t2 = if b then 0 else t2';
+    do
+      var t3 : int; in
+      t3 = y + t;
+      t2' = t3;
+    done;
+    t = x + t2;
+  done;
+  z = t;
+tel
+  

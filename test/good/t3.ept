@@ -2,8 +2,9 @@
  set arguments -v test/good/t3.ept *)
 
 node f(x,z:int) returns (o:int)
-  var o1:int;
+  var o1:int;r:bool;
   let
+    r = false;
     automaton
       state Init 
         do o = 1 + 2 

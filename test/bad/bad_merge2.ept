@@ -1,0 +1,6 @@
+type t = A | B
+
+node t2bool(x: t) returns (b: bool)
+  let
+    b = merge x (A-> true) (B-> true) (A-> false)
+  tel
