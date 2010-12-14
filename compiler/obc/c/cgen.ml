@@ -737,6 +737,7 @@ let cfile_list_of_oprog_ty_decls name oprog =
 
 let global_file_header name prog =
   let dependencies = S.elements (Obc_utils.Deps.deps_program prog) in
+  let dependencies = List.map String.uncapitalize dependencies in
 
   let (decls, defs) =
     List.split (List.map cdefs_and_cdecls_of_class_def prog.p_defs) in
