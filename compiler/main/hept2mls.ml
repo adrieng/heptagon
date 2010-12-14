@@ -247,11 +247,17 @@ let rec translate env
     | Heptagon.Efby _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
-    | Heptagon.Ewhen (e, c, n) ->
-        mk_exp ~loc:loc ~ty:ty (Ewhen (translate env e, c, n))
-    | Heptagon.Emerge (n, c_e_list) ->
-        mk_exp ~loc:loc ~ty:ty
-          (Emerge (n, List.map (fun (c,e) -> c, translate env e) c_e_list))
+    | Heptagon.Ewhen (e, c, ce) ->
+        (match ce.Heptagon.e_desc with
+          | Heptagon.Evar x ->
+              mk_exp ~loc:loc ~ty:ty (Ewhen (translate env e, c, x))
+          | _ -> Format.eprintf "when with a nonvar condition.@."; assert false)
+    | Heptagon.Emerge (e, c_e_list) ->
+        (match e.Heptagon.e_desc with
+          | Heptagon.Evar x ->
+              mk_exp ~loc:loc ~ty:ty
+                (Emerge (x, List.map (fun (c,e)->c, translate env e) c_e_list))
+          | _ -> Format.eprintf "merge with a nonvar condition.@.";assert false)
 
 let rec translate_pat = function
   | Heptagon.Evarpat(n) -> Evarpat n

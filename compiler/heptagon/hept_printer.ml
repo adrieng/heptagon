@@ -111,12 +111,12 @@ and print_exp_desc ff = function
         print_static_exp param
         print_exp_tuple args
         print_every reset
-  | Ewhen (e, c, n) ->
+  | Ewhen (e, c, ec) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"
-        print_exp e print_qualname c print_ident n
-  | Emerge (x, tag_e_list) ->
+        print_exp e print_qualname c print_exp ec
+  | Emerge (e, tag_e_list) ->
       fprintf ff "@[<2>merge %a@ %a@]"
-        print_ident x print_tag_e_list tag_e_list
+        print_exp e print_tag_e_list tag_e_list
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c
@@ -262,7 +262,7 @@ let rec print_type_def ff { t_name = name; t_desc = tdesc } =
 
 let print_contract ff { c_block = b;
                         c_assume = e_a; c_enforce = e_g;
-			c_controllables = c} =
+      c_controllables = c} =
   fprintf ff "@[<v2>contract@\n%a@ assume %a@ enforce %a@ with (%a)@]"
     (print_block "let") b
     print_exp e_a

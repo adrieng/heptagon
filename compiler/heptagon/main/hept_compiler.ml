@@ -64,6 +64,9 @@ let compile_impl pp p =
   (* Shared variables (last) *)
   let p = pass "Last" true Last.program p pp in
 
+  (* Remove switch statements *)
+  let p = pass "switch" true Switch.program p pp in
+
   (* Reset *)
   let p = pass "Reset" true Reset.program p pp in
 

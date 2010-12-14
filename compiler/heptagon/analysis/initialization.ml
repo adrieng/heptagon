@@ -249,14 +249,14 @@ let rec typing h e =
     | Eiterator (_, _, _, e_list, _) ->
         List.iter (fun e -> initialized_exp h e) e_list;
         skeleton izero e.e_ty
-    | Ewhen (e, _, n) ->
-        let i = imax (itype (IEnv.find_var_typ n h)) (itype (typing h e)) in
+    | Ewhen (e, _, ce) ->
+        let i = imax (itype (typing h ce)) (itype (typing h e)) in
         skeleton i e.e_ty
-    | Emerge (n, c_e_list) ->
+    | Emerge (e, c_e_list) ->
         let i =
           List.fold_left
             (fun acc (_, e) -> imax acc (itype (typing h e))) izero c_e_list in
-        let i = imax (itype (IEnv.find_var_typ n h)) i in
+        let i = imax (itype (typing h e)) i in
         skeleton i e.e_ty
 
 
@@ -367,10 +367,10 @@ let build_initialized h vdecs =
 let typing_contract h contract =
   match contract with
     | None -> h
-    | Some { c_block = b; 
-		         c_assume = e_a;
+    | Some { c_block = b;
+             c_assume = e_a;
              c_enforce = e_g;
-						 c_controllables = c } ->
+             c_controllables = c } ->
         let h' = build h b.b_local in
         typing_eqs h' b.b_equs;
         (* assumption *)

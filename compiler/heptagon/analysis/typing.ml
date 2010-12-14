@@ -543,14 +543,14 @@ let rec typing const_env h e =
                         , typed_n, typed_e_list, reset), ty
       | Eiterator _ -> assert false
 
-      | Ewhen (e, c, n) ->
+      | Ewhen (e, c, ce) ->
           let typed_e, t = typing const_env h e in
           let tn_expected = find_constrs c in
-          let tn_actual = typ_of_name h n in
+          let typed_ce, tn_actual = typing const_env h ce in
           unify tn_actual tn_expected;
-          Ewhen (typed_e, c, n), t
+          Ewhen (typed_e, c, typed_ce), t
 
-      | Emerge (n, (c1,e1)::c_e_list) ->
+      | Emerge (e, (c1,e1)::c_e_list) ->
           (* verify the constructors : they should be unique,
                all of the same type and cover all the possibilities *)
           let c_type = find_constrs c1 in
@@ -575,13 +575,13 @@ let rec typing const_env h e =
           if not (QualSet.is_empty c_set_diff)
           then message e.e_loc (Emerge_missing_constrs c_set_diff);
           (* verify [n] is of the right type *)
-          let n_type = typ_of_name h n in
-          unify n_type c_type;
+          let typed_e, e_type = typing const_env h e in
+          unify e_type c_type;
           (* type *)
           let typed_e1, t = typing const_env h e1 in
           let typed_c_e_list =
             List.map (fun (c, e) -> (c, expect const_env h t e)) c_e_list in
-          Emerge (n, (c1,typed_e1)::typed_c_e_list), t
+          Emerge (typed_e, (c1,typed_e1)::typed_c_e_list), t
       | Emerge (_, []) -> assert false
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty

@@ -39,9 +39,9 @@ and desc =
   | Epre of static_exp option * exp
   | Efby of exp * exp
   | Estruct of (field_name * exp) list
-  | Ewhen of exp * constructor_name * var_ident
+  | Ewhen of exp * constructor_name * exp
     (** exp when Constructor(ident) *)
-  | Emerge of var_ident * (constructor_name * exp) list
+  | Emerge of exp * (constructor_name * exp) list
     (** merge ident (Constructor -> exp)+ *)
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp * exp list * exp option
@@ -202,8 +202,8 @@ let mk_var_dec ?(last = Var) ?(ck = fresh_clock()) name ty =
   { v_ident = name; v_type = ty; v_clock = ck;
     v_last = last; v_loc = no_location }
 
-let mk_block ?(statefull = true) ?(defnames = Env.empty) eqs =
-  { b_local = []; b_equs = eqs; b_defnames = defnames;
+let mk_block ?(statefull = true) ?(defnames = Env.empty) ?(locals = []) eqs =
+  { b_local = locals; b_equs = eqs; b_defnames = defnames;
     b_statefull = statefull; b_loc = no_location }
 
 let dfalse =
