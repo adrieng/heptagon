@@ -101,6 +101,7 @@ struct
       to variables defined in the source file have the same name unless
       there is a collision. *)
   let assign_name n =
+    let num = ref 1 in
     let fresh s =
       num := !num + 1;
       s ^ "_" ^ (string_of_int !num) in
@@ -118,7 +119,8 @@ struct
 end
 
 let gen_fresh pass_name kind_to_string kind =
-  let s = "__" ^ pass_name ^ "_" ^ (kind_to_string kind) in
+  let s = kind_to_string kind in
+  let s = if !Compiler_options.full_name then "__"^pass_name ^ "_" ^ s else s in
   num := !num + 1;
   let id = { num = !num; source = s; is_generated = true } in
     UniqueNames.assign_name id; id

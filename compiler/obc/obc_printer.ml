@@ -80,7 +80,7 @@ let rec print_act ff a =
   match a with
     | Aassgn (x, e) -> print_asgn ff "" x e
     | Acase(e, tag_act_list) ->
-        fprintf ff "@[<v>@[<hv 2>switch (";
+        fprintf ff "@[<v>@[<v 2>switch (";
         print_exp ff e; fprintf ff ") {@ ";
         print_tag_act_list ff tag_act_list;
         fprintf ff "@]@,}@]"

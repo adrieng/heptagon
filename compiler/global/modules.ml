@@ -226,33 +226,53 @@ let current_qual n = { qual = g_env.current_mod; name = n }
 (** { 3 Fresh functions return a fresh qualname for the current module } *)
 
 let rec fresh_value pass_name name =
-  let q = current_qual ("__"^ pass_name ^"_"^ name) in
+  let fname =
+    if !Compiler_options.full_name
+    then ("__"^ pass_name ^"_"^ name)
+    else name in
+  let q = current_qual fname in
   if QualEnv.mem q g_env.values
-  then fresh_value pass_name (name ^"_"^ Misc.gen_symbol())
+  then fresh_value pass_name (name ^ Misc.gen_symbol())
   else q
 
 let rec fresh_value_in pass_name name qualifier =
-  let q = { qual = qualifier; name = "__"^ pass_name ^"_"^ name } in
+  let fname =
+    if !Compiler_options.full_name
+    then ("__"^ pass_name ^"_"^ name)
+    else name in
+  let q = { qual = qualifier; name = fname } in
   if QualEnv.mem q g_env.values
-  then fresh_value_in pass_name (name ^"_"^ Misc.gen_symbol()) qualifier
+  then fresh_value_in pass_name (name ^ Misc.gen_symbol()) qualifier
   else q
 
 let rec fresh_type pass_name name =
-  let q = current_qual ("__"^ pass_name ^"_"^ name) in
+  let fname =
+    if !Compiler_options.full_name
+    then ("__"^ pass_name ^"_"^ name)
+    else name in
+  let q = current_qual fname in
   if QualEnv.mem q g_env.types
-  then fresh_type pass_name (name ^"_"^ Misc.gen_symbol())
+  then fresh_type pass_name (name ^ Misc.gen_symbol())
   else q
 
 let rec fresh_const pass_name name =
-  let q = current_qual ("__"^ pass_name ^"_"^ name) in
+  let fname =
+    if !Compiler_options.full_name
+    then ("__"^ pass_name ^"_"^ name)
+    else name in
+  let q = current_qual fname in
   if QualEnv.mem q g_env.consts
-  then fresh_const pass_name (name ^"_"^ Misc.gen_symbol())
+  then fresh_const pass_name (name ^ Misc.gen_symbol())
   else q
 
 let rec fresh_constr pass_name name =
-  let q = current_qual ("__"^ pass_name ^"_"^ name) in
+  let fname =
+    if !Compiler_options.full_name
+    then ("__"^ pass_name ^"_"^ name)
+    else name in
+  let q = current_qual fname in
   if QualEnv.mem q g_env.constrs
-  then fresh_constr pass_name (name ^"_"^ Misc.gen_symbol())
+  then fresh_constr pass_name (name ^ Misc.gen_symbol())
   else q
 
 

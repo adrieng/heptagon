@@ -93,6 +93,7 @@ let main () =
         "-nocaus", Arg.Clear causality, doc_nocaus;
         "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
+        "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
       ]
       (compile compile_impl)
