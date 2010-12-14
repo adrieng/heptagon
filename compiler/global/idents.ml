@@ -9,6 +9,11 @@
 
 (* naming and local environment *)
 
+(* TODO AG : preprocessing pour avoir un release efficace :
+IFDEF RELEASE type iden = int
+ELSE *)
+
+
 
 type ident = {
   num : int;        (* a unique index *)
@@ -21,16 +26,15 @@ type var_ident = ident
 let num = ref 0
 
 let ident_compare id1 id2 = compare id1.num id2.num
-let sourcename id = id.source
+
+(* used only for debuging *)
 let name id =
   if id.is_generated then
     id.source ^ "_" ^ (string_of_int id.num)
   else
     id.source
 
-let set_sourcename id v =
-  { id with source = v }
-
+(* used only for debuging *)
 let fprint_t ff id = Format.fprintf ff "%s" (name id)
 
 module M = struct
@@ -77,13 +81,21 @@ end
 module S = Set.Make (struct type t = string
                             let compare = Pervasives.compare end)
 
+
+(** Module used to generate unique string (inside a node) per ident.
+    /!\ Any pass generating a name must call [enter_node] and use gen_fresh *)
 module UniqueNames =
 struct
-  let used_names = ref S.empty
-  let env = ref Env.empty
+  open Names
+  let used_names = ref (ref S.empty) (** Used strings in the current node *)
+  let env = ref Env.empty (** Map idents to their string *)
+  let (node_env : S.t ref QualEnv.t ref) = ref QualEnv.empty
 
-  let new_function () =
-    used_names := S.empty
+  (** This function should be called every time we enter a node *)
+  let enter_node n =
+    (if not (QualEnv.mem n !node_env)
+    then node_env := QualEnv.add n (ref S.empty) !node_env);
+    used_names := QualEnv.find n !node_env
 
   (** @return a unique string for each identifier. Idents corresponding
       to variables defined in the source file have the same name unless
@@ -91,26 +103,27 @@ struct
   let assign_name n =
     let fresh s =
       num := !num + 1;
-      s ^ "_" ^ (string_of_int !num)
-    in
+      s ^ "_" ^ (string_of_int !num) in
     let rec fresh_string base =
-      let base = fresh base in
-        if S.mem base !used_names then fresh_string base else base
-    in
-      if not (Env.mem n !env) then
-        let s = name n in
-        let s = if S.mem s !used_names then fresh_string s else s in
-          used_names := S.add s !used_names;
-          env := Env.add n s !env
+      let fs = fresh base in
+      if S.mem fs !(!used_names) then fresh_string base else fs in
+    if not (Env.mem n !env) then
+      (let s = n.source in
+       let s = if S.mem s !(!used_names) then fresh_string s else s in
+       !used_names := S.add s !(!used_names);
+       env := Env.add n s !env)
 
   let name id =
     Env.find id !env
 end
 
-let fresh s =
+let gen_fresh pass_name kind_to_string kind =
+  let s = "__" ^ pass_name ^ "_" ^ (kind_to_string kind) in
   num := !num + 1;
   let id = { num = !num; source = s; is_generated = true } in
     UniqueNames.assign_name id; id
+
+let gen_var pass_name name = gen_fresh pass_name (fun () -> name) ()
 
 let ident_of_name s =
   num := !num + 1;
@@ -118,6 +131,6 @@ let ident_of_name s =
     UniqueNames.assign_name id; id
 
 let name id = UniqueNames.name id
-let new_function () = UniqueNames.new_function ()
+let enter_node n = UniqueNames.enter_node n
 
 let print_ident ff id = Format.fprintf ff "%s" (name id)

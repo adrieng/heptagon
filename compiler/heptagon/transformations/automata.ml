@@ -17,6 +17,10 @@ open Hept_mapfold
 open Initial
 open Modules
 
+type var = S | NS | R | NR | PNR
+let fresh = Idents.gen_fresh "automata"
+  (function S -> "s" | NS -> "ns" | R -> "r" | NR -> "nr" | PNR -> "pnr")
+
 let mk_var_exp n ty =
   mk_exp (Evar n) ty
 
@@ -46,7 +50,7 @@ let state_type_dec_list = ref []
 
 (* create and add to the env the constructors corresponding to a name state *)
 let intro_state_constr type_name state state_env =
-  let c = Modules.fresh_constr state in
+  let c = Modules.fresh_constr "automata" state in
   Modules.add_constrs c type_name; NamesEnv.add state c state_env
 
 (* create and add the the global env and to state_type_dec_list
@@ -68,7 +72,7 @@ let no_strong_transition state_handlers =
 
 
 let translate_automaton v eq_list handlers =
-  let type_name = Modules.fresh_type ("states") in
+  let type_name = Modules.fresh_type "automata" "states" in
   (* the state env associate a name to a qualified constructor *)
   let state_env =
     List.fold_left
@@ -80,11 +84,11 @@ let translate_automaton v eq_list handlers =
   (* The initial state constructor *)
   let initial = (NamesEnv.find (List.hd handlers).s_state state_env) in
 
-  let statename = Idents.fresh "s" in
-  let next_statename = Idents.fresh "ns" in
-  let resetname = Idents.fresh "r" in
-  let next_resetname = Idents.fresh "nr" in
-  let pre_next_resetname = Idents.fresh "pnr" in
+  let statename = fresh S in
+  let next_statename = fresh NS in
+  let resetname = fresh R in
+  let next_resetname = fresh NR in
+  let pre_next_resetname = fresh PNR in
 
   let name n = NamesEnv.find n state_env in
   let state n =

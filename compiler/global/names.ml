@@ -75,3 +75,7 @@ let print_raw_qualname ff {qual = q; name = n} =
 let opname qn = match qn with
   | { qual = "Pervasives"; name = m; } -> m
   | { qual = qual; name = n; } -> qual ^ "." ^ n
+
+(** Use a printer to generate a string compatible with a name *)
+let print_pp_to_name p x =
+  Misc.sanitize_string (Misc.print_pp_to_string p x)

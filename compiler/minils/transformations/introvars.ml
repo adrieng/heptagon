@@ -93,7 +93,7 @@ and intro_var e (eq_list, var_list) =
   match e.e_desc with
     | Evar _ -> (e, eq_list, var_list)
     | _ ->
-        let id = Idents.fresh prefix in
+        let id = Idents.gen_var "introvars" prefix in
         let new_eq = mk_equation (Evarpat id) e
         and var_dc = mk_var_dec id e.e_ty in
         (mk_exp ~ty:e.e_ty (Evar id), new_eq :: eq_list, var_dc :: var_list)

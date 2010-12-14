@@ -25,7 +25,7 @@ let flatten_e_list l =
 
 let equation (d_list, eq_list) e =
   let add_one_var ty d_list =
-    let n = Idents.fresh "_v" in
+    let n = Idents.gen_var "normalize" "v" in
     let d_list = (mk_var_dec ~clock:e.e_ck n ty) :: d_list in
       n, d_list
   in
@@ -306,7 +306,7 @@ and fby kind context e v e1 =
         let e_list = List.map mk_pre e_list in
         let e = { e with e_desc = Eapp(app, e_list, r) } in
           translate kind context e
-    | Econst { se_desc = Stuple se_list }, None ->
+    | Econst { se_desc = Stuple _ }, None ->
         context, e1
     | _ ->
         let context, e1' =

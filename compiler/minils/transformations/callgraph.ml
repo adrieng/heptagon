@@ -92,14 +92,16 @@ struct
       [ln] with the static parameters [params] and stores it. *)
   let generate_new_name ln params = match params with
     | [] -> nodes_names := M.add (ln, params) ln !nodes_names
-    | _ -> let { qual = q; name = n } = ln in
-           let new_ln = { qual = q;
-                  (* TODO ??? c'est quoi ce nom ??? *)
-                  (* l'utilite de fresh n'est vrai que si toute les fonctions
-                     sont touchees.. ce qui n'est pas vrai cf main_nodes *)
-                  (* TODO mettre les valeurs des params dans le nom *)
-                          name = n^(Idents.name (Idents.fresh "")) } in
-           nodes_names := M.add (ln, params) new_ln !nodes_names
+    | _ ->
+        let { qual = q; name = n } = ln in
+        let param_string =
+          List.fold_left
+            (fun s se ->
+              s ^ (Names.print_pp_to_name Global_printer.print_static_exp se))
+            "_params_" params in
+        let new_ln =
+          Modules.fresh_value_in "callgraph" (n^param_string^"_") q in
+        nodes_names := M.add (ln, params) new_ln !nodes_names
 
   (** Adds an instance of a node. *)
   let add_node_instance ln params =
@@ -167,6 +169,7 @@ struct
       in ed, m
 
     let node_dec_instance modname n params =
+      Idents.enter_node n.n_name;
       let global_funs =
         { Global_mapfold.defaults with static_exp = static_exp } in
       let funs =
@@ -301,9 +304,9 @@ let program p =
   (* Find the nodes without static parameters *)
   let main_nodes = List.filter (fun n -> is_empty n.n_params) p.p_nodes in
   let main_nodes = List.map (fun n -> n.n_name, []) main_nodes in
-    info.opened <- NamesEnv.add p.p_modname p NamesEnv.empty;
-    (* Creates the list of instances starting from these nodes *)
-    List.iter call_node main_nodes;
-    let p_list = NamesEnv.fold (fun _ p l -> p::l) info.opened [] in
-      (* Generate all the needed instances *)
-      List.map Param_instances.Instantiate.program p_list
+  info.opened <- NamesEnv.add p.p_modname p NamesEnv.empty;
+  (* Creates the list of instances starting from these nodes *)
+  List.iter call_node main_nodes;
+  let p_list = NamesEnv.fold (fun _ p l -> p::l) info.opened [] in
+  (* Generate all the needed instances *)
+  List.map Param_instances.Instantiate.program p_list

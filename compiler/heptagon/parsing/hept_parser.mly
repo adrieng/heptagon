@@ -224,7 +224,7 @@ contract:
       { Some{ c_block = b;
               c_assume = $4;
               c_enforce = $5;
-	      c_controllables = $6 } }
+        c_controllables = $6 } }
 ;
 
 opt_assume:
@@ -445,8 +445,8 @@ _exp:
       { mk_op_call $2 [$1; $3] }
   | exp INFIX2 exp
       { mk_op_call $2 [$1; $3] }
-  | e=exp WHEN c=constructor_or_bool LPAREN n=IDENT RPAREN
-      { Ewhen (e, c, n) }
+  | e=exp WHEN c=constructor_or_bool LPAREN ce=IDENT RPAREN
+      { Ewhen (e, c, ce) }
   | MERGE n=IDENT hs=merge_handlers
       { Emerge (n, hs) }
   | exp INFIX1 exp

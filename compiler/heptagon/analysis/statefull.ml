@@ -67,6 +67,7 @@ let present_handler funs acc ph =
     { ph with p_cond = p_cond; p_block = p_block }, acc
 
 let node_dec funs _ n =
+  Idents.enter_node n.n_name;
   let n, statefull = Hept_mapfold.node_dec funs false n in
     if statefull & not (n.n_statefull) then
       message n.n_loc Eshould_be_a_node;

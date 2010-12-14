@@ -32,7 +32,7 @@ let ident_of_int =
   fun (name : string) (i : int) ->
     try Hashtbl.find ht i
     with Not_found ->
-      let new_ident = Idents.fresh name in
+      let new_ident = Idents.gen_var "tomato" name in
       Hashtbl.add ht i new_ident;
       new_ident
 
@@ -151,10 +151,10 @@ struct
     let funs = { Mls_mapfold.defaults with
                    Mls_mapfold.exp = exp;
                    Mls_mapfold.var_dec = var_dec; } in
-    fst (Mls_mapfold.node_dec funs subst nd)
+    fst (Mls_mapfold.node_dec_it funs subst nd)
 end
 
-let empty_var = Idents.fresh "EMPTY"
+let empty_var = Idents.gen_var "tomato" "EMPTY"
 let dummy_exp = mk_exp (Evar empty_var)
 
 let exp_of_ident vi = mk_exp (Evar vi)
@@ -460,7 +460,7 @@ let introduce_copies_for_outputs nd =
   let var_dec vd (iset, vd_list, eq_list) =
     if IdentSet.mem vd.v_ident iset
     then (* introduce copy, change vd *)
-      let fresh = Idents.fresh (Idents.name vd.v_ident) in
+      let fresh = Idents.gen_var "tomato" (Idents.name vd.v_ident) in
       let new_eq =
         let e = mk_exp ~ty:vd.v_type (Evar vd.v_ident) in
         mk_equation (Evarpat fresh) e in

@@ -257,20 +257,22 @@ and contract funs acc c =
   let c_assume, acc = exp_it funs acc c.c_assume in
   let c_enforce, acc = exp_it funs acc c.c_enforce in
   let c_block, acc = block_it funs acc c.c_block in
-	let c_controllables, acc = mapfold (var_dec_it funs) acc c.c_controllables in
+  let c_controllables, acc = mapfold (var_dec_it funs) acc c.c_controllables in
   { c with
     c_assume = c_assume;
-		c_enforce = c_enforce;
-		c_block = c_block;
-		c_controllables = c_controllables },
-	acc
+    c_enforce = c_enforce;
+    c_block = c_block;
+    c_controllables = c_controllables },
+  acc
 
 and param_it funs acc vd = funs.param funs acc vd
 and param funs acc vd =
   let v_last, acc = last_it funs acc vd.v_last in
   { vd with v_last = v_last }, acc
 
-and node_dec_it funs acc nd = funs.node_dec funs acc nd
+and node_dec_it funs acc nd =
+  Idents.enter_node nd.n_name;
+  funs.node_dec funs acc nd
 and node_dec funs acc nd =
   let n_input, acc = mapfold (var_dec_it funs) acc nd.n_input in
   let n_output, acc = mapfold (var_dec_it funs) acc nd.n_output in

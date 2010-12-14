@@ -90,7 +90,7 @@ end
 
 (* add an equation *)
 let equation locals l_eqs e =
-  let n = Idents.fresh "ck" in
+  let n = Idents.gen_var "hept2mls" "ck" in
   n,
   (mk_var_dec n e.e_ty) :: locals,
   (mk_equation (Evarpat n) e):: l_eqs
@@ -260,7 +260,7 @@ let rec translate_pat = function
 let rec rename_pat ni locals s_eqs = function
   | Heptagon.Evarpat(n), ty ->
       if IdentSet.mem n ni then (
-        let n_copy = Idents.fresh (sourcename n) in
+        let n_copy = Idents.gen_var "hept2mls" (name n) in
         Evarpat n_copy,
         (mk_var_dec n_copy ty) :: locals,
         add n (mk_exp ~ty:ty (Evar n_copy)) s_eqs
@@ -352,7 +352,7 @@ let translate_contract env contract =
                                   Heptagon.b_equs = eq_list };
              Heptagon.c_assume = e_a;
              Heptagon.c_enforce = e_g;
-						 Heptagon.c_controllables = l_c } ->
+             Heptagon.c_controllables = l_c } ->
         let env' = Env.add v env in
         let locals = translate_locals [] v in
         let locals, l_eqs, s_eqs =
@@ -360,12 +360,12 @@ let translate_contract env contract =
         let l_eqs, _ = add_locals IdentSet.empty l_eqs [] s_eqs in
         let e_a = translate env' e_a in
         let e_g = translate env' e_g in
-				let env = Env.add l_c env in
+        let env = Env.add l_c env in
         Some { c_local = locals;
                c_eq = l_eqs;
                c_assume = e_a;
                c_enforce = e_g;
-							 c_controllables = List.map translate_var l_c },
+               c_controllables = List.map translate_var l_c },
         env
 
 
@@ -387,7 +387,7 @@ let node
     n_input = List.map translate_var i;
     n_output = List.map translate_var o;
     n_contract = contract;
-		n_controller_call = ([],[]);
+    n_controller_call = ([],[]);
     n_local = locals;
     n_equs = l_eqs;
     n_loc = loc ;

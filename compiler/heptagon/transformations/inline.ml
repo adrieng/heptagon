@@ -105,6 +105,7 @@ let block funs (env, newvars, newequs) blk =
    (env, [], []))
 
 let node_dec funs (env, newvars, newequs) nd =
+  Idents.enter_node nd.n_name;
   let nd, (env, newvars, newequs) =
     Hept_mapfold.node_dec funs (env, newvars, newequs) nd in
   ({ nd with n_block =

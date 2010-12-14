@@ -49,7 +49,7 @@ and edesc funs acc ed = match ed with
   | Econst se ->
       let se, acc = static_exp_it funs.global_funs acc se in
         Econst se, acc
-  | Evar x -> ed, acc
+  | Evar _ -> ed, acc
   | Efby (se, e) ->
       let se, acc = optional_wacc (static_exp_it funs.global_funs) acc se in
       let e, acc = exp_it funs acc e in
@@ -126,7 +126,9 @@ and contract funs acc c =
   , acc
 
 
-and node_dec_it funs acc nd = funs.node_dec funs acc nd
+and node_dec_it funs acc nd =
+  Idents.enter_node nd.n_name;
+  funs.node_dec funs acc nd
 and node_dec funs acc nd =
   let n_input, acc = var_decs_it funs acc nd.n_input in
   let n_output, acc = var_decs_it funs acc nd.n_output in

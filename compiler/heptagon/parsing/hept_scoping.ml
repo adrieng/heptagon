@@ -369,7 +369,7 @@ let translate_contract env ct =
   let b, _ = translate_block env ct.c_block in
   { Heptagon.c_assume = translate_exp env ct.c_assume;
     Heptagon.c_enforce = translate_exp env ct.c_enforce;
-		Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
+    Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
     Heptagon.c_block = b }
 
 let params_of_var_decs =
@@ -383,7 +383,8 @@ let args_of_var_decs =
                         (translate_type vd.v_loc vd.v_type))
 
 let translate_node node =
-  Idents.new_function ();
+  let n = current_qual node.n_name in
+  Idents.enter_node n;
   (* Inputs and outputs define the initial local env *)
   let env0 = Rename.append Rename.empty (node.n_input @ node.n_output) in
   let params = params_of_var_decs node.n_params in
@@ -393,7 +394,6 @@ let translate_node node =
   let contract =
     Misc.optional (translate_contract env) node.n_contract in
   (* the env of the block is used in the contract translation *)
-  let n = current_qual node.n_name in
   (* add the node signature to the environment *)
   let i = args_of_var_decs node.n_input in
   let o = args_of_var_decs node.n_output in

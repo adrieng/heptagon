@@ -26,7 +26,7 @@ let add_check prefix pass nd nd_list =
     let nd'_name = { nd.n_name with name = prefix ^ "_" ^ nd.n_name.name; } in
     let nd' = pass nd in
     let nd' = { nd' with n_name = nd'_name; } in
-    let output = Idents.fresh "o" in
+    let output = Idents.gen_var "checkpass" "o" in
 
     let echeck =
       let ty_r = match nd.n_output with

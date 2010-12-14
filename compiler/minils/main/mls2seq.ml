@@ -30,7 +30,7 @@ let write_object_file p =
     close_out epoc;
     comment "Generating of object file"
 
-(** Writes a .epo file for program [p]. *)
+(** Writes a .obc file for program [p]. *)
 let write_obc_file p =
   let obc_name = (filename_of_name p.Obc.p_modname)^".obc" in
   let obc = open_out obc_name in

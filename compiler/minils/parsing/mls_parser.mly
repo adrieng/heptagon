@@ -118,10 +118,10 @@ node_dec:
   NODE n=qualname p=params(n_param) LPAREN args=args RPAREN
   RETURNS LPAREN out=args RPAREN
   contract=contract vars=loc_vars eqs=equs
-      { mk_node p args out vars eqs 
-	  ~loc:(Loc ($startpos,$endpos))
-	  ~contract:contract
-	  n }
+      { mk_node p args out vars eqs
+    ~loc:(Loc ($startpos,$endpos))
+    ~contract:contract
+    n }
 
 
 contract:
@@ -129,14 +129,14 @@ contract:
   | CONTRACT
     locvars=loc_vars
     eqs=opt_equs
-    assume=opt_assume 
-    enforce=opt_enforce 
+    assume=opt_assume
+    enforce=opt_enforce
     withvar=opt_with
       { Some{ c_local=locvars;
-	      c_equs=eqs;
+        c_equs=eqs;
               c_assume = assume;
               c_enforce = enforce;
-	      c_controllables = withvar } }
+        c_controllables = withvar } }
 ;
 
 opt_assume:
@@ -181,7 +181,7 @@ var:
   | ns=snlist(COMMA, NAME) COLON t=type_ident c=clock_annot
       { List.map (fun n -> mk_var_dec n t c (Loc ($startpos,$endpos))) ns }
 
-opt_equs: 
+opt_equs:
   | /* empty */ { [] }
   | LET e=slist(SEMICOL, equ) TEL { e }
 

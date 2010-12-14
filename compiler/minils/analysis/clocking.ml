@@ -140,7 +140,7 @@ let typing_contract h contract base =
              c_eq = eq_list;
              c_assume = e_a;
              c_enforce = e_g;
-						 c_controllables = c_list } ->
+             c_controllables = c_list } ->
         let h' = build h l_list in
         (* assumption *)
         (* property *)

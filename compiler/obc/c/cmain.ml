@@ -24,9 +24,13 @@ open Compiler_utils
 
 (** {1 Main C function generation} *)
 
+let _ = Idents.enter_node (Modules.fresh_value "cmain" "main")
+
+let fresh n = Idents.name (Idents.gen_var "cmain" n)
+
 (* Unique names for C variables handling step counts. *)
-let step_counter = Idents.fresh "step_c"
-and max_step = Idents.fresh "step_max"
+let step_counter = fresh "step_c"
+and max_step = fresh"step_max"
 
 let assert_node_res cd =
   let stepm = find_step_method cd in
@@ -43,10 +47,10 @@ let assert_node_res cd =
      exit 1);
   let name = cname_of_qn cd.cd_name in
   let mem =
-    (Idents.name (Idents.fresh ("mem_for_" ^ name)),
+    (fresh ("mem_for_" ^ name),
       Cty_id (qn_append cd.cd_name "_mem"))
   and out =
-    (Idents.name (Idents.fresh ("out_for_" ^ name)),
+    (fresh ("out_for_" ^ name),
       Cty_id (qn_append cd.cd_name "_out")) in
   let reset_i =
     Cfun_call (name ^ "_reset", [Caddrof (Cvar (fst mem))]) in
@@ -71,7 +75,7 @@ let assert_node_res cd =
                                      [Cconst (Cstrlit ("Node \\\"" ^ name
                                                        ^ "\\\" failed at step" ^
                                                        " %d.\\n"));
-                                      Clhs (Cvar (Idents.name step_counter))]));
+                                      Clhs (Cvar step_counter)]));
                   Creturn (Cconst (Ccint 1))],
                  []);
           ];
@@ -104,7 +108,7 @@ let main_def_of_class_def cd =
   (** Generates scanf statements. *)
   let rec read_lhs_of_ty lhs ty = match ty with
     | Tarray (ty, n) ->
-        let iter_var = Idents.name (Idents.fresh "i") in
+        let iter_var = fresh "i" in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = read_lhs_of_ty lhs ty in
         ([Cfor (iter_var, 0, int_of_static_exp n, reads)], bufs)
@@ -130,7 +134,7 @@ let main_def_of_class_def cd =
         match need_buf_for_ty ty with
           | None -> ([scan_exp], [])
           | Some tyn ->
-              let varn = Idents.name (Idents.fresh "buf") in
+              let varn = fresh "buf" in
               ([scan_exp;
                 Csexpr (Cfun_call (tyn ^ "_of_string",
                                    [Clhs (Cvar varn)]))],
@@ -140,14 +144,14 @@ let main_def_of_class_def cd =
       resulting values of enum types. *)
   let rec write_lhs_of_ty lhs ty = match ty with
     | Tarray (ty, n) ->
-        let iter_var = Idents.name (Idents.fresh "i") in
+        let iter_var = fresh "i" in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = write_lhs_of_ty lhs ty in
         ([cprint_string "[ ";
           Cfor (iter_var, 0, int_of_static_exp n, reads);
           cprint_string "]"], bufs)
     | _ ->
-        let varn = Idents.name (Idents.fresh "buf") in
+        let varn = fresh "buf" in
         let format_s = format_for_type ty in
         let nbuf_opt = need_buf_for_ty ty in
         let ep = match nbuf_opt with
@@ -217,7 +221,7 @@ let main_skel var_list prologue body =
     f_args = [("argc", Cty_int); ("argv", Cty_ptr (Cty_ptr Cty_char))];
     f_body = {
       var_decls =
-        (name step_counter, Cty_int) :: (name max_step, Cty_int) :: var_list;
+        (step_counter, Cty_int) :: (max_step, Cty_int) :: var_list;
       block_body =
         [
           (*
@@ -226,10 +230,10 @@ let main_skel var_list prologue body =
             if (argc == 2)
               max_step = atoi(argv[1]);
           *)
-          Caffect (Cvar (name step_counter), Cconst (Ccint 0));
-          Caffect (Cvar (name max_step), Cconst (Ccint 0));
+          Caffect (Cvar step_counter, Cconst (Ccint 0));
+          Caffect (Cvar max_step, Cconst (Ccint 0));
           Cif (Cbop ("==", Clhs (Cvar "argc"), Cconst (Ccint 2)),
-               [Caffect (Cvar (name max_step),
+               [Caffect (Cvar max_step,
                          Cfun_call ("atoi",
                                     [Clhs (Carray (Cvar "argv",
                                                    Cconst (Ccint 1)))]))], []);
@@ -238,14 +242,14 @@ let main_skel var_list prologue body =
           (* while (!max_step || step_c < max_step) *)
         @ [
           Cwhile (Cbop ("||",
-                        Cuop ("!", Clhs (Cvar (name max_step))),
+                        Cuop ("!", Clhs (Cvar max_step)),
                         Cbop ("<",
-                              Clhs (Cvar (name step_counter)),
-                              Clhs (Cvar (name max_step)))),
+                              Clhs (Cvar step_counter),
+                              Clhs (Cvar max_step))),
                   (* step_counter = step_counter + 1; *)
-                  Caffect (Cvar (name step_counter),
+                  Caffect (Cvar step_counter,
                            Cbop ("+",
-                                 Clhs (Cvar (name step_counter)),
+                                 Clhs (Cvar step_counter),
                                  Cconst (Ccint 1)))
                   :: body);
           Creturn (Cconst (Ccint 0));

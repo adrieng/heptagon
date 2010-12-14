@@ -1,8 +1,9 @@
 
-(** This modules manages unique identifiers,
-  [fresh] generates an identifier from a name
-  [name] returns a unique name from an identifier. *)
+open Names
 
+(** This modules manages unique identifiers,
+  [gen_fresh] generates an identifier
+  [name] returns a unique name (inside its node) from an identifier. *)
 
 (** The (abstract) type of identifiers*)
 type ident
@@ -13,21 +14,21 @@ type var_ident = ident
 (** Comparision on idents with the same properties as [Pervasives.compare] *)
 val ident_compare : ident -> ident -> int
 
-(** Get the source name from an identifier*)
-val sourcename : ident -> string
 (** Get the full name of an identifier (it is guaranteed to be unique) *)
 val name : ident -> string
-(** [set_sourcename id v] returns id with its source name changed to v. *)
-val set_sourcename : ident -> string -> ident
 
-(** [fresh n] returns a fresh identifier with source name n *)
-val fresh : string -> ident
+(** [gen_fresh pass_name kind_to_string kind]
+    generate a fresh ident with a sweet [name].
+    It should be used to define a [fresh] function specific to a pass. *)
+val gen_fresh : string -> ('a -> string) -> 'a -> ident
+val gen_var : string -> string -> ident
+
 (** [ident_of_name n] returns an identifier corresponding
   to a _source_ variable (do not use it for generated variables). *)
 val ident_of_name : string -> ident
-(** Resets the sets that makes sure that idents are mapped to unique
-    identifiers. Should be called when scoping a new function. *)
-val new_function : unit -> unit
+
+(** /!\ This function should be called every time we enter a node *)
+val enter_node : Names.qualname -> unit
 
 (** Maps taking an identifier as a key. *)
 module Env :

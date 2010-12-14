@@ -19,6 +19,8 @@ open Static
 open Obc_mapfold
 open Initial
 
+let fresh_it () = Idents.gen_var "mls2obc" "i"
+
 (** Not giving any type and called after typing, DO NOT use it anywhere else *)
 let static_exp_of_int i =
   Types.mk_static_exp (Types.Sint i)
@@ -131,8 +133,8 @@ and translate_act map pat
 
     | Minils.Evarpat x,
                 Minils.Eapp ({ Minils.a_op = Minils.Econcat }, [e1; e2], _) ->
-        let cpt1 = Idents.fresh "i" in
-        let cpt2 = Idents.fresh "i" in
+        let cpt1 = fresh_it () in
+        let cpt2 = fresh_it () in
         let x = var_from_name map x in
         (match e1.Minils.e_ty, e2.Minils.e_ty with
            | Tarray (_, n1), Tarray (_, n2) ->
@@ -157,7 +159,7 @@ and translate_act map pat
     | Minils.Evarpat x,
               Minils.Eapp ({ Minils.a_op = Minils.Earray_fill;
                              Minils.a_params = [n] }, [e], _) ->
-        let cpt = Idents.fresh "i" in
+        let cpt = fresh_it () in
         let e = translate map e in
           [ Afor (cpt, mk_static_int 0, n,
                   mk_block [Aassgn (mk_lhs (Larray (var_from_name map x,
@@ -166,7 +168,7 @@ and translate_act map pat
     | Minils.Evarpat x,
         Minils.Eapp ({ Minils.a_op = Minils.Eselect_slice;
                        Minils.a_params = [idx1; idx2] }, [e], _) ->
-        let cpt = Idents.fresh "i" in
+        let cpt = fresh_it () in
         let e = translate map e in
         let idx = mk_exp (Eop (op_from_string "+",
                                [mk_evar cpt;
@@ -296,7 +298,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let name_list = translate_pat map pat in
         let c_list =
           List.map (translate map) e_list in
-        let x = Idents.fresh "i" in
+        let x = fresh_it () in
         let call_context = Oarray ("n", mk_lhs (Lvar x)), Some n in
         let si', j', action = translate_iterator map call_context it
           name_list app loc n x c_list in

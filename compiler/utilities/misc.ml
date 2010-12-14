@@ -30,6 +30,17 @@ let rec split_string s c =
   with Not_found -> [s]
 
 
+(** Print to a string *)
+let print_pp_to_string print_fun element =
+  let _ = Format.flush_str_formatter () in (* Ensure that the buffer is empty *)
+  print_fun Format.str_formatter element;
+  Format.flush_str_formatter ()
+
+(** Replace all non [a-z A-Z 0-9] character of a string by [_] *)
+let sanitize_string s =
+  Str.global_replace (Str.regexp "[^a-zA-Z0-9]") "_" s
+
+
 (* creation of names. Ensure unicity for the whole compilation chain *)
 let symbol = ref 0
 

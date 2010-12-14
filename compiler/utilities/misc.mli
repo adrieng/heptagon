@@ -76,3 +76,10 @@ val assert_1min : 'a list -> 'a * 'a list
 val assert_2 : 'a list -> 'a * 'a
 val assert_2min : 'a list -> 'a * 'a * 'a list
 val assert_3 : 'a list -> 'a * 'a * 'a
+
+(** Print to string *)
+val print_pp_to_string : (Format.formatter -> 'a -> unit) -> 'a -> string
+
+(** Replace all non [a-z A-Z 0-9] character of a string by [_] *)
+val sanitize_string : string -> string
+

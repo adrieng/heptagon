@@ -231,7 +231,7 @@ let typ_of_name h x =
   try
     let { ty = ty } = Env.find x h in ty
   with
-      Not_found -> error (Eundefined(sourcename x))
+      Not_found -> error (Eundefined(name x))
 
 let desc_of_ty = function
   | Tid n when n = pbool  -> Tenum [ptrue; pfalse]
@@ -290,7 +290,7 @@ let diff_const defined_names local_names =
     the difference *)
 let included_env s1 s2 =
   Env.iter
-    (fun elt _ -> if not (Env.mem elt s2) then error (Emissing(sourcename elt)))
+    (fun elt _ -> if not (Env.mem elt s2) then error (Emissing(name elt)))
     s1
 
 let diff_env defined_names local_names =
@@ -321,7 +321,7 @@ let all_last h env =
   Env.iter
     (fun elt _ ->
        if not (Env.find elt h).last
-       then error (Elast_undefined(sourcename elt)))
+       then error (Elast_undefined(name elt)))
     env
 
 let last = function | Var -> false | Last _ -> true
@@ -977,7 +977,7 @@ and build const_env h dec =
         | Var | Last None -> vd.v_last in
 
       if Env.mem vd.v_ident h then
-        error (Ealready_defined(sourcename vd.v_ident));
+        error (Ealready_defined(name vd.v_ident));
 
       let acc_defined = Env.add vd.v_ident ty acc_defined in
       let h = Env.add vd.v_ident { ty = ty; last = last vd.v_last } h in
@@ -994,7 +994,7 @@ let typing_contract const_env h contract =
     | Some ({ c_block = b;
               c_assume = e_a;
               c_enforce = e_g;
-							c_controllables = c }) ->
+              c_controllables = c }) ->
         let typed_b, defined_names, _ = typing_block const_env h b in
           (* check that the equations do not define other unexpected names *)
           included_env defined_names Env.empty;
@@ -1005,11 +1005,11 @@ let typing_contract const_env h contract =
         let typed_e_g = expect const_env h (Tid Initial.pbool) e_g in
 
         let typed_c, (c_names, h) = build const_env h c in
-				
+
         Some { c_block = typed_b;
                c_assume = typed_e_a;
                c_enforce = typed_e_g;
-							 c_controllables = typed_c }, h
+               c_controllables = typed_c }, h
 
 let solve loc cl =
   try

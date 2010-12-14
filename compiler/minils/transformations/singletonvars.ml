@@ -59,7 +59,7 @@ struct
 
   let node nd =
     let funs = { Mls_mapfold.defaults with Mls_mapfold.edesc = edesc; } in
-    snd (Mls_mapfold.node_dec funs Env.empty nd)
+    snd (Mls_mapfold.node_dec_it funs Env.empty nd)
 end
 
 module InlineSingletons =
@@ -72,7 +72,7 @@ struct
 
   let inline_node subst nd =
     let funs = { Mls_mapfold.defaults with Mls_mapfold.exp = exp; } in
-    fst (Mls_mapfold.node_dec funs subst nd)
+    fst (Mls_mapfold.node_dec_it funs subst nd)
 
   let inline_exp subst e =
     let funs = { Mls_mapfold.defaults with

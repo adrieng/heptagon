@@ -7,8 +7,15 @@ open Minils
 (* Iterator fusion *)
 
 (* Functions to temporarily store anonymous nodes*)
-let mk_fresh_node_name () =
-  current_qual (Idents.name (Idents.fresh "_n_"))
+let mk_fresh_node_name () = Modules.fresh_value "itfusion" "temp"
+
+let fresh_vd_of_arg =
+  Idents.gen_fresh "itfusion"
+                   (fun a -> match a.a_name with
+                             | None -> "v"
+                             | Some n -> n)
+
+let fresh_var = Idents.gen_fresh "itfusion" (fun () -> "x")
 
 let anon_nodes = ref QualEnv.empty
 
@@ -44,8 +51,7 @@ let tuple_of_vd_list l =
     mk_exp ~ty:ty (Eapp (mk_app Etuple, el, None))
 
 let vd_of_arg ad =
-  let n = match ad.a_name with None -> "_v" | Some n -> n in
-    mk_var_dec (Idents.fresh n) ad.a_type
+    mk_var_dec (fresh_vd_of_arg ad) ad.a_type
 
 (** @return the lists of inputs and outputs (as var_dec) of
     an app object. *)
@@ -100,7 +106,7 @@ let edesc funs acc ed =
               let new_inp, e, acc_eq_list = mk_call g acc_eq_list in
                 new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->
-              let vd = mk_var_dec (Idents.fresh "_x") e.e_ty in
+              let vd = mk_var_dec (fresh_var ()) e.e_ty in
               let x = mk_exp (Evar vd.v_ident) in
               vd::inp, acc_eq_list, x::largs, e::args, b
         in
