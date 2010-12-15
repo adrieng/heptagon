@@ -1,10 +1,21 @@
 open Heptagon
 open Hept_mapfold
-open Reset
+open Types
 
 
 (* Transform [f (...) every e]
    into [f (...) every r] and add an equation [r=e] *)
+
+let mk_bool_var n = mk_exp (Evar n) (Tid Initial.pbool)
+let mk_bool_param n = mk_var_dec n (Tid Initial.pbool)
+
+let fresh = Idents.gen_fresh "reset" (fun () -> "r")
+(* add an equation *)
+let equation v acc_eq_list e =
+  let n = fresh() in
+  n,
+  (mk_bool_param n) :: v,
+  (mk_equation (Eeq(Evarpat n, e))) ::acc_eq_list
 
 
 let statefull eq_list = List.exists (fun eq -> eq.eq_statefull) eq_list

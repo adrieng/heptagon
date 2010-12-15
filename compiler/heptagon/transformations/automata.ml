@@ -8,6 +8,8 @@
 (**************************************************************************)
 (* removing automata statements *)
 
+(* TODO deal correctly with [stateful] *)
+
 open Misc
 open Types
 open Names

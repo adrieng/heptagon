@@ -36,7 +36,7 @@ and desc =
   | Econst of static_exp
   | Evar of var_ident
   | Elast of var_ident
-  | Epre of static_exp option * exp
+  | Epre of static_exp option * exp (* the static_exp purpose is the initialization of the mem_var *)
   | Efby of exp * exp
   | Estruct of (field_name * exp) list
   | Ewhen of exp * constructor_name * exp
@@ -182,9 +182,9 @@ and interface_desc =
   | Isignature of signature
 
 (* Helper functions to create AST. *)
-let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ty  =
+let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
-    e_base_ck = Cbase; e_loc = no_location; }
+    e_base_ck = Cbase; e_loc = loc; }
 
 let mk_op ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }
