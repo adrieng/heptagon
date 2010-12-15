@@ -49,10 +49,14 @@ compile () {
   if [ $verbose != 0 ]; then
     echo ""
     echo "****************************************"
-    echo Compile -i $coption $1 $2 $args_comp
-    $compilo $coption -I good $1 $2 $args_comp
+    echo Compile -i $coption $args_comp $1
+    $compilo $coption -I good $args_comp $1 >$1.log 2>&1
   else
-    $compilo $coption -I good $args_comp $1 $2 >/dev/null 2>&1
+    if [ $2 == 1 ]; then
+      $compilo $coption -I good $args_comp $1 >/dev/null 2>&1
+    else
+      $compilo $coption -I good $args_comp $1 2>&1
+    fi
   fi
   failed=$?
 
@@ -73,7 +77,7 @@ launch_check () {
       echo -n "."
     fi
     max=`expr $max + 1`;
-    if compile $f; then
+    if compile $f 1; then
       echo
       echo "ERROR on "$f" (should fail to compile)";
     else
@@ -91,7 +95,7 @@ launch_check () {
     fi
     max=`expr $max + 1`;
     base_f=`basename $f .ept`
-    if compile $f; then
+    if compile $f 0; then
       echec=0
     else
       echec=1
@@ -110,7 +114,7 @@ launch_check () {
       for java_file in *.java ; do
         if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null
         then
-          echec=${echec}
+          echec=0
         else
           echec=3
         fi
@@ -122,7 +126,7 @@ launch_check () {
         pushd ${base_f}_c >/dev/null
         for cf in *.c; do
             if $CC -c $cf >/dev/null 2>&1; then
-                echec=$echec
+                echec=0
             else
                 echec=5
             fi
@@ -132,7 +136,7 @@ launch_check () {
             if egrep "(node main\(\))|(CHECK)" ../${base_f}.ept >/dev/null 2>&1
             then
                 if $CC *.o -o ${base_f} 2>&1; then
-                    echec=$echec
+                    echec=0
                 else
                     echec=6
                 fi
@@ -141,7 +145,7 @@ launch_check () {
                     step_count=`grep CHECK ../$base_f.ept | awk '{ print $4 }'`
                     if [ -n "$step_count" ]; then
                         if ./${base_f} $step_count >/dev/null 2>&1; then
-                            echec=${echec}
+                            echec=0
                         else
                             echec=7
                         fi
@@ -159,11 +163,11 @@ launch_check () {
       echo "ERROR on \"$f\" (should compile)";
       case $echec in
         1 )
-          echo "Compilation to Obc failed.";;
+          echo "Compilation failed.";;
         3 )
-          echo "Compilation to Java failed.";;
+          echo "Java compilation failed.";;
         5 )
-          echo "Compilation to C failed.";;
+          echo "C compilation failed.";;
         6 )
           echo "Link failure.";;
         7 )
