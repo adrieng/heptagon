@@ -20,7 +20,6 @@ let err_message ?(exp=void) ?(loc=exp.e_loc) = function
         print_exp exp;
       raise Errors.Error
 
-(*TODO faux pour l'instant, besoin d'une passe de best effort exp->static_exp*)
 let rec static_exp_of_exp e =
   match e.e_desc with
     | Econst se -> se
