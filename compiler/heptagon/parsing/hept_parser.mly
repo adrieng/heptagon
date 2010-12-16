@@ -313,8 +313,8 @@ _equ:
       { Eswitch($2,
                    [{ w_name = ptrue; w_block = tb };
                     { w_name = pfalse; w_block = fb }]) }
-  | RESET equs EVERY exp (* LG TODO real blocks(IN)*)
-      { Ereset(mk_block [] $2 (Loc($startpos,$endpos)), $4) }
+  | RESET b=block(IN) EVERY e=exp
+      { Ereset(b,e) }
   | DO b=block(IN) DONE
       { Eblock b }
 ;
