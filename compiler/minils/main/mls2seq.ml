@@ -46,38 +46,33 @@ let targets = [ "c", Obc_no_params Cmain.program;
 let generate_target p s =
   let print_unfolded p_list =
     comment "Unfolding";
-    if !Compiler_options.verbose then
-      List.iter (Mls_printer.print stderr) p_list in
-
+    if !Compiler_options.verbose
+    then List.iter (Mls_printer.print stderr) p_list in
   let target =
     (try List.assoc s targets
-    with Not_found -> language_error s; raise Errors.Error) in
-    match target with
-      | Minils convert_fun ->
-          convert_fun p
-      | Obc convert_fun ->
-          let o = Mls2obc.program p in
-            convert_fun o
-      | Minils_no_params convert_fun ->
-          let p_list = Callgraph.program p in
-            List.iter convert_fun p_list
-      | Obc_no_params convert_fun ->
-          let p_list = Callgraph.program p in
-          let o_list = List.map Mls2obc.program p_list in
-          print_unfolded p_list;
-          comment "Translation to Obc";
-          if !verbose then
-            List.iter (Obc_printer.print stdout) o_list;
-          List.iter convert_fun o_list
+     with Not_found -> language_error s; raise Errors.Error) in
+  match target with
+    | Minils convert_fun ->
+        convert_fun p
+    | Obc convert_fun ->
+        let o = Mls2obc.program p in
+          convert_fun o
+    | Minils_no_params convert_fun ->
+        let p_list = Callgraph.program p in
+          List.iter convert_fun p_list
+    | Obc_no_params convert_fun ->
+        let p_list = Callgraph.program p in
+        let o_list = List.map Mls2obc.program p_list in
+        print_unfolded p_list;
+        comment "Translation to Obc";
+        if !verbose then
+          List.iter (Obc_printer.print stdout) o_list;
+        List.iter convert_fun o_list
 
+(** Translation into dataflow and sequential languages, defaults to obc. *)
 let program p =
-  (* Translation into dataflow and sequential languages *)
-  let targets =
-    if !create_object_file then
-      ["epo"]
-    else
-      match !target_languages with
-        | [] -> ["obc"]; (* by default, generate obc file *)
-        | l -> l
-  in
-    List.iter (generate_target p) targets
+  let targets = match !target_languages with
+    | [] -> ["obc"] (* by default, generate obc file *)
+    | l -> l in
+  let targets = if !create_object_file then "epo"::targets else targets in
+  List.iter (generate_target p) targets
