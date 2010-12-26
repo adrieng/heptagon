@@ -88,8 +88,22 @@ open Hept_parsetree
 %%
 
 /** Tools **/
-%inline slist(S, x)        : l=separated_list(S, x)                    {l}
-%inline snlist(S, x)       : l=separated_nonempty_list(S, x)           {l}
+
+/* Separated list */
+slist(S, x) :
+  |                        {[]}
+  | x=x                    {[x]}
+  | x=x S r=slist(S,x)     {x::r}
+/*Separated Nonempty list */
+snlist(S, x) :
+  | x=x                    {[x]}
+  | x=x S r=snlist(S,x)    {x::r}
+/*Option Separated Nonempty list*/
+optsnlist(S,x) :
+  | x=x                    {[x]}
+  | x=x S                  {[x]}
+  | x=x S r=optsnlist(S,x) {x::r}
+
 %inline tuple(x)           : LPAREN h=x COMMA t=snlist(COMMA,x) RPAREN { h::t }
 %inline soption(P,x):
   |/* empty */    { None }
@@ -220,11 +234,11 @@ node_params:
 
 contract:
   | /* empty */ {None}
-  | CONTRACT b=block(LET) TEL? opt_assume opt_enforce opt_with
+  | CONTRACT b=block(LET) TEL a=opt_assume e=opt_enforce w=opt_with
       { Some{ c_block = b;
-              c_assume = $4;
-              c_enforce = $5;
-        c_controllables = $6 } }
+              c_assume = a;
+              c_enforce = e;
+        c_controllables = w } }
 ;
 
 opt_assume:
@@ -242,9 +256,9 @@ opt_with:
   | WITH LPAREN params RPAREN { $3 }
 ;
 
-loc_vars:
-  | /* empty */    { [] }
-  | VAR loc_params { $2 }
+loc_vars(S):
+  | /* empty */      { [] }
+  | VAR loc_params S { $2 }
 ;
 
 loc_params:
@@ -275,28 +289,25 @@ ty_ident:
 ;
 
 equs:
-  | /* empty */             { [] }
-  | non_empty_equs opt_semi { List.rev $1 }
+  | /* empty */                      { [] }
+  | eqs=optsnlist(SEMICOL,equ)       { eqs }
 ;
 
-non_empty_equs:
-  | equ                        { [$1] }
-  | non_empty_equs SEMICOL equ {$3 :: $1}
-;
-
-opt_semi:
-  | {}
-  | SEMICOL {}
-;
 
 opt_bar:
   | {}
   | BAR {}
 ;
 
-block(S):
-  | l=loc_vars S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
-  | l=loc_vars { mk_block l [] (Loc($startpos,$endpos)) }
+/* delimited block */
+block(S) :
+  | VAR l=loc_params S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
+  | S eq=equs                    { mk_block [] eq (Loc($startpos,$endpos)) }
+
+/* separated block */
+sblock(S) :
+  | VAR l=loc_params S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
+  | eq=equs                  { mk_block [] eq (Loc($startpos,$endpos)) }
 
 equ: eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
 _equ:
@@ -307,15 +318,15 @@ _equ:
       { Eswitch($2, List.rev $4) }
   | PRESENT opt_bar present_handlers END
       { Epresent(List.rev $3, mk_block [] [] (Loc($startpos,$endpos))) }
-  | PRESENT opt_bar present_handlers DEFAULT b=block(DO) END
+  | PRESENT opt_bar present_handlers DEFAULT DO b=sblock(IN) END
       { Epresent(List.rev $3, b) }
-  | IF exp THEN tb=block(DO) ELSE fb=block(DO) END
+  | IF exp THEN tb=sblock(IN) ELSE fb=sblock(IN) END
       { Eswitch($2,
                    [{ w_name = ptrue; w_block = tb };
                     { w_name = pfalse; w_block = fb }]) }
-  | RESET b=block(IN) EVERY e=exp
+  | RESET b=sblock(IN) EVERY e=exp
       { Ereset(b,e) }
-  | DO b=block(IN) DONE
+  | DO b=sblock(IN) DONE
       { Eblock b }
 ;
 
@@ -374,8 +385,8 @@ switch_handlers:
 ;
 
 present_handler:
-  | exp b=block(DO)
-      { { p_cond = $1; p_block = b } }
+  | e=exp b=block(DO)
+      { { p_cond = e; p_block = b } }
 ;
 
 present_handlers:
