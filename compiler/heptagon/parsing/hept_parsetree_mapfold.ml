@@ -268,6 +268,7 @@ and ty funs acc t = match t with
       let t, acc = ty_it funs acc t in
       let e, acc = exp_it funs acc e in
       Tarray (t, e), acc
+  | Tasync (a, t) -> let t, acc = ty_it funs acc t in Tasync (a, t), acc
 
 
 and const_dec_it funs acc c = funs.const_dec funs acc c

@@ -209,6 +209,10 @@ let rec translate map e =
         let e = translate_extvalue map (assert_1 e_list) in
         let idx_list = List.map (fun idx -> mk_exp tint (Econst idx)) idx in
           Epattern (pattern_of_idx_list (pattern_of_exp e) idx_list)
+  (* Async operators *)
+    | Minils.Eapp ({Minils.a_op = Minils.Ebang }, e_list, _) ->
+        let e = translate map (assert_1 e_list) in
+          Ebang e
   (* Already treated cases when translating the [eq] *)
     | Minils.Eiterator _ | Minils.Emerge _ | Minils.Efby _
     | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat
@@ -470,7 +474,9 @@ and mk_node_call map call_context app loc name_list args ty =
                    | Minils.Efun _ -> []
                    | Minils.Enode _ -> [reinit o]
                    | _ -> assert false) in
-        let s = [Acall (name_list, o, Mstep, args)] in
+        let s = (match app.Minils.a_async with
+                  | None -> [Acall (name_list, o, Mstep, args)]
+                  | Some a -> [Aasync_call (a, name_list, o, Mstep, args)]) in
         [], si, [obj], s
     | _ -> assert false
 

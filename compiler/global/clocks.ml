@@ -92,7 +92,7 @@ let rec skeleton ck = function
       (match ty_list with
         | [] -> Ck ck
         | _ -> Cprod (List.map (skeleton ck) ty_list))
-  | Tarray (t, _) -> skeleton ck t
+  | Tarray (t, _) | Tasync (_, t) -> skeleton ck t
   | Tid _ | Tinvalid -> Ck ck
 
 (* TODO here it implicitely says that the base clock is Cbase

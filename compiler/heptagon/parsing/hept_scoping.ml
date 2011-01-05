@@ -216,7 +216,7 @@ let rec translate_type loc ty =
       | Tarray (ty, e) ->
           let ty = translate_type loc ty in
           Types.Tarray (ty, expect_static_exp e)
-    )
+      | Tasync (a, ty) -> Types.Tasync (a, translate_type loc ty))
   with
     | ScopingError err -> message loc err
 
@@ -244,10 +244,10 @@ and translate_desc loc env = function
         List.map (fun (f,e) -> qualify_field f, translate_exp env e)
           f_e_list in
       Heptagon.Estruct f_e_list
-  | Eapp ({ a_op = op; a_params = params; }, e_list) ->
+  | Eapp ({ a_op = op; a_params = params; a_async = async }, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
       let params = List.map (expect_static_exp) params in
-      let app = Heptagon.mk_app ~params:params (translate_op op) in
+      let app = Heptagon.mk_app ~params:params ~async:async (translate_op op) in
       Heptagon.Eapp (app, e_list, None)
 
   | Eiterator (it, { a_op = op; a_params = params }, n, pe_list, e_list) ->
@@ -291,6 +291,7 @@ and translate_op = function
   | Eselect_trunc -> Heptagon.Eselect_trunc
   | Efun ln -> Heptagon.Efun (qualify_value ln)
   | Enode ln -> Heptagon.Enode (qualify_value ln)
+  | Ebang -> Heptagon.Ebang
 
 and translate_pat loc env = function
   | Evarpat x -> Heptagon.Evarpat (Rename.var loc env x)
@@ -329,7 +330,8 @@ and translate_block env b =
     Heptagon.b_equs = List.map (translate_eq env) b.b_equs;
     Heptagon.b_defnames = Env.empty;
     Heptagon.b_stateful = false;
-    Heptagon.b_loc = b.b_loc; }, env
+    Heptagon.b_loc = b.b_loc;
+    Heptagon.b_async = b.b_async; }, env
 
 and translate_state_handler env sh =
   let b, env = translate_block env sh.s_block in

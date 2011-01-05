@@ -52,6 +52,7 @@ and desc =
 and app = {
   a_op     : op;
   a_params : static_exp list;
+  a_async  : async_t option;
   a_unsafe : bool }
 
 and op =
@@ -71,6 +72,7 @@ and op =
   | Eselect_slice
   | Eupdate
   | Econcat
+  | Ebang
 
 and pat =
   | Etuplepat of pat list
@@ -94,7 +96,8 @@ and block = {
   b_equs      : eq list;
   b_defnames  : ty Env.t;
   b_stateful : bool;
-  b_loc       : location; }
+  b_loc       : location;
+  b_async     : async_t option; }
 
 and state_handler = {
   s_state  : state_name;
@@ -194,8 +197,8 @@ let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
     e_base_ck = Cbase; e_loc = loc; }
 
-let mk_app ?(params=[]) ?(unsafe=false) op =
-  { a_op = op; a_params = params; a_unsafe = unsafe }
+let mk_app ?(params=[]) ?(unsafe=false) ?(async=None) op =
+  { a_op = op; a_params = params; a_async = async; a_unsafe = unsafe }
 
 let mk_op_app ?(params=[]) ?(unsafe=false) ?(reset=None) op args =
   Eapp(mk_app ~params:params ~unsafe:unsafe op, args, reset)
@@ -210,9 +213,9 @@ let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty =
   { v_ident = name; v_type = ty; v_clock = clock;
     v_last = last; v_loc = no_location }
 
-let mk_block ?(stateful = true) ?(defnames = Env.empty) ?(locals = []) eqs =
+let mk_block ?(stateful = true) ?(defnames = Env.empty) ?(async = None) ?(locals = []) eqs =
   { b_local = locals; b_equs = eqs; b_defnames = defnames;
-    b_stateful = stateful; b_loc = no_location; }
+    b_stateful = stateful; b_loc = no_location; b_async = async; }
 
 let dfalse =
   mk_exp (Econst (mk_static_bool false)) (Tid Initial.pbool)

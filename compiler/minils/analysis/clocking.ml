@@ -113,6 +113,9 @@ and typing_op op e_list h e ck = match op with
       let e1, e2 = assert_2 e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; ct)
+  | Ebang ->
+      let e = assert_1 e_list in
+      typing h e
 
 and typing_c_e_list h ck_c n c_e_list =
   let rec typrec =

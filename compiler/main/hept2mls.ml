@@ -84,9 +84,10 @@ let rec translate_op = function
   | Heptagon.Earray -> Earray
   | Heptagon.Etuple -> Misc.internal_error "hept2mls Etuple" 1
   | Heptagon.Earrow -> assert false
+  | Heptagon.Ebang -> Ebang
 
 let translate_app app =
-  mk_app ~params:app.Heptagon.a_params
+  mk_app ~params:app.Heptagon.a_params ~async:app.Heptagon.a_async
     ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
 
 let rec translate_extvalue e =

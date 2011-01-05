@@ -47,6 +47,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP MAPI FOLD FOLDI MAPFOLD
+%token ASYNC BANG
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -76,6 +77,7 @@ open Hept_parsetree
 %left POWER
 %right PREFIX
 
+%left BANG
 
 
 %start program
@@ -266,6 +268,8 @@ ty_ident:
       { Tid $1 }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
+  | ASYNC t=ty_ident
+      { Tasync ((), t) }
 ;
 
 equs:
@@ -428,6 +432,10 @@ _exp:
   /* node call*/
   | n=qualname p=call_params LPAREN args=exps RPAREN
       { Eapp(mk_app (Enode n) p , args) }
+  | ASYNC n=qualname p=call_params LPAREN args=exps RPAREN
+      { Eapp(mk_app (Enode n) ~async:(Some ()) p, args) }
+  | BANG e=exp
+      { mk_call Ebang [e] }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp

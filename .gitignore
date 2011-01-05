@@ -28,3 +28,4 @@ _build
 test/*.ml
 test/_check_builds
 lib/java/.classpath
+test/async/build/*

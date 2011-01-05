@@ -52,8 +52,11 @@ type error =
   | Emerge_missing_constrs of QualSet.t
   | Emerge_uniq of qualname
   | Emerge_mix of qualname
+  | Epat_should_be_async of ty
+  | Eshould_be_async of ty
 
 exception Unify
+exception Should_be_async of ty
 exception TypingError of error
 
 let error kind = raise (TypingError(kind))
@@ -162,10 +165,20 @@ let message loc kind =
                as the last but one argument (found: %a).@."
           print_location loc
           print_type ty
+    | Epat_should_be_async ty ->
+        eprintf "%aThis pattern is expected to be of async vars \
+                   but the type found is %a.@."
+          print_location loc
+          print_type ty
     | Emapi_bad_args  ty ->
         eprintf
           "%aThe function given to mapi should expect an integer \
                as the last argument (found: %a).@."
+          print_location loc
+          print_type ty
+    | Eshould_be_async ty ->
+        eprintf "%aThis expression is expected to be async \
+                   but the type found is %a.@."
           print_location loc
           print_type ty
   end;
@@ -392,6 +405,7 @@ let rec check_type const_env = function
   | Tprod l ->
       Tprod (List.map (check_type const_env) l)
   | Tinvalid -> Tinvalid
+  | Tasync (a, t) -> Tasync (a, check_type const_env t)
 
 and typing_static_exp const_env se =
   try
@@ -645,6 +659,7 @@ and typing_app const_env h app e_list =
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
         let typed_e_list = typing_args const_env h expected_ty_list e_list in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
+        let result_ty_list = asyncify app.a_async result_ty_list in
         (* Type static parameters and generate constraints *)
         let typed_params = typing_node_params const_env ty_desc.node_params app.a_params in
         let size_constrs = instanciate_constr m ty_desc.node_params_constraints in
@@ -755,6 +770,13 @@ and typing_app const_env h app e_list =
         let n =
           mk_static_int_op (mk_pervasives "+") [array_size t1; array_size t2] in
         Tarray (element_type t1, n), app, [typed_e1; typed_e2]
+    | Ebang ->
+        let e = assert_1 e_list in
+        let typed_e, t = typing const_env h e in
+        (match t with
+          | Tasync (_, t) -> t, app, [typed_e]
+          | _ -> message e.e_loc (Eshould_be_async t))
+
 
 
 
@@ -977,7 +999,7 @@ and typing_present_handlers const_env h acc def_names
   (typed_present_handlers,
    (add total (add partial acc)))
 
-and typing_block const_env h
+and typing_block const_env h (* TODO async deal with it ! *)
     ({ b_local = l; b_equs = eq_list; b_loc = loc } as b) =
   try
     let typed_l, (local_names, h0) = build const_env h l in
