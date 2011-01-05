@@ -1,12 +1,19 @@
 #!/bin/bash
 
+checkdir=_check_builds
+
+if [ ! -d $checkdir ]; then
+	mkdir $checkdir
+fi
+cd $checkdir
+
 # TODO: rewrite in OCaml or something better than sh
 
 shopt -s nullglob
 
 # script de test
 
-compilo=../heptc
+compilo=../../heptc
 coption=
 
 # compilateurs utilises pour les tests de gen. de code
@@ -25,7 +32,7 @@ score=0
 max=0
 verbose=0
 
-for d in good bad; do
+for d in ../good ../bad; do
   rm -f -r $d/*.obc $d/*_java $d/*_c $d/*.mci $d/*.mls $d/*.epci
 done
 
@@ -72,7 +79,7 @@ launch_check () {
 
   # les mauvais
   echo -n "bad "
-  for f in bad/*.ept ; do
+  for f in ../bad/*.ept ; do
     if [ $verbose = 0 ]; then
       echo -n "."
     fi
@@ -88,7 +95,7 @@ launch_check () {
   echo
 
   echo -n "bons"
-  for f in good/*.ept; do
+  for f in ../good/*.ept; do
     echec=0
     if [ $verbose = 0 ]; then
       echo -n "."
