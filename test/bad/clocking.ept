@@ -1,0 +1,6 @@
+node f (i:int; c:bool) returns (x:int)
+var t:int;
+let
+  t = 0 fby t when true(c);
+  x = i;
+tel
