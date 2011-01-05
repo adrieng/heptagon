@@ -381,7 +381,7 @@ let rec check_type const_env = function
   | Tarray(ty, e) ->
       let typed_e = expect_static_exp const_env (Tid Initial.pint) e in
         Tarray(check_type const_env ty, typed_e)
-  | Tid ty_name -> Tid ty_name
+  | Tid ty_name -> Tid ty_name (* TODO bug ? should check that ty_name exists ? *)
   | Tprod l ->
       Tprod (List.map (check_type const_env) l)
   | Tunit -> Tunit

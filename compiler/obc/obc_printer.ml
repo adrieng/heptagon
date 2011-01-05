@@ -77,6 +77,9 @@ let print_method_name ff = function
   | Mmethod n -> fprintf ff "%s" n
 
 let rec print_act ff a =
+  let print_lhs_tuple ff var_list = match var_list with
+    | [] -> ()
+    | _ -> fprintf ff "@[(%a)@] =@ " (print_list print_lhs "" "," "") var_list in
   match a with
     | Aassgn (x, e) -> print_asgn ff "" x e
     | Acase(e, tag_act_list) ->
@@ -91,12 +94,6 @@ let rec print_act ff a =
           print_static_exp i2
           print_block act_list
     | Acall (var_list, o, meth, es) ->
-        let print_lhs_tuple ff var_list = match var_list with
-          | [] -> ()
-          | _ ->
-              fprintf ff "@[(%a)@] =@ "
-                (print_list print_lhs "" "," "") var_list in
-
         fprintf ff "@[<2>%a%a.%a(%a)@]"
           print_lhs_tuple var_list
           print_obj_call o

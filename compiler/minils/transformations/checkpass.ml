@@ -32,13 +32,8 @@ let add_check prefix pass nd nd_list =
       let ty_r = match nd.n_output with
         | [out] -> out.v_type
         | _ -> Tprod (List.map (fun vd -> vd.v_type) nd.n_output) in
-      let mk_call nn =
-        mk_exp ~ty:ty_r
-          (Eapp ({ a_op = Enode nn; a_params = []; a_unsafe = false; },
-                 [], None)) in
-      mk_exp ~ty:(Tid Initial.pbool)
-        (Eapp ({ a_op = Eequal; a_params = []; a_unsafe = false; },
-               [mk_call nd.n_name; mk_call nd'.n_name], None)) in
+      let mk_call nn = mk_exp ~ty:ty_r (Eapp (mk_app (Enode nn), [], None)) in
+      mk_exp ~ty:(Tid Initial.pbool) (Eapp (mk_app Eequal, [mk_call nd.n_name; mk_call nd'.n_name], None)) in
 
     let nd_check =
       mk_node

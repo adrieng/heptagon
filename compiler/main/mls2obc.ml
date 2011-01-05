@@ -85,26 +85,21 @@ let rec translate map e =
         let e = translate map e in
           e.e_desc
     | Minils.Estruct f_e_list ->
-        let type_name =
-          (match e.Minils.e_ty with
-             | Tid name -> name
-             | _ -> assert false) in
-        let f_e_list =
-          List.map
-            (fun (f, e) -> (f, (translate map e)))
-            f_e_list
-        in Estruct (type_name, f_e_list)
-    | Minils.Eapp ({ Minils.a_op = Minils.Efield;
-                    Minils.a_params = [{ se_desc = Sfield f }] },
-                   [e], _) ->
-        let e = translate map e in
+        let type_name = (match e.Minils.e_ty with
+                           | Tid name -> name
+                           | _ -> assert false) in
+        let f_e_list = List.map (fun (f, e) -> (f, (translate map e))) f_e_list in
+          Estruct (type_name, f_e_list)
+    | Minils.Eapp ({ Minils.a_op = Minils.Efield; Minils.a_params = params }, e_list, _) ->
+        let f = match (assert_1 params).se_desc with Sfield f -> f | _ -> assert false in
+        let e = translate map (assert_1 e_list) in
           Elhs (mk_lhs (Lfield (lhs_of_exp e, f)))
-     (*Array operators*)
+  (*Remaining array operators*)
     | Minils.Eapp ({ Minils.a_op = Minils.Earray }, e_list, _) ->
         Earray (List.map (translate map ) e_list)
     | Minils.Eapp ({ Minils.a_op = Minils.Eselect;
-                     Minils.a_params = idx }, [e], _) ->
-        let e = translate map e in
+                     Minils.a_params = idx }, e_list, _) ->
+        let e = translate map (assert_1 e_list) in
         let idx_list = List.map (fun idx -> mk_exp (Econst idx)) idx in
           Elhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
     | _ ->
@@ -221,8 +216,9 @@ and translate_act map pat
     | Minils.Evarpat n, _ ->
         [Aassgn (var_from_name map n, translate map act)]
     | _ ->
-      (*let ff = Format.formatter_of_out_channel stdout in
-        Mls_printer.print_exp ff act; Format.fprintf ff "@?";*) assert false
+      Format.eprintf "%a The pattern %a should be a simple var to be translated to obc.@."
+        Location.print_location act.Minils.e_loc Mls_printer.print_pat pat;
+      assert false
 
 and translate_c_act_list map pat c_act_list =
   List.map
@@ -250,13 +246,9 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let x = var_from_name map n in
         let si = (match opt_c with
                     | None -> si
-                    | Some c ->
-                        (Aassgn (x,
-                                mk_exp (Econst c))) :: si) in
-        let action = Aassgn (var_from_name map n,
-                            translate map e)
-        in
-          v, si, j, (control map ck action) :: s
+                    | Some c -> (Aassgn (x, mk_exp (Econst c))) :: si) in
+        let action = Aassgn (var_from_name map n, translate map e) in
+        v, si, j, (control map ck action) :: s
 
     | Minils.Etuplepat p_list,
         Minils.Eapp({ Minils.a_op = Minils.Etuple }, act_list, _) ->

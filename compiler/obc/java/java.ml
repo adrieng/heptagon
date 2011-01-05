@@ -6,7 +6,7 @@
 (*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
 (*                                                                        *)
 (**************************************************************************)
-(* $Id$ *)
+
 
 open Signature
 open Modules

@@ -146,9 +146,7 @@ let node nd =
                   let eq =
                     mk_equation pat
                       { eq.eq_rhs with e_desc =
-                          Eapp ({ a_op = Etuple;
-                                  a_params = [];
-                                  a_unsafe = unsafe; }, e_list, rst); } in
+                          Eapp (mk_app ~unsafe:unsafe Etuple, e_list, rst); } in
                   (eq :: eq_list, subst) in
     List.fold_right add_to_subst nd.n_equs ([], Env.empty) in
 
