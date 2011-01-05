@@ -1,0 +1,25 @@
+
+fun sum (x,m: int) returns (s: int)
+let
+  s = x + m
+tel
+
+fun substr (x,m: int) returns (d: int; m2:int)
+let
+  d = x - m;
+  m2 = m;
+tel
+
+fun mean<<n: int>> (i: int^n) returns (m: int)
+let
+  m = fold sum <<n>> (i,0)
+tel
+
+
+node normalized_movie<<n: int>> (i: int^n) returns (im: int^n)
+var m: int; trash: int;
+let
+  m = mean<<n>>(i);
+  (im,trash) = mapfold substr <<n>> (i fby i, 0 -> (pre m))
+tel
+

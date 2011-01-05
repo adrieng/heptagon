@@ -184,14 +184,10 @@ and translate_act map pat
         let true_act = Aassgn (x, mk_exp p.pat_ty (Epattern p)) in
         let false_act = Aassgn (x, translate map e2) in
         let cond = bound_check_expr idx bounds in
-          [ Acase (cond, [ ptrue, mk_block [true_act];
-                                    pfalse, mk_block [false_act] ]) ]
-
+          [ Acase (cond, [ ptrue, mk_block [true_act]; pfalse, mk_block [false_act] ]) ]
+    | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eupdate }, e1::e2::idx, _) ->
+        let x = Control.var_from_name map x in
      (** TODO: remplacer par if 0 < e && e < n then for () ; o[e] = v; for () else o = a *)
-    | Minils.Evarpat x,
-            Minils.Eapp ({ Minils.a_op = Minils.Eupdate },
-                         e1::e2::idx, _) ->
-        let x = var_from_name map x in
         let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
         let idx = List.map (translate map) idx in
         let action = Aassgn (pattern_of_idx_list x idx,
