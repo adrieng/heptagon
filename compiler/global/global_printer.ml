@@ -13,6 +13,9 @@ let print_qualname ff qn = match qn with
   | { qual = m; name = n } when m = local_qualname -> print_name ff n
   | { qual = m; name = n } -> fprintf ff "%s.%a" m print_name n
 
+let print_async ff async = match async with
+  | None -> ()
+  | Some () -> fprintf ff "async "
 
 let rec print_static_exp ff se = match se.se_desc with
   | Sint i -> fprintf ff "%d" i
@@ -49,6 +52,7 @@ and print_type ff = function
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
   | Tunit -> fprintf ff "()"
+  | Tasync (a, t) -> fprintf ff "%a%a" print_async (Some a) print_type t
 
 let print_field ff field =
   fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type

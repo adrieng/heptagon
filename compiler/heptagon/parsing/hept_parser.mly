@@ -47,6 +47,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP FOLD FOLDI MAPFOLD
+%token ASYNC BANG
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -77,6 +78,7 @@ open Hept_parsetree
 %left POWER
 %right PREFIX
 %left DOT
+%left BANG
 
 
 %start program
@@ -286,6 +288,8 @@ ty_ident:
       { Tid $1 }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
+  | ASYNC t=ty_ident
+      { Tasync ((), t) }
 ;
 
 equs:
@@ -309,7 +313,8 @@ sblock(S) :
   | VAR l=loc_params S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
   | eq=equs                  { mk_block [] eq (Loc($startpos,$endpos)) }
 
-equ: eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
+equ:
+  | eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
 _equ:
   | pat EQUAL exp { Eeq($1, $3) }
   | AUTOMATON automaton_handlers END
@@ -430,8 +435,6 @@ _simple_exp:
                 Efield [$1] }
 ;
 
-node_name:
-  | qualname call_params { mk_app (Enode $1) $2 }
 
 merge_handlers:
   | hs=nonempty_list(merge_handler) { hs }
@@ -446,8 +449,13 @@ _exp:
       { Efby ($1, $3) }
   | PRE exp
       { Epre (None, $2) }
-  | node_name LPAREN exps RPAREN
-      { Eapp($1, $3) }
+  /* node call*/
+  | n=qualname p=call_params LPAREN args=exps RPAREN
+      { Eapp(mk_app (Enode n) p , args) }
+  | ASYNC n=qualname p=call_params LPAREN args=exps RPAREN
+      { Eapp(mk_app (Enode n) ~async:(Some ()) p, args) }
+  | BANG e=exp
+      { mk_call Ebang [e] }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp

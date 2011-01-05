@@ -94,7 +94,8 @@ let rec skeleton ck = function
             Format.eprintf "Internal error, an exp with invalid type@.";
             assert false;
         | _ -> Cprod (List.map (skeleton ck) ty_list))
-  | Tarray _ | Tid _ | Tunit -> Ck ck
+  | Tarray (t, _) | Tasync (_, t) -> skeleton ck t
+  | Tid _ | Tunit -> Ck ck
 
 (* TODO here it implicitely says that the base clock is Cbase
     and that all tuple is on Cbase *)

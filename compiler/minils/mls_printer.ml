@@ -110,51 +110,56 @@ and print_exp_desc ff = function
         print_exp_tuple args
         print_every reset
 
-and print_app ff (app, args) = match app.a_op with
-  | Eequal ->
-    let e1, e2 = assert_2 args in
-      fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
-  | Etuple -> print_exp_tuple ff args
-  | Efun f | Enode f ->
-      fprintf ff "@[%a@,%a@,%a@]"
-        print_qualname f print_params app.a_params  print_exp_tuple args
-  | Eifthenelse ->
-    let e1, e2, e3 = assert_3 args in
-      fprintf ff "@[<hv>if %a@ then %a@ else %a@]"
-        print_exp e1 print_exp e2 print_exp e3
-  | Efield ->
-    let r = assert_1 args in
-    let f = assert_1 app.a_params in
-    fprintf ff "%a.%a" print_exp r print_static_exp f
-  | Efield_update ->
-    let r,e = assert_2 args in
-    let f = assert_1 app.a_params in
-      fprintf ff "@[<2>{%a with .%a =@ %a}@]"
-        print_exp r print_static_exp f print_exp e
-  | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") args
-  | Earray_fill ->
-    let e = assert_1 args in
-    let n = assert_1 app.a_params in
-      fprintf ff "%a^%a" print_exp e print_static_exp n
-  | Eselect ->
-    let e = assert_1 args in
-      fprintf ff "%a%a" print_exp e print_index app.a_params
-  | Eselect_slice ->
-    let e = assert_1 args in
-    let idx1, idx2 = assert_2 app.a_params in
-      fprintf ff "%a[%a..%a]"
-        print_exp e  print_static_exp idx1  print_static_exp idx2
-  | Eselect_dyn ->
-    let r, d, e = assert_2min args in
-      fprintf ff "%a%a default %a"
-        print_exp r  print_dyn_index e  print_exp d
-  | Eupdate ->
-    let e1, e2, idx = assert_2min args in
-        fprintf ff "@[<2>(%a with %a =@ %a)@]"
-          print_exp e1 print_dyn_index idx print_exp e2
-  | Econcat ->
-    let e1, e2 = assert_2 args in
-      fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
+and print_app ff (app, args) =
+  print_async ff app.a_async;
+  match app.a_op with
+    | Eequal ->
+      let e1, e2 = assert_2 args in
+        fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
+    | Etuple -> print_exp_tuple ff args
+    | Efun f | Enode f ->
+        fprintf ff "@[%a@,%a@,%a@]"
+          print_qualname f print_params app.a_params  print_exp_tuple args
+    | Eifthenelse ->
+      let e1, e2, e3 = assert_3 args in
+        fprintf ff "@[<hv>if %a@ then %a@ else %a@]"
+          print_exp e1 print_exp e2 print_exp e3
+    | Efield ->
+      let r = assert_1 args in
+      let f = assert_1 app.a_params in
+      fprintf ff "%a.%a" print_exp r print_static_exp f
+    | Efield_update ->
+      let r,e = assert_2 args in
+      let f = assert_1 app.a_params in
+        fprintf ff "@[<2>{%a with .%a =@ %a}@]"
+          print_exp r print_static_exp f print_exp e
+    | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") args
+    | Earray_fill ->
+      let e = assert_1 args in
+      let n = assert_1 app.a_params in
+        fprintf ff "%a^%a" print_exp e print_static_exp n
+    | Eselect ->
+      let e = assert_1 args in
+        fprintf ff "%a%a" print_exp e print_index app.a_params
+    | Eselect_slice ->
+      let e = assert_1 args in
+      let idx1, idx2 = assert_2 app.a_params in
+        fprintf ff "%a[%a..%a]"
+          print_exp e  print_static_exp idx1  print_static_exp idx2
+    | Eselect_dyn ->
+      let r, d, e = assert_2min args in
+        fprintf ff "%a%a default %a"
+          print_exp r  print_dyn_index e  print_exp d
+    | Eupdate ->
+      let e1, e2, idx = assert_2min args in
+          fprintf ff "@[<2>(%a with %a =@ %a)@]"
+            print_exp e1 print_dyn_index idx print_exp e2
+    | Econcat ->
+      let e1, e2 = assert_2 args in
+        fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
+    | Ebang ->
+      let e = assert_1 args in
+        fprintf ff "!(%a)" print_exp e
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c

@@ -31,6 +31,8 @@ type field_name = qualname
 type constructor_name = qualname
 type constant_name = qualname
 
+type async_t = unit
+
 type static_exp = { se_desc: static_exp_desc; se_loc: location }
 
 and static_exp_desc =
@@ -56,6 +58,7 @@ type ty =
   | Tprod of ty list
   | Tid of qualname
   | Tarray of ty * exp
+  | Tasync of async_t * ty
 
 and exp =
   { e_desc : edesc;
@@ -74,7 +77,7 @@ and edesc =
   | Ewhen of exp * constructor_name * var_name
   | Emerge of var_name * (constructor_name * exp) list
 
-and app = { a_op: op; a_params: exp list; }
+and app = { a_op: op; a_params: exp list; a_async : async_t option }
 
 and op =
   | Eequal
@@ -92,6 +95,7 @@ and op =
   | Eselect_slice
   | Eupdate
   | Econcat
+  | Ebang
 
 and pat =
   | Etuplepat of pat list
@@ -112,7 +116,8 @@ and eqdesc =
 and block =
   { b_local : var_dec list;
     b_equs  : eq list;
-    b_loc   : location; }
+    b_loc   : location;
+    b_async : async_t option; }
 
 and state_handler =
   { s_state  : state_name;
@@ -211,8 +216,8 @@ and interface_desc =
 let mk_exp desc ?(ct_annot = Clocks.invalid_clock) loc =
   { e_desc = desc; e_ct_annot = ct_annot; e_loc = loc }
 
-let mk_app op params =
-  { a_op = op; a_params = params }
+let mk_app op ?(async=None) params =
+  { a_op = op; a_params = params; a_async = async; }
 
 let mk_call ?(params=[]) op exps =
   Eapp (mk_app op params, exps)
@@ -246,9 +251,9 @@ let mk_var_dec name ty last loc =
   { v_name = name; v_type = ty;
     v_last = last; v_loc = loc }
 
-let mk_block locals eqs loc =
+let mk_block locals ?(async=None) eqs loc =
   { b_local = locals; b_equs = eqs;
-    b_loc = loc }
+    b_loc = loc; b_async = async }
 
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }

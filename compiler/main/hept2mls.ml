@@ -209,11 +209,11 @@ let rec translate_op = function
   | Heptagon.Econcat -> Econcat
   | Heptagon.Earray -> Earray
   | Heptagon.Etuple -> Etuple
-  | Heptagon.Earrow ->
-      Error.message no_location Error.Eunsupported_language_construct
+  | Heptagon.Earrow -> Error.message no_location Error.Eunsupported_language_construct
+  | Heptagon.Ebang -> Ebang
 
 let translate_app app =
-  mk_app ~params:app.Heptagon.a_params
+  mk_app ~params:app.Heptagon.a_params ~async:app.Heptagon.a_async
     ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
 
 let rec translate env

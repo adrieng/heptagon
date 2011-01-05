@@ -150,6 +150,7 @@ and apply op e_list =
         let t1 = typing e1 in
         let t2 = ctuplelist (List.map typing e_list) in
           cseq t2 t1
+    | Ebang -> let e = assert_1 e_list in typing e
 
 let rec typing_pat = function
   | Evarpat(x) -> cwrite(x)

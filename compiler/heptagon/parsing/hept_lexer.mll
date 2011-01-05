@@ -14,6 +14,7 @@ let comment_depth = ref 0
 let keyword_table = ((Hashtbl.create 149) : (string, token) Hashtbl.t);;
 
 List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
+ "async", ASYNC;
  "node", NODE;
  "fun", FUN;
  "returns", RETURNS;
@@ -145,6 +146,7 @@ rule token = parse
   | ".."            {DOUBLE_DOT}
   | "<<"            {DOUBLE_LESS}
   | ">>"            {DOUBLE_GREATER}
+  | "!"             {BANG}
   | (['A'-'Z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {Constructor id}
   | (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)

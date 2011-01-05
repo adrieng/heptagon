@@ -62,6 +62,9 @@ and edesc funs acc ed = match ed with
   | Earray args ->
       let args, acc = mapfold (exp_it funs) acc args in
         Earray args, acc
+  | Ebang e ->
+      let e, acc = exp_it funs acc e in
+      Ebang e, acc
 
 
 and lhs_it funs acc l = funs.lhs funs acc l
@@ -97,6 +100,10 @@ and act funs acc a = match a with
       let lhs_list, acc = mapfold (lhs_it funs) acc lhs_list in
       let args, acc = mapfold (exp_it funs) acc args in
         Acall(lhs_list, obj, n, args), acc
+  | Aasync_call(a, lhs_list, obj, n, args) ->
+      let lhs_list, acc = mapfold (lhs_it funs) acc lhs_list in
+      let args, acc = mapfold (exp_it funs) acc args in
+        Aasync_call(a, lhs_list, obj, n, args), acc
   | Acase(x, c_b_list) ->
       let aux acc (c,b) =
         let b, acc = block_it funs acc b in

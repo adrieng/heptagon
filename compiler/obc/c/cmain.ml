@@ -85,14 +85,14 @@ let assert_node_res cd =
 (** [main_def_of_class_def cd] returns a [(var_list, rst_i, step_i)] where
     [var_list] (resp. [rst_i] and [step_i]) is a list of variables (resp. of
     statements) needed for a main() function calling [cd]. *)
-(* TODO: refactor into something more readable. *)
 let main_def_of_class_def cd =
   let format_for_type ty = match ty with
     | Tarray _ | Tprod _ | Tunit -> assert false
     | Types.Tid id when id = Initial.pfloat -> "%f"
     | Types.Tid id when id = Initial.pint -> "%d"
     | Types.Tid id when id = Initial.pbool -> "%d"
-    | Tid _ -> "%s" in
+    | Tid _ -> "%s"
+    | Tasync _ -> assert false (* TODO async *) in
 
   (** Does reading type [ty] need a buffer? When it is the case,
       [need_buf_for_ty] also returns the type's name. *)
@@ -101,7 +101,8 @@ let main_def_of_class_def cd =
     | Types.Tid id when id = Initial.pfloat -> None
     | Types.Tid id when id = Initial.pint -> None
     | Types.Tid id when id = Initial.pbool -> None
-    | Tid { name = n } -> Some n in
+    | Tid { name = n } -> Some n
+    | Tasync _ -> assert false (* TODO async *) in
 
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
 

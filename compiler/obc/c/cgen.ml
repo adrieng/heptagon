@@ -103,6 +103,7 @@ let rec ctype_of_otype oty =
                                ctype_of_otype ty)
     | Tprod _ -> assert false
     | Tunit -> assert false
+    | Tasync _ -> assert false (* TODO async *)
 
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =
@@ -288,6 +289,8 @@ let rec cexpr_of_exp var_env exp =
         Cstructlit (ctyn, cexps)
     | Earray e_list ->
         Carraylit (cexprs_of_exps var_env e_list)
+    | Ebang _ ->
+        (* TODO async *) assert false
 
 and cexprs_of_exps var_env exps =
   List.map (cexpr_of_exp var_env) exps
@@ -490,6 +493,8 @@ let rec cstm_of_act var_env obj_env act =
                  [Cfor(x, 0, int_of_static_exp size,
                        [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
         )
+
+    | Aasync_call _ -> assert false (* TODO async *)
 
     (** Special case for x = 0^n^n...*)
     | Aassgn (vn, { e_desc = Econst c }) ->

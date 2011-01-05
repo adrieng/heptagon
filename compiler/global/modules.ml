@@ -287,6 +287,7 @@ let rec unalias_type t = match t with
   | Tarray (ty, n) -> Tarray(unalias_type ty, n)
   | Tprod ty_list -> Tprod (List.map unalias_type ty_list)
   | Tunit -> Tunit
+  | Tasync (a, t) -> Tasync (a, unalias_type t)
 
 
 (** Return the current module as a [module_object] *)

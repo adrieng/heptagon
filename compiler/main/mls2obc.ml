@@ -74,8 +74,7 @@ let rec translate map e =
     | Minils.Evar n -> Elhs (var_from_name map n)
     | Minils.Eapp ({ Minils.a_op = Minils.Eequal }, e_list, _) ->
         Eop (op_from_string "=", List.map (translate map ) e_list)
-    | Minils.Eapp ({ Minils.a_op = Minils.Efun n },
-                   e_list, _) when Mls_utils.is_op n ->
+    | Minils.Eapp ({ Minils.a_op = Minils.Efun n }, e_list, _) when Mls_utils.is_op n ->
         Eop (n, List.map (translate map ) e_list)
     | Minils.Ewhen (e, _, _) ->
         let e = translate map e in
@@ -98,9 +97,18 @@ let rec translate map e =
         let e = translate map (assert_1 e_list) in
         let idx_list = List.map (fun idx -> mk_exp (Econst idx)) idx in
           Elhs (lhs_of_idx_list (lhs_of_exp e) idx_list)
-    | _ ->
-      Format.eprintf "%a@." Mls_printer.print_exp e;
-      assert false
+  (* Async operators *)
+    | Minils.Eapp ({Minils.a_op = Minils.Ebang }, e_list, _) ->
+        let e = translate map (assert_1 e_list) in
+          Ebang e
+  (* Already treated cases when translating the [eq] *)
+    | Minils.Eiterator _ | Minils.Emerge _ | Minils.Efby _
+    | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat|Minils.Eupdate|Minils.Eselect_dyn
+                                 |Minils.Eselect_slice|Minils.Earray_fill|Minils.Efield_update|Minils.Eifthenelse
+                                 |Minils.Etuple)}, _, _) ->
+        Format.eprintf "%aThis should not be treated as an exp in mls2obc : %a@."
+          Location.print_location e.Minils.e_loc Mls_printer.print_exp e;
+        assert false
   in
     mk_exp ~ty:e.Minils.e_ty desc
 
@@ -347,12 +355,14 @@ and mk_node_call map call_context app loc name_list args =
           { o_name = obj_ref_name o; o_class = f;
             o_params = app.Minils.a_params;
             o_size = size_from_call_context call_context; o_loc = loc } in
-        let si =
-          (match app.Minils.a_op with
-             | Minils.Efun _ -> []
-             | Minils.Enode _ -> [reinit o]
-             | _ -> assert false) in
-          [], si, [obj], [Acall (name_list, o, Mstep, args)]
+        let si = (match app.Minils.a_op with
+                   | Minils.Efun _ -> []
+                   | Minils.Enode _ -> [reinit o]
+                   | _ -> assert false) in
+        let s = (match app.Minils.a_async with
+                  | None -> [Acall (name_list, o, Mstep, args)]
+                  | Some a -> [Aasync_call (a, name_list, o, Mstep, args)]) in
+        [], si, [obj], s
     | _ -> assert false
 
 and translate_iterator map call_context it name_list app loc n x c_list =

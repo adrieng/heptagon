@@ -51,6 +51,8 @@ and print_exp ff e =
         fprintf ff "@[";
         print_list_r print_exp "[" ";" "]" ff e_list;
         fprintf ff "@]"
+    | Ebang e ->
+        fprintf ff "!(%a)" print_exp e
 
 and print_op ff op e_list = match e_list with
   | [l; r] ->
@@ -75,6 +77,7 @@ let print_method_name ff = function
   | Mstep -> fprintf ff "step"
   | Mreset -> fprintf ff "reset"
 
+
 let rec print_act ff a =
   let print_lhs_tuple ff var_list = match var_list with
     | [] -> ()
@@ -95,6 +98,13 @@ let rec print_act ff a =
     | Acall (var_list, o, meth, es) ->
         fprintf ff "@[<2>%a%a.%a(%a)@]"
           print_lhs_tuple var_list
+          print_obj_call o
+          print_method_name meth
+          print_exps es
+    | Aasync_call (a, var_list, o, meth, es) ->
+        fprintf ff "@[<2>%a%a%a.%a(%a)@]"
+          print_lhs_tuple var_list
+          print_async (Some a)
           print_obj_call o
           print_method_name meth
           print_exps es

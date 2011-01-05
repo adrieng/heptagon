@@ -11,6 +11,8 @@ open Names
 open Misc
 open Location
 
+type async_t = unit
+
 type static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
 
 and static_exp_desc =
@@ -30,6 +32,7 @@ and ty =
   | Tprod of ty list
   | Tid of type_name
   | Tarray of ty * static_exp
+  | Tasync of async_t * ty
   | Tunit
 
 let invalid_type = Tprod []
@@ -38,6 +41,10 @@ let prod = function
   | []      -> assert false
   | [ty]    -> ty
   | ty_list -> Tprod ty_list
+
+let asyncify async ty_list = match async with
+  | None -> ty_list
+  | Some a -> List.map (fun ty -> Tasync (a,ty)) ty_list
 
 
 (** DO NOT use this after the typing, since it could give invalid_type *)
