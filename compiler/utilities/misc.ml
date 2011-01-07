@@ -20,15 +20,6 @@ let optunit f = function
   | None -> ()
   | Some x -> f x
 
-(** [split_string s c] splits the string [s] in a list of sub-strings according
-    to separator [c]. *)
-let rec split_string s c =
-  try
-    let id = String.index s c in
-    let rest = String.sub s (id + 1) (String.length s - id - 1) in
-    String.sub s 0 id :: split_string rest c
-  with Not_found -> [s]
-
 
 (** Print to a string *)
 let print_pp_to_string print_fun element =
@@ -201,3 +192,10 @@ let assert_2min = function
 let assert_3 = function
   | [v1; v2; v3] -> v1, v2, v3
   | l -> _arity_error 3 l
+
+let (|>) x f = f x
+
+let split_string s separator = Str.split (separator |> Str.quote |> Str.regexp) s
+
+let file_extension s = split_string s "." |> last_element
+

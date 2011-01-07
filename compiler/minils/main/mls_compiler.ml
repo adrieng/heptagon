@@ -13,7 +13,7 @@ open Compiler_options
 
 let pp p = if !verbose then Mls_printer.print stdout p
 
-let compile pp p =
+let compile_program p =
   (* Clocking *)
   let p = pass "Clocking" true Clocking.program p pp in
 

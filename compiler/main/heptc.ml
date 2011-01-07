@@ -13,63 +13,79 @@ open Modules
 open Location
 open Compiler_utils
 open Compiler_options
-open Hept_compiler
 
 
+let compile_interface modname source_f =
 
-let compile_impl modname filename =
-  (* input and output files *)
-  let source_name = filename ^ ".ept" in
-  let filename = String.uncapitalize filename
-  and obj_interf_name = filename ^ ".epci"
-  and mls_name = filename ^ ".mls" in
+  (* output file names *)
+  let output = String.uncapitalize modname in
+  let epci_f = output ^ ".epci" in
 
-  let ic, lexbuf = lexbuf_from_file source_name
-  and itc = open_out_bin obj_interf_name
-  and mlsc = open_out mls_name in
-
-  let close_all_files () =
-    close_in ic;
-    close_out itc;
-    close_out mlsc in
+  (* input/output channels *)
+  let source_c, lexbuf = lexbuf_from_file source_f in
+  let epci_c = open_out_bin epci_f in
+  let close_all_files () = close_in source_c; close_out epci_c in
 
   try
-    Initial.initialize modname;
-    add_include (Filename.dirname filename);
-
-    (* Parsing of the file *)
-    let p = do_silent_pass "Parsing" (parse_implementation modname) lexbuf in
-
-    (* Fuse static exps together *)
-    let p = do_silent_pass "Static Scoping"
-      Hept_static_scoping.program p in
-    (* Convert the parse tree to Heptagon AST *)
-    let p = do_pass "Scoping" Hept_scoping.translate_program p pp in
-
-    (* Process the Heptagon AST *)
-    let p = compile_impl pp p in
-    output_value itc (Modules.current_module ());
-
-    (* Set pretty printer to the Minils one *)
-    let pp = Mls_compiler.pp in
-
-    (* Compile Heptagon to MiniLS *)
-    let p = do_pass "Translation into MiniLs" Hept2mls.program p pp in
-    Mls_printer.print mlsc p;
-
-    (* Process the MiniLS AST *)
-    let p = Mls_compiler.compile pp p in
-
-    (* Generate the sequential code *)
-    Mls2seq.program p;
-
+  (* Process the [lexbuf] to an Heptagon AST *)
+    let _ = Hept_parser_scoper.parse_interface modname lexbuf in
+    if !print_types then Global_printer.print_interface Format.std_formatter;
+  (* Output the .epci *)
+    output_value epci_c (Modules.current_module ());
     close_all_files ()
+  with
+    | x -> close_all_files (); raise x
 
+(* [modname] is the module name, [source_f] is the source file *)
+let compile_program modname source_f =
+
+  (* output file names *)
+  let output = String.uncapitalize modname in
+  let epci_f = output ^ ".epci" in
+  let mls_f = output ^ ".mls" in
+
+  (* input/output channels *)
+  let source_c, lexbuf = lexbuf_from_file source_f in
+  let epci_c = open_out_bin epci_f in
+  let mls_c = open_out mls_f in
+  let close_all_files () = close_in source_c; close_out epci_c; close_out mls_c in
+
+  try
+  (* Process the [lexbuf] to an Heptagon AST *)
+    let p = Hept_parser_scoper.parse_program modname lexbuf in
+  (* Process the Heptagon AST *)
+    let p = Hept_compiler.compile_program p in
+  (* Output the .epci *)
+    output_value epci_c (Modules.current_module ());
+  (* Compile Heptagon to MiniLS *)
+    let p = do_pass "Translation into MiniLs" Hept2mls.program p Mls_compiler.pp in
+  (* Output the .mls *)
+    Mls_printer.print mls_c p;
+  (* Process the MiniLS AST *)
+    let p = Mls_compiler.compile_program p in
+  (* Generate the sequential code *)
+    Mls2seq.program p;
+    close_all_files ()
   with x -> close_all_files (); raise x
 
-let read_qualname f = Arg.String (fun s -> f (Names.qualname_of_string s))
 
+
+let compile source_f =
+  let modname = source_f |> Filename.basename |> Filename.chop_extension |> String.capitalize in
+
+  Initial.initialize modname;
+  source_f |> Filename.dirname |> add_include;
+
+  match Misc.file_extension source_f with
+    | "ept" -> compile_program modname source_f
+    | "epi" -> compile_interface modname source_f
+    | ext -> raise (Arg.Bad ("Unknow file type: " ^ ext ^ " for file: " ^ source_f))
+
+
+
+(** [main] function to be launched *)
 let main () =
+  let read_qualname f = Arg.String (fun s -> f (Names.qualname_of_string s)) in
   try
     Arg.parse
       [
@@ -96,9 +112,10 @@ let main () =
         "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
       ]
-      (compile compile_impl)
-      errmsg;
+        compile errmsg;
   with
     | Errors.Error -> exit 2;;
 
+
+(** Launch the [main] *)
 main ()

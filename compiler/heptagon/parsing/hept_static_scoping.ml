@@ -58,11 +58,19 @@ let const_dec funs local_const cd =
   let c_name = current_qual cd.c_name in
   let c_type = Hept_scoping.translate_type cd.c_loc cd.c_type in
   let c_value = Hept_scoping.expect_static_exp cd.c_value in
-    add_const c_name (Signature.mk_const_def c_type c_value);
-    cd, local_const
+  add_const c_name (Signature.mk_const_def c_type c_value);
+  cd, local_const
 
 let program p =
   let funs = { Hept_parsetree_mapfold.defaults
                with node_dec = node; exp = exp; const_dec = const_dec } in
   let p, _ = Hept_parsetree_mapfold.program_it funs Names.S.empty p in
-    p
+  p
+
+(* (* TODO mapfold on interface *)
+let interface i =
+  let funs = { Hept_parsetree_mapfold.defaults
+               with node_dec = node; exp = exp; const_dec = const_dec } in
+  let i, _ = Hept_parsetree_mapfold.interface_it funs Names.S.empty i in
+  i
+*)

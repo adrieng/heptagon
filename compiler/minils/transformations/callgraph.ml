@@ -168,7 +168,7 @@ struct
         | _ -> ed
       in ed, m
 
-    let node_dec_instance modname n params =
+    let node_dec_instance n params =
       Idents.enter_node n.n_name;
       let global_funs =
         { Global_mapfold.defaults with static_exp = static_exp } in
@@ -189,12 +189,11 @@ struct
           Modules.add_value ln node_sig;
       { n with n_name = ln; n_params = []; n_params_constraints = []; }
 
-    let node_dec modname n =
-      List.map (node_dec_instance modname n) (get_node_instances n.n_name)
+    let node_dec n =
+      List.map (node_dec_instance n) (get_node_instances n.n_name)
 
     let program p =
-      { p
-        with p_nodes = List.flatten (List.map (node_dec p.p_modname) p.p_nodes)}
+      { p with p_nodes = List.flatten (List.map node_dec p.p_nodes) }
   end
 
 end
@@ -219,7 +218,7 @@ let load_object_file modname =
       let filename = Compiler_utils.findfile (name ^ ".epo") in
       let ic = open_in_bin filename in
         try
-          let p:program = input_value ic in
+          let (p : program) = input_value ic in
             if p.p_format_version <> minils_format_version then (
               Format.eprintf "The file %s was compiled with \
                        an older version of the compiler.@\n\

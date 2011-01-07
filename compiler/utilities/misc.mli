@@ -12,7 +12,9 @@ val optional : ('a -> 'b) -> 'a option -> 'b option
 (** Optional with accumulator *)
 val optional_wacc : ('a -> 'b -> 'c*'a) -> 'a -> 'b option -> ('c option * 'a)
 val optunit : ('a -> unit) -> 'a option -> unit
-val split_string : string -> char -> string list
+
+(** [split_string s c] splits the string [s] according to the separator [c] into a list of string without [c] *)
+val split_string : string -> string -> string list
 
 (* Generation of unique names. Mandatory call of reset_symbol between
    set_min_symbol and gen_symbol *)
@@ -83,3 +85,8 @@ val print_pp_to_string : (Format.formatter -> 'a -> unit) -> 'a -> string
 (** Replace all non [a-z A-Z 0-9] character of a string by [_] *)
 val sanitize_string : string -> string
 
+(** Pipe a value to a function *)
+val (|>) : 'a -> ('a -> 'b) -> 'b
+
+(** Return the extension of a filename string *)
+val file_extension : string -> string
