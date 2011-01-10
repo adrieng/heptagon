@@ -504,10 +504,6 @@ let rec cstm_of_act var_env obj_env act =
         let outvl = clhss_of_lhss var_env outvl in
         generate_function_call var_env obj_env outvl objn args
 
-    | Acall(_, o, Mmethod s, _) ->
-        let on = obj_ref_name o in
-        let obj = assoc_obj on obj_env in
-          Error.message obj.o_loc (Error.Eunknown_method s)
 
 and cstm_of_act_list var_env obj_env b =
   let l = List.map cvar_of_vd b.b_locals in

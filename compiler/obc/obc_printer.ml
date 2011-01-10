@@ -74,7 +74,6 @@ let print_obj_call ff = function
 let print_method_name ff = function
   | Mstep -> fprintf ff "step"
   | Mreset -> fprintf ff "reset"
-  | Mmethod n -> fprintf ff "%s" n
 
 let rec print_act ff a =
   let print_lhs_tuple ff var_list = match var_list with
@@ -122,7 +121,6 @@ and print_tag_act_list ff tag_act_list =
 let print_method_name ff = function
   | Mreset -> fprintf ff "reset"
   | Mstep -> fprintf ff "step"
-  | Mmethod n -> fprintf ff "%s" n
 
 let print_arg_list ff var_list =
   fprintf ff "(@[%a@])" (print_list_r print_vd "" "," "") var_list

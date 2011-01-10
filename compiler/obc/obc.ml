@@ -61,7 +61,6 @@ type obj_ref =
 type method_name =
   | Mreset
   | Mstep
-  | Mmethod of name
 
 type act =
   | Aassgn of pattern * exp
