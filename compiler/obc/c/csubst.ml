@@ -41,6 +41,7 @@ and subst_exp map = function
   | Caddrof lhs -> Caddrof (subst_lhs map lhs)
   | Cstructlit (s, el) -> Cstructlit (s, subst_exp_list map el)
   | Carraylit el ->  Carraylit (subst_exp_list map el)
+  | Cmethod_call _ -> (*TODO async*) assert false
 
 and subst_exp_list map =
   List.map (subst_exp map)

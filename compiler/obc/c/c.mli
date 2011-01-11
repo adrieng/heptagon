@@ -25,6 +25,7 @@ type cty =
   | Cty_ptr of cty (** C points-to-other-type type. *)
   | Cty_arr of int * cty (** A static array of the specified size. *)
   | Cty_void (** Well, [void] is not really a C type. *)
+  | Cty_future of cty (** async result as a future<t> *)
 
 (** A C block: declarations and statements. In source code form, it begins with
     variable declarations before a list of semicolon-separated statements, the
@@ -48,6 +49,7 @@ and cexpr =
   | Cstructlit of string * cexpr list (** Structure literal
                                           " \{f1, f2, ... \}". *)
   | Carraylit of cexpr list (** Array literal [e1, e2, ...]. *)
+  | Cmethod_call of cexpr * string * cexpr list (** Object member function call with parameters. *)
 and cconst =
   | Ccint of int (** Integer constant. *)
   | Ccfloat of float (** Floating-point number constant. *)
