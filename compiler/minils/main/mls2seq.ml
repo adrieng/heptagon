@@ -15,7 +15,7 @@ open Misc
 
 (** Definition of a target. A target starts either from
     dataflow code (ie Minils) or sequential code (ie Obc),
-    with or without static parameters*)
+    with or without static parameters *)
 type target =
   | Obc of (Obc.program -> unit)
   | Obc_no_params of (Obc.program -> unit)
@@ -39,6 +39,7 @@ let write_obc_file p =
     comment "Generation of Obc code"
 
 let targets = [ "c", Obc_no_params Cmain.program;
+                "java", Obc_no_params Java_main.program;
                 "obc", Obc write_obc_file;
                 "obc_np", Obc_no_params write_obc_file;
                 "epo", Minils write_object_file ]
