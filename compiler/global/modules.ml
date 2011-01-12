@@ -162,13 +162,11 @@ let replace_value f v =
 
 (** { 3 Find functions look in the global environnement, nothing more } *)
 
-let _find env x = QualEnv.find x env
-
-let find_value x = _find g_env.values x
-let find_type x = _find g_env.types x
-let find_constrs x = _find g_env.constrs x
-let find_field x = _find g_env.fields x
-let find_const x = _find g_env.consts x
+let find_value x = QualEnv.find x g_env.values
+let find_type x = QualEnv.find x g_env.types
+let find_constrs x = Tid (QualEnv.find x g_env.constrs)
+let find_field x = QualEnv.find x g_env.fields (* TODO master : the result should be Tid(...) *)
+let find_const x = QualEnv.find x g_env.consts
 
 (** @return the fields of a record type. *)
 let find_struct n =

@@ -109,13 +109,13 @@ type program =
 let mk_var_dec ?(loc=no_location) name ty =
   { v_ident = name; v_type = ty; v_loc = loc }
 
-let mk_exp ?(ty=invalid_type) ?(loc=no_location) desc =
+let mk_exp ?(ty=invalid_type) ?(loc=no_location) desc = (* TODO master :  remove the invalid_type *)
   { e_desc = desc; e_ty = ty; e_loc = loc }
 
-let mk_lhs ?(ty=invalid_type) ?(loc=no_location) desc =
+let mk_lhs ?(ty=invalid_type) ?(loc=no_location) desc = (* TODO master :  remove the invalid_type *)
   { pat_desc = desc; pat_ty = ty; pat_loc = loc }
 
-let mk_lhs_exp ?(ty=invalid_type) desc =
+let mk_lhs_exp ?(ty=invalid_type) desc = (* TODO master :  remove the invalid_type *)
   let lhs = mk_lhs ~ty:ty desc in
     mk_exp ~ty:ty (Elhs lhs)
 

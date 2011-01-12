@@ -171,7 +171,7 @@ let find_with_error find_fun f =
   with Not_found -> error (Eundefined(fullname f))
 
 let find_value v = find_with_error find_value v
-let find_constrs c = Tid (find_with_error find_constrs c)
+let find_constrs c = find_with_error find_constrs c
 let find_field f = find_with_error find_field f
 
 (** Constraints related functions *)

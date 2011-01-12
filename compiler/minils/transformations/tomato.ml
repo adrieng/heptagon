@@ -155,9 +155,9 @@ struct
 end
 
 let empty_var = Idents.gen_var "tomato" "EMPTY"
-let dummy_exp = mk_exp (Evar empty_var)
+let dummy_exp = mk_exp ~ty:Types.Tunit (Evar empty_var)
 
-let exp_of_ident vi = mk_exp (Evar vi)
+let exp_of_ident ~ty vi = mk_exp ~ty:ty (Evar vi)
 and ident_of_exp { e_desc = e_d; } = match e_d with
   | Evar vi -> vi
   | _ -> invalid_arg "ident_of_exp"
@@ -180,7 +180,7 @@ let behead e =
 
   let encode_reset rst = match rst with
     | None -> (None, [])
-    | Some x -> (Some empty_var, [exp_of_ident x]) in
+    | Some x -> (Some empty_var, [exp_of_ident ~ty:(Tid Initial.pbool) x]) in
 
   let (e_desc, children) = match e.e_desc with
     | Econst _ -> (e.e_desc, [])
@@ -192,12 +192,11 @@ let behead e =
            an empty argument list. *)
         (Eapp (op, repeat_list dummy_exp (List.length e_list), rst), l @ e_list)
     | Ewhen (e, cstr, x) ->
-        (Ewhen (dummy_exp, cstr, empty_var), [exp_of_ident x; e])
+        (Ewhen (dummy_exp, cstr, empty_var), [exp_of_ident ~ty:(Modules.find_constrs cstr)  x; e])
     | Emerge (x, lne_list) ->
-        let (lne_list, e_list) =
-          List.split
-            (List.map (fun (ln, e) -> ((ln, dummy_exp), e)) lne_list) in
-        (Emerge (empty_var, lne_list), exp_of_ident x :: e_list)
+        let (lne_list, e_list) = List.split (List.map (fun (ln, e) -> ((ln, dummy_exp), e)) lne_list) in
+        let ty = lne_list |> List.hd |> fun (c,_) -> c |> Modules.find_constrs in
+        (Emerge (empty_var, lne_list), exp_of_ident ~ty:ty x::e_list)
     | Estruct lne_list ->
         let (lne_list, e_list) =
           List.split

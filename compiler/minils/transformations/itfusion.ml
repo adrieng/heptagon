@@ -104,25 +104,27 @@ let edesc funs acc ed =
         let mk_arg e (inp, acc_eq_list, largs, args, b) = match e.e_desc with
           | Eiterator(Imap, g, m, local_args, _) when are_equal n m ->
               let new_inp, e, acc_eq_list = mk_call g acc_eq_list in
-                new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
+              new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->
               let vd = mk_var_dec (fresh_var ()) e.e_ty in
-              let x = mk_exp (Evar vd.v_ident) in
+              let x = mk_exp ~ty:vd.v_type (Evar vd.v_ident) in
               vd::inp, acc_eq_list, x::largs, e::args, b
         in
 
         let inp, acc_eq_list, largs, args, can_be_fused =
           List.fold_right mk_arg e_list ([], [], [], [], false) in
-          if can_be_fused then (
-            (* create the call to f in the lambda fun *)
-            let call = mk_exp (Eapp(f, largs, None)) in
-            let _, outp = get_node_inp_outp f in
-            let eq = mk_equation (pat_of_vd_list outp) call in
-            (* create the lambda *)
-      let anon = mk_app (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
-            Eiterator(Imap, anon, n, args, r), acc
-          ) else
-            ed, acc
+        if can_be_fused
+        then (
+          (* create the call to f in the lambda fun *)
+          let _, outp = get_node_inp_outp f in
+          let f_out_type = Types.prod (List.map (fun v -> v.v_type) outp) in
+          let call = mk_exp ~ty:f_out_type (Eapp(f, largs, None)) in
+          let eq = mk_equation (pat_of_vd_list outp) call in
+          (* create the lambda *)
+          let anon = mk_app (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
+          Eiterator(Imap, anon, n, args, r), acc)
+        else
+          ed, acc
 
 
     | _ -> raise Errors.Fallback

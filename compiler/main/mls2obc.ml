@@ -21,10 +21,6 @@ open Initial
 
 let fresh_it () = Idents.gen_var "mls2obc" "i"
 
-(** Not giving any type and called after typing, DO NOT use it anywhere else *)
-let static_exp_of_int i =
-  Types.mk_static_exp (Types.Sint i)
-
 let gen_obj_name n =
   (shortname n) ^ "_mem" ^ (gen_symbol ())
 
@@ -143,7 +139,7 @@ and translate_act map pat
                let idx = mk_exp (Eop (op_from_string "+",
                                       [ mk_exp (Econst n1); mk_evar cpt2])) in
                let a2 =
-                 Afor (cpt2, static_exp_of_int 0, n2,
+                 Afor (cpt2, mk_static_int 0, n2,
                        mk_block [Aassgn (mk_lhs (Larray (x, idx)),
                                          mk_lhs_exp (Larray (lhs_of_exp e2,
                                                              mk_evar cpt2)))] )
@@ -373,7 +369,7 @@ and translate_iterator map call_context it name_list app loc n x c_list =
           app loc name_list c_list in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
-          si, j, [ Afor (x, static_exp_of_int 0, n, b) ]
+          si, j, [ Afor (x, mk_static_int 0, n, b) ]
 
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
@@ -386,7 +382,7 @@ and translate_iterator map call_context it name_list app loc n x c_list =
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
           si, j, [Aassgn (acc_out, acc_in);
-                  Afor (x, static_exp_of_int 0, n, b)]
+                  Afor (x, mk_static_int 0, n, b)]
 
     | Minils.Ifold ->
         let (c_list, acc_in) = split_last c_list in
@@ -397,7 +393,7 @@ and translate_iterator map call_context it name_list app loc n x c_list =
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
           si, j, [ Aassgn (acc_out, acc_in);
-                   Afor (x, static_exp_of_int 0, n, b) ]
+                   Afor (x, mk_static_int 0, n, b) ]
 
     | Minils.Ifoldi ->
         let (c_list, acc_in) = split_last c_list in
@@ -408,7 +404,7 @@ and translate_iterator map call_context it name_list app loc n x c_list =
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
           si, j, [ Aassgn (acc_out, acc_in);
-                   Afor (x, static_exp_of_int 0, n, b) ]
+                   Afor (x, mk_static_int 0, n, b) ]
 
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list

@@ -133,7 +133,7 @@ type program = {
 
 (*Helper functions to build the AST*)
 
-let mk_exp ?(ty = invalid_type) ?(clock = fresh_clock())
+let mk_exp ~ty ?(clock = fresh_clock())
            ?(loc = no_location) ?(base_clock = Cbase) desc =
   { e_desc = desc; e_ty = ty;
     e_base_ck = base_clock; e_ck = clock; e_loc = loc }
@@ -173,5 +173,5 @@ let mk_program o n t c =
   { p_modname = ""; p_format_version = "";
     p_opened = o; p_nodes = n; p_types = t; p_consts = c }
 
-let void = mk_exp (Eapp (mk_app Etuple, [], None))
+let void = mk_exp ~ty:Types.Tunit (Eapp (mk_app Etuple, [], None))
 
