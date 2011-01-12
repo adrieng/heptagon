@@ -2,10 +2,6 @@
 
 checkdir=_check_builds
 
-if [ ! -d $checkdir ]; then
-	mkdir $checkdir
-fi
-cd $checkdir
 
 # TODO: rewrite in OCaml or something better than sh
 
@@ -31,10 +27,7 @@ c=0
 score=0
 max=0
 verbose=0
-
-for d in ../good ../bad; do
-  rm -f -r $d/*.obc $d/*_java $d/*_c $d/*.mci $d/*.mls $d/*.epci
-done
+clean=0
 
 compile () {
   args_comp=""
@@ -54,10 +47,9 @@ compile () {
   fi
 
   if [ $verbose != 0 ]; then
-    echo ""
-    echo "****************************************"
-    echo Compile -i $coption $args_comp $1
-    $compilo $coption -I good $args_comp $1 >$1.log 2>&1
+    logfile=`basename $1`.log
+    echo "Compile -i $coption $args_comp $1"
+    $compilo $coption -I good $args_comp $1 >$logfile 2>&1
   else
     if [ $2 == 1 ]; then
       $compilo $coption -I good $args_comp $1 >/dev/null 2>&1
@@ -75,10 +67,18 @@ launch_check () {
   score=0
   max=0
 
-  echo "Test"
+  if [ $clean = 1 ]; then
+    rm -r $checkdir
+    exit 0
+  fi
+
+  if [ ! -d $checkdir ]; then
+    mkdir $checkdir
+  fi
+  cd $checkdir
 
   # les mauvais
-  echo -n "bad "
+  echo "Tests bads"
   for f in ../bad/*.ept ; do
     if [ $verbose = 0 ]; then
       echo -n "."
@@ -92,9 +92,7 @@ launch_check () {
     fi
   done
 
-  echo
-
-  echo -n "bons"
+  echo "Tests goods"
   for f in ../good/*.ept; do
     echec=0
     if [ $verbose = 0 ]; then
@@ -189,6 +187,10 @@ launch_check () {
   echo -n "Test: $score/$max : $percent%";
 }
 
+activate_clean () {
+  clean=1
+}
+
 activate_minils () {
   minils=1
 }
@@ -212,6 +214,9 @@ activate_all () {
 # (to be suppressed)
 while [ $# -gt 0 ]; do
   case $1 in
+    "-clean" )
+      activate_clean
+      shift;;
     "-v" )
       verbose=1;
       shift;;
