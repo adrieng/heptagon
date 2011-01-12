@@ -1,27 +1,36 @@
 #!/bin/bash
-
 #Small wrapper to deal with compilation of the compiler and the stdlib.
 
-SCRIPT_DIR=`dirname $0`
-COMPILER_DIR=compiler #relative to the script_dir
-COMPILER=heptc.d.byte
-HEPTC=$COMPILER_DIR/$COMPILER
 
 RUN_DIR=`pwd`
-cd $SCRIPT_DIR
 
-if [ ! -x $HEPTC ] #compile the compiler
+
+SCRIPT_DIR=$RUN_DIR/`dirname $0`
+
+COMPILER_DIR=$SCRIPT_DIR/compiler
+COMPILER=heptc.byte
+LIB_DIR=$SCRIPT_DIR/lib
+
+#the symlink
+HEPTC=$COMPILER_DIR/$COMPILER
+
+#compile the compiler
+if [ ! -x $HEPTC ]
 then
 	cd $COMPILER_DIR
 	ocamlbuild -j 0 $COMPILER
 	cd -
 fi
 
-if [ ! -e lib/pervasives.epci ] #compile the stdlib
+#compile the stdlib
+if [ ! -e $LIB_DIR/pervasives.epci ] || [ $HEPTC -nt $LIB_DIR/pervasives.epci ]
 then
-	$HEPTC -nopervasives lib/pervasives.epi
+	cd $LIB_DIR
+	echo "Recompile pervasives.epci"
+	$HEPTC -nopervasives pervasives.epi
+	cd -
 fi
 
+#call the compiler with the passed arguments.
 cd $RUN_DIR
-
-$SCRIPT_DIR/$HEPTC -stdlib $SCRIPT_DIR/lib "$@" #call the compiler with the passed arguments.
+$HEPTC -stdlib $LIB_DIR "$@"
