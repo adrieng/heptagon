@@ -244,6 +244,14 @@ let rec cexpr_of_static_exp se =
     | Sfield _ -> assert false
     | Sconstructor c -> Cconst (Ctag (cname_of_qn c))
     | Sarray sl -> Carraylit (List.map cexpr_of_static_exp sl)
+    | Srecord fl ->
+        let ty_name =
+          match Modules.unalias_type se.se_ty with
+            | Types.Tid n -> cname_of_qn n
+            | _ -> assert false
+        in
+          Cstructlit (ty_name,
+                     List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
     | Sarray_power(n,c) ->
         let cc = cexpr_of_static_exp c in
           Carraylit (repeat_list cc (int_of_static_exp n))
@@ -259,7 +267,7 @@ let rec cexpr_of_static_exp se =
           else
             cexpr_of_static_exp se'
     | Stuple _ -> assert false (** TODO *)
-    | Srecord _ -> assert false (** TODO *)
+
 
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
 let rec cexpr_of_exp var_env exp =
