@@ -9,13 +9,13 @@ open Minils
 (* Functions to temporarily store anonymous nodes*)
 let mk_fresh_node_name () = Modules.fresh_value "itfusion" "temp"
 
-let fresh_vd_of_arg =
+let fresh_vd_of_arg a =
   Idents.gen_fresh "itfusion"
                    (fun a -> match a.a_name with
                              | None -> "v"
-                             | Some n -> n)
+                             | Some n -> n) a
 
-let fresh_var = Idents.gen_fresh "itfusion" (fun () -> "x")
+let fresh_var () = Idents.gen_var "itfusion" "x"
 
 let anon_nodes = ref QualEnv.empty
 

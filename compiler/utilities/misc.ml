@@ -112,7 +112,7 @@ let rec assocd value = function
 
 (** { 3 Compiler iterators } *)
 
-(** Mapfold *)
+(** Mapfold *) (* TODO optim : lot's of place we don't need the List.rev *)
 let mapfold f acc l =
   let l,acc = List.fold_left
                 (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)

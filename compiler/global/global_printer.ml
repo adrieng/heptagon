@@ -13,6 +13,8 @@ let print_qualname ff qn = match qn with
   | { qual = m; name = n } when m = local_qualname -> print_name ff n
   | { qual = m; name = n } -> fprintf ff "%s.%a" m print_name n
 
+let print_shortname ff {name = n} = print_name ff n
+
 let print_async ff async = match async with
   | None -> ()
   | Some () -> fprintf ff "async "

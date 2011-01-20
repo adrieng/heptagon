@@ -132,7 +132,7 @@ let const e c =
 (* normal form for expressions and equations:                              *)
 (* - e ::= op(e,...,e) | x | C | e when C(x)                               *)
 (* - act ::= e | merge x (C1 -> act) ... (Cn -> act) | (act,...,act)       *)
-(* - eq ::= [x = v fby e] | [pat = act ] | [pat = f(e1,...,en) every n     *)
+(* - eq ::= [x = v fby e] | [pat = act] | [pat = f(e1,...,en) every n     *)
 (* - A-normal form: (e1,...,en) when c(x) = (e1 when c(x),...,en when c(x) *)
 type kind = VRef | Exp | Act | Any
 

@@ -7,6 +7,7 @@
 (*                                                                        *)
 (**************************************************************************)
 (* removing present statements *)
+
 open Heptagon
 open Hept_mapfold
 

@@ -14,7 +14,7 @@ let print_vd ff vd =
   fprintf ff "@]"
 
 let print_obj ff o =
-  fprintf ff "@[<v>"; print_name ff o.o_name;
+  fprintf ff "@[<v>"; print_ident ff o.o_ident;
   fprintf ff " : "; print_qualname ff o.o_class;
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") o.o_params;
   (match o.o_size with
@@ -67,10 +67,10 @@ let print_asgn ff pref x e =
   fprintf ff "@]"
 
 let print_obj_call ff = function
-  | Oobj o -> print_name ff o
+  | Oobj o -> print_ident ff o
   | Oarray (o, i) ->
       fprintf ff "%a[%a]"
-        print_name o
+        print_ident o
         print_lhs i
 
 let print_method_name ff = function
@@ -90,7 +90,7 @@ let rec print_act ff a =
         print_tag_act_list ff tag_act_list;
         fprintf ff "@]@,}@]"
     | Afor(x, i1, i2, act_list) ->
-        fprintf ff "@[<v>@[<v 2>for %s = %a to %a {@, %a @]@,}@]"
+        fprintf ff "@[<v>@[<v 2>for %s = %a to %a {@ %a @]@,}@]"
           (name x)
           print_static_exp i1
           print_static_exp i2

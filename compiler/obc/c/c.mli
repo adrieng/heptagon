@@ -46,9 +46,8 @@ and cexpr =
   | Cconst of cconst (** Constants. *)
   | Clhs of clhs (** Left-hand-side expressions are obviously expressions! *)
   | Caddrof of clhs (** Take the address of a left-hand-side expression. *)
-  | Cstructlit of string * cexpr list (** Structure literal
-                                          " \{f1, f2, ... \}". *)
-  | Carraylit of cexpr list (** Array literal [e1, e2, ...]. *)
+  | Cstructlit of string * cexpr list (** Structure literal [{f1, f2, ... }]. *)
+  | Carraylit of cexpr list (** Array literal [\[e1, e2, ...\]]. *)
   | Cmethod_call of cexpr * string * cexpr list (** Object member function call with parameters. *)
 and cconst =
   | Ccint of int (** Integer constant. *)

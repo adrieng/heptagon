@@ -38,7 +38,7 @@ let write_obc_file p =
     close_out obc;
     comment "Generation of Obc code"
 
-let targets = [ "c", Obc_no_params Cmain.program;
+let targets = [ (*"c", Obc_no_params Cmain.program;*)
                 "java", Obc_no_params Java_main.program;
                 "obc", Obc write_obc_file;
                 "obc_np", Obc_no_params write_obc_file;

@@ -2,6 +2,7 @@
 open Names
 
 (** This modules manages unique identifiers,
+  /!\ To be effective, [enter_node] has to be called when entering a node
   [gen_fresh] generates an identifier
   [name] returns a unique name (inside its node) from an identifier. *)
 
@@ -11,7 +12,7 @@ type ident
 (** Type to be used for local variables *)
 type var_ident = ident
 
-(** Comparision on idents with the same properties as [Pervasives.compare] *)
+(** Comparison on idents with the same properties as [Pervasives.compare] *)
 val ident_compare : ident -> ident -> int
 
 (** Get the full name of an identifier (it is guaranteed to be unique) *)
@@ -21,6 +22,9 @@ val name : ident -> string
     generate a fresh ident with a sweet [name].
     It should be used to define a [fresh] function specific to a pass. *)
 val gen_fresh : string -> ('a -> string) -> 'a -> ident
+
+(** [gen_var pass_name name]
+    generates a fresh ident with a sweet [name] *)
 val gen_var : string -> string -> ident
 
 (** [ident_of_name n] returns an identifier corresponding

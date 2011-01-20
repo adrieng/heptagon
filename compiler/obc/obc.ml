@@ -16,12 +16,12 @@ open Signature
 open Location
 
 type class_name = qualname
-type instance_name = qualname
-type obj_name = name
 type op_name = qualname
+type obj_ident = var_ident
+
 
 type type_dec =
-    { t_name : qualname;
+    { t_name : type_name;
       t_desc : tdesc;
       t_loc : location }
 
@@ -56,8 +56,8 @@ and exp_desc =
   | Ebang of exp
 
 type obj_ref =
-  | Oobj of obj_name
-  | Oarray of obj_name * pattern
+  | Oobj of obj_ident
+  | Oarray of obj_ident * pattern
 
 type method_name =
   | Mreset
@@ -80,10 +80,10 @@ and var_dec =
       v_loc : location }
 
 type obj_dec =
-    { o_name : obj_name;
-      o_class : instance_name;
+    { o_ident : obj_ident;
+      o_class : class_name;
       o_params : static_exp list;
-      o_size : static_exp option;
+      o_size : static_exp option; (** size of the array if the declaration is an array of obj *)
       o_loc : location }
 
 type method_def =
@@ -146,6 +146,17 @@ let rec vd_find n = function
   | [] -> Format.eprintf "Not found var %s@." (name n); raise Not_found
   | vd::l ->
       if vd.v_ident = n then vd else vd_find n l
+
+(** Returns the type of a [var_dec list] *)
+let vd_list_to_type vd_l = match vd_l with
+  | [] -> Types.Tunit
+  | [vd] -> vd.v_type
+  | _ -> Tprod (List.map (fun vd -> vd.v_type) vd_l)
+
+let pattern_list_to_type p_l = match p_l with
+  | [] -> Types.Tunit
+  | [p] -> p.pat_ty
+  | _ -> Tprod (List.map (fun p -> p.p_type) p_l)
 
 let lhs_of_exp e = match e.e_desc with
   | Elhs l -> l

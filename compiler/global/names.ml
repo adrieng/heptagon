@@ -34,6 +34,7 @@ module S = Set.Make (struct type t = string let compare = compare end)
 
 
 let shortname { name = n; } = n
+let qualname { qual = n; } = n
 
 let fullname { qual = qual; name = n; } = qual ^ "." ^ n
 
