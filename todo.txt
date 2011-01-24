@@ -3,8 +3,6 @@ Plus ou moins ordonné du plus urgent au moins urgent.
 
 *- Bugs related to matching types without unaliasing it. In lots of parts. Use Modules.unalias_type. 
 
-*- Les types des patterns dans les boucles crées par concatenate ( entre autres ) sont faux.
-
 *- Collision entre les noms de params et les idents dans les noeuds.
 
 *- Optimisations du genre "if true then ... else ... " ou genre "x,y = if b then a,c else a2,c" qui devrait etre transformé en "x = if b then a else s2; y = c" ...

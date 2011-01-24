@@ -202,6 +202,7 @@ and translate_static_exp_desc ed =
         let qualf (f, se) = (qualify_field f, t se) in
         Types.Srecord (List.map qualf se_f_list)
     | Sop (fn, se_list) -> Types.Sop (qualify_value fn, List.map t se_list)
+    | Sasync se -> Types.Sasync (t se)
 
 let expect_static_exp e = match e.e_desc with
   | Econst se -> translate_static_exp se

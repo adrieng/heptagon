@@ -1,9 +1,4 @@
 
-fun sum (x,m: int) returns (s: int)
-let
-  s = x + m
-tel
-
 fun substr (x,m: int) returns (d: int; m2:int)
 let
   d = x - m;

@@ -469,6 +469,7 @@ and mk_node_call map call_context app loc name_list args ty =
         let obj =
           { o_ident = obj_ref_name o; o_class = f;
             o_params = app.Minils.a_params;
+            o_async = app.Minils.a_async;
             o_size = size_from_call_context call_context; o_loc = loc } in
         let si = (match app.Minils.a_op with
                    | Minils.Efun _ -> []

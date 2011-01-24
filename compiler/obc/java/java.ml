@@ -67,6 +67,7 @@ and block = { b_locals : var_dec list;
 and act = Anewvar of var_dec * exp
         | Aassgn of pattern * exp
         | Amethod_call of exp * method_name * exp list
+        | Aasync_method_call of exp * method_name * exp list (* could be used for async logging etc *)
         | Aswitch of exp * (constructor_name * block) list
         | Aif of exp * block
         | Aifelse of exp * block * block
@@ -78,6 +79,7 @@ and exp = Eval of pattern
         | Ethis
         | Efun of op_name * exp list
         | Emethod_call of exp * method_name * exp list
+        | Easync_method_call of exp * method_name * exp list
         | Enew of ty * exp list
         | Enew_array of ty * exp list (** [ty] is the array base type *)
         | Evoid (*printed as nothing*)
@@ -112,6 +114,14 @@ let rec default_value ty = match ty with
 
 let java_pervasive_class c = Names.qualname_of_string ("jeptagon.Pervasives."^c)
 let the_java_pervasives = Names.qualname_of_string "jeptagon.Pervasives"
+
+let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
+
+let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
+                    Names.qualname_of_string "java.util.concurrent.ExecutionException"]
+
+let throws_async = [Names.qualname_of_string "InterruptedException";
+                    Names.qualname_of_string "ExecutionException"]
 
 
 let mk_var x = Eval (Pvar x)

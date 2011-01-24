@@ -27,6 +27,7 @@ and static_exp_desc =
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)
   | Srecord of (field_name * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
   | Sop of fun_name * static_exp list (** defined ops for now in pervasives *)
+  | Sasync of static_exp
 
 and ty =
   | Tprod of ty list (** Product type used for tuples *)
@@ -44,6 +45,8 @@ let prod = function
 let unprod = function
   | Tprod l -> l
   | t -> [t]
+
+
 let asyncify async ty_list = match async with
   | None -> ty_list
   | Some a -> List.map (fun ty -> Tasync (a,ty)) ty_list

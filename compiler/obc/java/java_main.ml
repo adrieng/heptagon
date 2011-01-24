@@ -70,8 +70,8 @@ let program p =
         in
         mk_block ~locals:[vd_step] acts
       in
-      mk_methode ~static:true ~args:[vd_args] body "main"
+      mk_methode ~static:true ~args:[vd_args] ~throws:throws_async body "main"
     in
-    let c = mk_classe ~fields:[field_step_dnb] ~methodes:[main_methode] class_name in
+    let c = mk_classe ~imports:import_async ~fields:[field_step_dnb] ~methodes:[main_methode] class_name in
     output_program dir [c]
   )

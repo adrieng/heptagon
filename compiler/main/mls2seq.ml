@@ -39,7 +39,6 @@ let write_obc_file p =
     comment "Generation of Obc code"
 
 let no_conf () = ()
-
 let targets = [ "c",(Obc_no_params Cmain.program, no_conf);
                 "java", (Obc Java_main.program, no_conf);
                 "obc", (Obc write_obc_file, no_conf);

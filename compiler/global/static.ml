@@ -121,7 +121,8 @@ let rec eval_core partial env se = match se.se_desc with
   | Srecord f_se_list ->
       { se with se_desc = Srecord
           (List.map (fun (f,se) -> f, eval_core partial env se) f_se_list) }
-
+  | Sasync se' ->
+      { se with se_desc = Sasync (eval_core partial env se') }
 
 (** [simplify env e] returns e simplified with the
     variables values taken from [env] or from the global env with [find_const].
