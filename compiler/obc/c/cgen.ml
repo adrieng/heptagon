@@ -274,7 +274,7 @@ let rec cexpr_of_static_exp se =
 let rec cexpr_of_exp var_env exp =
   match exp.e_desc with
     (** Obj expressions that form valid C lhs are translated via clhs_of_exp. *)
-    | Elhs _  ->
+    | Epattern _  ->
         Clhs (clhs_of_exp var_env exp)
           (** Constants, the easiest translation. *)
     | Econst lit ->
@@ -338,7 +338,7 @@ and clhss_of_lhss var_env lhss =
   List.map (clhs_of_lhs var_env) lhss
 
 and clhs_of_exp var_env exp = match exp.e_desc with
-  | Elhs l -> clhs_of_lhs var_env l
+  | Epattern l -> clhs_of_lhs var_env l
   (** We were passed an expression that is not translatable to a valid C lhs?!*)
   | _ -> invalid_arg "clhs_of_exp: argument not a Var, Mem or Field"
 

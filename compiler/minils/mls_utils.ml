@@ -135,10 +135,15 @@ struct
     | _ -> []
 end
 
+(* Assumes normal form, all fby are solo rhs *)
 let node_memory_vars n =
   let eq _ acc ({ eq_lhs = pat; eq_rhs = e } as eq) =
     match e.e_desc with
-    | Efby(_, _) -> eq, Vars.vars_pat acc pat
+    | Efby(_, _) ->
+        let v_l = Vars.vars_pat [] pat in
+        let t_l = Types.unprod e.e_ty in
+        let acc = (List.combine v_l t_l) @ acc in
+        eq, acc
     | _ -> eq, acc
   in
   let funs = { Mls_mapfold.defaults with eq = eq } in

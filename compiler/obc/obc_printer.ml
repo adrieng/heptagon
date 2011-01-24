@@ -37,7 +37,7 @@ and print_exps ff e_list = print_list_r print_exp "" "," "" ff e_list
 
 and print_exp ff e =
   match e.e_desc with
-    | Elhs lhs -> print_lhs ff lhs
+    | Epattern lhs -> print_lhs ff lhs
     | Econst c -> print_static_exp ff c
     | Eop(op, e_list) -> print_op ff op e_list
     | Estruct(_,f_e_list) ->
@@ -90,8 +90,8 @@ let rec print_act ff a =
         print_tag_act_list ff tag_act_list;
         fprintf ff "@]@,}@]"
     | Afor(x, i1, i2, act_list) ->
-        fprintf ff "@[<v>@[<v 2>for %s = %a to %a {@ %a @]@,}@]"
-          (name x)
+        fprintf ff "@[<v>@[<v 2>for %a = %a to %a {@  %a @]@,}@]"
+          print_vd x
           print_static_exp i1
           print_static_exp i2
           print_block act_list

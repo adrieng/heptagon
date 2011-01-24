@@ -199,3 +199,14 @@ let split_string s separator = Str.split (separator |> Str.quote |> Str.regexp) 
 
 let file_extension s = split_string s "." |> last_element
 
+exception Assert_false
+let internal_error passe code =
+  Format.eprintf "@.---------\nInternal compiler error\nPasse : %s, Code : %d\n----------@." passe code;
+  raise Assert_false
+
+exception Unsupported
+let unsupported passe code =
+  Format.eprintf "@.---------\nUnsupported feature, please report it\nPasse : %s, Code : %d\n----------@." passe code;
+  raise Unsupported
+
+

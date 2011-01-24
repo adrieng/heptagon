@@ -90,3 +90,9 @@ val (|>) : 'a -> ('a -> 'b) -> 'b
 
 (** Return the extension of a filename string *)
 val file_extension : string -> string
+
+(** Internal error : Is used when an assertion wrong *)
+val internal_error : string -> int -> 'a
+
+(** Unsupported : Is used when something should work but is not currently supported *)
+val unsupported : string -> int -> 'a

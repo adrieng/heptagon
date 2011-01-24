@@ -13,6 +13,8 @@ open Java
 open Pp_tools
 open Format
 
+(* TODO java faire des vrais qualname recursifs, bare_constructor doit être vraiment bare *)
+
 let class_name = Global_printer.print_shortname
 let obj_ident = Global_printer.print_ident
 let constructor_name = Global_printer.print_qualname
@@ -54,22 +56,22 @@ let rec field ff f =
     final f.f_final
     ty f.f_type
     field_ident f.f_name
-    (print_opt2 exp " =@ ") f.f_value
+    (print_opt2 exp " = ") f.f_value
 
 and exp ff = function
   | Eval p -> pattern ff p
   | Efun (f,e_l) -> fprintf ff "%a@[%a@]" op_name f args e_l
   | Emethod_call (o,m,e_l) -> fprintf ff "%a.%a%a" pattern o method_name m args e_l
   | Enew (c,e_l) -> fprintf ff "new %a%a" ty c args e_l
+  | Enew_array (t,e_l) -> fprintf ff "new %a@[<2>%a@]" ty t (print_list_r exp "{"",""}") e_l
   | Evoid -> ()
-  | Earray e_l -> fprintf ff "@[<2>%a@]" (print_list_r exp "{"",""}") e_l
   | Svar c -> const_name ff c
   | Sint i -> pp_print_int ff i
   | Sfloat f -> pp_print_float ff f
   | Sbool b -> pp_print_bool ff b
   | Sconstructor c -> constructor_name ff c
 
-and args ff e_l = fprintf ff "@[%a@]" (print_list_r exp "("","")") e_l
+and args ff e_l = fprintf ff "@[(%a)@]" (print_list_r exp """,""") e_l
 
 and pattern ff = function
   | Pfield (p,f) -> fprintf ff "%a.%a" pattern p field_name f
@@ -100,29 +102,37 @@ and act ff = function
         block bf
   | Ablock b -> fprintf ff "@[<2>{@ %a@ }]" block b
   | Afor (x, i1, i2, b) ->
-        fprintf ff "@[<2>for %a = %a to %a {@ %a@ }@]"
-          var_ident x
+        fprintf ff "@[<2>for (%a = %a; %a<%a; %a++) {@ %a@ }@]"
+          var_dec x
           exp i1
+          var_ident x.vd_ident
           exp i2
+          var_ident x.vd_ident
           block b
   | Areturn e -> fprintf ff "return %a" exp e
 
 let methode ff m =
-  fprintf ff "@[<4>%a%a%a %a @[<2>%a@] {@\n%a@]@\n}"
+  fprintf ff "@[<4>%a%a%a %a @[<2>(%a)@] {@\n%a@]@\n}"
     protection m.m_protection
     static m.m_static
     ty m.m_returns
     method_name m.m_name
-    (vd_list "("","")") m.m_args
+    (vd_list """,""") m.m_args
+    block m.m_body
+
+let constructor ff m =
+  fprintf ff "@[<4>%a%a @[<2>(%a)@] {@\n%a@]@\n}"
+    protection m.m_protection
+    method_name m.m_name
+    (vd_list """,""") m.m_args
     block m.m_body
 
 let rec class_desc ff cd =
-  let pm = print_list methode """""" in
   fprintf ff "@[<v>%a@ %a@ %a@ %a@]"
     (print_list_r field """;"";") cd.cd_fields
     (print_list_r classe """""") cd.cd_classs
-    pm cd.cd_constructors
-    pm cd.cd_methodes
+    (print_list constructor """""") cd.cd_constructors
+    (print_list methode """""") cd.cd_methodes
 
 and classe ff c = match c.c_kind with
   | Cenum c_l ->
@@ -143,8 +153,11 @@ let output_classe dir c =
   let file_name = file_name ^ ".java" in
   let oc = open_out (Filename.concat dir file_name) in
   let ff = Format.formatter_of_out_channel oc in
-  fprintf ff "package %s;@\n" package_name;
+  fprintf ff "package %s;@\n" (String.lowercase package_name);
   classe ff c;
   pp_print_flush ff ();
   close_out oc
+
+let output_program dir (p:Java.program) =
+  List.iter (output_classe dir) p
 

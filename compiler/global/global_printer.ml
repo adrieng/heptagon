@@ -48,6 +48,7 @@ and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l
 
 and print_type ff = function
+  | Tprod [] -> fprintf ff "INVALID TYPE"
   | Tprod ty_list ->
       fprintf ff "@[<hov2>%a@]" (print_list_r print_type "(" " *" ")") ty_list
   | Tid id -> print_qualname ff id

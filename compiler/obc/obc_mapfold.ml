@@ -44,9 +44,9 @@ and edesc_it funs acc ed =
   try funs.edesc funs acc ed
   with Fallback -> edesc funs acc ed
 and edesc funs acc ed = match ed with
-  | Elhs l ->
+  | Epattern l ->
      let l, acc = lhs_it funs acc l in
-        Elhs l, acc
+        Epattern l, acc
   | Econst se ->
       let se, acc = static_exp_it funs.global_funs acc se in
         Econst se, acc

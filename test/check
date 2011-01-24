@@ -114,18 +114,18 @@ launch_check () {
       fi
     fi
     # Compil. java ?
-    if [[ ($echec == 0) && ($java == 1) ]]; then
-      pushd "${base_f}" > /dev/null
-      for java_file in *.java ; do
-        if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null
-        then
-          echec=0
-        else
-          echec=3
-        fi
-      done
-      popd > /dev/null
-    fi
+    #if [[ ($echec == 0) && ($java == 1) ]]; then
+    #  pushd "${base_f}_java" > /dev/null
+    #  for java_file in *.java ; do
+    #    if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null
+    #    then
+    #      echec=0
+    #    else
+    #      echec=3
+    #    fi
+    #  done
+    #  popd > /dev/null
+    #fi
     # Compil. c ?
     if [[ ($echec == 0) && ($c == 1) ]]; then
         pushd ${base_f}_c >/dev/null

@@ -48,7 +48,7 @@ and pat_desc =
 and exp = { e_desc : exp_desc; e_ty : ty; e_loc : location }
 
 and exp_desc =
-  | Elhs of pattern
+  | Epattern of pattern
   | Econst of static_exp
   | Eop of op_name * exp list
   | Estruct of type_name * (field_name * exp) list
@@ -68,7 +68,7 @@ type act =
   | Acall of pattern list * obj_ref * method_name * exp list
   | Aasync_call of async_t * pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
-  | Afor of var_ident * static_exp * static_exp * block
+  | Afor of var_dec * static_exp * static_exp * block
 
 and block =
     { b_locals : var_dec list;
@@ -107,21 +107,33 @@ type program =
       p_consts : const_dec list;
       p_defs  : class_def list }
 
-let mk_var_dec ?(loc=no_location) name ty =
-  { v_ident = name; v_type = ty; v_loc = loc }
+let mk_var_dec ?(loc=no_location) ident ty =
+  { v_ident = ident; v_type = ty; v_loc = loc }
 
-let mk_exp ?(ty=invalid_type) ?(loc=no_location) desc = (* TODO master :  remove the invalid_type *)
+let mk_exp ?(loc=no_location) ty desc =
   { e_desc = desc; e_ty = ty; e_loc = loc }
 
-let mk_lhs ?(ty=invalid_type) ?(loc=no_location) desc = (* TODO master :  remove the invalid_type *)
+let mk_exp_int ?(loc=no_location) desc =
+  { e_desc = desc; e_ty = Initial.tint; e_loc = loc }
+
+let mk_exp_bool ?(loc=no_location) desc =
+  { e_desc = desc; e_ty = Initial.tbool; e_loc = loc }
+
+let mk_pattern ?(loc=no_location) ty desc =
   { pat_desc = desc; pat_ty = ty; pat_loc = loc }
 
-let mk_lhs_exp ?(ty=invalid_type) desc = (* TODO master :  remove the invalid_type *)
-  let lhs = mk_lhs ~ty:ty desc in
-    mk_exp ~ty:ty (Elhs lhs)
+let mk_pattern_int ?(loc=no_location) desc =
+  { pat_desc = desc; pat_ty = Initial.tint; pat_loc = loc }
 
-let mk_evar id =
-  mk_exp (Elhs (mk_lhs (Lvar id)))
+let mk_pattern_exp ty desc =
+  let pat = mk_pattern ty desc in
+    mk_exp ty (Epattern pat)
+
+let mk_evar ty id =
+  mk_exp ty (Epattern (mk_pattern ty (Lvar id)))
+
+let mk_evar_int id =
+  mk_exp Initial.tint (Epattern (mk_pattern Initial.tint (Lvar id)))
 
 let mk_block ?(locals=[]) eq_list =
   { b_locals = locals;
@@ -156,10 +168,10 @@ let vd_list_to_type vd_l = match vd_l with
 let pattern_list_to_type p_l = match p_l with
   | [] -> Types.Tunit
   | [p] -> p.pat_ty
-  | _ -> Tprod (List.map (fun p -> p.p_type) p_l)
+  | _ -> Tprod (List.map (fun p -> p.pat_ty) p_l)
 
-let lhs_of_exp e = match e.e_desc with
-  | Elhs l -> l
+let pattern_of_exp e = match e.e_desc with
+  | Epattern l -> l
   | _ -> assert false
 
 let find_step_method cd =

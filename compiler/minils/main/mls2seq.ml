@@ -39,7 +39,7 @@ let write_obc_file p =
     comment "Generation of Obc code"
 
 let targets = [ (*"c", Obc_no_params Cmain.program;*)
-                "java", Obc_no_params Java_main.program;
+                "java", Obc Java_main.program;
                 "obc", Obc write_obc_file;
                 "obc_np", Obc_no_params write_obc_file;
                 "epo", Minils write_object_file ]

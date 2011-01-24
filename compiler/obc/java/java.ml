@@ -68,15 +68,15 @@ and act = Anewvar of var_dec * exp
         | Aif of exp * block
         | Aifelse of exp * block * block
         | Ablock of block
-        | Afor of var_ident * exp * exp * block
+        | Afor of var_dec * exp * exp * block (* TODO var_dec *)
         | Areturn of exp
 
 and exp = Eval of pattern
         | Efun of op_name * exp list
         | Emethod_call of pattern * method_name * exp list
         | Enew of ty * exp list
+        | Enew_array of ty * exp list
         | Evoid (*printed as nothing*)
-        | Earray of exp list
         | Svar of const_name
         | Sint of int
         | Sfloat of float
@@ -89,6 +89,14 @@ and pattern = Pfield of pattern * field_name
             | Pthis of field_ident
 
 type program = classe list
+
+let mk_var x = Eval (Pvar x)
+
+let mk_var_dec x ty =
+  { vd_type = ty; vd_ident = x }
+
+let mk_block ?(locals=[]) b =
+  { b_locals = locals; b_body = b; }
 
 let mk_methode ?(protection=Ppublic) ?(static=false) ?(args=[]) ?(returns=Tunit)
                body name =

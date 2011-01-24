@@ -202,7 +202,7 @@ let rec print_lhs ff e avs single =
 
 let rec print_exp ff e p avs ts single =
   match e.e_desc with
-    | Elhs l -> print_lhs ff l avs single
+    | Epattern l -> print_lhs ff l avs single
     | Econst c -> print_const ff c ts
     | Eop (op, es) -> print_op ff op es p avs ts single
     | Estruct (type_name,fields) ->

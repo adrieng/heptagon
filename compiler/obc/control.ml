@@ -38,12 +38,12 @@ let rec control map ck s =
     | Cvar { contents = Clink ck } -> control map ck s
     | Con(ck, c, n)  ->
         let x = var_from_name map n in
-          control map ck (Acase(mk_exp (Elhs x), [(c, mk_block [s])]))
+        control map ck (Acase(mk_exp x.pat_ty (Epattern x), [(c, mk_block [s])]))
 
 let is_deadcode = function
     | Aassgn (lhs, e) ->
         (match e.e_desc with
-           | Elhs l -> l = lhs
+           | Epattern l -> l = lhs
            | _ -> false
         )
     | Acase (_, []) -> true

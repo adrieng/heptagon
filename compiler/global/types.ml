@@ -42,6 +42,11 @@ let prod = function
   | [ty]    -> ty
   | ty_list -> Tprod ty_list
 
+let unprod = function
+  | Tprod l -> l
+  | t -> [t]
+
+
 let asyncify async ty_list = match async with
   | None -> ty_list
   | Some a -> List.map (fun ty -> Tasync (a,ty)) ty_list

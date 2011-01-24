@@ -1,6 +1,5 @@
 (* pour debugger
    set arguments -v test/good/t1.mls *)
-type t
 
 node f(x,z:int) returns (o1:int)
    var o: int;
