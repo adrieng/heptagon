@@ -40,6 +40,7 @@ let array_elt_of_exp idx e =
     in idx_list are in the bounds. If idx_list=[e1;..;ep]
     and bounds = [n1;..;np], it returns
     e1 <= n1 && .. && ep <= np *)
+(** TODO: Add check for idx >= 0  *)
 let rec bound_check_expr idx_list bounds =
   match (idx_list, bounds) with
     | [idx], [n] ->
@@ -186,6 +187,7 @@ and translate_act map pat
           [ Acase (cond, [ ptrue, mk_block [true_act];
                                     pfalse, mk_block [false_act] ]) ]
 
+     (** TODO: remplacer par if 0 < e && e < n then for () ; o[e] = v; for () else o = a *)
     | Minils.Evarpat x,
             Minils.Eapp ({ Minils.a_op = Minils.Eupdate },
                          e1::e2::idx, _) ->
@@ -199,6 +201,7 @@ and translate_act map pat
         let copy = Aassgn (x, translate map e1) in
           [copy; action]
 
+    (** TODO: remplacer par o = { f = v; g = a.g; h = a.h; ... } *)
     | Minils.Evarpat x,
           Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
                    Minils.a_params = [{ se_desc = Sfield f }] },
