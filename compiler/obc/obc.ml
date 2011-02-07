@@ -76,11 +76,12 @@ and block =
 
 and var_dec =
     { v_ident : var_ident;
-      v_type : ty; (* TODO GD should be here, v_controllable : bool *)
+      v_type : ty;
       v_loc : location }
 
 type obj_dec =
     { o_ident : obj_ident;
+      o_async : async_t option;
       o_class : class_name;
       o_params : static_exp list;
       o_size : static_exp option; (** size of the array if the declaration is an array of obj *)
@@ -101,8 +102,8 @@ type class_def =
       cd_loc : location }
 
 type program =
-    { p_modname : name;
-      p_opened : name list;
+    { p_modname : modul;
+      p_opened : modul list;
       p_types : type_dec list;
       p_consts : const_dec list;
       p_defs  : class_def list }

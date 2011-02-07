@@ -125,9 +125,9 @@ type const_dec = {
   c_loc : location }
 
 type program = {
-  p_modname : name;
+  p_modname : modul;
   p_format_version : string;
-  p_opened : name list;
+  p_opened : modul list;
   p_types  : type_dec list;
   p_nodes  : node_dec list;
   p_consts : const_dec list }
@@ -171,7 +171,7 @@ let mk_app ?(params=[]) ?(async=None) ?(unsafe=false) op =
 
 (** The modname field has to be set when known, TODO LG : format_version *)
 let mk_program o n t c =
-  { p_modname = ""; p_format_version = "";
+  { p_modname = Module ""; p_format_version = "";
     p_opened = o; p_nodes = n; p_types = t; p_consts = c }
 
 let void = mk_exp ~ty:Types.Tunit (Eapp (mk_app Etuple, [], None))

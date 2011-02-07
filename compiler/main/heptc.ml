@@ -72,8 +72,8 @@ let compile_program modname source_f =
 
 let compile source_f =
   let modname = source_f |> Filename.basename |> Filename.chop_extension |> String.capitalize in
-
-  Initial.initialize modname;
+  let modul = Names.modul_of_string modname in
+  Initial.initialize modul;
   source_f |> Filename.dirname |> add_include;
 
   match Misc.file_extension source_f with

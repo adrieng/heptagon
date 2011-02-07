@@ -286,7 +286,7 @@ let print_node ff
     (print_local_vars "") nb.b_local
     print_eq_list nb.b_equs
 
-let print_open_module ff name = fprintf ff "open %a@." print_name name
+let print_open_module ff name = fprintf ff "open %s@." (modul_to_string name)
 
 let print oc { p_opened = po; p_types = pt; p_nodes = pn; p_consts = pc } =
   let ff = Format.formatter_of_out_channel oc in

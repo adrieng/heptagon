@@ -158,7 +158,7 @@ let pp_string fmt s =
   fprintf fmt "%s" (cname_of_name s)
 
 let cname_of_qn q =
-  if q.qual = "Pervasives" or q.qual = Names.local_qualname then
+  if q.qual = Pervasives or q.qual = Names.local_qualname then
     q.name
   else
     (q.qual ^ "__" ^ q.name)

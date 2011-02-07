@@ -296,7 +296,7 @@ and cexprs_of_exps var_env exps =
   List.map (cexpr_of_exp var_env) exps
 
 and cop_of_op_aux op_name cexps = match op_name with
-    | { qual = "Pervasives"; name = op } ->
+    | { qual = Pervasives; name = op } ->
         begin match op,cexps with
           | "~-", [e] -> Cuop ("-", e)
           | "not", [e] -> Cuop ("!", e)
@@ -354,7 +354,7 @@ let assoc_cn instance obj_env =
   (assoc_obj (obj_ref_name instance) obj_env).o_class
 
 let is_op = function
-  | { qual = "Pervasives"; name = _ } -> true
+  | { qual = Pervasives; name = _ } -> true
   | _ -> false
 
 let out_var_name_of_objn o =

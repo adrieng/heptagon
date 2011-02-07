@@ -53,7 +53,7 @@ let is_record_type ty = match ty with
   | _ -> false
 
 let is_op = function
-  | { qual = "Pervasives"; name = _ } -> true | _ -> false
+  | { qual = Pervasives; name = _ } -> true | _ -> false
 
 let exp_list_of_static_exp_list se_list =
   let mk_one_const se =

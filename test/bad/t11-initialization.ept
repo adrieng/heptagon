@@ -1,4 +1,4 @@
-node mmm(x: int) returns (o': int)
+node mmm(x: int) returns (o2: int)
   var last m: int; o: int;
   let
     automaton
@@ -7,5 +7,5 @@ node mmm(x: int) returns (o': int)
       state J
         do m = last m + 1; o = 0
     end;
-    o' = 1 -> pre o
+    o2 = 1 -> pre o
   tel

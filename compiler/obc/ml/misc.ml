@@ -15,7 +15,7 @@ let version = "3.0b"
 let date = DATE
 
 (* standard module *)
-let pervasives_module = "Pervasives"
+let pervasives_module = Pervasives
 let standard_lib = STDLIB
 
 (* variable creation *)

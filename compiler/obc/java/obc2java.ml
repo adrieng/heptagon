@@ -23,108 +23,131 @@ open Signature
 open Obc
 open Java
 
+let java_pervasives = Names.modul_of_string "jeptagon.Pervasives"
+let java_pervasives_class = Names.qualname_of_string "jeptagon.Pervasives"
 
-let fresh_it () =
-  let id = Idents.gen_var "obc2java" "i" in
-  id, mk_var_dec id Tint
+let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
+
+let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
+                    Names.qualname_of_string "java.util.concurrent.ExecutionException"]
+
+let throws_async = [Names.qualname_of_string "InterruptedException";
+                    Names.qualname_of_string "ExecutionException"]
+
+
+(** Additional classes created during the translation *)
+let add_classe, get_classes =
+  let extra_classes = ref [] in
+   (fun c -> extra_classes := c :: !extra_classes)
+  ,(fun () -> !extra_classes)
 
 (** fresh Afor from 0 to [size] with [body] a function from [var_ident] (the iterator) to [act] list *)
 let fresh_for size body =
-  let i, id = fresh_it () in
+  let i = Idents.gen_var "obc2java" "i" in
+  let id = mk_var_dec i Tint in
   Afor (id, Sint 0, size, mk_block (body i))
 
-
-(** a [Module] becomes a [package] *)
-let translate_qualname q = match q with
-  | { qual = "Pervasives" } -> q
-  | { qual = m } when m = g_env.current_mod -> q (* current module is not translated to keep track,
-                                                    there is no issue since printed without the qualifier *)
-  | { qual = m } when m = local_qualname -> q
-  | _ -> { q with qual = String.lowercase q.qual }
+ (* current module is not translated to keep track, there is no issue since printed without the qualifier *)
+let rec translate_modul ?(full=false) m = match m with
+  | Pervasives
+  | LocalModule -> m
+  | _ when m = g_env.current_mod && not full -> m
+  | Module n ->  Module (String.lowercase n)
+  | QualModule { qual = q; name = n} -> QualModule { qual = translate_modul q; name = String.lowercase n }
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
-let translate_const_name q = match q with
-  | { qual = m } when m = local_qualname -> { q with name = String.uppercase q.name }
-  | _ -> { q with qual = (String.lowercase q.qual)^ ".CONSTANTES"; name = String.uppercase q.name }
+let translate_const_name { qual = m; name = n } =
+  { qual = QualModule { qual = translate_modul m; name = "CONSTANTES"}; name = String.uppercase n }
 
 (** a [Module.name] becomes a [module.Name]
     used for type_names, class_names, fun_names *)
 let qualname_to_class_name q =
-  let q = translate_qualname q in
-  { q with name = String.capitalize q.name }
+  { qual = translate_modul q.qual; name = String.capitalize q.name }
+
+(** a [Module.name] becomes a [module.Name] even on current_mod *)
+let qualname_to_package_classe q =
+  { qual = translate_modul ~full:true q.qual; name = String.capitalize q.name }
+
+(** Create a fresh class qual from a name *)
+let fresh_classe n = Modules.fresh_value "obc2java" n |> qualname_to_package_classe
 
 (** a [Module.Constr] of an [Module.enum] type becomes a [module.Enum.CONSTR] of the [module.Enum] class *)
-let _translate_constructor_name q q_ty = (* TODO java recursive qualname ! *)
+let translate_constructor_name_2 q q_ty =
   let classe = qualname_to_class_name q_ty in
-  let q = qualname_to_class_name q in
-  { q with name = classe.name ^ "." ^ q.name }
+  { qual = QualModule classe; name = String.uppercase q.name }
 
 let translate_constructor_name q =
   match Modules.find_constrs q with
     | Types.Tid q_ty when q_ty = Initial.pbool -> q |> shortname |> local_qn
-    | Types.Tid q_ty -> _translate_constructor_name q q_ty
+    | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
     | _ -> assert false
 
 let translate_field_name f = f |> Names.shortname |> String.lowercase
 
 (** a [name] becomes a [package.Name] *)
-let name_to_classe_name n = n |> Modules.current_qual |> qualname_to_class_name
+let name_to_classe_name n = n |> Modules.current_qual |> qualname_to_package_classe
 
 (** translate an ostatic_exp into an jexp *)
 let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Svar c ->
-      if shortname c = local_qualname
-      then let n = NamesEnv.find (shortname c) param_env in Svar (n |> Idents.name |> local_qn)
-      else Svar (translate_const_name c)
+      (match c.qual with
+        | LocalModule ->
+            let n = NamesEnv.find (shortname c) param_env in
+            Svar (n |> Idents.name |> local_qn)
+        | _ -> Svar (translate_const_name c))
   | Types.Sint i -> Sint i
   | Types.Sfloat f -> Sfloat f
   | Types.Sbool b -> Sbool b
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield f -> eprintf "ojSfield @."; assert false;
-  | Types.Stuple t -> eprintf "ojStuple@."; assert false;
-  (* TODO java ?? not too difficult if needed, return Tuplen<..>() *)
+  | Types.Stuple se_l ->  tuple param_env se_l
   | Types.Sarray_power _ -> eprintf "ojSarray_power@."; assert false; (* TODO java array *)
   | Types.Sarray se_l -> Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
 
 and boxed_ty param_env t = match t with
-  | Types.Tprod ty_l ->
-      let ln = ty_l |> List.length |> Pervasives.string_of_int in
-      Tgeneric ({ qual = "heptagon"; name = "Tuple"^ln }, List.map (boxed_ty param_env) ty_l)
+  | Types.Tprod ty_l -> tuple_ty param_env ty_l
   | Types.Tid t when t = Initial.pbool -> Tclass (Names.local_qn "Boolean")
   | Types.Tid t when t = Initial.pint -> Tclass (Names.local_qn "Integer")
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (boxed_ty param_env t, static_exp param_env size)
-  | Types.Tasync _ -> assert false; (* TODO async *)
+  | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
   | Types.Tunit -> Tunit
 
+and tuple_ty param_env ty_l =
+  let ln = ty_l |> List.length |> Pervasives.string_of_int in
+  Tgeneric ({ qual = java_pervasives; name = "Tuple"^ln }, List.map (boxed_ty param_env) ty_l)
+
 and ty param_env t :Java.ty = match t with
-  | Types.Tprod ty_l ->
-      let ln = ty_l |> List.length |> Pervasives.string_of_int in
-      Tgeneric ({ qual = "heptagon"; name = "Tuple"^ln }, List.map (boxed_ty param_env) ty_l)
+  | Types.Tprod ty_l -> tuple_ty param_env ty_l
   | Types.Tid t when t = Initial.pbool -> Tbool
   | Types.Tid t when t = Initial.pint -> Tint
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tasync _ -> assert false; (* TODO async *)
+  | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
   | Types.Tunit -> Tunit
 
-let var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
+and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
 
-let var_dec_list param_env vd_l = List.map (var_dec param_env) vd_l
+and var_dec_list param_env vd_l = List.map (var_dec param_env) vd_l
 
-let rec exp param_env e = match e.e_desc with
+and exp param_env e = match e.e_desc with
   | Obc.Epattern p -> Eval (pattern param_env p)
   | Obc.Econst se -> static_exp param_env se
   | Obc.Eop (op,e_l) -> Efun (op, exp_list param_env e_l)
   | Obc.Estruct _ -> eprintf "ojEstruct@."; assert false (* TODO java *)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
-  | Obc.Ebang _ -> eprintf "ojEbang@."; assert false (* TODO java async *)
+  | Obc.Ebang e -> Emethod_call (exp param_env e,"get",[])
 
 and exp_list param_env e_l = List.map (exp param_env) e_l
+
+and tuple param_env se_l =
+  let t = tuple_ty param_env (List.map (fun e -> e.Types.se_ty) se_l) in
+  Enew (t, List.map (static_exp param_env) se_l)
+
 
 and pattern param_env p = match p.pat_desc with
   | Obc.Lvar v -> Pvar v
@@ -133,20 +156,23 @@ and pattern param_env p = match p.pat_desc with
   | Obc.Larray (p,e) -> Parray_elem (pattern param_env p, exp param_env e)
 
 let obj_ref param_env o = match o with
-  | Oobj id -> Pvar id
-  | Oarray (id,p) -> Parray_elem (Pvar id, Eval (pattern param_env p))
+  | Oobj id -> Eval (Pvar id)
+  | Oarray (id,p) -> Eval (Parray_elem (Pvar id, Eval (pattern param_env p)))
 
 let rec act_list param_env act_l acts =
   let _act act acts = match act with
     | Obc.Aassgn (p,e) -> (Aassgn (pattern param_env p, exp param_env e))::acts
-    | Obc.Acall ([], obj, Mstep, e_l) ->
+    | Obc.Acall ([], obj, Mstep, e_l)
+    | Obc.Aasync_call (_,[], obj, Mstep, e_l) ->
         let acall = Amethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         acall::acts
-    | Obc.Acall ([p], obj, Mstep, e_l) ->
+    | Obc.Acall ([p], obj, Mstep, e_l)
+    | Obc.Aasync_call (_,[p], obj, Mstep, e_l) ->
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         let assgn = Aassgn (pattern param_env p, ecall) in
         assgn::acts
-    | Obc.Acall (p_l, obj, Mstep, e_l) ->
+    | Obc.Acall (p_l, obj, Mstep, e_l)
+    | Obc.Aasync_call (_,p_l, obj, Mstep, e_l) ->
         let return_ty = p_l |> pattern_list_to_type |> (ty param_env) in
         let return_id = Idents.gen_var "obc2java" "out" in
         let return_vd = { vd_type = return_ty; vd_ident = return_id } in
@@ -157,10 +183,10 @@ let rec act_list param_env act_l acts =
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
-    | Obc.Acall (_, obj, Mreset, _) ->
+    | Obc.Acall (_, obj, Mreset, _)
+    | Obc.Aasync_call (_,_, obj, Mreset, _) ->
         let acall = Amethod_call (obj_ref param_env obj, "reset", []) in
         acall::acts
-    | Obc.Aasync_call _ -> assert false (* TODO java async *)
     | Obc.Acase (e, c_b_l) when e.e_ty = Types.Tid Initial.pbool ->
         (match c_b_l with
           | [] -> acts
@@ -169,8 +195,8 @@ let rec act_list param_env act_l acts =
           | [(c,b)] when c = Initial.pfalse ->
               (Aifelse (exp param_env e, {b_locals = []; b_body = []}, block param_env b)) :: acts
           | _ ->
-              let _, _then = List.find (fun (c,b) -> c = Initial.ptrue) c_b_l in
-              let _, _else = List.find (fun (c,b) -> c = Initial.pfalse) c_b_l in
+              let _, _then = List.find (fun (c,_) -> c = Initial.ptrue) c_b_l in
+              let _, _else = List.find (fun (c,_) -> c = Initial.pfalse) c_b_l in
               (Aifelse (exp param_env e, block param_env _then, block param_env _else)) :: acts)
     | Obc.Acase (e, c_b_l) ->
         let _c_b (c,b) = translate_constructor_name c, block param_env b in
@@ -188,58 +214,193 @@ and block param_env ?(locals=[]) ?(end_acts=[]) ob =
   let acts = act_list param_env ob.Obc.b_body end_acts in
   { b_locals = locals; b_body = acts }
 
+
+
+
+
+(** Create the [param_env] and translate [Signature.param]s to [var_dec]s
+   @return [vds, param_env] *)
+let sig_params_to_vds p_l =
+  let param_to_arg param_env p =
+    let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
+    let p_vd = { vd_ident = p_ident; vd_type = ty param_env p.Signature.p_type } in
+    let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
+    p_vd, param_env
+  in Misc.mapfold param_to_arg NamesEnv.empty p_l
+
+(** Translate [Signature.arg]s to [var_dec]s *)
+let sig_args_to_vds param_env a_l =
+  let arg_to_vd { a_name = n; a_type = t } =
+    let n = match n with None -> "v" | Some s -> s in
+    let id = Idents.gen_var "obc2java" n in
+    mk_var_dec id (ty param_env t)
+  in List.map arg_to_vd a_l
+
+(** [copy_to_this vd_l] creates [this.x = x] for all [x] in [vd_l] *)
+let copy_to_this vd_l =
+  let _vd vd = Aassgn (Pthis vd.vd_ident, Eval (Pvar vd.vd_ident)) in
+  List.map _vd vd_l
+
+
+
+let create_async_classe async base_classe =
+  let classe_name = base_classe.o_class |> Names.shortname |> (fun n -> "Async_factory_"^n) |> fresh_classe in
+  let callable_name = base_classe.o_class |> Names.shortname |> (fun n -> "Async_"^n) in
+  let callable_classe_name = {qual = QualModule classe_name; name = callable_name } in
+  Idents.enter_node classe_name;
+
+  (* Base class signature *)
+  let { node_inputs    = b_in;
+        node_outputs   = b_out;
+        node_statefull = b_stateful;
+        node_params    = b_params;   } = Modules.find_value base_classe.o_class in
+
+  (* Fields *)
+
+  (* [params] : fields to stock the static parameters, arguments of the constructors *)
+  let fields_params, vds_params, exps_params, param_env =
+    let v, env = sig_params_to_vds b_params in
+    let f = vds_to_fields ~protection:Pprotected v in
+    let e = vds_to_exps v in
+    f, v, e, env
+  in
+  (* [instance] : field used to represent the instance of the base classe *)
+  let field_inst, ty_inst, id_inst, var_inst, vd_inst =
+    let t = Tclass (qualname_to_class_name base_classe.o_class) in
+    let id = base_classe.o_ident in
+    mk_field ~protection:Pprotected t id, t, id, mk_var id, mk_var_dec id t
+  in
+  (* [result] : field used to stock the asynchronous result *)
+  let field_result, ty_aresult, ty_result, id_result, var_result =
+    let t = b_out |> Signature.types_of_arg_list |> Types.prod in
+    let ty_result = boxed_ty param_env t in
+    let t = Types.Tasync(async, t) in
+    let aty = ty param_env t in
+    let result_id = Idents.gen_var "obc2java" "result" in
+    mk_field ~protection:Pprotected aty result_id, aty, ty_result, result_id, mk_var result_id
+  in
+  let fields = field_inst::field_result::fields_params in
+
+  (* [step] arguments *)
+  let fields_step, vds_step, exps_step =
+    let v = sig_args_to_vds param_env b_in in
+    let e = vds_to_exps v in
+    let f = vds_to_fields v in
+    f, v, e
+  in
+
+  (* Methods *)
+
+  let constructor, reset =
+    let body, body_r =
+      let acts_params = copy_to_this vds_params in
+      let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
+      let act_result = Aassgn (Pthis id_result, Snull) in
+      mk_block (act_result::act_inst::acts_params)
+      , mk_block [act_result; act_inst]
+    in
+    mk_methode ~args:vds_params body (shortname classe_name)
+    , mk_methode body_r "reset"
+  in
+
+  let step =
+    let body =
+      let act_syncronize =
+        Aif( Efun(Initial.mk_pervasives "<>", [Snull; var_result])
+           , mk_block [Amethod_call(var_result, "get", [])])
+      in
+      let act_result =
+        let exp_call =
+          let args = var_inst::exps_step in
+          let executor = Eval (Pfield (Pclass java_pervasives_class, "executor_cached")) in
+          Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
+        in Aassgn (Pthis id_result, exp_call)
+      in
+      let act_return = Areturn var_result in
+      mk_block [act_syncronize; act_result; act_return]
+    in mk_methode ~throws:throws_async  ~args:vds_step ~returns:ty_aresult body "step"
+  in
+
+  (* Inner class *)
+
+  let callable_class =
+    let fields = field_inst::fields_step in
+    let constructor =
+      let body =
+        let acts_init = copy_to_this (vd_inst::vds_step) in
+        mk_block acts_init
+      in mk_methode ~args:(vd_inst::vds_step) body (shortname callable_classe_name)
+    in
+    let call =
+      let body =
+        let act = Areturn (Emethod_call (Eval (Pthis id_inst), "step", exps_step)) in
+        mk_block [act]
+      in mk_methode ~returns:ty_result body "call"
+    in mk_classe ~protection:Pprotected ~static:true ~fields:fields ~implements:[java_callable]
+                 ~constrs:[constructor] ~methodes:[call] callable_classe_name
+  in
+
+  mk_classe ~imports:import_async ~fields:fields ~constrs:[constructor]
+            ~methodes:[step;reset] ~classes:[callable_class] classe_name
+
+
 let class_def_list classes cd_l =
   let class_def classes cd =
     Idents.enter_node cd.cd_name;
-    let class_name = qualname_to_class_name cd.cd_name in
-     (* [param_env] is an env mapping local param name to ident *)
-    let constructeur, param_env =
-      let param_to_arg param_env p =
-        let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
-        let p_vd = { vd_ident = p_ident; vd_type = ty param_env p.Signature.p_type } in
-        let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
-        p_vd, param_env
+    let class_name = qualname_to_package_classe cd.cd_name in
+    (* [param_env] is an env mapping local param name to ident *)
+    (* [params] : fields to stock the static parameters, arguments of the constructors *)
+    let fields_params, vds_params, exps_params, param_env =
+      let v, env = sig_params_to_vds cd.cd_params in
+      let f = vds_to_fields ~protection:Pprotected v in
+      let e = vds_to_exps v in
+      f, v, e, env
+    in
+     (* [obj_env] gives the type of an [obj_ident], needed in async because we change the classe for async obj *)
+    let constructeur, param_env, obj_env =
+      let obj_env = (* In async we change the type of the async objects *)
+        let aux obj_env od =
+          let t = match od.o_async with
+            | None -> Tclass (qualname_to_class_name od.o_class)
+            | Some a -> let c = create_async_classe a od in add_classe c; Tclass c.c_name
+          in Idents.Env.add od.o_ident t obj_env
+        in List.fold_left aux Idents.Env.empty cd.cd_objs
       in
-      let args, param_env = Misc.mapfold param_to_arg NamesEnv.empty cd.cd_params in
       let body =
         (* TODO java array : also initialize arrays with [ new int[3] ] *)
-        let final_field_init_act arg = Aassgn (Pthis arg.vd_ident, Eval (Pvar arg.vd_ident)) in
+        (* Initialize the objects *)
         let obj_init_act acts od =
           let params = List.map (static_exp param_env) od.o_params in
           let act = match od.o_size with
-            | None -> [ Aassgn (Pthis od.o_ident, Enew (Tclass od.o_class, params)) ]
+            | None ->
+                let t = Idents.Env.find od.o_ident obj_env in
+                [ Aassgn (Pthis od.o_ident, Enew (t, params)) ]
             | Some size ->
                 let size = static_exp param_env size in
-                let assgn_elem i =
-                  [ Aassgn (Parray_elem (Pthis od.o_ident, mk_var i), Enew (Tclass od.o_class, params)) ]
-                in
-                [ Aassgn (Pthis od.o_ident, Enew (Tarray (Tclass od.o_class,size), []));
+                let t = Idents.Env.find od.o_ident obj_env in
+                let assgn_elem i = [ Aassgn (Parray_elem (Pthis od.o_ident, mk_var i), Enew (t, params)) ] in
+                [ Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size), []));
                   fresh_for size assgn_elem ]
-          in
-          act@acts
+          in act@acts
         in
-        let acts = List.map final_field_init_act args in
-        let acts = List.fold_left obj_init_act acts cd.cd_objs in
+        let acts_init_params = copy_to_this vds_params in
+        let acts = List.fold_left obj_init_act acts_init_params cd.cd_objs in
         { b_locals = []; b_body = acts }
       in
-      mk_methode ~args:args body (shortname class_name), param_env
+      mk_methode ~args:vds_params body (shortname class_name), param_env, obj_env
     in
     let fields =
       let mem_to_field fields vd = (mk_field ~protection:Pprotected (ty param_env vd.v_type) vd.v_ident) :: fields in
       let obj_to_field fields od =
         let jty = match od.o_size with
-          | None -> Tclass (qualname_to_class_name od.o_class)
-          | Some size -> Tarray (Tclass (qualname_to_class_name od.o_class), static_exp param_env size)
+          | None -> Idents.Env.find od.o_ident obj_env
+          | Some size -> Tarray (Idents.Env.find od.o_ident obj_env, static_exp param_env size)
         in
         (mk_field ~protection:Pprotected jty od.o_ident) :: fields
       in
-      let params_to_field fields p =
-        let p_ident = NamesEnv.find p.p_name param_env in
-        (mk_field ~protection:Pprotected ~final:true (ty param_env p.p_type) p_ident) :: fields
-      in
-      let fields = List.fold_left mem_to_field [] cd.cd_mems in
-      let fields = List.fold_left obj_to_field fields cd.cd_objs in
-      List.fold_left params_to_field fields cd.cd_params
+      let fields = fields_params in
+      let fields = List.fold_left mem_to_field fields cd.cd_mems in
+      List.fold_left obj_to_field fields cd.cd_objs
     in
     let step =
       let ostep = find_step_method cd in
@@ -251,14 +412,15 @@ let class_def_list classes cd_l =
                                  | vd_l -> Enew (return_ty, List.map (fun vd -> Eval (Pvar vd.vd_ident)) vd_l))
       in
       let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
-      mk_methode ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
+      mk_methode ~throws:throws_async ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
     in
     let reset =
       let oreset = find_reset_method cd in
       let body = block param_env oreset.Obc.m_body in
       mk_methode body "reset"
     in
-    let classe = mk_classe ~fields:fields ~constrs:[constructeur] ~methodes:[step;reset] class_name in
+    let classe = mk_classe ~imports:import_async ~fields:fields
+                           ~constrs:[constructeur] ~methodes:[step;reset] class_name in
     classe::classes
   in
   List.fold_left class_def classes cd_l
@@ -267,17 +429,20 @@ let class_def_list classes cd_l =
 let type_dec_list classes td_l =
   let param_env = NamesEnv.empty in
   let _td classes td =
-    let classe_name = qualname_to_class_name td.t_name in
+    let classe_name = qualname_to_package_classe td.t_name in
+    Idents.enter_node classe_name;
     match td.t_desc with
-      | Type_abs -> Misc.unsupported "obc2java" 1 (* TODO java *)
-      | Type_alias ot -> classes (* TODO java alias ?? *)
+      | Type_abs -> Misc.unsupported "obc2java, abstract type." 1
+      | Type_alias _ -> Misc.unsupported "obc2java, type alias." 2
       | Type_enum c_l ->
-          let mk_constr_enum c = _translate_constructor_name c td.t_name in
+          let mk_constr_enum c = translate_constructor_name_2 c td.t_name in
           (mk_enum (List.map mk_constr_enum c_l) classe_name) :: classes
       | Type_struct f_l ->
           let mk_field_jfield { Signature.f_name = oname; Signature.f_type = oty } =
             let jty = ty param_env oty in
-            let field = Idents.ident_of_name (translate_field_name oname) in (* TODO java pretty ugly *)
+            let field = Idents.ident_of_name (translate_field_name oname) in
+            (* [translate_field_name] will give the right result anywhere it is used,
+            since the [ident_of_name] will keep it as it is unique in the class, see [Idents.enter_node classe_name] *)
             mk_field jty field
           in
           (mk_classe ~fields:(List.map mk_field_jfield f_l) classe_name) :: classes
@@ -285,27 +450,30 @@ let type_dec_list classes td_l =
   List.fold_left _td classes td_l
 
 
-let const_dec_list cd_l =
-  let param_env = NamesEnv.empty in
-  let mk_const_field { Obc.c_name = oname ; Obc.c_value = ovalue; Obc.c_type = otype } =
-    let name = oname |> translate_const_name |> shortname |> Idents.ident_of_name in (* TODO java pretty ugly*)
-    let value = Some (static_exp param_env ovalue) in
-    let t = ty param_env otype in
-    mk_field ~static:true ~final:true ~value:value t name
-  in
-  match cd_l with
-    | [] -> []
-    | _ ->
-        let classe_name = "CONSTANTES" |> name_to_classe_name in
-        let fields = List.map mk_const_field cd_l in
-        [mk_classe ~fields:fields classe_name]
+let const_dec_list cd_l = match cd_l with
+  | [] -> []
+  | _ ->
+      let classe_name = "CONSTANTES" |> name_to_classe_name in
+      Idents.enter_node classe_name;
+      let param_env = NamesEnv.empty in
+      let mk_const_field { Obc.c_name = oname ; Obc.c_value = ovalue; Obc.c_type = otype } =
+        let name = oname |> translate_const_name |> shortname |> Idents.ident_of_name in
+        (* name should always keep the shortname unchanged since we enter a special node free of existing variables *)
+        (* thus [translate_const_name] will gives the right result anywhere it is used. *)
+        let value = Some (static_exp param_env ovalue) in
+        let t = ty param_env otype in
+        mk_field ~static: true ~final: true ~value: value t name
+      in
+      let fields = List.map mk_const_field cd_l in
+      [mk_classe ~fields: fields classe_name]
+
 
 
 let program p =
   let classes = const_dec_list p.p_consts in
   let classes = type_dec_list classes p.p_types in
   let p = class_def_list classes p.p_defs in
-  p
+  get_classes()@p
 
 
 

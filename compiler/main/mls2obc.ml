@@ -25,7 +25,7 @@ let fresh_it () =
 
 let gen_obj_ident n = Idents.gen_var "mls2obc" ((shortname n) ^ "_inst")
 
-let op_from_string op = { qual = "Pervasives"; name = op; }
+let op_from_string op = { qual = Pervasives; name = op; }
 
 let rec pattern_of_idx_list p l =
   let rec aux ty l = match ty, l with
@@ -335,6 +335,7 @@ and mk_node_call map call_context app loc name_list args ty =
         let obj =
           { o_ident = obj_ref_name o; o_class = f;
             o_params = app.Minils.a_params;
+            o_async = app.Minils.a_async;
             o_size = size_from_call_context call_context; o_loc = loc } in
         let si = (match app.Minils.a_op with
                    | Minils.Efun _ -> []
@@ -352,33 +353,36 @@ and translate_iterator map call_context it name_list app loc n x xd c_list ty =
     | _ -> Format.eprintf "%a" Global_printer.print_type ty; internal_error "mls2obc" 6
   in
   let array_of_output name_list ty_list =
-    List.map (fun l -> mk_pattern ty (Larray (l, mk_evar_int x))) name_list (* TODO not ty, but Tprod (ti...) -> ti *)
+    List.map2 (fun l ty -> mk_pattern ty (Larray (l, mk_evar_int x))) name_list ty_list
   in
   let array_of_input c_list = List.map (array_elt_of_exp (mk_pattern_int (Lvar x))) c_list in
   match it with
     | Minils.Imap ->
         let c_list = array_of_input c_list in
-        let ty_list = Types.unprod ty in
+        let ty_list = List.map unarray (Types.unprod ty) in
         let name_list = array_of_output name_list ty_list in
-        let node_out_ty = Types.prod (List.map unarray ty_list) in
+        let node_out_ty = Types.prod ty_list in
         let v, si, j, action = mk_node_call map call_context app loc name_list c_list node_out_ty in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
-          si, j, [ Afor (xd, mk_static_int 0, n, b) ]
+        let bi = mk_block si in
+          [Afor (xd, mk_static_int 0, n, bi)], j, [Afor (xd, mk_static_int 0, n, b)]
 
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
-        let ty_list = Types.unprod ty in
-        let (name_list, acc_out) = split_last name_list in
-        let name_list = array_of_output name_list ty_list in
-        let node_out_ty = Types.prod (Misc.map_butlast unarray ty_list) in
+        let ty_list = Misc.map_butlast unarray (Types.unprod ty) in
+        let ty_name_list, ty_acc_out = Misc.split_last ty_list in
+        let (name_list, acc_out) = Misc.split_last name_list in
+        let name_list = array_of_output name_list ty_name_list in
+        let node_out_ty = Types.prod ty_list in
         let v, si, j, action = mk_node_call map call_context app loc (name_list @ [ acc_out ])
                                             (c_list @ [ mk_exp acc_out.pat_ty (Epattern acc_out) ]) node_out_ty
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
-          si, j, [Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b)]
+        let bi = mk_block si in
+          [Afor (xd, mk_static_int 0, n, bi)], j, [Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b)]
 
     | Minils.Ifold ->
         let (c_list, acc_in) = split_last c_list in
@@ -389,7 +393,8 @@ and translate_iterator map call_context it name_list app loc n x xd c_list ty =
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
-          si, j, [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
+        let bi = mk_block si in
+          [Afor (xd, mk_static_int 0, n, bi)], j, [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
 
     | Minils.Ifoldi ->
         let (c_list, acc_in) = split_last c_list in
@@ -400,7 +405,8 @@ and translate_iterator map call_context it name_list app loc n x xd c_list ty =
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
-          si, j, [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
+        let bi = mk_block si in
+          [Afor (xd, mk_static_int 0, n, bi)], j, [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
 
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list

@@ -15,7 +15,7 @@ let version = "0.4"
 let date = "DATE"
 
 (* standard module *)
-let pervasives_module = "Pervasives"
+let pervasives_module = Pervasives
 let standard_lib = "STDLIB"
 let standard_lib = try Sys.getenv "HEPTLIB" with Not_found -> standard_lib
 

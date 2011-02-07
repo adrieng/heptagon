@@ -179,7 +179,7 @@ and print_eqs ff = function
   | [] -> ()
   | l -> fprintf ff "@[<v2>let@ %a@]@\ntel" (print_list_r print_eq """;""") l
 
-let print_open_module ff name = fprintf ff "open %a@." print_name name
+let print_open_module ff name = fprintf ff "open %s@." (modul_to_string name)
 
 let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
   let print_type_desc ff = function

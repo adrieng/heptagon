@@ -3,22 +3,35 @@
     [fullname] longname -> Module.name *)
 
 type name = string
+type module_name = name
 
-and qualname = { qual: string; name: string }
+type modul =
+  | Pervasives
+  | LocalModule
+  | Module of module_name
+  | QualModule of qualname
+
+and qualname = { qual: modul; name: name }
 
 type type_name = qualname
 type fun_name = qualname
 type field_name = qualname
 type constructor_name = qualname
 type constant_name = qualname
-type module_name = name
 
 
-let local_qualname = "$$%local_current_illegal_module_name%$$"
-let local_qn name = { qual = local_qualname; name = name }
+let pervasives_qn name = { qual = Pervasives; name = name }
+
+let local_qn name = { qual = LocalModule; name = name }
+
 
 module NamesEnv = struct
   include (Map.Make(struct type t = name let compare = compare end))
+  let append env0 env = fold (fun key v env -> add key v env) env0 env
+end
+
+module ModulEnv = struct
+  include (Map.Make(struct type t = modul let compare = compare end))
   let append env0 env = fold (fun key v env -> add key v env) env0 env
 end
 
@@ -34,18 +47,32 @@ module S = Set.Make (struct type t = string let compare = compare end)
 
 
 let shortname { name = n; } = n
-let qualname { qual = n; } = n
 
-let fullname { qual = qual; name = n; } = qual ^ "." ^ n
+let modul { qual = m; } = m
+
+let rec modul_to_string m = match m with
+  | Pervasives -> "Pervasives"
+  | LocalModule -> "\#$%@#_LOCAL_MODULE"
+  | Module n -> n
+  | QualModule {qual = q; name = n} -> (modul_to_string q) ^"."^ n
+
+let fullname {qual = q; name = n} = modul_to_string q ^ "." ^ n
+
+let rec modul_of_string_list = function
+  | [] -> LocalModule
+  | ["Pervasives"] -> Pervasives
+  | [q] -> Module q
+  | q::q_l -> QualModule {qual = modul_of_string_list q_l; name = q}
 
 let qualname_of_string s =
-  try
-    let ind = String.index s '.' in
-    if ind = 0 || ind = String.length s - 1
-    then invalid_arg "mk_longname: ill-formed identifier";
-    let n = String.sub s (ind + 1) (String.length s - ind - 1) in
-    { qual = String.sub s 0 ind; name = n; }
-  with Not_found -> { qual = ""; name = s }
+  let q_l_n = Misc.split_string s "." in
+  match List.rev q_l_n with
+    | [] -> Misc.internal_error "Names" 0
+    | n::q_l -> { qual = modul_of_string_list q_l; name = n }
+
+let modul_of_string s =
+  let q_l = Misc.split_string s "." in
+  modul_of_string_list (List.rev q_l)
 
 (** Are infix
     [or], [quo], [mod], [land], [lor], [lxor], [lsl], [lsr], [asr]
@@ -58,7 +85,7 @@ let is_infix s =
       StrSet.empty in
   if StrSet.mem s infix_set then true
   else (match String.get s 0 with
-          | 'a' .. 'z' | 'A' .. 'Z' | '_' | '`' -> false
+          | 'a' .. 'z' | 'A' .. 'Z' | '_' | '`' | '~' -> false
           | _ -> true)
 
 open Format
@@ -69,13 +96,6 @@ let print_name ff n =
                             "(*" would create bugs *)
   else n
   in fprintf ff "%s" n
-
-let print_raw_qualname ff {qual = q; name = n} =
-  fprintf ff "%s.%a" q print_name n
-
-let opname qn = match qn with
-  | { qual = "Pervasives"; name = m; } -> m
-  | { qual = qual; name = n; } -> qual ^ "." ^ n
 
 (** Use a printer to generate a string compatible with a name *)
 let print_pp_to_name p x =

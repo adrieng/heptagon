@@ -17,8 +17,8 @@ let assert_se e = match e.e_desc with
     op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
 let static_app_from_app app args =
   match app.a_op with
-    | Efun ((Q { Names.qual = "Pervasives" }) as q)
-    | Enode ((Q { Names.qual = "Pervasives" }) as q) ->
+    | Efun ((Q { Names.qual = Names.Pervasives }) as q)
+    | Enode ((Q { Names.qual = Names.Pervasives }) as q) ->
         q, (app.a_params @ args)
     | _ -> raise Not_static
 

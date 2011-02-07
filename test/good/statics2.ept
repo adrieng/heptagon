@@ -24,9 +24,9 @@ let
   o = f<<m + k2>>();
 tel
 
-fun h() returns (y,y':int)
+fun h() returns (y,y2:int)
 let
   y = c2 + g<<c2>>() + i<<k2>>();
-  y' = c2 + Statics.g<<k2>>() + Statics.i<<k2>>();
+  y2 = c2 + Statics.g<<k2>>() + Statics.i<<k2>>();
 tel
 

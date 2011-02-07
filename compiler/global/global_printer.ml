@@ -7,11 +7,27 @@ open Modules
 open Format
 open Pp_tools
 
-let print_qualname ff qn = match qn with
-  | { qual = "Pervasives"; name = n } -> print_name ff n
-  | { qual = m; name = n } when m = g_env.current_mod -> print_name ff n
-  | { qual = m; name = n } when m = local_qualname -> print_name ff n
-  | { qual = m; name = n } -> fprintf ff "%s.%a" m print_name n
+
+let rec _print_modul ff m = match m with
+  | Pervasives -> ()
+  | LocalModule -> ()
+  | _ when m = g_env.current_mod -> ()
+  | Module m -> fprintf ff "%a." print_name m
+  | QualModule { qual = m; name = n } -> fprintf ff "%a%a." _print_modul m print_name n
+
+(** Prints a [modul] with a [.] at the end when not empty *)
+let print_modul ff m = match m with
+  | Pervasives -> ()
+  | LocalModule -> ()
+  | _ when m = g_env.current_mod -> ()
+  | Module m -> fprintf ff "%a" print_name m
+  | QualModule { qual = m; name = n } -> fprintf ff "%a%a" _print_modul m print_name n
+
+let print_qualname ff { qual = q; name = n} = match q with
+  | Pervasives -> print_name ff n
+  | LocalModule -> print_name ff n
+  | _ when q = g_env.current_mod -> print_name ff n
+  | _ -> fprintf ff "%a%a" _print_modul q print_name n
 
 let print_shortname ff {name = n} = print_name ff n
 
@@ -29,9 +45,8 @@ let rec print_static_exp ff se = match se.se_desc with
   | Sop (op, se_list) ->
       if is_infix (shortname op)
       then
-        let op_s = opname op ^ " " in
-        fprintf ff "@[%a@]"
-          (print_list_l print_static_exp "(" op_s ")") se_list
+        let e1,e2 = Misc.assert_2 se_list in
+        fprintf ff "(@[%a@ %a %a@])" print_static_exp e1 print_qualname op print_static_exp e2
       else
         fprintf ff "@[<2>%a@,%a@]"
           print_qualname op  print_static_exp_tuple se_list

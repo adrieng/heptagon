@@ -1,0 +1,6 @@
+#!/bin/bash
+cp $@ build/
+cd build
+../../../heptc -target obc $@
+cd ..
+

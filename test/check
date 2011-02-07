@@ -91,7 +91,7 @@ launch_check () {
       score=`expr $score + 1`;
     fi
   done
-
+  echo
   echo "Tests goods"
   for f in ../good/*.ept; do
     echec=0
@@ -235,6 +235,7 @@ while [ $# -gt 0 ]; do
     "-h" )
       echo "usage : $0 <options> <compilo>"
       echo "options : "
+      echo "-clean    : clean build dir"
       echo "-java     : test of code generation (java code)"
       echo "-c        : test of code generation (c code)"
       echo "-all      : test all"

@@ -67,5 +67,5 @@ struct
       obj_dec = deps_obj_dec;
     } in
     let (_, deps) = Obc_mapfold.program funs S.empty p in
-    S.remove p.p_modname (S.remove "Pervasives" deps)
+    S.remove p.p_modname (S.remove Pervasives deps)
 end

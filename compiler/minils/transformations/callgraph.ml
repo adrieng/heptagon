@@ -137,13 +137,11 @@ struct
       let se, _ = Global_mapfold.static_exp funs m se in
       let se = match se.se_desc with
         | Svar q ->
-            if q.qual = local_qualname
-            then (* This var is a static parameter, it has to be instanciated *)
-              (try QualEnv.find q m
-               with Not_found ->
-                Format.eprintf "local param not local";
-                assert false;)
-            else se
+            (match q.qual with
+              | LocalModule -> (* This var is a static parameter, it has to be instanciated *)
+                (try QualEnv.find q m
+                 with Not_found -> Misc.internal_error "callgraph" 0)
+              | _ -> se)
         | _ -> se in
       se, m
 
@@ -201,18 +199,24 @@ end
 open Param_instances
 
 type info =
-  { mutable opened : program NamesEnv.t;
+  { mutable opened : program ModulEnv.t;
     mutable called_nodes : ((qualname * static_exp list) list) QualEnv.t; }
 
 let info =
   { (** opened programs*)
-    opened = NamesEnv.empty;
+    opened = ModulEnv.empty;
     (** Maps a node to the list of (node name, params) it calls *)
     called_nodes = QualEnv.empty }
 
 (** Loads the modname.epo file. *)
-let load_object_file modname =
-  Modules.open_module modname;
+let load_object_file modul =
+  Modules.open_module modul;
+  let modname = match modul with
+      | Names.Pervasives -> "Pervasives"
+      | Names.Module n -> n
+      | Names.LocalModule -> Misc.internal_error "modules" 0
+      | Names.QualModule _ -> Misc.unsupported "modules" 0
+  in
   let name = String.uncapitalize modname in
     try
       let filename = Compiler_utils.findfile (name ^ ".epo") in
@@ -226,7 +230,7 @@ let load_object_file modname =
               raise Errors.Error
             );
             close_in ic;
-            info.opened <- NamesEnv.add p.p_modname p info.opened
+            info.opened <- ModulEnv.add p.p_modname p info.opened
         with
           | End_of_file | Failure _ ->
               close_in ic;
@@ -242,10 +246,10 @@ let load_object_file modname =
 (** @return the node with name [ln], loading the corresponding
     object file if necessary. *)
 let node_by_longname node =
-  if not (NamesEnv.mem node.qual info.opened)
+  if not (ModulEnv.mem node.qual info.opened)
   then load_object_file node.qual;
   try
-    let p = NamesEnv.find node.qual info.opened in
+    let p = ModulEnv.find node.qual info.opened in
     List.find (fun n -> n.n_name = node) p.p_nodes
   with
     Not_found -> Error.message no_location (Error.Enode_unbound node)
@@ -258,7 +262,7 @@ let collect_node_calls ln =
       | [] -> acc
       | _ ->
           (match ln with
-            | { qual = "Pervasives" } -> acc
+            | { qual = Pervasives } -> acc
             | _ -> (ln, params)::acc)
   in
   let edesc _ acc ed = match ed with
@@ -303,9 +307,9 @@ let program p =
   (* Find the nodes without static parameters *)
   let main_nodes = List.filter (fun n -> is_empty n.n_params) p.p_nodes in
   let main_nodes = List.map (fun n -> n.n_name, []) main_nodes in
-  info.opened <- NamesEnv.add p.p_modname p NamesEnv.empty;
+  info.opened <- ModulEnv.add p.p_modname p ModulEnv.empty;
   (* Creates the list of instances starting from these nodes *)
   List.iter call_node main_nodes;
-  let p_list = NamesEnv.fold (fun _ p l -> p::l) info.opened [] in
+  let p_list = ModulEnv.fold (fun _ p l -> p::l) info.opened [] in
   (* Generate all the needed instances *)
   List.map Param_instances.Instantiate.program p_list

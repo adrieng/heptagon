@@ -17,6 +17,8 @@ type var_name = Names.name
 (** dec_names are locally declared qualified names *)
 type dec_name = Names.name
 
+type module_name = Names.modul
+
 (** state_names, [automata] translate them in constructors with a fresh type. *)
 type state_name = Names.name
 
@@ -182,7 +184,7 @@ type const_dec =
 type program =
   { p_modname : dec_name;
     p_pragmas : (var_name * string) list;
-    p_opened  : dec_name list;
+    p_opened  : module_name list;
     p_types   : type_dec list;
     p_nodes   : node_dec list;
     p_consts  : const_dec list; }
@@ -206,7 +208,7 @@ and interface_decl =
     interf_loc  : location }
 
 and interface_desc =
-  | Iopen of dec_name
+  | Iopen of module_name
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
@@ -223,8 +225,7 @@ let mk_call ?(params=[]) op exps =
   Eapp (mk_app op params, exps)
 
 let mk_op_call ?(params=[]) s exps =
-  mk_call ~params:params
-    (Efun (Q { Names.qual = "Pervasives"; Names.name = s })) exps
+  mk_call ~params:params (Efun (Q (Names.pervasives_qn s))) exps
 
 let mk_iterator_call it ln params n exps =
   Eiterator (it, mk_app (Enode ln) params, n, exps)

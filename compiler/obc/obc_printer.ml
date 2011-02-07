@@ -179,9 +179,7 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
         fprintf ff "@]@.@]"
 
 let print_open_module ff name =
-  fprintf ff "@[open ";
-  print_name ff name;
-  fprintf ff "@.@]"
+  fprintf ff "open %s@." (modul_to_string name)
 
 let print_const_dec ff c =
   fprintf ff "const %a = %a@." print_qualname c.c_name

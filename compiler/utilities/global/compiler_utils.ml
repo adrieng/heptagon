@@ -58,13 +58,12 @@ let silent_pass d enabled f p =
   then do_silent_pass d f p
   else p
 
+
+
 let build_path suf =
   match !target_path with
     | None -> suf
     | Some path -> Filename.concat path suf
-
-let filename_of_name n =
-  String.uncapitalize n
 
 let clean_dir dir =
   if Sys.file_exists dir && Sys.is_directory dir
@@ -73,6 +72,12 @@ let clean_dir dir =
     Array.iter rm_file_in_dir (Sys.readdir dir);
   end else Unix.mkdir dir 0o740;
   dir
+
+let ensure_dir dir =
+  if not (Sys.file_exists dir && Sys.is_directory dir)
+  then Unix.mkdir dir 0o740
+
+
 
 exception Cannot_find_file of string
 

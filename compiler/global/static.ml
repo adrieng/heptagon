@@ -28,22 +28,22 @@ let partial_apply_op op se_list =
   match se_list with
     | [{ se_desc = Sint n1 }; { se_desc = Sint n2 }] ->
         (match op with
-           | { qual = "Pervasives"; name = "+" } ->
+           | { qual = Pervasives; name = "+" } ->
                Sint (n1 + n2)
-           | { qual = "Pervasives"; name = "-" } ->
+           | { qual = Pervasives; name = "-" } ->
                Sint (n1 - n2)
-           | { qual = "Pervasives"; name = "*" } ->
+           | { qual = Pervasives; name = "*" } ->
                Sint (n1 * n2)
-           | { qual = "Pervasives"; name = "/" } ->
+           | { qual = Pervasives; name = "/" } ->
                let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
                Sint n
-           | { qual = "Pervasives"; name = "=" } ->
+           | { qual = Pervasives; name = "=" } ->
                Sbool (n1 = n2)
            | _ -> assert false (*TODO: add missing operators*)
         )
     | [{ se_desc = Sint n }] ->
         (match op with
-           | { qual = "Pervasives"; name = "~-" } -> Sint (-n)
+           | { qual = Pervasives; name = "~-" } -> Sint (-n)
            | _ -> assert false (*TODO: add missing operators*)
         )
     | _ -> Sop(op, se_list)

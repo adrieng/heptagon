@@ -127,7 +127,7 @@ pragma_headers:
 
 open_modules:
   | /* empty */ { [] }
-  | open_modules OPEN Constructor { $3 :: $1 }
+  | open_modules OPEN modul { $3 :: $1 }
 ;
 
 const_decs:
@@ -537,14 +537,21 @@ indexes:
   | LBRACKET exp RBRACKET indexes { $2::$4 }
 ;
 
+qualified(X):
+  | m=modul DOT x=X { Q { qual = m; name = x } }
+
+modul:
+  | c=Constructor { Names.Module c }
+  | m=modul DOT c=Constructor { Names.QualModule { Names.qual = m; Names.name = c} }
+
 constructor:
   | Constructor { ToQ $1 } %prec prec_ident
-  | Constructor DOT Constructor { Q {qual = $1; name = $3} }
+  | q=qualified(Constructor) { q }
 ;
 
 qualname:
-  | ident { ToQ $1 }
-  | Constructor DOT ident { Q {qual = $1; name = $3} }
+  | i=ident { ToQ i }
+  | q=qualified(ident) { q }
 ;
 
 
@@ -554,8 +561,8 @@ _const:
   | FLOAT       { Sfloat $1 }
   | BOOL        { Sbool $1 }
   | constructor { Sconstructor $1 }
-  | Constructor DOT ident
-      { Svar (Q {qual = $1; name = $3}) }
+  | q=qualified (ident)
+      { Svar q }
 ;
 
 tuple_exp:
@@ -612,7 +619,7 @@ interface_decl:
 _interface_decl:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
-  | OPEN Constructor { Iopen $2 }
+  | OPEN modul { Iopen $2 }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
     { Isignature({ sig_name = $3;

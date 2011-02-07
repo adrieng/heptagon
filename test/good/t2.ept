@@ -32,13 +32,13 @@ node g(x: bool) returns (o: bool)
   tel
 
 node hhh() returns ()
-  var last o' : int = 0;
+  var last o2 : int = 0;
   let
     automaton
       state S1
         var r: int;
-        do o' = 1; r = 2
-        unless last o' = 0 then S1
+        do o2 = 1; r = 2
+        unless last o2 = 0 then S1
     end
   tel
 

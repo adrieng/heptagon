@@ -15,7 +15,7 @@ open Hept_compiler
 open Location
 
 
-let check_implementation modname filename =
+let check_implementation modul filename =
   (* input and output files *)
   let source_name = filename ^ ".ept" in
 
@@ -25,11 +25,11 @@ let check_implementation modname filename =
   in
 
   try
-    Initial.initialize modname;
+    Initial.initialize modul;
     add_include (Filename.dirname filename);
 
     (* Parsing of the file *)
-    let p = do_silent_pass "Parsing" (parse_implementation modname) lexbuf in
+    let p = do_silent_pass "Parsing" (parse_implementation modul) lexbuf in
 
     (* Fuse static exps together *)
     let p = do_silent_pass "Static Scoping"

@@ -158,8 +158,8 @@ type const_dec = {
   c_loc   : location }
 
 type program = {
-  p_modname : name;
-  p_opened  : name list;
+  p_modname : modul;
+  p_opened  : modul list;
   p_types   : type_dec list;
   p_nodes   : node_dec list;
   p_consts  : const_dec list }
@@ -179,7 +179,7 @@ and interface_decl = {
   interf_loc  : location }
 
 and interface_desc =
-  | Iopen of name
+  | Iopen of modul
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature

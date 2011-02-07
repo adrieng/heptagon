@@ -11,12 +11,12 @@ let
 tel
 
 
-node updown'() returns (y:int)
+node updown2() returns (y:int)
 let
   y = (0 fby y) + 1
 tel
 
 node main() returns (y:int)
 let
-  y = updown'();
+  y = updown2();
 tel
