@@ -33,6 +33,7 @@ let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
 
 let throws_async = [Names.qualname_of_string "InterruptedException";
                     Names.qualname_of_string "ExecutionException"]
+let mk_classe = mk_classe ~imports:import_async
 
 
 (** Additional classes created during the translation *)
@@ -335,12 +336,12 @@ let create_async_classe async base_classe =
       let body =
         let act = Areturn (Emethod_call (Eval (Pthis id_inst), "step", exps_step)) in
         mk_block [act]
-      in mk_methode ~returns:ty_result body "call"
+      in mk_methode ~throws:throws_async ~returns:ty_result body "call"
     in mk_classe ~protection:Pprotected ~static:true ~fields:fields ~implements:[java_callable]
                  ~constrs:[constructor] ~methodes:[call] callable_classe_name
   in
 
-  mk_classe ~imports:import_async ~fields:fields ~constrs:[constructor]
+  mk_classe ~fields:fields ~constrs:[constructor]
             ~methodes:[step;reset] ~classes:[callable_class] classe_name
 
 
@@ -419,7 +420,7 @@ let class_def_list classes cd_l =
       let body = block param_env oreset.Obc.m_body in
       mk_methode body "reset"
     in
-    let classe = mk_classe ~imports:import_async ~fields:fields
+    let classe = mk_classe ~fields:fields
                            ~constrs:[constructeur] ~methodes:[step;reset] class_name in
     classe::classes
   in

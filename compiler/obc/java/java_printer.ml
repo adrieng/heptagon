@@ -59,7 +59,7 @@ and vd_list s1 s2 s3 ff vd_l = match vd_l with
   | _ -> fprintf ff "@[<v>%a@]@\n" (print_list_r (var_dec true) s1 s2 s3) vd_l
 
 and field ff f =
-  fprintf ff "@[<2>%a%a%a%a %a%a;@]"
+  fprintf ff "@[<2>%a%a%a%a %a%a@]"
     protection f.f_protection
     static f.f_static
     final f.f_final
@@ -148,15 +148,15 @@ and act ff = function
         exp e
         (print_list_r pcb """""") c_b_l
   | Aif (e,bt) ->
-      fprintf ff "@[<hv 2>if (%a) {@ %a@ }@]" exp e block bt
+      fprintf ff "@[<hv>@[<hv 2>if (%a) {@ %a@]@ }@]" exp e block bt
   | Aifelse (e,bt,bf) ->
-      fprintf ff "@[<hv 2>if (%a) {@ %a@ }@]@\n@[<hv 2>else {@ %a@ }@]"
+      fprintf ff "@[<hv>@[<hv 2>if (%a) {@ %a@ @]}@\n@[<hv 2>else {@ %a@]@ }@]"
         exp e
         block bt
         block bf
   | Ablock b -> fprintf ff "@[<v2>{@ %a@ }]" block b
   | Afor (x, i1, i2, b) ->
-      fprintf ff "@[<hv 2>for (%a = %a; %a<%a; %a++) {@ %a@ }@]"
+      fprintf ff "@[<hv>@[<hv 2>for (%a = %a; %a<%a; %a++) {@ %a@]@ }@]"
         (var_dec false) x
         exp i1
         var_ident x.vd_ident
@@ -172,7 +172,7 @@ let methode ff m =
     ty m.m_returns
     method_name m.m_name
     (print_list_r (var_dec false) """,""") m.m_args
-    (print_list_r class_name "throws "",""") m.m_throws
+    (print_list_r class_name "throws "","" ") m.m_throws
     block m.m_body
 
 let constructor ff m =
