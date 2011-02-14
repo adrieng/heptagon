@@ -35,7 +35,7 @@ and ty =
 let invalid_type = Tprod []
 
 let prod = function
-  | []      -> assert false
+  | []      -> Tunit
   | [ty]    -> ty
   | ty_list -> Tprod ty_list
 
