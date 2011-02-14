@@ -13,9 +13,10 @@ open Names
 open Idents
 open Signature
 open Obc
+open Obc_utils
+open Obc_mapfold
 open Types
 open Static
-open Obc_mapfold
 open Initial
 
 
@@ -225,9 +226,9 @@ let size_from_call_context c = match c with
 
 let empty_call_context = None
 
-(** [si] is the initialization actions used in the reset method.
+(** [si] the initialization actions used in the reset method,
     [j] obj decs
-    [s] is the list of actions used in the step method.
+    [s] the actions used in the step method.
     [v] var decs *)
 let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
     (v, si, j, s) =

@@ -21,18 +21,9 @@ open Names
 open Modules
 open Signature
 open Obc
+open Obc_utils
 open Java
 
-let java_pervasives = Names.modul_of_string "jeptagon.Pervasives"
-let java_pervasives_class = Names.qualname_of_string "jeptagon.Pervasives"
-
-let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
-
-let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
-                    Names.qualname_of_string "java.util.concurrent.ExecutionException"]
-
-let throws_async = [Names.qualname_of_string "InterruptedException";
-                    Names.qualname_of_string "ExecutionException"]
 let mk_classe = mk_classe ~imports:import_async
 
 
@@ -49,10 +40,10 @@ let fresh_for size body =
   Afor (id, Sint 0, size, mk_block (body i))
 
  (* current module is not translated to keep track, there is no issue since printed without the qualifier *)
-let rec translate_modul ?(full=false) m = match m with
+let rec translate_modul m = match m with
   | Pervasives
   | LocalModule -> m
-  | _ when m = g_env.current_mod && not full -> m
+  | _ when m = g_env.current_mod -> m
   | Module n ->  Module (String.lowercase n)
   | QualModule { qual = q; name = n} -> QualModule { qual = translate_modul q; name = String.lowercase n }
 
@@ -67,7 +58,7 @@ let qualname_to_class_name q =
 
 (** a [Module.name] becomes a [module.Name] even on current_mod *)
 let qualname_to_package_classe q =
-  { qual = translate_modul ~full:true q.qual; name = String.capitalize q.name }
+  { qual = translate_modul q.qual; name = String.capitalize q.name }
 
 (** Create a fresh class qual from a name *)
 let fresh_classe n = Modules.fresh_value "obc2java" n |> qualname_to_package_classe
@@ -357,8 +348,17 @@ let class_def_list classes cd_l =
       let e = vds_to_exps v in
       f, v, e, env
     in
+    (* [reset] is the reset method of the class,
+       [reset_mems] is the block to reset the members of the class
+         without call to the reset method of inner instances, it retains [this.x = 0] but not [this.I.reset()] *)
+    let reset, reset_mems =
+      let oreset = find_reset_method cd in
+      let body = block param_env oreset.Obc.m_body in
+      let reset_mems = block param_env (remove_resets oreset.Obc.m_body) in
+      mk_methode body "reset", reset_mems
+    in
      (* [obj_env] gives the type of an [obj_ident], needed in async because we change the classe for async obj *)
-    let constructeur, param_env, obj_env =
+    let constructeur, obj_env =
       let obj_env = (* In async we change the type of the async objects *)
         let aux obj_env od =
           let t = match od.o_async with
@@ -367,28 +367,32 @@ let class_def_list classes cd_l =
           in Idents.Env.add od.o_ident t obj_env
         in List.fold_left aux Idents.Env.empty cd.cd_objs
       in
+
       let body =
         (* TODO java array : also initialize arrays with [ new int[3] ] *)
         (* Initialize the objects *)
         let obj_init_act acts od =
           let params = List.map (static_exp param_env) od.o_params in
-          let act = match od.o_size with
+          match od.o_size with
             | None ->
                 let t = Idents.Env.find od.o_ident obj_env in
-                [ Aassgn (Pthis od.o_ident, Enew (t, params)) ]
+                (Aassgn (Pthis od.o_ident, Enew (t, params)))::acts
             | Some size ->
                 let size = static_exp param_env size in
                 let t = Idents.Env.find od.o_ident obj_env in
                 let assgn_elem i = [ Aassgn (Parray_elem (Pthis od.o_ident, mk_var i), Enew (t, params)) ] in
-                [ Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size), []));
-                  fresh_for size assgn_elem ]
-          in act@acts
+                (Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size), [])))
+                 :: (fresh_for size assgn_elem)
+                 :: acts
         in
-        let acts_init_params = copy_to_this vds_params in
-        let acts = List.fold_left obj_init_act acts_init_params cd.cd_objs in
+        (* init member variables *)
+        let acts = [Ablock reset_mems] in
+        (* init member objects *)
+        let acts = List.fold_left obj_init_act acts cd.cd_objs in
+        (* init static params *)
+        let acts = (copy_to_this vds_params)@acts in
         { b_locals = []; b_body = acts }
-      in
-      mk_methode ~args:vds_params body (shortname class_name), param_env, obj_env
+      in mk_methode ~args:vds_params body (shortname class_name), obj_env
     in
     let fields =
       let mem_to_field fields vd = (mk_field ~protection:Pprotected (ty param_env vd.v_type) vd.v_ident) :: fields in
@@ -414,11 +418,6 @@ let class_def_list classes cd_l =
       in
       let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
       mk_methode ~throws:throws_async ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
-    in
-    let reset =
-      let oreset = find_reset_method cd in
-      let body = block param_env oreset.Obc.m_body in
-      mk_methode body "reset"
     in
     let classe = mk_classe ~fields:fields
                            ~constrs:[constructeur] ~methodes:[step;reset] class_name in

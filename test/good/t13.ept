@@ -1,6 +1,6 @@
 node count(c : int; r : bool) returns (res : int)
 let
-(*  res = c fby (if r then 0 else res + c);*)
+  res = c fby (if r then 0 else res + c);
   res = 0;
 tel
 

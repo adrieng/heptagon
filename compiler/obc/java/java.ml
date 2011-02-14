@@ -76,6 +76,7 @@ and act = Anewvar of var_dec * exp
         | Areturn of exp
 
 and exp = Eval of pattern
+        | Ethis
         | Efun of op_name * exp list
         | Emethod_call of exp * method_name * exp list
         | Easync_method_call of exp * method_name * exp list
@@ -87,7 +88,9 @@ and exp = Eval of pattern
         | Sfloat of float
         | Sbool of bool
         | Sconstructor of constructor_name
+        | Sstring of string
         | Snull
+
 
 and pattern = Pfield of pattern * field_name
             | Pclass of class_name
@@ -106,6 +109,19 @@ let default_value ty = match ty with
   | Tfloat -> Sfloat 0.0
   | Tunit -> Evoid
   | Tarray _ -> Enew_array (ty,[])
+
+
+let java_pervasives = Names.modul_of_string "jeptagon.Pervasives"
+let java_pervasives_class = Names.qualname_of_string "jeptagon.Pervasives"
+
+let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
+
+let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
+                    Names.qualname_of_string "java.util.concurrent.ExecutionException"]
+
+let throws_async = [Names.qualname_of_string "InterruptedException";
+                    Names.qualname_of_string "ExecutionException"]
+
 
 let mk_var x = Eval (Pvar x)
 

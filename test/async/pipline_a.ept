@@ -18,3 +18,13 @@ let
   (im,trash) = mapfold substr <<n>> (i fby i, 0 -> !(pre m))
 tel
 
+
+node main () returns (r:int)
+var f: int^100; nf: int^100; x: int;
+let
+  x = 0 fby x+1;
+  f = x^100;
+  nf = normalized_movie<<100>>(f);
+  r = mean<<100>>(nf)
+tel
+  

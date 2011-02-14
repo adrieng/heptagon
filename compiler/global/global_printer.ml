@@ -8,26 +8,30 @@ open Format
 open Pp_tools
 
 
-let rec _print_modul ff m = match m with
+let rec _aux_print_modul ?(full=false) ff m = match m with
   | Pervasives -> ()
   | LocalModule -> ()
-  | _ when m = g_env.current_mod -> ()
+  | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a." print_name m
-  | QualModule { qual = m; name = n } -> fprintf ff "%a%a." _print_modul m print_name n
+  | QualModule { qual = m; name = n } -> fprintf ff "%a%a." (_aux_print_modul ~full:full) m print_name n
 
 (** Prints a [modul] with a [.] at the end when not empty *)
-let print_modul ff m = match m with
+let _print_modul ?(full=false) ff m = match m with
   | Pervasives -> ()
   | LocalModule -> ()
-  | _ when m = g_env.current_mod -> ()
+  | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a" print_name m
-  | QualModule { qual = m; name = n } -> fprintf ff "%a%a" _print_modul m print_name n
+  | QualModule { qual = m; name = n } -> fprintf ff "%a%a" (_aux_print_modul ~full:full) m print_name n
+let print_full_modul ff m = _print_modul ~full:true ff m
+let print_modul ff m = _print_modul ~full:false ff m
 
-let print_qualname ff { qual = q; name = n} = match q with
+let _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
   | Pervasives -> print_name ff n
   | LocalModule -> print_name ff n
-  | _ when q = g_env.current_mod -> print_name ff n
-  | _ -> fprintf ff "%a%a" _print_modul q print_name n
+  | _ when q = g_env.current_mod && not full -> print_name ff n
+  | _ -> fprintf ff "%a%a" (_aux_print_modul ~full:full) q print_name n
+let print_qualname ff qn = _print_qualname ~full:false ff qn
+let print_full_qualname ff qn = _print_qualname ~full:true ff qn
 
 let print_shortname ff {name = n} = print_name ff n
 

@@ -1,6 +1,6 @@
 #!/bin/bash
-cp $@ build/
+cp $1 build/
 cd build
-../../../heptc -target java $@
+../../../heptc $2 $3 $4 $5 $6 -target java $1
 cd ..
 
