@@ -38,7 +38,7 @@ and ty =
 let invalid_type = Tprod [] (** Invalid type given to untyped expression etc. *)
 
 let prod = function
-  | []      -> assert false
+  | []      -> Tunit
   | [ty]    -> ty
   | ty_list -> Tprod ty_list
 
