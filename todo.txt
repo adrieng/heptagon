@@ -17,4 +17,4 @@ Plus ou moins ordonné du plus urgent au moins urgent.
 
 *- Permettre la définition de constantes locales.
 
-*- Optimiser le reset en utilisant un memcopy ?
+*- Optimiser le reset en utilisant un memcopy ? ou autre chose ?

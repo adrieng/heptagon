@@ -18,8 +18,12 @@ _build
 *.c
 *.h
 *.o
+*.java
+*.class
+*.log
 *.
 *.epci
 *.epo
 *.dot
 test/*.ml
+test/_check_builds
