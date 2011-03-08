@@ -27,8 +27,6 @@ open Obc
 open Obc_utils
 open Java
 
-let mk_classe = mk_classe ~imports:import_async
-
 
 (** Additional classes created during the translation *)
 let add_classe, get_classes =
@@ -100,9 +98,6 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sarray se_l -> Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
-  | Types.Sasync se ->
-      let t_c = Tgeneric (java_pervasive_class "StaticFuture", [boxed_ty param_env se.Types.se_ty]) in
-      Enew (t_c, [static_exp param_env se])
 
 and boxed_ty param_env t = match t with
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
@@ -111,7 +106,6 @@ and boxed_ty param_env t = match t with
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (boxed_ty param_env t, static_exp param_env size)
-  | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
   | Types.Tunit -> Tunit
 
 and tuple_ty param_env ty_l =
@@ -125,7 +119,6 @@ and ty param_env t :Java.ty = match t with
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
   | Types.Tunit -> Tunit
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
@@ -138,7 +131,6 @@ and exp param_env e = match e.e_desc with
   | Obc.Eop (op,e_l) -> Efun (op, exp_list param_env e_l)
   | Obc.Estruct _ -> eprintf "ojEstruct@."; assert false (* TODO java *)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
-  | Obc.Ebang e -> Emethod_call (exp param_env e,"get",[])
 
 and exp_list param_env e_l = List.map (exp param_env) e_l
 
@@ -160,17 +152,14 @@ let obj_ref param_env o = match o with
 let rec act_list param_env act_l acts =
   let _act act acts = match act with
     | Obc.Aassgn (p,e) -> (Aassgn (pattern param_env p, exp param_env e))::acts
-    | Obc.Acall ([], obj, Mstep, e_l)
-    | Obc.Aasync_call (_,[], obj, Mstep, e_l) ->
+    | Obc.Acall ([], obj, Mstep, e_l) ->
         let acall = Amethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         acall::acts
-    | Obc.Acall ([p], obj, Mstep, e_l)
-    | Obc.Aasync_call (_,[p], obj, Mstep, e_l) ->
+    | Obc.Acall ([p], obj, Mstep, e_l) ->
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         let assgn = Aassgn (pattern param_env p, ecall) in
         assgn::acts
-    | Obc.Acall (p_l, obj, Mstep, e_l)
-    | Obc.Aasync_call (_,p_l, obj, Mstep, e_l) ->
+    | Obc.Acall (p_l, obj, Mstep, e_l) ->
         let return_ty = p_l |> pattern_list_to_type |> (ty param_env) in
         let return_id = Idents.gen_var "obc2java" "out" in
         let return_vd = { vd_type = return_ty; vd_ident = return_id } in
@@ -181,8 +170,7 @@ let rec act_list param_env act_l acts =
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
-    | Obc.Acall (_, obj, Mreset, _)
-    | Obc.Aasync_call (_,_, obj, Mreset, _) ->
+    | Obc.Acall (_, obj, Mreset, _) ->
         let acall = Amethod_call (obj_ref param_env obj, "reset", []) in
         acall::acts
     | Obc.Acase (e, c_b_l) when e.e_ty = Types.Tid Initial.pbool ->
@@ -244,106 +232,6 @@ let copy_to_this vd_l =
 
 
 
-let create_async_classe async base_classe =
-  let classe_name = base_classe.o_class |> Names.shortname |> (fun n -> "Async_factory_"^n) |> fresh_classe in
-  let callable_name = base_classe.o_class |> Names.shortname |> (fun n -> "Async_"^n) in
-  let callable_classe_name = {qual = QualModule classe_name; name = callable_name } in
-  Idents.enter_node classe_name;
-
-  (* Base class signature *)
-  let { node_inputs    = b_in;
-        node_outputs   = b_out;
-        node_statefull = b_stateful;
-        node_params    = b_params;   } = Modules.find_value base_classe.o_class in
-
-  (* Fields *)
-
-  (* [params] : fields to stock the static parameters, arguments of the constructors *)
-  let fields_params, vds_params, exps_params, param_env =
-    let v, env = sig_params_to_vds b_params in
-    let f = vds_to_fields ~protection:Pprotected v in
-    let e = vds_to_exps v in
-    f, v, e, env
-  in
-  (* [instance] : field used to represent the instance of the base classe *)
-  let field_inst, ty_inst, id_inst, var_inst, vd_inst =
-    let t = Tclass (qualname_to_class_name base_classe.o_class) in
-    let id = base_classe.o_ident in
-    mk_field ~protection:Pprotected t id, t, id, mk_var id, mk_var_dec id t
-  in
-  (* [result] : field used to stock the asynchronous result *)
-  let field_result, ty_aresult, ty_result, id_result, var_result =
-    let t = b_out |> Signature.types_of_arg_list |> Types.prod in
-    let ty_result = boxed_ty param_env t in
-    let t = Types.Tasync(async, t) in
-    let aty = ty param_env t in
-    let result_id = Idents.gen_var "obc2java" "result" in
-    mk_field ~protection:Pprotected aty result_id, aty, ty_result, result_id, mk_var result_id
-  in
-  let fields = field_inst::field_result::fields_params in
-
-  (* [step] arguments *)
-  let fields_step, vds_step, exps_step =
-    let v = sig_args_to_vds param_env b_in in
-    let e = vds_to_exps v in
-    let f = vds_to_fields v in
-    f, v, e
-  in
-
-  (* Methods *)
-
-  let constructor, reset =
-    let body, body_r =
-      let acts_params = copy_to_this vds_params in
-      let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
-      let act_result = Aassgn (Pthis id_result, Snull) in
-      mk_block (act_result::act_inst::acts_params)
-      , mk_block [act_result; act_inst]
-    in
-    mk_methode ~args:vds_params body (shortname classe_name)
-    , mk_methode body_r "reset"
-  in
-
-  let step =
-    let body =
-      let act_syncronize =
-        Aif( Efun(Initial.mk_pervasives "<>", [Snull; var_result])
-           , mk_block [Amethod_call(var_result, "get", [])])
-      in
-      let act_result =
-        let exp_call =
-          let args = var_inst::exps_step in
-          let executor = Eval (Pfield (Pclass the_java_pervasives, "executor_cached")) in
-          Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
-        in Aassgn (Pthis id_result, exp_call)
-      in
-      let act_return = Areturn var_result in
-      mk_block [act_syncronize; act_result; act_return]
-    in mk_methode ~throws:throws_async  ~args:vds_step ~returns:ty_aresult body "step"
-  in
-
-  (* Inner class *)
-
-  let callable_class =
-    let fields = field_inst::fields_step in
-    let constructor =
-      let body =
-        let acts_init = copy_to_this (vd_inst::vds_step) in
-        mk_block acts_init
-      in mk_methode ~args:(vd_inst::vds_step) body (shortname callable_classe_name)
-    in
-    let call =
-      let body =
-        let act = Areturn (Emethod_call (Eval (Pthis id_inst), "step", exps_step)) in
-        mk_block [act]
-      in mk_methode ~throws:throws_async ~returns:ty_result body "call"
-    in mk_classe ~protection:Pprotected ~static:true ~fields:fields ~implements:[java_callable]
-                 ~constrs:[constructor] ~methodes:[call] callable_classe_name
-  in
-
-  mk_classe ~fields:fields ~constrs:[constructor]
-            ~methodes:[step;reset] ~classes:[callable_class] classe_name
-
 
 let class_def_list classes cd_l =
   let class_def classes cd =
@@ -370,9 +258,7 @@ let class_def_list classes cd_l =
     let constructeur, obj_env =
       let obj_env = (* In async we change the type of the async objects *)
         let aux obj_env od =
-          let t = match od.o_async with
-            | None -> Tclass (qualname_to_class_name od.o_class)
-            | Some a -> let c = create_async_classe a od in add_classe c; Tclass c.c_name
+          let t = Tclass (qualname_to_class_name od.o_class)
           in Idents.Env.add od.o_ident t obj_env
         in List.fold_left aux Idents.Env.empty cd.cd_objs
       in
@@ -426,7 +312,7 @@ let class_def_list classes cd_l =
                                  | vd_l -> Enew (return_ty, List.map (fun vd -> Eval (Pvar vd.vd_ident)) vd_l))
       in
       let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
-      mk_methode ~throws:throws_async ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
+      mk_methode ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
     in
     let classe = mk_classe ~fields:fields
                            ~constrs:[constructeur] ~methodes:[step;reset] class_name in

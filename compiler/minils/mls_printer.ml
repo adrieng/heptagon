@@ -111,7 +111,6 @@ and print_exp_desc ff = function
         print_every reset
 
 and print_app ff (app, args) =
-  print_async ff app.a_async;
   match app.a_op with
     | Eequal ->
       let e1, e2 = assert_2 args in
@@ -157,9 +156,6 @@ and print_app ff (app, args) =
     | Econcat ->
       let e1, e2 = assert_2 args in
         fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
-    | Ebang ->
-      let e = assert_1 args in
-        fprintf ff "!(%a)" print_exp e
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c

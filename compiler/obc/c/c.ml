@@ -49,7 +49,6 @@ type cty =
   | Cty_ptr of cty (** C points-to-other-type type. *)
   | Cty_arr of int * cty (** A static array of the specified size. *)
   | Cty_void (** Well, [void] is not really a C type. *)
-  | Cty_future of cty (** async result as a future<t> *)
 
 (** A C block: declarations and statements. In source code form, it begins with
     variable declarations before a list of semicolon-separated statements, the
@@ -246,7 +245,6 @@ and pp_cexpr fmt ce = match ce with
       fprintf fmt "(%a){@[%a@]}" pp_string s (pp_list1 pp_cexpr ",") el
   | Carraylit el ->
       fprintf fmt "((int []){@[%a@]})" (pp_list1 pp_cexpr ",") el (* TODO master : WRONG *)
-  | Cmethod_call _ -> assert false (* TODO async *)
 
 and pp_clhs fmt lhs = match lhs with
   | Cvar s -> pp_string fmt s

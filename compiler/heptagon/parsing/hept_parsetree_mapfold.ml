@@ -104,9 +104,6 @@ and static_exp_desc funs acc sd = match sd with
         (f, se), acc in
       let f_se_l, acc = mapfold aux acc f_se_l in
       Srecord f_se_l, acc
-  | Sasync se ->
-      let se, acc = static_exp_it funs acc se in
-      Sasync se, acc
 
 
 and exp_it funs acc e = funs.exp funs acc e
@@ -301,7 +298,6 @@ and ty funs acc t = match t with
       let t, acc = ty_it funs acc t in
       let e, acc = exp_it funs acc e in
       Tarray (t, e), acc
-  | Tasync (a, t) -> let t, acc = ty_it funs acc t in Tasync (a, t), acc
 
 
 and const_dec_it funs acc c = funs.const_dec funs acc c

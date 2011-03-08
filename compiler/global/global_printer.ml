@@ -35,9 +35,6 @@ let print_full_qualname ff qn = _print_qualname ~full:true ff qn
 
 let print_shortname ff {name = n} = print_name ff n
 
-let print_async ff async = match async with
-  | None -> ()
-  | Some () -> fprintf ff "async "
 
 let rec print_static_exp ff se = match se.se_desc with
   | Sint i -> fprintf ff "%d" i
@@ -62,7 +59,6 @@ let rec print_static_exp ff se = match se.se_desc with
   | Srecord f_se_list ->
       print_record (print_couple print_qualname
                       print_static_exp """ = """) ff f_se_list
-  | Sasync se -> fprintf ff "@[<2>async %a@]" print_static_exp se
 
 and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l
@@ -75,7 +71,6 @@ and print_type ff = function
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
   | Tunit -> fprintf ff "unit"
-  | Tasync (a, t) -> fprintf ff "%a%a" print_async (Some a) print_type t
 
 let print_field ff field =
   fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type

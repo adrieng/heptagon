@@ -129,7 +129,6 @@ and print_every ff reset =
   print_opt (fun ff id -> fprintf ff " every %a" print_exp id) ff reset
 
 and print_app ff (app, args) =
-  print_async ff app.a_async;
   match app.a_op with
     | Eequal ->
       let e1, e2 = assert_2 args in
@@ -178,9 +177,6 @@ and print_app ff (app, args) =
     | Earrow ->
       let e1, e2 = assert_2 args in
         fprintf ff "@[<2>%a ->@ %a@]" print_exp e1  print_exp e2
-    | Ebang ->
-        let e = assert_1 args in
-        fprintf ff "!(%a)" print_exp e
 
 let rec print_eq ff eq =
   match eq.eq_desc with

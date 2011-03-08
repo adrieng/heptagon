@@ -61,7 +61,7 @@ and edesc =
   | Eiterator of iterator_type * app * static_exp * exp list * var_ident option
                        (** map f <<n>> (exp, exp...) reset ident *)
 
-and app = { a_op: op; a_params: static_exp list; a_async  : async_t option; a_unsafe: bool }
+and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
     (** Unsafe applications could have side effects
         and be delicate about optimizations, !be careful! *)
 
@@ -80,7 +80,6 @@ and op =
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
   | Eupdate            (** [ arg1 with arg3..arg_n = arg2 ] *)
   | Econcat            (** arg1@@arg2 *)
-  | Ebang              (** !arg1 *)
 
 
 type pat =
@@ -166,8 +165,8 @@ let mk_type_dec type_desc name loc =
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
-let mk_app ?(params=[]) ?(async=None) ?(unsafe=false) op =
-  { a_op = op; a_params = params; a_async = async; a_unsafe = unsafe }
+let mk_app ?(params=[]) ?(unsafe=false) op =
+  { a_op = op; a_params = params; a_unsafe = unsafe }
 
 (** The modname field has to be set when known, TODO LG : format_version *)
 let mk_program o n t c =

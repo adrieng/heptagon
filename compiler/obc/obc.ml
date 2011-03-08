@@ -68,7 +68,6 @@ and exp_desc =
   | Eop of op_name * exp list
   | Estruct of type_name * (field_name * exp) list
   | Earray of exp list
-  | Ebang of exp
 
 type obj_ref =
   | Oobj of obj_ident
@@ -81,7 +80,6 @@ type method_name =
 type act =
   | Aassgn of pattern * exp
   | Acall of pattern list * obj_ref * method_name * exp list
-  | Aasync_call of async_t * pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
   | Afor of var_dec * static_exp * static_exp * block
   | Ablock of block
@@ -97,7 +95,6 @@ and var_dec =
 
 type obj_dec =
     { o_ident : obj_ident;
-      o_async : async_t option;
       o_class : class_name;
       o_params : static_exp list;
       o_size : static_exp option; (** size of the array if the declaration is an array of obj *)

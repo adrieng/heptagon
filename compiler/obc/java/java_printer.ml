@@ -72,7 +72,6 @@ and exp ff = function
   | Eval p -> pattern ff p
   | Efun (f,e_l) -> op ff (f, e_l)
   | Emethod_call (o,m,e_l) -> fprintf ff "%a.%a%a" exp o method_name m args e_l
-  | Easync_method_call _ -> Misc.internal_error "java_printer, Easync call not translated" 0
   | Enew (c,e_l) -> fprintf ff "new %a%a" full_ty c args e_l
   | Enew_array (t,e_l) ->
     (match e_l with
@@ -142,7 +141,6 @@ and act ff = function
   | Anewvar (vd,e) -> fprintf ff "@[<4>%a =@ %a;@]" (var_dec false) vd exp e
   | Aassgn (p,e) -> fprintf ff "@[<4>%a =@ %a;@]" pattern p exp e
   | Amethod_call (o,m,e_l) -> fprintf ff "@[%a.%a%a;@]" exp o method_name m args e_l
-  | Aasync_method_call _ -> Misc.internal_error "java_printer, Aasync call not translated" 1
   | Aswitch (e, c_b_l) ->
       let pcb ff (c,b) = fprintf ff "@[<v4>case %a:@ %a@ break;@]" bare_constructor_name c block b in
     (*  let switch_hack ff c_b_l = (* TODO java : better thing to do ? *)

@@ -103,7 +103,6 @@ let rec ctype_of_otype oty =
                                ctype_of_otype ty)
     | Tprod _ -> assert false
     | Tunit -> assert false
-    | Tasync (a,ty) -> Cty_future (ctype_of_otype ty)
 
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =
@@ -289,8 +288,6 @@ let rec cexpr_of_exp var_env exp =
         Cstructlit (ctyn, cexps)
     | Earray e_list ->
         Carraylit (cexprs_of_exps var_env e_list)
-    | Ebang e ->
-        Cmethod_call (cexpr_of_exp var_env e, "get", [])
 
 and cexprs_of_exps var_env exps =
   List.map (cexpr_of_exp var_env) exps
@@ -507,18 +504,6 @@ let rec cstm_of_act var_env obj_env act =
                        [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
         )
 
-    | Aasync_call (a, name_list, o, Mreset, args) ->
-        assert_empty name_list;
-        assert_empty args;
-        let on = obj_ref_name o in
-        let obj = assoc_obj on obj_env in
-        let classn = cname_of_qn obj.o_class in
-        (match obj.o_size with
-          | None ->
-              [Csexpr (Cfun_call (classn ^ "_reset", [Caddrof (Cfield (Cderef (Cvar "self"), local_qn on))] ))]
-          | _ -> assert false (* TODO array async *)
-        )
-
     (** Step functions applications can return multiple values, so we use a
         local structure to hold the results, before allocating to our
         variables. *)
@@ -526,8 +511,6 @@ let rec cstm_of_act var_env obj_env act =
         let args = cexprs_of_exps var_env el in
         let outvl = clhss_of_lhss var_env outvl in
         generate_function_call var_env obj_env outvl objn args
-
-    | Aasync_call _ -> assert false (* TODO async *)
 
 
 and cstm_of_act_list var_env obj_env b =

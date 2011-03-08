@@ -49,7 +49,6 @@ let rec java_type_default_value = function
         | Talias t -> java_type_default_value t
         | Tenum _ -> "int", "0" (* TODO java *)
         | Tstruct _ -> shortname t, "null" )
-  | Tasync (a,t) -> assert false (* TODO async *)
   | Tarray _ -> assert false (* TODO array *)
   | Tprod _ -> assert false (* TODO java *)
   | Tunit -> "void", "null"
@@ -217,7 +216,6 @@ let rec print_exp ff e p avs ts single =
         print_exps ff exps 0 avs ts single;
         fprintf ff "@])"
     | Earray _ -> assert false (* TODO array *)
-    | Ebang _ -> assert false (* TODO async *)
 
 and print_exps ff es p avs ts single =
   match es with
@@ -324,7 +322,6 @@ let rec print_act ff a objs avs ts single =
         let o = obj_ref_to_string oref in
         fprintf ff "%s.reset();" o
     | Afor _ -> assert false (* TODO java array *)
-    | Aasync_call _ -> assert false (* TODO java array *)
 
 
 and print_grds ff grds objs avs ts single =

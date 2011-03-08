@@ -288,8 +288,6 @@ ty_ident:
       { Tid $1 }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
-  | ASYNC t=ty_ident
-      { Tasync ((), t) }
 ;
 
 equs:
@@ -427,7 +425,6 @@ simple_exp:
 _simple_exp:
   | IDENT                            { Evar $1 }
   | const                            { Econst $1 }
-  | ASYNC c=const                    { Econst (mk_static_exp (Sasync c) (Loc($startpos,$endpos))) }
   | LBRACE field_exp_list RBRACE     { Estruct $2 }
   | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
   | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
@@ -453,10 +450,6 @@ _exp:
   /* node call*/
   | n=qualname p=call_params LPAREN args=exps RPAREN
       { Eapp(mk_app (Enode n) p , args) }
-  | ASYNC n=qualname p=call_params LPAREN args=exps RPAREN
-      { Eapp(mk_app (Enode n) ~async:(Some ()) p, args) }
-  | BANG e=exp
-      { mk_call Ebang [e] }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp

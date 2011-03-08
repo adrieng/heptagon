@@ -36,8 +36,6 @@ and link_compare li1 li2 = match li1, li2 with
   | Clink _, _ -> -1
 
 
-let async_t_compare a1 a2 = Pervasives.compare a1 a2
-
 let rec static_exp_compare se1 se2 =
   let cr = type_compare se1.se_ty se2.se_ty in
 
@@ -83,9 +81,6 @@ let rec static_exp_compare se1 se2 =
       | Sfield _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _) -> -1
       | Sfield _, _ -> 1
 
-      | Sasync _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _) -> -1
-      | Sasync _, _ -> 1
-
       | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _ ) -> 1
       | Stuple _, _ -> -1
 
@@ -106,20 +101,10 @@ and type_compare ty1 ty2 = match ty1, ty2 with
   | Tarray (ty1, se1), Tarray (ty2, se2) ->
       let cr = type_compare ty1 ty2 in
       if cr <> 0 then cr else static_exp_compare se1 se2
-  | Tasync (a1, t1), Tasync (a2, t2) ->
-      let cr = type_compare t1 t2 in
-      if cr <> 0 then cr else async_t_compare a1 a2
   | Tunit, Tunit -> 0
-
   | Tprod _, _ -> 1
-
   | Tid _, Tprod _ -> -1
   | Tid _, _ -> 1
-
   | Tarray _, (Tprod _ | Tid _) -> -1
   | Tarray _, _ -> 1
-
-  | Tasync _, Tunit -> 1
-  | Tasync _, _ -> -1
-
   | Tunit, _ -> -1

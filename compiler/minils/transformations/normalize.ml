@@ -274,10 +274,6 @@ and translate_app kind context op e_list =
         let context, e1 = translate VRef context e1 in
         let context, e2 = translate VRef context e2 in
         context, [e1; e2]
-    | Ebang ->
-        let e = assert_1 e_list in
-        let context, e = translate Exp context e in
-          context, [e]
     | Enode _ | Efun _ | Eifthenelse _ ->
       assert false (*already done in translate*)
 
