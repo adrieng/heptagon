@@ -13,6 +13,7 @@ open Misc
 open Names
 open Idents
 open Obc
+open Obc_utils
 open Types
 open Modules
 open Signature
@@ -258,9 +259,8 @@ let main_skel var_list prologue body =
   }
 
 let mk_main name p =
-  match (!Compiler_options.simulation_node, !Compiler_options.assert_nodes) with
-    | (None, []) -> []
-    | (_, n_names) ->
+  if !Compiler_options.simulation then (
+      let n_names = !Compiler_options.assert_nodes in
       let find_class n =
         try List.find (fun cd -> cd.cd_name.name = n) p.p_defs
         with Not_found ->
@@ -275,18 +275,16 @@ let mk_main name p =
           (var @ var_l, res :: res_l, step :: step_l) in
         List.fold_right add a_classes ([], [], []) in
 
-      let (_, var_l, res_l, step_l) =
-        (match !Compiler_options.simulation_node with
-           | None -> (n_names, var_l, res_l, step_l)
-           | Some n ->
-               let (nvar_l, res, nstep_l) =
-                 main_def_of_class_def (find_class n) in
-               (n :: n_names, nvar_l @ var_l,
-                res :: res_l, nstep_l @ step_l)) in
+      let n = !Compiler_options.simulation_node in
+      let (nvar_l, res, nstep_l) = main_def_of_class_def (find_class n) in
+      let (var_l, res_l, step_l) =
+        (nvar_l @ var_l, res :: res_l, nstep_l @ step_l) in
 
       [("_main.c", Csource [main_skel var_l res_l step_l]);
        ("_main.h", Cheader ([name], []))];
-;;
+  ) else
+    []
+
 
 
 (******************************)
@@ -297,7 +295,8 @@ let translate name prog =
   (global_file_header modname prog) @ (mk_main name prog)
 
 let program p =
-  let filename = filename_of_name (cname_of_name p.p_modname) in
+  let filename =
+    filename_of_name (cname_of_name (modul_to_string p.p_modname)) in
   let dirname = build_path (filename ^ "_c") in
   let dir = clean_dir dirname in
   let c_ast = translate filename p in

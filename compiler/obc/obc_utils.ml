@@ -109,11 +109,12 @@ let remove_resets b =
   b
 
 
-(*
 module Deps =
 struct
 
-  let deps_longname deps { qual = modn; } = S.add modn deps
+  let deps_longname deps qn = match qn.qual with
+    | Module _ | QualModule _ -> ModulSet.add qn.qual deps
+    | _ -> deps
 
   let deps_static_exp_desc funs deps sedesc =
     let (sedesc, deps) = Global_mapfold.static_exp_desc funs deps sedesc in
@@ -162,7 +163,6 @@ struct
       act = deps_act;
       obj_dec = deps_obj_dec;
     } in
-    let (_, deps) = Obc_mapfold.program funs S.empty p in
-    S.remove p.p_modname (S.remove Pervasives deps)
+    let (_, deps) = Obc_mapfold.program funs ModulSet.empty p in
+    ModulSet.remove p.p_modname deps
 end
-*)

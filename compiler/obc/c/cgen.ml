@@ -13,6 +13,7 @@ open Misc
 open Names
 open Idents
 open Obc
+open Obc_utils
 open Types
 
 open Modules
@@ -343,7 +344,7 @@ let rec assoc_obj instance obj_env =
   match obj_env with
     | [] -> raise Not_found
     | od :: t ->
-        if od.o_name = instance
+        if od.o_ident = instance
         then od
         else assoc_obj instance t
 
@@ -364,10 +365,10 @@ let step_fun_call var_env sig_info objn out args =
   if sig_info.node_statefull then (
     let mem =
       (match objn with
-         | Oobj o -> Cfield (Cderef (Cvar "self"), local_qn o)
+         | Oobj o -> Cfield (Cderef (Cvar "self"), local_qn (name o))
          | Oarray (o, l) ->
              let l = clhs_of_lhs var_env l in
-               Carray (Cfield (Cderef (Cvar "self"), local_qn o), Clhs l)
+               Carray (Cfield (Cderef (Cvar "self"), local_qn (name o)), Clhs l)
       ) in
       args@[Caddrof out; Caddrof mem]
   ) else
@@ -427,7 +428,7 @@ let rec create_affect_const var_env dest c =
           let dest = Carray (dest, Cconst (Ccint i)) in
           (i - 1, create_affect_const var_env dest c @ affl) in
         snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
-    | _ -> [Caffect (dest, cexpr_of_exp var_env (mk_exp (Econst c)))]
+    | _ -> [Caffect (dest, cexpr_of_static_exp c)]
 
 (** [cstm_of_act obj_env mods act] translates the Obj action [act] to a list of
     C statements, using the association list [obj_env] to map object names to
@@ -465,9 +466,12 @@ let rec cstm_of_act var_env obj_env act =
                cstm_of_act_list var_env obj_env act) cl in
         [Cswitch (cexpr_of_exp var_env e, ccl)]
 
+    | Ablock b ->
+        cstm_of_act_list var_env obj_env b
+
     (** For composition of statements, just recursively apply our
         translation function on sub-statements. *)
-    | Afor (x, i1, i2, act) ->
+    | Afor ({ v_ident = x; _ }, i1, i2, act) ->
         [Cfor(name x, int_of_static_exp i1,
               int_of_static_exp i2, cstm_of_act_list var_env obj_env act)]
 
@@ -495,10 +499,10 @@ let rec cstm_of_act var_env obj_env act =
         (match obj.o_size with
            | None ->
              [Csexpr (Cfun_call (classn ^ "_reset",
-                [Caddrof (Cfield (Cderef (Cvar "self"), local_qn on))]))]
+                [Caddrof (Cfield (Cderef (Cvar "self"), local_qn (name on)))]))]
            | Some size ->
                let x = gen_symbol () in
-               let field = Cfield (Cderef (Cvar "self"), local_qn on) in
+               let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
                let elt = [Caddrof( Carray(field, Clhs (Cvar x)) )] in
                  [Cfor(x, 0, int_of_static_exp size,
                        [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
@@ -595,7 +599,7 @@ let mem_decl_of_class_def cd =
       let ty = match od.o_size with
         | Some se -> Cty_arr (int_of_static_exp se, ty)
         | None -> ty in
-        (od.o_name, ty)::l
+        (name od.o_ident, ty)::l
     else
       l
   in
@@ -740,8 +744,8 @@ let cfile_list_of_oprog_ty_decls name oprog =
   filename_types, [types_h; types_c]
 
 let global_file_header name prog =
-  let dependencies = S.elements (Obc_utils.Deps.deps_program prog) in
-  let dependencies = List.map String.uncapitalize dependencies in
+  let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
+  let dependencies = List.map modul_to_string dependencies in
 
   let (decls, defs) =
     List.split (List.map cdefs_and_cdecls_of_class_def prog.p_defs) in

@@ -43,6 +43,7 @@ module QualEnv = struct
 end
 
 module QualSet = Set.Make (struct type t = qualname let compare = compare end)
+module ModulSet = Set.Make (struct type t = modul let compare = compare end)
 module S = Set.Make (struct type t = string let compare = compare end)
 
 

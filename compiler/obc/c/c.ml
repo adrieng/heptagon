@@ -75,7 +75,6 @@ and cexpr =
   | Caddrof of clhs (** Take the address of a left-hand-side expression. *)
   | Cstructlit of string * cexpr list (** Structure literal "{ f1, f2, ... }".*)
   | Carraylit of cexpr list (** Array literal [\[e1, e2, ...\]]. *)
-  | Cmethod_call of cexpr * string * cexpr list (** Object member function call with parameters. *)
 and cconst =
   | Ccint of int (** Integer constant. *)
   | Ccfloat of float (** Floating-point number constant. *)
@@ -156,11 +155,14 @@ let rec pp_list f sep fmt l = match l with
 let pp_string fmt s =
   fprintf fmt "%s" (cname_of_name s)
 
-let cname_of_qn q =
-  if q.qual = Pervasives or q.qual = Names.local_qualname then
-    q.name
-  else
-    (q.qual ^ "__" ^ q.name)
+let rec modul_to_cname q = match q with
+  | Pervasives | LocalModule -> ""
+  | Module m -> m ^ "__"
+  | QualModule { qual = q; name = n } ->
+      (modul_to_cname q)^n^"__"
+
+let cname_of_qn qn =
+  (modul_to_cname qn.qual) ^ qn.name
 
 let pp_qualname fmt q =
   pp_string fmt (cname_of_qn q)
@@ -173,7 +175,6 @@ let rec pp_cty fmt cty = match cty with
   | Cty_ptr cty' -> fprintf fmt "%a*" pp_cty cty'
   | Cty_arr (n, cty') -> fprintf fmt "%a[%d]" pp_cty cty' n
   | Cty_void -> fprintf fmt "void"
-  | Cty_future cty' -> fprintf fmt "future<%a>" pp_cty cty'
 
 (** [pp_array_decl cty] returns the base type of a (multidimensionnal) array
     and the string of indices. *)
@@ -243,8 +244,8 @@ and pp_cexpr fmt ce = match ce with
   | Caddrof lhs -> fprintf fmt "&%a" pp_clhs lhs
   | Cstructlit (s, el) ->
       fprintf fmt "(%a){@[%a@]}" pp_string s (pp_list1 pp_cexpr ",") el
-  | Carraylit el ->
-      fprintf fmt "((int []){@[%a@]})" (pp_list1 pp_cexpr ",") el (* TODO master : WRONG *)
+  | Carraylit el -> (* TODO master : WRONG *)
+      fprintf fmt "((int []){@[%a@]})" (pp_list1 pp_cexpr ",") el
 
 and pp_clhs fmt lhs = match lhs with
   | Cvar s -> pp_string fmt s
