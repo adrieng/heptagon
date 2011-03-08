@@ -8,6 +8,21 @@
 (**************************************************************************)
 (* Object code internal representation *)
 
+(** { 3 Semantics }
+  Any variable is a reference to a constant memory.
+    Thus [p = e] is not the change of the reference,
+    but a recursive copy of what is referenced (deep copy).
+    As an example, [x = 3] but also [x = \[3; 4; 5\]]
+    and [t1 = t2] with the content of the array [t2] copied into the array [t1].
+  Obc is also "SSA" in the sens that a variable is assigned a value only once per call of [step] etc.
+    Thus arguments are passed as constant references to a constant memory.
+
+  One exception to the SSA rule is through the [mutable] variables.
+    Theses variables can be assigned multiple times.
+    Thus a [mutable] argument is passed as a reference to a constant memory.
+*)
+
+
 open Misc
 open Names
 open Idents
@@ -69,6 +84,7 @@ type act =
   | Aasync_call of async_t * pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
   | Afor of var_dec * static_exp * static_exp * block
+  | Ablock of block
 
 and block =
     { b_locals : var_dec list;

@@ -83,7 +83,10 @@ let rec static_exp_compare se1 se2 =
       | Sfield _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _) -> -1
       | Sfield _, _ -> 1
 
-      | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _) -> 1
+      | Sasync _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _) -> -1
+      | Sasync _, _ -> 1
+
+      | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _ ) -> 1
       | Stuple _, _ -> -1
 
       | Sarray_power _, (Srecord _ | Sop _ | Sarray _) -> -1

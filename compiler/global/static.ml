@@ -74,6 +74,8 @@ let eval_core eval apply_op env se = match se.se_desc with
   | Srecord f_se_list ->
       { se with se_desc = Srecord
           (List.map (fun (f,se) -> f, eval env se) f_se_list) }
+  | Sasync se' ->
+      { se with se_desc = Sasync (eval env se') }
 
 (** [simplify env e] returns e simplified with the
     variables values taken from [env] or from the global env with [find_const].

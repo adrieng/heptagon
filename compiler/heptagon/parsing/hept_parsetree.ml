@@ -49,6 +49,7 @@ and static_exp_desc =
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)
   | Srecord of (field_name * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
   | Sop of fun_name * static_exp list (** defined ops for now in pervasives *)
+  | Sasync of static_exp
 
 type iterator_type =
   | Imap

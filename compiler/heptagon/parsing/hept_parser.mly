@@ -427,6 +427,7 @@ simple_exp:
 _simple_exp:
   | IDENT                            { Evar $1 }
   | const                            { Econst $1 }
+  | ASYNC c=const                    { Econst (mk_static_exp (Sasync c) (Loc($startpos,$endpos))) }
   | LBRACE field_exp_list RBRACE     { Estruct $2 }
   | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
   | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
@@ -555,14 +556,14 @@ qualname:
 ;
 
 
-const: c=_const { mk_static_exp c (Loc($startpos,$endpos)) }
+const:
+  | c=_const { mk_static_exp c (Loc($startpos,$endpos)) }
 _const:
-  | INT         { Sint $1 }
-  | FLOAT       { Sfloat $1 }
-  | BOOL        { Sbool $1 }
-  | constructor { Sconstructor $1 }
-  | q=qualified (ident)
-      { Svar q }
+  | INT                { Sint $1 }
+  | FLOAT              { Sfloat $1 }
+  | BOOL               { Sbool $1 }
+  | constructor        { Sconstructor $1 }
+  | q=qualified(ident) { Svar q }
 ;
 
 tuple_exp:

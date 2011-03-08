@@ -104,6 +104,9 @@ and static_exp_desc funs acc sd = match sd with
         (f, se), acc in
       let f_se_l, acc = mapfold aux acc f_se_l in
       Srecord f_se_l, acc
+  | Sasync se ->
+      let se, acc = static_exp_it funs acc se in
+      Sasync se, acc
 
 
 and exp_it funs acc e = funs.exp funs acc e

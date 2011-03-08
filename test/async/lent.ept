@@ -1,0 +1,12 @@
+
+node g () returns (y : int)
+let
+  y = 3
+tel
+
+node f (x : int; c : bool) returns (z : int)
+let
+  z = merge c (true -> (0 fby (g(z when true(c))))) (false -> 0)
+tel
+
+

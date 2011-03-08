@@ -62,6 +62,7 @@ let rec print_static_exp ff se = match se.se_desc with
   | Srecord f_se_list ->
       print_record (print_couple print_qualname
                       print_static_exp """ = """) ff f_se_list
+  | Sasync se -> fprintf ff "@[<2>async %a@]" print_static_exp se
 
 and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l

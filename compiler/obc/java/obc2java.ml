@@ -15,6 +15,9 @@
        Obc.Oobj and Oarray are simply Pvar and Parray_elem
        Obc.Types_alias are dereferenced since no simple type alias is possible in Java *)
 
+(** Requires scalar Obc : [p = e] when [e] is an array is understand as a copy of the reference,
+  not a copy of the array. *)
+
 open Format
 open Misc
 open Names
@@ -97,6 +100,9 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sarray se_l -> Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
+  | Types.Sasync se ->
+      let t_c = Tgeneric (java_pervasive_class "StaticFuture", [boxed_ty param_env se.Types.se_ty]) in
+      Enew (t_c, [static_exp param_env se])
 
 and boxed_ty param_env t = match t with
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
@@ -110,7 +116,7 @@ and boxed_ty param_env t = match t with
 
 and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
-  Tgeneric ({ qual = java_pervasives; name = "Tuple"^ln }, List.map (boxed_ty param_env) ty_l)
+  Tgeneric (java_pervasive_class ("Tuple"^ln), List.map (boxed_ty param_env) ty_l)
 
 and ty param_env t :Java.ty = match t with
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
@@ -197,6 +203,9 @@ let rec act_list param_env act_l acts =
     | Obc.Afor (v, se, se', b) ->
         let afor = Afor (var_dec param_env v, static_exp param_env se, static_exp param_env se', block param_env b) in
         afor::acts
+    | Obc.Ablock b ->
+        let ablock = Ablock (block param_env b) in
+        ablock::acts
   in
   List.fold_right _act act_l acts
 
@@ -304,7 +313,7 @@ let create_async_classe async base_classe =
       let act_result =
         let exp_call =
           let args = var_inst::exps_step in
-          let executor = Eval (Pfield (Pclass java_pervasives_class, "executor_cached")) in
+          let executor = Eval (Pfield (Pclass the_java_pervasives, "executor_cached")) in
           Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
         in Aassgn (Pthis id_result, exp_call)
       in

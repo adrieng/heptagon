@@ -115,6 +115,9 @@ and act funs acc a = match a with
       let idx2, acc = static_exp_it funs.global_funs acc idx2 in
       let b, acc = block_it funs acc b in
         Afor(x, idx1, idx2, b), acc
+  | Ablock b ->
+      let b, acc = block_it funs acc b in
+      Ablock b, acc
 
 and block_it funs acc b = funs.block funs acc b
 and block funs acc b =

@@ -1,5 +1,3 @@
-load_printer "/sw/lib/ocaml/menhirLib/menhirLib.cmo"
-load_printer "/sw/lib/ocaml/str.cma"
 load_printer "_build/global/names.d.cmo"
 load_printer "_build/global/location.d.cmo"
 load_printer "_build/utilities/misc.d.cmo"

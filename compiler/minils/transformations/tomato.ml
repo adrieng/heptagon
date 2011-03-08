@@ -67,6 +67,10 @@ module PatEnv =
 
     type penv_t = (int * exp * ident list) P.t
 
+
+    (* An environment used for automata minimization: holds both a pattern environment mapping patterns to equivalence
+       classes, and a [(pat * int list) Env.t] that maps variable [x] to a [(pat, pth)] tuple where [pat] is the pattern
+       holding [x] at path [pth] *)
     type t = penv_t * (pat * int list) Env.t
 
     let empty = (P.empty, Env.empty)

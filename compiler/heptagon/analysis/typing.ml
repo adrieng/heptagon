@@ -449,6 +449,9 @@ and typing_static_exp const_env se =
             List.map (typing_static_field const_env fields
                         (Tid q)) f_se_list in
           Srecord f_se_list, Tid q
+     | Sasync se ->
+          let typed_se, ty = typing_static_exp const_env se in
+          Sasync typed_se, Tasync ((),ty)
   in
    { se with se_ty = ty; se_desc = desc }, ty
 

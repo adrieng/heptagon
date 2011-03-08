@@ -111,8 +111,8 @@ let default_value ty = match ty with
   | Tarray _ -> Enew_array (ty,[])
 
 
-let java_pervasives = Names.modul_of_string "jeptagon.Pervasives"
-let java_pervasives_class = Names.qualname_of_string "jeptagon.Pervasives"
+let java_pervasive_class c = Names.qualname_of_string ("jeptagon.Pervasives."^c)
+let the_java_pervasives = Names.qualname_of_string "jeptagon.Pervasives"
 
 let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
 

@@ -18,6 +18,7 @@ open Misc
     with or without static parameters *)
 type target =
   | Obc of (Obc.program -> unit)
+  | Obc_scalar of (Obc.program -> unit)
   | Obc_no_params of (Obc.program -> unit)
   | Minils of (Minils.program -> unit)
   | Minils_no_params of (Minils.program -> unit)
@@ -39,7 +40,7 @@ let write_obc_file p =
     comment "Generation of Obc code"
 
 let targets = [ (*"c", Obc_no_params Cmain.program;*)
-                "java", Obc Java_main.program;
+                "java", Obc_scalar Java_main.program;
                 "obc", Obc write_obc_file;
                 "obc_np", Obc_no_params write_obc_file;
                 "epo", Minils write_object_file ]
@@ -65,10 +66,17 @@ let generate_target p s =
         let p_list = Callgraph.program p in
         let o_list = List.map Mls2obc.program p_list in
         print_unfolded p_list;
-        comment "Translation to Obc";
+        comment "Obc Callgraph";
         if !verbose then
           List.iter (Obc_printer.print stdout) o_list;
         List.iter convert_fun o_list
+    | Obc_scalar convert_fun ->
+        let o = Mls2obc.program p in
+        comment "Obc Scalarize";
+        let o_s = Scalarize.program o in
+        convert_fun o;
+        if !verbose then Obc_printer.print stdout o_s
+
 
 (** Translation into dataflow and sequential languages, defaults to obc. *)
 let program p =

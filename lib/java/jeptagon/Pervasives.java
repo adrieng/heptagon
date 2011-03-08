@@ -1,14 +1,43 @@
 package jeptagon;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
 public class Pervasives {
 
-    public static final java.util.concurrent.ExecutorService executor_cached = java.util.concurrent.Executors.newCachedThreadPool();
+    public static final ExecutorService executor_cached = Executors.newCachedThreadPool();
 
+    public static class StaticFuture<V> implements Future<V> {
+    	V v;
+    	
+    	public StaticFuture(V v) { this.v = v;	}
+    	
+    	public boolean cancel(boolean mayInterruptIfRunning) { return false; }
+    	
+    	public boolean isCancelled() { return false; }
+    	
+    	public boolean isDone() { return true; }
+    	
+    	public V get() { return v; }
+    	
+    	public V get(long timeout, TimeUnit unit) { return v; }	
+    }
 	
-    public static class Tuple1 <T> {
+    public static class Tuple1<T> {
     	public final T c0;
     	public Tuple1(T v) {
     		c0 = v;
+    	}
+    }
+    
+    public static class Tuple22 {
+    	public final Object c0;
+    	public final Object c1;
+    	public Tuple22(Object v0, Object v1) {
+    		c0 = v0;
+    		c1 = v1;
     	}
     }
     

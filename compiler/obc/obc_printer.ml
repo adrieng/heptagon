@@ -108,6 +108,8 @@ let rec print_act ff a =
           print_obj_call o
           print_method_name meth
           print_exps es
+    | Ablock b ->
+        fprintf ff "do@\n  %a@\ndone" print_block b
 
 and print_var_dec_list ff var_dec_list = match var_dec_list with
   | [] -> ()
