@@ -85,6 +85,10 @@ let add_inlined_node s = inline := s :: !inline
 
 let flatten = ref false
 
+let boolean = ref false
+
+let deadcode = ref false
+
 let tomato = ref false
 
 let tomato_nodes : qualname list ref = ref []
@@ -117,6 +121,8 @@ and doc_full_name = "\t\t\tPrint full variable name information"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
   ^ " cleaned)"
+and doc_boolean = "\t\tTranslate enumerated values towards boolean vectors"
+and doc_deadcode = "\t\tDeadcode removal"
 and doc_nocaus = "\t\tDisable causality analysis"
 and doc_noinit = "\t\tDisable initialization analysis"
 and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"

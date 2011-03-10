@@ -30,6 +30,11 @@ let compile_program p =
   let p =
     pass "Automata minimization checks" true Tomato.tomato_checks p pp in
 *)
+  
+  (* Boolean translation of enumerated values *)
+  let sigali = List.mem "z3z" !target_languages in
+  let p =
+    pass "Boolean transformation" (!boolean or sigali) Boolean.program  p pp  in
 
   (* Scheduling *)
   let p = pass "Scheduling" true Schedule.program p pp in
