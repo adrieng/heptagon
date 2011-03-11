@@ -49,6 +49,8 @@ open Types
 open Clocks
 open Minils
 
+let fresh = Idents.gen_fresh "bool" (fun s -> s)
+
 let ty_bool = Tid({ qual = "Pervasives"; name = "bool"})
 
 let strue = mk_static_exp ~ty:ty_bool (Sbool(true))
@@ -238,6 +240,7 @@ let translate_ty ty =
 	end
     | Tprod(ty_list) -> Tprod(List.map trans ty_list)
     | Tarray(ty,se) -> Tarray(trans ty,se)
+    | Tunit -> Tunit
   in
   trans ty
 
@@ -336,12 +339,14 @@ let rec when_ck desc ty ck =
   match ck with
   | Cbase | Cvar _ -> 
       { e_desc = desc;
+	e_base_ck = Cbase;
 	e_ck = ck;
 	e_ty = ty;
 	e_loc = no_location }
   | Con(ck',c,v) ->
       let e = when_ck desc ty ck' in
       { e_desc = Ewhen(e,c,v);
+	e_base_ck = Cbase;
 	e_ck = ck;
 	e_ty = ty;
 	e_loc = no_location }
@@ -384,6 +389,7 @@ let rec base_value ck ty =
 		let e_list = aux [] n in
 		{ e_desc = mk_tuple e_list;
 		  e_ty = Tprod(List.map (fun _ -> ty_bool) e_list);
+		  e_base_ck = Cbase;
 		  e_ck = ck;
 		  e_loc = no_location }
 	  end
@@ -394,6 +400,7 @@ let rec base_value ck ty =
       let e_list = List.map (base_value ck) ty_list in
       { e_desc = mk_tuple e_list;
 	e_ty = Tprod(List.map (fun e -> e.e_ty) e_list);
+	e_base_ck = Cbase;
 	e_ck = ck;
 	e_loc = no_location;
       }
@@ -401,6 +408,14 @@ let rec base_value ck ty =
       let e = base_value ck ty in
       { e_desc = Eapp((mk_app ~params:[se] Earray_fill), [e], None);
 	e_ty = Tarray(e.e_ty,se);
+	e_base_ck = Cbase;
+	e_ck = ck;
+	e_loc = no_location;
+      }
+  | Tunit ->
+      { e_desc = Eapp (mk_app Etuple, [], None);
+        e_ty = Tunit;
+	e_base_ck = Cbase;
 	e_ck = ck;
 	e_loc = no_location;
       }
@@ -417,6 +432,7 @@ let rec merge_tree ck ty e_map btree vtree =
       in
       { e_desc = Emerge(v,[(ctrue,e1);(cfalse,e2)]);
 	e_ty = ty;
+	e_base_ck = Cbase;
 	e_ck = ck;
 	e_loc = no_location }
   | Tree (_,_), Vempty -> failwith("merge_tree: non-coherent trees")
@@ -558,6 +574,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
     match ckvar_list,ck with
     | [], _ -> 
 	{ e_desc = Evar(var);
+	  e_base_ck = Cbase;
 	  e_ck = ck;
 	  e_ty = ty_bool;
 	  e_loc = no_location }
@@ -565,6 +582,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 	(* assert v = _ckvar *)
 	let e = when_ck l ck' var in
 	{ e_desc = Ewhen(e,c,v);
+	  e_base_ck = Cbase;
 	  e_ck = ck;
 	  e_ty = ty_bool;
 	  e_loc = no_location }
@@ -622,7 +640,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 	acc_loc,acc_eq,VNode(v1,t0,t1)
     | vi::v_list, _ ->
 	(* Build name vi_(0|1)* *)
-	let v = (sourcename vi) ^ suffix in
+	let v = (name vi) ^ suffix in
 	(* Build ident from this name *)
 	let id = fresh v in
 	let acc_loc = { v_ident = id;
@@ -661,7 +679,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 
 let translate_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
   match ty with
-  | Tprod _ | Tarray _ -> v::acc_vd, acc_loc, acc_eq, env
+  | Tprod _ | Tarray _ | Tunit -> v::acc_vd, acc_loc, acc_eq, env
   | Tid(tname) ->
       begin
 	match tname with
