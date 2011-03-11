@@ -97,8 +97,7 @@ launch_check () {
   done
   echo
   echo "Tests goods"
-  pushd good > /dev/null
-  for f in *.ept; do
+  for f in ../good/*.ept; do
     echec=0
     if [ $verbose = 0 ]; then
       echo -n "."
@@ -209,7 +208,6 @@ launch_check () {
       esac
     fi
   done
-  popd > /dev/null
   echo
 
   percent=`expr 100 \* $score / $max`;
