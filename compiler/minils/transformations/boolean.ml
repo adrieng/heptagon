@@ -265,7 +265,6 @@ let rec translate_ck env ck =
 	  let bl = QualEnv.find c info.var_enum.ty_assoc in
 	  on_list ck bl info.clocked_var
 	with Not_found ->
-	  Printf.printf "Not found in env : %s\n" (name n);
 	  (* Boolean clock *)
 	  Con(ck,c,n)
       end
@@ -677,7 +676,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 
   (acc_vd,acc_loc,acc_eq,v_list,t)
 
-let translate_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
+let buildenv_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
   match ty with
   | Tprod _ | Tarray _ | Tunit -> v::acc_vd, acc_loc, acc_eq, env
   | Tid(tname) ->
@@ -709,8 +708,14 @@ let translate_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
 	    end
       end
  
+let buildenv_var_dec_list env vlist =
+  List.fold_left buildenv_var_dec ([],[],[],env) vlist
+
+let translate_var_dec env ({ v_clock = ck } as v) =
+  { v with v_clock = translate_ck env ck }
+
 let translate_var_dec_list env vlist =
-  List.fold_left translate_var_dec ([],[],[],env) vlist
+  List.map (translate_var_dec env) vlist
 
 let translate_contract env contract =
   match contract with
@@ -720,14 +725,18 @@ let translate_contract env contract =
 	   c_assume = e_a;
 	   c_enforce = e_g;
 	   c_controllables = cl } ->
-      let cl, cl_loc, cl_eq, env = translate_var_dec_list env cl in
-      let v, v', v_eq, env' = translate_var_dec_list env v in
+      let cl, cl_loc, cl_eq, env = buildenv_var_dec_list env cl in
+      let cl = translate_var_dec_list env cl in
+      let v, v', v_eq, env' = buildenv_var_dec_list env v in
+      let v = v@v'@cl_loc in
+      let v = translate_var_dec_list env v in
+      let eq_list = eq_list@v_eq@cl_eq in
       let context = translate_eqs env' eq_list in
       let context, e_a = translate env' context e_a in
       let context, e_g = translate env' context e_g in
       let (d_list,eq_list) = context in
-      Some { c_local = v@v'@cl_loc@d_list;
-	     c_eq = eq_list@v_eq@cl_eq;
+      Some { c_local = v@d_list;
+	     c_eq = eq_list;
 	     c_assume = e_a;
 	     c_enforce = e_g;
 	     c_controllables = cl },
@@ -738,17 +747,20 @@ let node ({ n_local = locals;
 	    n_output = outputs;
 	    n_contract = contract;
 	    n_equs = eq_list } as n) =
-  let inputs,in_loc,in_eq,env = translate_var_dec_list Env.empty inputs in
-  let outputs,out_loc,out_eq,env = translate_var_dec_list env outputs in
+  let inputs,in_loc,in_eq,env = buildenv_var_dec_list Env.empty inputs in
+  let outputs,out_loc,out_eq,env = buildenv_var_dec_list env outputs in
   let contract, env = translate_contract env contract in
-  let locals,locals',loc_eq,env = translate_var_dec_list env locals in
+  let locals,locals',loc_eq,env = buildenv_var_dec_list env locals in
+  let locals = locals@locals'@in_loc@out_loc in
+  let locals = translate_var_dec_list env locals in
+  let eq_list = eq_list@loc_eq@in_eq@out_eq in
   let (d_list,eq_list) = translate_eqs env eq_list in
   { n with 
-      n_local = locals@locals'@in_loc@out_loc@d_list; 
+      n_local = locals@d_list; 
       n_input = List.rev inputs;
       n_output = List.rev outputs;
       n_contract = contract;
-      n_equs = eq_list@loc_eq@in_eq@out_eq }
+      n_equs = eq_list }
       
 let program ({ p_types = pt_list; p_nodes = n_list } as p) =
   let pt_list = build_enum_env pt_list in
