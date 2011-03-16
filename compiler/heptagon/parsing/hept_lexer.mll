@@ -53,6 +53,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "assume", ASSUME;
  "enforce", ENFORCE;
  "with", WITH;
+ "inlined",INLINED;
  "when", WHEN;
  "merge", MERGE;
  "map", MAP;

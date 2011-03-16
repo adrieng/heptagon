@@ -244,10 +244,10 @@ and translate_desc loc env = function
         List.map (fun (f,e) -> qualify_field f, translate_exp env e)
           f_e_list in
       Heptagon.Estruct f_e_list
-  | Eapp ({ a_op = op; a_params = params; }, e_list) ->
+  | Eapp ({ a_op = op; a_params = params; a_inlined = inl }, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
       let params = List.map (expect_static_exp) params in
-      let app = Heptagon.mk_app ~params:params (translate_op op) in
+      let app = Heptagon.mk_op ~params:params ~inlined:inl (translate_op op) in
       Heptagon.Eapp (app, e_list, None)
 
   | Eiterator (it, { a_op = op; a_params = params }, n, pe_list, e_list) ->

@@ -39,6 +39,7 @@ open Hept_parsetree
 %token ASSUME
 %token ENFORCE
 %token WITH
+%token INLINED
 %token WHEN MERGE
 %token POWER
 %token LBRACKET LBRACKETGREATER
@@ -411,6 +412,9 @@ _simple_exp:
 /* TODO : conflict with Eselect_dyn and or const*/
 ;
 
+node_name:
+  | q=qualname c=call_params { mk_app (Enode q) c false }
+  | INLINED q=qualname c=call_params { mk_app (Enode q) c true }
 
 merge_handlers:
   | hs=nonempty_list(merge_handler) { hs }
@@ -426,8 +430,8 @@ _exp:
   | PRE exp
       { Epre (None, $2) }
   /* node call*/
-  | n=qualname p=call_params LPAREN args=exps RPAREN
-      { Eapp(mk_app (Enode n) p , args) }
+  | n=node_name LPAREN args=exps RPAREN
+      { Eapp(n, args) }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp

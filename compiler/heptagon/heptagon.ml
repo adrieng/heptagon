@@ -52,7 +52,8 @@ and desc =
 and app = {
   a_op     : op;
   a_params : static_exp list;
-  a_unsafe : bool }
+  a_unsafe : bool;
+  a_inlined : bool }
 
 and op =
   | Eequal
@@ -194,8 +195,8 @@ let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
     e_base_ck = Cbase; e_loc = loc; }
 
-let mk_app ?(params=[]) ?(unsafe=false) op =
-  { a_op = op; a_params = params; a_unsafe = unsafe }
+let mk_app ?(params=[]) ?(unsafe=false) ?(inlined=false) op =
+  { a_op = op; a_params = params; a_unsafe = unsafe; a_inlined = inlined }
 
 let mk_op_app ?(params=[]) ?(unsafe=false) ?(reset=None) op args =
   Eapp(mk_app ~params:params ~unsafe:unsafe op, args, reset)
