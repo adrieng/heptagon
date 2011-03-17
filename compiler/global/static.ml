@@ -92,15 +92,10 @@ let rec eval env se =
 
 (** [int_of_static_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers. Raises
-    Instanciation_failed if it cannot be computed (if a var has no value).*)
-let int_of_static_exp env se =
-  match (simplify env se).se_desc with
-    | Sint i -> i
-    | _ ->
-      (Format.eprintf "Internal compiler error, \
-        [eval_int] received the static_exp %a.@."
-        Global_printer.print_static_exp se;
-      assert false)
+    Partial_instanciation if it cannot be computed (if a var has no value).*)
+let int_of_static_exp env se = match (eval_core env se).se_desc with
+  | Sint i -> i
+  | _ -> Misc.internal_error "static int_of_static_exp" 1
 
 (** [is_true env constr] returns whether the constraint is satisfied
     in the environment (or None if this can be decided)
