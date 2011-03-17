@@ -255,7 +255,7 @@ let rec cexpr_of_static_exp se =
                      List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
     | Sarray_power(n,c) ->
         let cc = cexpr_of_static_exp c in
-          Carraylit (repeat_list cc (int_of_static_exp n))
+          Carraylit (repeat_list cc (int_of_static_exp n)) (* TODO should be recursive *)
     | Svar ln ->
         (try
           let cd = find_const ln in
