@@ -14,7 +14,7 @@ module Error =
 struct
   type error =
     | Enode_unbound of qualname
-    | Epartial_instanciation of static_exp
+    | Epartial_evaluation of static_exp
 
   let message loc kind =
     begin match kind with
@@ -22,7 +22,7 @@ struct
           Format.eprintf "%aUnknown node '%s'@."
             print_location loc
             (fullname ln)
-      | Epartial_instanciation se ->
+      | Epartial_evaluation se ->
           Format.eprintf "%aUnable to fully instanciate the static exp '%a'@."
             print_location se.se_loc
             print_static_exp se
@@ -79,8 +79,8 @@ struct
   (** create a params instance *)
   let instantiate m se =
     try List.map (eval m) se
-    with Partial_instanciation se ->
-      Error.message no_location (Error.Epartial_instanciation se)
+    with Errors.Error se ->
+      Error.message no_location (Error.Epartial_evaluation se)
 
   (** @return the name of the node corresponding to the instance of
       [ln] with the static parameters [params]. *)

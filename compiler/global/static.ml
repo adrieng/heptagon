@@ -17,14 +17,50 @@ open Format
 open Types
 open Signature
 open Modules
+open Location
 
-(* unsatisfiable constraint *)
-exception Instanciation_failed
-exception Partial_instanciation of static_exp
 
 exception Not_static
 
-let partial_apply_op op se_list =
+
+
+(** Some evaluations are not possible *)
+type eval_error = Division_by_zero
+exception Evaluation_failed of eval_error * location
+
+(** Some unknown operators could be used preventing the evaluation *)
+type partial_eval_cause = Unknown_op of fun_name | Unknown_param of qualname
+exception Partial_evaluation of partial_eval_cause * location
+
+let message exn =
+  begin match exn with
+    | Evaluation_failed (e,loc) ->
+        (match e with
+          | Division_by_zero ->
+              eprintf "%aForbidden division by 0.@."
+              print_location loc
+        )
+    | Partial_evaluation (e,loc) ->
+        (match e with
+          | Unknown_op op ->
+              eprintf "%aUnknown operator %a.@."
+              Location.print_location loc
+              Global_printer.print_qualname op
+          | Unknown_param q ->
+              eprintf "%aUninstanciated param %a.@."
+              Location.print_location loc
+              Global_printer.print_qualname q
+        )
+    | _ -> raise exn
+  end;
+  raise Errors.Error
+
+
+
+(** When not [partial],
+      @raise Partial_evaluation when the application of the operator can't be evaluated (only Unknown_op).
+    Otherwise keep as it is unknown operators. *)
+let apply_op partial loc op se_list =
   match se_list with
     | [{ se_desc = Sint n1 }; { se_desc = Sint n2 }] ->
         (match op with
@@ -35,8 +71,8 @@ let partial_apply_op op se_list =
            | { qual = Pervasives; name = "*" } ->
                Sint (n1 * n2)
            | { qual = Pervasives; name = "/" } ->
-               let n = if n2 = 0 then raise Instanciation_failed else n1 / n2 in
-               Sint n
+               if n2 = 0 then raise (Evaluation_failed (Division_by_zero, loc));
+               Sint (n1 / n2)
            | { qual = Pervasives; name = "=" } ->
                Sbool (n1 = n2)
            | _ -> assert false (*TODO: add missing operators*)
@@ -46,54 +82,60 @@ let partial_apply_op op se_list =
            | { qual = Pervasives; name = "~-" } -> Sint (-n)
            | _ -> assert false (*TODO: add missing operators*)
         )
-    | _ -> Sop(op, se_list)
+    | _ -> if partial then Sop(op, se_list) (* partial evaluation *)
+           else raise (Partial_evaluation (Unknown_op op, loc))
 
-let apply_op op se_list =
-  let se = partial_apply_op op se_list in
-  match se with
-    | Sop _ -> raise Not_found
-    | _ -> se
 
-let eval_core eval apply_op env se = match se.se_desc with
+(** When not [partial],
+      @raise Partial_evaluation when a static var cannot be evaluated, a local static parameter for example.
+    Otherwise evaluate in a best effort manner. *)
+let rec eval_core partial env se = match se.se_desc with
   | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _ -> se
-  | Svar ln -> (
-      try (* first try to find in global const env *)
-        let cd = find_const ln in
-        eval env cd.c_value
-      with Not_found -> (* then try to find in local env *)
-        eval env (QualEnv.find ln env))
+  | Svar ln ->
+      (try (* first try to find in global const env *)
+         let cd = find_const ln in
+         eval_core partial env cd.c_value
+       with Not_found -> (* then try to find in local env *)
+         (try eval_core partial env (QualEnv.find ln env)
+          with Not_found ->
+            if partial then se
+            else raise (Partial_evaluation (Unknown_param ln, se.se_loc))
+         )
+      )
   | Sop (op, se_list) ->
-      let se_list = List.map (eval env) se_list in
-        { se with se_desc = apply_op op se_list }
+      let se_list = List.map (eval_core partial env) se_list in
+      let se_desc = apply_op partial se.se_loc op se_list in
+      { se with se_desc = se_desc }
   | Sarray se_list ->
-      { se with se_desc = Sarray (List.map (eval env) se_list) }
+      { se with se_desc = Sarray (List.map (eval_core partial env) se_list) }
   | Sarray_power (se, n) ->
-       { se with se_desc = Sarray_power (eval env se, eval env n) }
+       { se with se_desc = Sarray_power (eval_core partial env se, eval_core partial env n) }
   | Stuple se_list ->
-       { se with se_desc = Stuple (List.map (eval env) se_list) }
+       { se with se_desc = Stuple (List.map (eval_core partial env) se_list) }
   | Srecord f_se_list ->
       { se with se_desc = Srecord
-          (List.map (fun (f,se) -> f, eval env se) f_se_list) }
+          (List.map (fun (f,se) -> f, eval_core partial env se) f_se_list) }
+
 
 (** [simplify env e] returns e simplified with the
     variables values taken from [env] or from the global env with [find_const].
     Every operator that can be computed is.
     It can return static_exp with uninstanciated variables.*)
-let rec simplify env se =
-  try eval_core simplify partial_apply_op env se
-  with _ -> se
+let simplify env se =
+  try eval_core true env se
+  with exn -> message exn
 
 (** [eval env e] does the same as [simplify]
     but if it returns, there are no variables nor op left.
-    @raise [Partial_instanciation] when it cannot fully evaluate *)
-let rec eval env se =
-  try eval_core eval apply_op env se
-  with Not_found -> raise (Partial_instanciation se)
+    @raise [Errors.Error] when it cannot fully evaluate. *)
+let eval env se =
+  try eval_core false env se
+  with exn -> message exn
 
 (** [int_of_static_exp env e] returns the value of the expression
-    [e] in the environment [env], mapping vars to integers. Raises
-    Partial_instanciation if it cannot be computed (if a var has no value).*)
-let int_of_static_exp env se = match (eval_core env se).se_desc with
+    [e] in the environment [env], mapping vars to integers.
+    @raise [Errors.Error] if it cannot be computed.*)
+let int_of_static_exp env se = match (eval env se).se_desc with
   | Sint i -> i
   | _ -> Misc.internal_error "static int_of_static_exp" 1
 
