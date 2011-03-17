@@ -1,5 +1,5 @@
-const n:int = 42
-const m:int = 52
+const n:int = 10
+const m:int = 10
 
 node concatenate(a:int^n; b:int^m) returns (o1, o2: int^(n+m))
 let
@@ -40,4 +40,14 @@ tel
 node constant(a,b:int) returns (o:int^4)
 let
   o = [a,b,a,b];
+tel
+
+
+node test1() returns (r1,r2: int^3)
+var x,y : int^10; z,t : int^20;
+let
+  x = ten(3);
+  y = ten(4);
+  (z,t) = concatenate(x,y);
+  (r1,r2) = slicing(x);
 tel
