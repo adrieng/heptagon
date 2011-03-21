@@ -15,5 +15,5 @@ tel
 node p(a:int^n) returns (o:int^n)
 var acc:int;
 let
-  (o, acc) = mapfold sumdup <<n>>(a, 0); 
+  (o, acc) = mapfold<<n>> sumdup (a, 0); 
 tel

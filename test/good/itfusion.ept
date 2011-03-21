@@ -7,15 +7,15 @@ tel
 
 fun f1(a:int^n) returns (o:int^n)
 let
-  o = map inc <<n>>(map inc <<n>> (a));
+  o = map<<n>> inc (map<<n>> inc (a));
 tel
 
 fun f2(a,b:int^n) returns (o:int^n)
 let
-  o = map (+) <<n>>(map inc <<n>>(b), map inc <<n>> (a));
+  o = map<<n>> (+) (map<<n>> inc (b), map<<n>> inc (a));
 tel
 
 fun f3(a,b:int^n) returns (o:int^n)
 let
-  o = map (+) <<n>>(b, map inc <<n>> (a));
+  o = map<<n>> (+) (b, map<<n>> inc (a));
 tel

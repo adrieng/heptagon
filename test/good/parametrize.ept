@@ -25,6 +25,6 @@ tel
 
 node p(a:int^n^n) returns (o:int^n^n)
 let
-  o = map (l<<n>>) <<n>>(a);
+  o = map<<n>> (l<<n>>)(a);
 tel
 

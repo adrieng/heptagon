@@ -11,12 +11,12 @@ tel
 
 fun g(a:tableau) returns (o:tableau)
 let
-  o = map f <<n>>(a);
+  o = map<<n>> f (a);
 tel
 
 fun h(a:matrice) returns (o:matrice)
 var x : matrice;
 let
   x = a;
-  o = map g <<n>>(x);
+  o = map<<n>> g (x);
 tel

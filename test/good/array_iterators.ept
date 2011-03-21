@@ -7,7 +7,7 @@ tel
 
 node g(a:int^n) returns (o:int^n)
 let
-  o = map plusone <<n>>(a);
+  o = map<<n>> plusone (a);
 tel
 
 node sum_acc (a, acc_in:int) returns (acc_out:int)
@@ -17,7 +17,7 @@ tel
 
 node h(a:int^n) returns (m:int)
 let
-  m = fold sum_acc <<n>>(a, 0);
+  m = fold<<n>> sum_acc (a, 0);
 tel
 
 node sum_dup (a, acc_in:int) returns (o:int; acc_out:int)
@@ -29,17 +29,17 @@ tel
 node p(a:int^n) returns (o:int^n)
 var acc:int;
 let
-  (o, acc) = mapfold sum_dup <<n>>(a, 0);
+  (o, acc) = mapfold<<n>> sum_dup (a, 0);
 tel
 
 node k(a,b:int^n) returns (o:int^n)
 let
-  o = map (+) <<n>>(a,b);
+  o = map<<n>> (+) (a,b);
 tel
 
 node iter_reset(a:int^n; r:bool) returns (o:int^n)
 let
   reset
-   o = map plusone <<n>>(a);
+   o = map<<n>> plusone (a);
   every (r & r)
 tel

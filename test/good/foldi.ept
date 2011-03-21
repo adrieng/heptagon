@@ -7,5 +7,5 @@ tel
 
 fun g(a: bool^n) returns (o:bool)
 let
-  o = foldi f <<n>>(a, true);
+  o = foldi<<n>> f (a, true);
 tel
