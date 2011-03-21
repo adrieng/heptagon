@@ -172,8 +172,8 @@ let translate_iterator_type = function
     op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
 let static_app_from_app app args=
   match app.a_op with
-    | Efun (Q ({ qual = "Pervasives" } as q))
-    | Enode (Q ({ qual = "Pervasives" } as q)) ->
+    | Efun (Q ({ qual = Pervasives } as q))
+    | Enode (Q ({ qual = Pervasives } as q)) ->
         q, (app.a_params @ args)
     | _ -> raise Not_static
 
@@ -214,7 +214,8 @@ let rec translate_type loc ty =
       | Tid ln -> Types.Tid (qualify_type ln)
       | Tarray (ty, e) ->
           let ty = translate_type loc ty in
-          Types.Tarray (ty, expect_static_exp e))
+          Types.Tarray (ty, expect_static_exp e)
+    )
   with
     | ScopingError err -> message loc err
 
@@ -242,18 +243,20 @@ and translate_desc loc env = function
         List.map (fun (f,e) -> qualify_field f, translate_exp env e)
           f_e_list in
       Heptagon.Estruct f_e_list
-  | Eapp ({ a_op = op; a_params = params }, e_list) ->
+  | Eapp ({ a_op = op; a_params = params; }, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
       let params = List.map (expect_static_exp) params in
-      let app = Heptagon.mk_op ~params:params (translate_op op) in
+      let app = Heptagon.mk_app ~params:params (translate_op op) in
       Heptagon.Eapp (app, e_list, None)
-  | Eiterator (it, { a_op = op; a_params = params }, n, e_list) ->
+
+  | Eiterator (it, { a_op = op; a_params = params }, n, pe_list, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
+      let pe_list = List.map (translate_exp env) pe_list in
       let n = expect_static_exp n in
       let params = List.map (expect_static_exp) params in
-      let app = Heptagon.mk_op ~params:params (translate_op op) in
+      let app = Heptagon.mk_app ~params:params (translate_op op) in
       Heptagon.Eiterator (translate_iterator_type it,
-                          app, n, e_list, None)
+                          app, n, pe_list, e_list, None)
   | Ewhen (e, c, ce) ->
       let e = translate_exp env e in
       let c = qualify_constrs c in
@@ -268,6 +271,7 @@ and translate_desc loc env = function
           (c, e) in
         List.map fun_c_e c_e_list in
       Heptagon.Emerge (e, c_e_list)
+
 
 and translate_op = function
   | Eequal -> Heptagon.Eequal
@@ -292,8 +296,8 @@ and translate_pat loc env = function
 
 let rec translate_eq env eq =
   { Heptagon.eq_desc = translate_eq_desc eq.eq_loc env eq.eq_desc ;
-    Heptagon.eq_statefull = false;
-    Heptagon.eq_loc = eq.eq_loc }
+    Heptagon.eq_stateful = false;
+    Heptagon.eq_loc = eq.eq_loc; }
 
 and translate_eq_desc loc env = function
   | Eswitch(e, switch_handlers) ->
@@ -322,8 +326,8 @@ and translate_block env b =
   { Heptagon.b_local = translate_vd_list env b.b_local;
     Heptagon.b_equs = List.map (translate_eq env) b.b_equs;
     Heptagon.b_defnames = Env.empty;
-    Heptagon.b_statefull = false;
-    Heptagon.b_loc = b.b_loc }, env
+    Heptagon.b_stateful = false;
+    Heptagon.b_loc = b.b_loc; }, env
 
 and translate_state_handler env sh =
   let b, env = translate_block env sh.s_block in
@@ -398,9 +402,9 @@ let translate_node node =
   let i = args_of_var_decs node.n_input in
   let o = args_of_var_decs node.n_output in
   let p = params_of_var_decs node.n_params in
-  add_value n (Signature.mk_node i o node.n_statefull p);
+  add_value n (Signature.mk_node i o node.n_stateful p);
   { Heptagon.n_name = n;
-    Heptagon.n_statefull = node.n_statefull;
+    Heptagon.n_stateful = node.n_stateful;
     Heptagon.n_input = inputs;
     Heptagon.n_output = outputs;
     Heptagon.n_contract = contract;
@@ -452,7 +456,7 @@ let translate_program p =
   let consts = List.map translate_const_dec p.p_consts in
   let types = List.map translate_typedec p.p_types in
   let nodes = List.map translate_node p.p_nodes in
-  { Heptagon.p_modname = p.p_modname;
+  { Heptagon.p_modname = Names.modul_of_string p.p_modname;
     Heptagon.p_opened = p.p_opened;
     Heptagon.p_types = types;
     Heptagon.p_nodes = nodes;
@@ -465,8 +469,8 @@ let translate_signature s =
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
-  add_value n (Signature.mk_node i o s.sig_statefull p);
-  Heptagon.mk_signature n i o s.sig_statefull p s.sig_loc
+  add_value n (Signature.mk_node i o s.sig_stateful p);
+  Heptagon.mk_signature n i o s.sig_stateful p s.sig_loc
 
 
 let translate_interface_desc = function

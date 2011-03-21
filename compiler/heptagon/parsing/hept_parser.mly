@@ -9,7 +9,7 @@ open Hept_parsetree
 
 %}
 
-%token DOT LPAREN RPAREN LBRACE RBRACE COLON SEMICOL
+%token DOT LPAREN LPARENLPAREN RPAREN RPARENRPAREN LBRACE RBRACE COLON SEMICOL
 %token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
@@ -58,7 +58,6 @@ open Hept_parsetree
 
 
 %right AROBASE
-%nonassoc prec_ident
 %nonassoc DEFAULT
 %left ELSE
 %right ARROW
@@ -76,7 +75,7 @@ open Hept_parsetree
 %right PRE
 %left POWER
 %right PREFIX
-%left DOT
+
 
 
 %start program
@@ -94,6 +93,10 @@ slist(S, x) :
   |                        {[]}
   | x=x                    {[x]}
   | x=x S r=slist(S,x)     {x::r}
+/* Separated list with delimiter*/
+delim_slist(S, L, R, x) :
+  |                        {[]}
+  | L l=slist(S, x) R      {l}
 /*Separated Nonempty list */
 snlist(S, x) :
   | x=x                    {[x]}
@@ -125,7 +128,7 @@ pragma_headers:
 
 open_modules:
   | /* empty */ { [] }
-  | open_modules OPEN Constructor { $3 :: $1 }
+  | open_modules OPEN modul { $3 :: $1 }
 ;
 
 const_decs:
@@ -184,7 +187,7 @@ node_dec:
     RETURNS LPAREN out_params RPAREN
     contract b=block(LET) TEL
       {{ n_name = $2;
-         n_statefull = $1;
+         n_stateful = $1;
          n_input  = $5;
          n_output = $9;
          n_contract = $11;
@@ -309,7 +312,8 @@ sblock(S) :
   | VAR l=loc_params S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
   | eq=equs                  { mk_block [] eq (Loc($startpos,$endpos)) }
 
-equ: eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
+equ:
+  | eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
 _equ:
   | pat EQUAL exp { Eeq($1, $3) }
   | AUTOMATON automaton_handlers END
@@ -430,8 +434,6 @@ _simple_exp:
                 Efield [$1] }
 ;
 
-node_name:
-  | qualname call_params { mk_app (Enode $1) $2 }
 
 merge_handlers:
   | hs=nonempty_list(merge_handler) { hs }
@@ -446,8 +448,9 @@ _exp:
       { Efby ($1, $3) }
   | PRE exp
       { Epre (None, $2) }
-  | node_name LPAREN exps RPAREN
-      { Eapp($1, $3) }
+  /* node call*/
+  | n=qualname p=call_params LPAREN args=exps RPAREN
+      { Eapp(mk_app (Enode n) p , args) }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp
@@ -501,11 +504,15 @@ _exp:
   | exp AROBASE exp
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
-  | iterator qualname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_iterator_call $1 $2 [] $4 $7 }
-  | iterator LPAREN qualname DOUBLE_LESS array_exp_list DOUBLE_GREATER
-      RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_iterator_call $1 $3 $5 $9 $12 }
+  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER q=qualname
+      pargs=delim_slist(COMMA, LPARENLPAREN, RPARENRPAREN, exp)
+      LPAREN args=exps RPAREN
+      { mk_iterator_call it q [] n pargs args }
+  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
+      LPAREN q=qualname DOUBLE_LESS sa=array_exp_list DOUBLE_GREATER RPAREN
+      pargs=delim_slist(COMMA, LPARENLPAREN, RPARENRPAREN, exp)
+      LPAREN args=exps RPAREN
+      { mk_iterator_call it q sa n pargs args }
 /*Records operators */
   | LBRACE simple_exp WITH DOT c=qualname EQUAL exp RBRACE
       { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))]
@@ -529,25 +536,32 @@ indexes:
   | LBRACKET exp RBRACKET indexes { $2::$4 }
 ;
 
+qualified(X):
+  | m=modul DOT x=X { Q { qual = m; name = x } }
+
+modul:
+  | c=Constructor { Names.Module c }
+  | m=modul DOT c=Constructor { Names.QualModule { Names.qual = m; Names.name = c} }
+
 constructor:
-  | Constructor { ToQ $1 } %prec prec_ident
-  | Constructor DOT Constructor { Q {qual = $1; name = $3} }
+  | Constructor { ToQ $1 }
+  | q=qualified(Constructor) { q }
 ;
 
 qualname:
-  | ident { ToQ $1 }
-  | Constructor DOT ident { Q {qual = $1; name = $3} }
+  | i=ident { ToQ i }
+  | q=qualified(ident) { q }
 ;
 
 
-const: c=_const { mk_static_exp c (Loc($startpos,$endpos)) }
+const:
+  | c=_const { mk_static_exp c (Loc($startpos,$endpos)) }
 _const:
-  | INT         { Sint $1 }
-  | FLOAT       { Sfloat $1 }
-  | BOOL        { Sbool $1 }
-  | constructor { Sconstructor $1 }
-  | Constructor DOT ident
-      { Svar (Q {qual = $1; name = $3}) }
+  | INT                { Sint $1 }
+  | FLOAT              { Sfloat $1 }
+  | BOOL               { Sbool $1 }
+  | constructor        { Sconstructor $1 }
+  | q=qualified(ident) { Svar q }
 ;
 
 tuple_exp:
@@ -604,12 +618,12 @@ interface_decl:
 _interface_decl:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
-  | OPEN Constructor { Iopen $2 }
+  | OPEN modul { Iopen $2 }
   | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
     RETURNS LPAREN params_signature RPAREN
     { Isignature({ sig_name = $3;
                    sig_inputs = $6;
-                   sig_statefull = $2;
+                   sig_stateful = $2;
                    sig_outputs = $10;
                    sig_params = $4;
                    sig_loc = (Loc($startpos,$endpos)) }) }

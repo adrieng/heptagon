@@ -73,11 +73,12 @@ and edesc funs acc ed = match ed with
           (n,e), acc in
       let n_e_list, acc = mapfold aux acc n_e_list in
         Estruct n_e_list, acc
-  | Eiterator (i, app, param, args, reset) ->
+  | Eiterator (i, app, param, pargs, args, reset) ->
       let app, acc = app_it funs acc app in
       let param, acc = static_exp_it funs.global_funs acc param in
+      let pargs, acc = mapfold (exp_it funs) acc pargs in
       let args, acc = mapfold (exp_it funs) acc args in
-        Eiterator (i, app, param, args, reset), acc
+        Eiterator (i, app, param, pargs, args, reset), acc
 
 
 and app_it funs acc a = funs.app funs acc a

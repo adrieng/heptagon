@@ -9,13 +9,13 @@ open Minils
 (* Functions to temporarily store anonymous nodes*)
 let mk_fresh_node_name () = Modules.fresh_value "itfusion" "temp"
 
-let fresh_vd_of_arg =
+let fresh_vd_of_arg a =
   Idents.gen_fresh "itfusion"
                    (fun a -> match a.a_name with
                              | None -> "v"
-                             | Some n -> n)
+                             | Some n -> n) a
 
-let fresh_var = Idents.gen_fresh "itfusion" (fun () -> "x")
+let fresh_var () = Idents.gen_var "itfusion" "x"
 
 let anon_nodes = ref QualEnv.empty
 
@@ -89,7 +89,7 @@ let mk_call app acc_eq_list =
 let edesc funs acc ed =
   let ed, acc = Mls_mapfold.edesc funs acc ed in
   match ed with
-    | Eiterator(Imap, f, n, e_list, r) ->
+    | Eiterator(Imap, f, n, [], e_list, r) ->
         (** @return the list of inputs of the anonymous function,
             a list of created equations (the body of the function),
             the args for the call of f in the lambda,
@@ -102,7 +102,7 @@ let edesc funs acc ed =
                         o1, o2 = f (_v1, _v2, z')
         *)
         let mk_arg e (inp, acc_eq_list, largs, args, b) = match e.e_desc with
-          | Eiterator(Imap, g, m, local_args, _) when are_equal n m ->
+          | Eiterator(Imap, g, m, [], local_args, _) when are_equal n m ->
               let new_inp, e, acc_eq_list = mk_call g acc_eq_list in
               new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->
@@ -122,7 +122,7 @@ let edesc funs acc ed =
           let eq = mk_equation (pat_of_vd_list outp) call in
           (* create the lambda *)
           let anon = mk_app (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
-          Eiterator(Imap, anon, n, args, r), acc)
+          Eiterator(Imap, anon, n, [], args, r), acc)
         else
           ed, acc
 

@@ -27,3 +27,4 @@ _build
 *.dot
 test/*.ml
 test/_check_builds
+lib/java/.classpath

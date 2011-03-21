@@ -14,7 +14,7 @@ let print_vd ff vd =
   fprintf ff "@]"
 
 let print_obj ff o =
-  fprintf ff "@[<v>"; print_name ff o.o_name;
+  fprintf ff "@[<v>"; print_ident ff o.o_ident;
   fprintf ff " : "; print_qualname ff o.o_class;
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") o.o_params;
   (match o.o_size with
@@ -37,7 +37,7 @@ and print_exps ff e_list = print_list_r print_exp "" "," "" ff e_list
 
 and print_exp ff e =
   match e.e_desc with
-    | Elhs lhs -> print_lhs ff lhs
+    | Epattern lhs -> print_lhs ff lhs
     | Econst c -> print_static_exp ff c
     | Eop(op, e_list) -> print_op ff op e_list
     | Estruct(_,f_e_list) ->
@@ -65,15 +65,16 @@ let print_asgn ff pref x e =
   fprintf ff "@]"
 
 let print_obj_call ff = function
-  | Oobj o -> print_name ff o
+  | Oobj o -> print_ident ff o
   | Oarray (o, i) ->
       fprintf ff "%a[%a]"
-        print_name o
+        print_ident o
         print_lhs i
 
 let print_method_name ff = function
   | Mstep -> fprintf ff "step"
   | Mreset -> fprintf ff "reset"
+
 
 let rec print_act ff a =
   let print_lhs_tuple ff var_list = match var_list with
@@ -87,8 +88,8 @@ let rec print_act ff a =
         print_tag_act_list ff tag_act_list;
         fprintf ff "@]@,}@]"
     | Afor(x, i1, i2, act_list) ->
-        fprintf ff "@[<v>@[<v 2>for %s = %a to %a {@, %a @]@,}@]"
-          (name x)
+        fprintf ff "@[<v>@[<v 2>for %a = %a to %a {@  %a @]@,}@]"
+          print_vd x
           print_static_exp i1
           print_static_exp i2
           print_block act_list
@@ -98,6 +99,8 @@ let rec print_act ff a =
           print_obj_call o
           print_method_name meth
           print_exps es
+    | Ablock b ->
+        fprintf ff "do@\n  %a@\ndone" print_block b
 
 and print_var_dec_list ff var_dec_list = match var_dec_list with
   | [] -> ()
@@ -149,6 +152,7 @@ let print_class_def ff
   print_list_r print_method "" "\n" "" ff m_list;
   fprintf ff "@]"
 
+
 let print_type_def ff { t_name = name; t_desc = tdesc } =
   match tdesc with
     | Type_abs -> fprintf ff "@[type %a@\n@]" print_qualname name
@@ -169,21 +173,19 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
         fprintf ff "@]@.@]"
 
 let print_open_module ff name =
-  fprintf ff "@[open ";
-  print_name ff name;
-  fprintf ff "@.@]"
+  fprintf ff "open %s@." (modul_to_string name)
 
 let print_const_dec ff c =
   fprintf ff "const %a = %a@." print_qualname c.c_name
     print_static_exp c.c_value
 
 let print_prog ff { p_opened = modules; p_types = types;
-                    p_consts = consts; p_defs = defs } =
+                    p_consts = consts; p_classes = classes; } =
   List.iter (print_open_module ff) modules;
   List.iter (print_type_def ff) types;
   List.iter (print_const_dec ff) consts;
   fprintf ff "@\n";
-  List.iter (fun def -> (print_class_def ff def; fprintf ff "@\n@\n")) defs
+  List.iter (fun cdef -> (print_class_def ff cdef; fprintf ff "@\n@\n")) classes
 
 let print oc p =
   let ff = formatter_of_out_channel oc in

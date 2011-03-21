@@ -67,6 +67,10 @@ module PatEnv =
 
     type penv_t = (int * exp * ident list) P.t
 
+
+    (* An environment used for automata minimization: holds both a pattern environment mapping patterns to equivalence
+       classes, and a [(pat * int list) Env.t] that maps variable [x] to a [(pat, pth)] tuple where [pat] is the pattern
+       holding [x] at path [pth] *)
     type t = penv_t * (pat * int list) Env.t
 
     let empty = (P.empty, Env.empty)
@@ -202,9 +206,12 @@ let behead e =
           List.split
             (List.map (fun (ln, e) -> ((ln, dummy_exp), e)) lne_list) in
         (Estruct lne_list, e_list)
-    | Eiterator (it, op, s, e_list, rst) ->
+    | Eiterator (it, op, s, pe_list, e_list, rst) ->
         let (rst, l) = encode_reset rst in
-        (Eiterator (it, op, s, [], rst), l @ e_list) in
+        (* count is the number of partial arguments *)
+        let count = mk_exp ~ty:Initial.tint
+          (Econst (Initial.mk_static_int (List.length pe_list))) in
+        (Eiterator (it, op, s, [], [], rst), count :: (pe_list @ l @ e_list)) in
   ({ e with e_desc = e_desc; }, children)
 
 let pat_name pat =
@@ -398,7 +405,7 @@ let rec reconstruct input_type (env : PatEnv.t) =
     | Etuplepat pat_list, Tprod ty_list ->
         List.fold_right2 mk_var_decs pat_list ty_list var_list
     | Etuplepat [], Tunit -> var_list
-    | Etuplepat _, (Tarray _ | Tid _ | Tunit) -> assert false (* ill-typed *) in
+    | Etuplepat _, (Tarray _ | Tid _ | Tunit | Tmutable _) -> assert false (* ill-typed *) in
 
   let add_to_lists pat (_, head, children) (eq_list, var_list) =
     (* Remember the encoding of resets given above. *)
@@ -421,11 +428,19 @@ let rec reconstruct input_type (env : PatEnv.t) =
                   List.combine (List.map fst cnel) (List.tl e_list))
       | Estruct fnel, e_list ->
           Estruct (List.combine (List.map fst fnel) e_list)
-      | Eiterator (it, app, se, [], rst), e_list ->
+      | Eiterator (it, app, se, [], [], rst), e_list ->
+          (* the first element is the number of partial arguments *)
+          let count, e_list = assert_1min e_list in
+          let c = (match count.e_desc with
+            | Econst { se_desc = Sint c } -> c
+            | _ -> assert false)
+          in
+          let pe_list, e_list = Misc.split_at c e_list in
           let rst, e_list = rst_of_e_list rst e_list in
-          Eiterator (it, app, se, e_list, rst)
+          Eiterator (it, app, se, pe_list, e_list, rst)
 
-      | (Eiterator (_, _, _, _ :: _, _) | Ewhen _ | Efby _ | Evar _ | Econst _)
+      | (Eiterator (_, _, _, _, _, _) | Ewhen _
+        | Efby _ | Evar _ | Econst _)
           , _ -> assert false (* invariant *) in
     (mk_equation pat { head with e_desc = e_desc; } :: eq_list,
      mk_var_decs pat head.e_ty var_list) in

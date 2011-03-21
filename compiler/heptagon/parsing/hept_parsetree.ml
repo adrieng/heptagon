@@ -17,6 +17,8 @@ type var_name = Names.name
 (** dec_names are locally declared qualified names *)
 type dec_name = Names.name
 
+type module_name = Names.modul
+
 (** state_names, [automata] translate them in constructors with a fresh type. *)
 type state_name = Names.name
 
@@ -70,7 +72,7 @@ and edesc =
   | Efby of exp * exp
   | Estruct of (qualname * exp) list
   | Eapp of app * exp list
-  | Eiterator of iterator_type * app * exp * exp list
+  | Eiterator of iterator_type * app * exp * exp list * exp list
   | Ewhen of exp * constructor_name * var_name
   | Emerge of var_name * (constructor_name * exp) list
 
@@ -160,7 +162,7 @@ type contract =
 
 type node_dec =
   { n_name      : dec_name;
-    n_statefull : bool;
+    n_stateful : bool;
     n_input     : var_dec list;
     n_output    : var_dec list;
     n_contract  : contract option;
@@ -177,7 +179,7 @@ type const_dec =
 type program =
   { p_modname : dec_name;
     p_pragmas : (var_name * string) list;
-    p_opened  : dec_name list;
+    p_opened  : module_name list;
     p_types   : type_dec list;
     p_nodes   : node_dec list;
     p_consts  : const_dec list; }
@@ -189,7 +191,7 @@ type arg =
 type signature =
   { sig_name      : dec_name;
     sig_inputs    : arg list;
-    sig_statefull : bool;
+    sig_stateful : bool;
     sig_outputs   : arg list;
     sig_params    : var_dec list;
     sig_loc       : location }
@@ -201,7 +203,7 @@ and interface_decl =
     interf_loc  : location }
 
 and interface_desc =
-  | Iopen of dec_name
+  | Iopen of module_name
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
@@ -212,17 +214,16 @@ let mk_exp desc ?(ct_annot = Clocks.invalid_clock) loc =
   { e_desc = desc; e_ct_annot = ct_annot; e_loc = loc }
 
 let mk_app op params =
-  { a_op = op; a_params = params }
+  { a_op = op; a_params = params; }
 
 let mk_call ?(params=[]) op exps =
   Eapp (mk_app op params, exps)
 
 let mk_op_call ?(params=[]) s exps =
-  mk_call ~params:params
-    (Efun (Q { Names.qual = "Pervasives"; Names.name = s })) exps
+  mk_call ~params:params (Efun (Q (Names.pervasives_qn s))) exps
 
-let mk_iterator_call it ln params n exps =
-  Eiterator (it, mk_app (Enode ln) params, n, exps)
+let mk_iterator_call it ln params n pexps exps =
+  Eiterator (it, mk_app (Enode ln) params, n, pexps, exps)
 
 let mk_static_exp desc loc =
   { se_desc = desc; se_loc = loc }
@@ -248,7 +249,7 @@ let mk_var_dec name ty last loc =
 
 let mk_block locals eqs loc =
   { b_local = locals; b_equs = eqs;
-    b_loc = loc }
+    b_loc = loc; }
 
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }

@@ -12,14 +12,7 @@ open List
 open Modules
 open Names
 
-let rec print_list ff print sep l =
-  match l with
-    | [] -> ()
-    | [x] -> print ff x
-    | x :: l ->
-        print ff x;
-        fprintf ff "%s@ " sep;
-        print_list ff print sep l
+let print_list ff print sep l = Pp_tools.print_list_r print "" sep "" ff l
 
 (** [cname_of_name name] translates the string [name] to a valid C identifier.
     Copied verbatim from the old C backend. *)
@@ -81,19 +74,19 @@ and cexpr =
   | Clhs of clhs (** Left-hand-side expressions are obviously expressions! *)
   | Caddrof of clhs (** Take the address of a left-hand-side expression. *)
   | Cstructlit of string * cexpr list (** Structure literal "{ f1, f2, ... }".*)
-  | Carraylit of cexpr list (** Array literal [e1, e2, ...]. *)
+  | Carraylit of cexpr list (** Array literal [\[e1, e2, ...\]]. *)
 and cconst =
   | Ccint of int (** Integer constant. *)
   | Ccfloat of float (** Floating-point number constant. *)
   | Ctag of string (** Tag, member of a previously declared enumeration. *)
   | Cstrlit of string (** String literal, enclosed in double-quotes. *)
-      (** C left-hand-side (ie. affectable) expressions. *)
+(** C left-hand-side (ie. affectable) expressions. *)
 and clhs =
   | Cvar of string (** A local variable. *)
   | Cderef of clhs (** Pointer dereference, *ptr. *)
   | Cfield of clhs * qualname (** Field access to left-hand-side. *)
   | Carray of clhs * cexpr (** Array access clhs[cexpr] *)
-      (** C statements. *)
+(** C statements. *)
 and cstm =
   | Csexpr of cexpr (** Expression evaluation, may cause side-effects! *)
   | Csblock of cblock (** A local sub-block, can have its own private decls. **)
@@ -162,11 +155,14 @@ let rec pp_list f sep fmt l = match l with
 let pp_string fmt s =
   fprintf fmt "%s" (cname_of_name s)
 
-let cname_of_qn q =
-  if q.qual = "Pervasives" or q.qual = Names.local_qualname then
-    q.name
-  else
-    (q.qual ^ "__" ^ q.name)
+let rec modul_to_cname q = match q with
+  | Pervasives | LocalModule -> ""
+  | Module m -> m ^ "__"
+  | QualModule { qual = q; name = n } ->
+      (modul_to_cname q)^n^"__"
+
+let cname_of_qn qn =
+  (modul_to_cname qn.qual) ^ qn.name
 
 let pp_qualname fmt q =
   pp_string fmt (cname_of_qn q)
@@ -248,8 +244,9 @@ and pp_cexpr fmt ce = match ce with
   | Caddrof lhs -> fprintf fmt "&%a" pp_clhs lhs
   | Cstructlit (s, el) ->
       fprintf fmt "(%a){@[%a@]}" pp_string s (pp_list1 pp_cexpr ",") el
-  | Carraylit el ->
-      fprintf fmt "((int []){@[%a@]})" (pp_list1 pp_cexpr ",") el (* WRONG *)
+  | Carraylit el -> (* TODO master : WRONG *)
+      fprintf fmt "((int []){@[%a@]})" (pp_list1 pp_cexpr ",") el
+
 and pp_clhs fmt lhs = match lhs with
   | Cvar s -> pp_string fmt s
   | Cderef lhs' -> fprintf fmt "*%a" pp_clhs lhs'
@@ -314,11 +311,10 @@ let pp_cfile_desc fmt filen cfile =
 let output_cfile dir (filen, cfile_desc) =
   if !Compiler_options.verbose then
     Format.printf "C-NG generating %s/%s@." dir filen;
-  let buf = Buffer.create 20000 in
   let oc = open_out (Filename.concat dir filen) in
-  let fmt = Format.formatter_of_buffer buf in
+  let fmt = Format.formatter_of_out_channel oc in
   pp_cfile_desc fmt filen cfile_desc;
-  Buffer.output_buffer oc buf;
+  pp_print_flush fmt ();
   close_out oc
 
 let output dir cprog =

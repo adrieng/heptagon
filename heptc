@@ -9,17 +9,25 @@ SCRIPT_DIR=$RUN_DIR/`dirname $0`
 
 COMPILER_DIR=$SCRIPT_DIR/compiler
 COMPILER=heptc.byte
+COMPILER_DEBUG=heptc.d.byte
 LIB_DIR=$SCRIPT_DIR/lib
 
 #the symlink
 HEPTC=$COMPILER_DIR/$COMPILER
+HEPTC_DEBUG=$COMPILER_DIR/$COMPILER_DEBUG
 
 #compile the compiler
 if [ ! -x $HEPTC ]
 then
-	cd $COMPILER_DIR
-	ocamlbuild -j 0 $COMPILER
-	cd -
+	if [ -x $HEPTC_DEBUG ]
+	then
+		#use the debug
+		HEPTC=$HEPTC_DEBUG
+	else
+		cd $COMPILER_DIR
+		ocamlbuild -j 0 $COMPILER
+		cd -
+	fi
 fi
 
 #compile the stdlib

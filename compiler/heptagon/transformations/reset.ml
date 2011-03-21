@@ -8,7 +8,7 @@
 (**************************************************************************)
 (* removing reset statements *)
 
-(* REQUIRES automaton switch statefull present *)
+(* REQUIRES automaton switch stateful present *)
 
 open Misc
 open Idents
@@ -23,12 +23,12 @@ open Initial
 
 let fresh = Idents.gen_fresh "reset" (fun () -> "r")
 
-(* get e and return x, var_dec_x, x = e *)
-let equation_from_exp e =
-  let n = fresh() in
-  { e with e_desc = Evar n }, mk_var_dec n (Tid Initial.pbool), mk_equation (Eeq(Evarpat n, e))
+(* get e and return r, var_dec_r, r = e *)
+let bool_var_from_exp e =
+  let r = fresh() in
+  { e with e_desc = Evar r }, mk_var_dec r (Tid Initial.pbool), mk_equation (Eeq(Evarpat r, e))
 
-
+(** Merge two reset conditions *)
 let merge_resets res1 res2 =
   let mk_or e1 e2 = mk_op_app (Efun Initial.por) [e1;e2] in
   match res1, res2 with
@@ -66,15 +66,15 @@ let edesc funs (res,s) ed =
         ifres res e1 e2
     | Eapp({ a_op = Enode _ } as op, e_list, re) ->
         Eapp(op, e_list, merge_resets res re)
-    | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, re) ->
-        Eiterator(it, op, n, e_list, merge_resets res re)
+    | Eiterator(it, ({ a_op = Enode _ } as op), n, pe_list, e_list, re) ->
+        Eiterator(it, op, n, pe_list, e_list, merge_resets res re)
     | _ -> ed
   in
     ed, (res,s)
 
 
 
-let eq funs (res,_) eq = Hept_mapfold.eq funs (res,eq.eq_statefull) eq
+let eq funs (res,_) eq = Hept_mapfold.eq funs (res,eq.eq_stateful) eq
 
 (* Transform reset blocks in blocks with reseted exps, create a var to store the reset condition evaluation. *)
 let eqdesc funs (res,stateful) = function
@@ -82,10 +82,10 @@ let eqdesc funs (res,stateful) = function
       if stateful
       then (
         let e, _ = Hept_mapfold.exp_it funs (res,true) e in
-        let e, vd, eq = equation_from_exp e in
+        let e, vd, eq = bool_var_from_exp e in
         let r = merge_resets res (Some e) in
         let b, _ = Hept_mapfold.block_it funs (r,true) b in
-        let b = { b with b_equs = eq::b.b_equs; b_local = vd::b.b_local; b_statefull = true } in
+        let b = { b with b_equs = eq::b.b_equs; b_local = vd::b.b_local; b_stateful = true } in
         Eblock(b), (res,true))
       else (
         let b, _ = Hept_mapfold.block_it funs (res,false) b in

@@ -8,6 +8,21 @@
 (**************************************************************************)
 (* Object code internal representation *)
 
+(** { 3 Semantics }
+  Any variable is a reference to a constant memory.
+    Thus [p = e] is not the change of the reference,
+    but a recursive copy of what is referenced (deep copy).
+    As an example, [x = 3] but also [x = \[3; 4; 5\]]
+    and [t1 = t2] with the content of the array [t2] copied into the array [t1].
+  Obc is also "SSA" in the sens that a variable is assigned a value only once per call of [step] etc.
+    Thus arguments are passed as constant references to a constant memory.
+
+  One exception to the SSA rule is through the [mutable] variables.
+    Theses variables can be assigned multiple times.
+    Thus a [mutable] argument is passed as a reference to a constant memory.
+*)
+
+
 open Misc
 open Names
 open Idents
@@ -16,12 +31,12 @@ open Signature
 open Location
 
 type class_name = qualname
-type instance_name = qualname
-type obj_name = name
 type op_name = qualname
+type obj_ident = var_ident
+
 
 type type_dec =
-    { t_name : qualname;
+    { t_name : type_name;
       t_desc : tdesc;
       t_loc : location }
 
@@ -48,15 +63,15 @@ and pat_desc =
 and exp = { e_desc : exp_desc; e_ty : ty; e_loc : location }
 
 and exp_desc =
-  | Elhs of pattern
+  | Epattern of pattern
   | Econst of static_exp
   | Eop of op_name * exp list
   | Estruct of type_name * (field_name * exp) list
   | Earray of exp list
 
 type obj_ref =
-  | Oobj of obj_name
-  | Oarray of obj_name * pattern
+  | Oobj of obj_ident
+  | Oarray of obj_ident * pattern
 
 type method_name =
   | Mreset
@@ -66,7 +81,8 @@ type act =
   | Aassgn of pattern * exp
   | Acall of pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
-  | Afor of var_ident * static_exp * static_exp * block
+  | Afor of var_dec * static_exp * static_exp * block
+  | Ablock of block
 
 and block =
     { b_locals : var_dec list;
@@ -74,14 +90,14 @@ and block =
 
 and var_dec =
     { v_ident : var_ident;
-      v_type : ty; (* TODO GD should be here, v_controllable : bool *)
+      v_type : ty;
       v_loc : location }
 
 type obj_dec =
-    { o_name : obj_name;
-      o_class : instance_name;
+    { o_ident : obj_ident;
+      o_class : class_name;
       o_params : static_exp list;
-      o_size : static_exp option;
+      o_size : static_exp option; (** size of the array if the declaration is an array of obj *)
       o_loc : location }
 
 type method_def =
@@ -92,70 +108,19 @@ type method_def =
 
 type class_def =
     { cd_name : class_name;
+      cd_stateful : bool; (** when false, the class is a function with static parameters
+                              calling other functions with parameters *)
       cd_mems : var_dec list;
       cd_objs  : obj_dec list;
       cd_params : param list;
       cd_methods: method_def list;
       cd_loc : location }
 
+
 type program =
-    { p_modname : name;
-      p_opened : name list;
+    { p_modname : modul;
+      p_opened : modul list;
       p_types : type_dec list;
       p_consts : const_dec list;
-      p_defs  : class_def list }
-
-let mk_var_dec ?(loc=no_location) name ty =
-  { v_ident = name; v_type = ty; v_loc = loc }
-
-let mk_exp ?(ty=invalid_type) ?(loc=no_location) desc = (* TODO master :  remove the invalid_type *)
-  { e_desc = desc; e_ty = ty; e_loc = loc }
-
-let mk_lhs ?(ty=invalid_type) ?(loc=no_location) desc = (* TODO master :  remove the invalid_type *)
-  { pat_desc = desc; pat_ty = ty; pat_loc = loc }
-
-let mk_lhs_exp ?(ty=invalid_type) desc = (* TODO master :  remove the invalid_type *)
-  let lhs = mk_lhs ~ty:ty desc in
-    mk_exp ~ty:ty (Elhs lhs)
-
-let mk_evar id =
-  mk_exp (Elhs (mk_lhs (Lvar id)))
-
-let mk_block ?(locals=[]) eq_list =
-  { b_locals = locals;
-    b_body = eq_list }
-
-let rec var_name x =
-  match x.pat_desc with
-    | Lvar x -> x
-    | Lmem x -> x
-    | Lfield(x,_) -> var_name x
-    | Larray(l, _) -> var_name l
-
-(** Returns whether an object of name n belongs to
-    a list of var_dec. *)
-let rec vd_mem n = function
-  | [] -> false
-  | vd::l -> vd.v_ident = n or (vd_mem n l)
-
-(** Returns the var_dec object corresponding to the name n
-    in a list of var_dec. *)
-let rec vd_find n = function
-  | [] -> Format.eprintf "Not found var %s@." (name n); raise Not_found
-  | vd::l ->
-      if vd.v_ident = n then vd else vd_find n l
-
-let lhs_of_exp e = match e.e_desc with
-  | Elhs l -> l
-  | _ -> assert false
-
-let find_step_method cd =
-  List.find (fun m -> m.m_name = Mstep) cd.cd_methods
-let find_reset_method cd =
-  List.find (fun m -> m.m_name = Mreset) cd.cd_methods
-
-let obj_ref_name o =
-  match o with
-    | Oobj obj
-    | Oarray (obj, _) -> obj
+      p_classes  : class_def list; }
 

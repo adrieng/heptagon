@@ -13,6 +13,7 @@ open Misc
 open Names
 open Idents
 open Obc
+open Obc_utils
 open Types
 open Modules
 open Signature
@@ -85,24 +86,24 @@ let assert_node_res cd =
 (** [main_def_of_class_def cd] returns a [(var_list, rst_i, step_i)] where
     [var_list] (resp. [rst_i] and [step_i]) is a list of variables (resp. of
     statements) needed for a main() function calling [cd]. *)
-(* TODO: refactor into something more readable. *)
 let main_def_of_class_def cd =
   let format_for_type ty = match ty with
-    | Tarray _ | Tprod _ | Tunit -> assert false
+    | Tarray _ | Tprod _ | Tmutable _ | Tunit -> assert false
     | Types.Tid id when id = Initial.pfloat -> "%f"
     | Types.Tid id when id = Initial.pint -> "%d"
     | Types.Tid id when id = Initial.pbool -> "%d"
-    | Tid _ -> "%s" in
+    | Tid _ -> "%s"
+  in
 
   (** Does reading type [ty] need a buffer? When it is the case,
       [need_buf_for_ty] also returns the type's name. *)
   let need_buf_for_ty ty = match ty with
-    | Tarray _ | Tprod _ | Tunit -> assert false
+    | Tarray _ | Tprod _ | Tmutable _ | Tunit -> assert false
     | Types.Tid id when id = Initial.pfloat -> None
     | Types.Tid id when id = Initial.pint -> None
     | Types.Tid id when id = Initial.pbool -> None
-    | Tid { name = n } -> Some n in
-
+    | Tid { name = n } -> Some n
+  in
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
 
   (** Generates scanf statements. *)
@@ -258,11 +259,10 @@ let main_skel var_list prologue body =
   }
 
 let mk_main name p =
-  match (!Compiler_options.simulation_node, !Compiler_options.assert_nodes) with
-    | (None, []) -> []
-    | (_, n_names) ->
+  if !Compiler_options.simulation then (
+      let n_names = !Compiler_options.assert_nodes in
       let find_class n =
-        try List.find (fun cd -> cd.cd_name.name = n) p.p_defs
+        try List.find (fun cd -> cd.cd_name.name = n) p.p_classes
         with Not_found ->
           Format.eprintf "Unknown node %s.@." n;
           exit 1 in
@@ -275,18 +275,16 @@ let mk_main name p =
           (var @ var_l, res :: res_l, step :: step_l) in
         List.fold_right add a_classes ([], [], []) in
 
-      let (_, var_l, res_l, step_l) =
-        (match !Compiler_options.simulation_node with
-           | None -> (n_names, var_l, res_l, step_l)
-           | Some n ->
-               let (nvar_l, res, nstep_l) =
-                 main_def_of_class_def (find_class n) in
-               (n :: n_names, nvar_l @ var_l,
-                res :: res_l, nstep_l @ step_l)) in
+      let n = !Compiler_options.simulation_node in
+      let (nvar_l, res, nstep_l) = main_def_of_class_def (find_class n) in
+      let (var_l, res_l, step_l) =
+        (nvar_l @ var_l, res :: res_l, nstep_l @ step_l) in
 
       [("_main.c", Csource [main_skel var_l res_l step_l]);
        ("_main.h", Cheader ([name], []))];
-;;
+  ) else
+    []
+
 
 
 (******************************)
@@ -297,7 +295,8 @@ let translate name prog =
   (global_file_header modname prog) @ (mk_main name prog)
 
 let program p =
-  let filename = filename_of_name (cname_of_name p.p_modname) in
+  let filename =
+    filename_of_name (cname_of_name (modul_to_string p.p_modname)) in
   let dirname = build_path (filename ^ "_c") in
   let dir = clean_dir dirname in
   let c_ast = translate filename p in

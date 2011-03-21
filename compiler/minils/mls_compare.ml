@@ -48,8 +48,8 @@ let rec exp_compare e1 e2 =
               let cr = compare fn1 fn2 in
               if cr <> 0 then cr else exp_compare e1 e2 in
             list_compare compare_fne fnel1 fnel2
-        | Eiterator (it1, app1, se1, el1, vio1),
-          Eiterator (it2, app2, se2, el2, vio2) ->
+        | Eiterator (it1, app1, se1, pel1, el1, vio1),
+          Eiterator (it2, app2, se2, pel2, el2, vio2) ->
             let cr = compare it1 it2 in
             if cr <> 0 then cr else
               let cr = static_exp_compare se1 se2 in
@@ -57,7 +57,9 @@ let rec exp_compare e1 e2 =
                 let cr = app_compare app1 app2 in
                 if cr <> 0 then cr else
                   let cr = option_compare ident_compare vio1 vio2 in
-                  if cr <> 0 then cr else list_compare exp_compare el1 el2
+                    if cr <> 0 then cr else
+                      let cr = list_compare exp_compare pel1 pel2 in
+                        if cr <> 0 then cr else list_compare exp_compare el1 el2
 
         | Econst _, _ -> 1
 
@@ -90,7 +92,7 @@ and app_compare app1 app2 =
     | (Eequal | Etuple | Efun _ | Enode _ | Eifthenelse | Efield
       | Efield_update), _ -> -1
     | (Earray | Earray_fill | Eselect | Eselect_slice | Eselect_dyn | Eupdate
-      | Econcat), _ -> 1 in
+      | Econcat ), _ -> 1 in
 
   if cr <> 0 then cr
   else list_compare static_exp_compare app1.a_params app2.a_params

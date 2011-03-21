@@ -223,7 +223,7 @@ let unify t1 t2 =
 
 let kind f ty_desc =
   let ty_of_arg v = v.a_type in
-  let op = if ty_desc.node_statefull then Enode f else Efun f in
+  let op = if ty_desc.node_stateful then Enode f else Efun f in
     op, List.map ty_of_arg ty_desc.node_inputs,
   List.map ty_of_arg ty_desc.node_outputs
 
@@ -250,6 +250,7 @@ let build_subst names values =
 let rec subst_type_vars m = function
   | Tarray(ty, e) -> Tarray(subst_type_vars m ty, simplify m e)
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
+  | Tmutable t -> Tmutable (subst_type_vars m t)
   | t -> t
 
 let add_distinct_env id ty env =
@@ -384,6 +385,8 @@ let rec check_type const_env = function
   | Tid ty_name -> Tid ty_name (* TODO bug ? should check that ty_name exists ? *)
   | Tprod l ->
       Tprod (List.map (check_type const_env) l)
+  | Tmutable t ->
+      Tmutable (check_type const_env t)
   | Tunit -> Tunit
 
 and typing_static_exp const_env se =
@@ -519,7 +522,7 @@ let rec typing const_env h e =
 
       | Eiterator (it, ({ a_op = (Enode f | Efun f);
                           a_params = params } as app),
-                   n, e_list, reset) ->
+                   n, pe_list, e_list, reset) ->
           let ty_desc = find_value f in
           let op, expected_ty_list, result_ty_list = kind f ty_desc in
           let node_params =
@@ -529,6 +532,11 @@ let rec typing const_env h e =
             List.map (subst_type_vars m) expected_ty_list in
           let result_ty_list = List.map (subst_type_vars m) result_ty_list in
           let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
+          (*typing of partial application*)
+          let p_ty_list, expected_ty_list =
+            Misc.split_at (List.length pe_list) expected_ty_list in
+          let typed_pe_list = typing_args const_env h p_ty_list pe_list in
+          (*typing of other arguments*)
           let ty, typed_e_list = typing_iterator const_env h it n
             expected_ty_list result_ty_list e_list in
           let typed_params = typing_node_params const_env
@@ -540,7 +548,7 @@ let rec typing const_env h e =
             List.iter add_size_constraint size_constrs;
             (* return the type *)
             Eiterator(it, { app with a_op = op; a_params = typed_params }
-                        , typed_n, typed_e_list, reset), ty
+                        , typed_n, typed_pe_list, typed_e_list, reset), ty
       | Eiterator _ -> assert false
 
       | Ewhen (e, c, ce) ->
@@ -628,18 +636,14 @@ and typing_app const_env h app e_list =
     | (Efun f | Enode f) ->
         let ty_desc = find_value f in
         let op, expected_ty_list, result_ty_list = kind f ty_desc in
-        let node_params =
-          List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
+        let node_params = List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
         let m = build_subst node_params app.a_params in
         let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
-        let typed_e_list = typing_args const_env h
-          expected_ty_list e_list in
+        let typed_e_list = typing_args const_env h expected_ty_list e_list in
         let result_ty_list = List.map (subst_type_vars m) result_ty_list in
         (* Type static parameters and generate constraints *)
-        let typed_params = typing_node_params const_env
-          ty_desc.node_params app.a_params in
-        let size_constrs =
-          instanciate_constr m ty_desc.node_params_constraints in
+        let typed_params = typing_node_params const_env ty_desc.node_params app.a_params in
+        let size_constrs = instanciate_constr m ty_desc.node_params_constraints in
         List.iter add_size_constraint size_constrs;
         prod result_ty_list,
         { app with a_op = op; a_params = typed_params },
@@ -741,6 +745,8 @@ and typing_app const_env h app e_list =
           mk_static_int_op (mk_pervasives "+") [array_size t1; array_size t2] in
         Tarray (element_type t1, n), app, [typed_e1; typed_e2]
 
+
+
 and typing_iterator const_env h
     it n args_ty_list result_ty_list e_list = match it with
   | Imap ->
@@ -830,6 +836,7 @@ and typing_args const_env h expected_ty_list e_list =
 and typing_node_params const_env params_sig params =
   List.map2 (fun p_sig p -> expect_static_exp const_env
                p_sig.p_type p) params_sig params
+
 
 let rec typing_pat h acc = function
   | Evarpat(x) ->

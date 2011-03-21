@@ -64,6 +64,16 @@ let rec split_last = function
       let l, a = split_last l in
       v::l, a
 
+exception List_too_short
+(** [split_at n l] splits [l] in two after the [n]th value.
+    Raises List_too_short exception if the list is too short. *)
+let rec split_at n l = match n, l with
+  | 0, l -> [], l
+  | _, [] -> raise List_too_short
+  | n, x::l ->
+      let l1, l2 = split_at (n-1) l in
+        x::l1, l2
+
 let remove x l =
   List.filter (fun y -> x <> y) l
 
@@ -112,7 +122,7 @@ let rec assocd value = function
 
 (** { 3 Compiler iterators } *)
 
-(** Mapfold *)
+(** Mapfold *) (* TODO optim : lot's of place we don't need the List.rev *)
 let mapfold f acc l =
   let l,acc = List.fold_left
                 (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)
@@ -158,16 +168,26 @@ let fold_righti f l acc =
     | h :: l -> f i h (aux (i + 1) l acc) in
   aux 0 l acc
 
+exception Assert_false
+let internal_error passe code =
+  Format.eprintf "@.---------\nInternal compiler error\nPasse : %s, Code : %d\n----------@." passe code;
+  raise Assert_false
+
+exception Unsupported
+let unsupported passe code =
+  Format.eprintf "@.---------\nUnsupported feature, please report it\nPasse : %s, Code : %d\n----------@." passe code;
+  raise Unsupported
+
 (* Functions to decompose a list into a tuple *)
 let _arity_error i l =
-  Format.eprintf "Internal compiler error: \
-     wrong list size (found %d, expected %d).@." (List.length l) i;
-  assert false
+  Format.eprintf "@.---------\nInternal compiler error: \
+     wrong list size (found %d, expected %d).\n----------@." (List.length l) i;
+  raise Assert_false
 
 let _arity_min_error i l =
-  Format.eprintf "Internal compiler error: \
-     wrong list size (found %d, expected %d at least).@." (List.length l) i;
-  assert false
+  Format.eprintf "@.---------\nInternal compiler error: \
+     wrong list size (found %d, expected %d at least).\n----------@." (List.length l) i;
+  raise Assert_false
 
 let assert_empty = function
   | [] -> ()
@@ -198,4 +218,5 @@ let (|>) x f = f x
 let split_string s separator = Str.split (separator |> Str.quote |> Str.regexp) s
 
 let file_extension s = split_string s "." |> last_element
+
 

@@ -58,7 +58,7 @@ and edesc =
                        (** merge ident (Constructor -> exp)+ *)
   | Estruct of (field_name * exp) list
                        (** { field=exp; ... } *)
-  | Eiterator of iterator_type * app * static_exp * exp list * var_ident option
+  | Eiterator of iterator_type * app * static_exp * exp list * exp list * var_ident option
                        (** map f <<n>> (exp, exp...) reset ident *)
 
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
@@ -106,11 +106,12 @@ type contract = {
 
 type node_dec = {
   n_name   : qualname;
+  n_stateful : bool;
   n_input  : var_dec list;
   n_output : var_dec list;
   n_contract : contract option;
-  (* GD: inglorious hack for controller call *)
-  mutable n_controller_call : var_ident list * var_ident list;
+  (* GD: inglorious hack for controller call
+  mutable n_controller_call : var_ident list * var_ident list; *)
   n_local  : var_dec list;
   n_equs   : eq list;
   n_loc    : location;
@@ -124,9 +125,9 @@ type const_dec = {
   c_loc : location }
 
 type program = {
-  p_modname : name;
+  p_modname : modul;
   p_format_version : string;
-  p_opened : name list;
+  p_opened : modul list;
   p_types  : type_dec list;
   p_nodes  : node_dec list;
   p_consts : const_dec list }
@@ -146,13 +147,14 @@ let mk_equation ?(loc = no_location) pat exp =
 
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
-    ?(loc = no_location) ?(param = []) ?(constraints = [])
+    ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
     ?(pinst = ([],[])) name =
   { n_name = name;
+    n_stateful = stateful;
     n_input = input;
     n_output = output;
     n_contract = contract;
-    n_controller_call = pinst;
+ (*   n_controller_call = pinst;*)
     n_local = local;
     n_equs = eq;
     n_loc = loc;
@@ -170,8 +172,7 @@ let mk_app ?(params=[]) ?(unsafe=false) op =
 
 (** The modname field has to be set when known, TODO LG : format_version *)
 let mk_program o n t c =
-  { p_modname = ""; p_format_version = "";
+  { p_modname = Module ""; p_format_version = "";
     p_opened = o; p_nodes = n; p_types = t; p_consts = c }
 
 let void = mk_exp ~ty:Types.Tunit (Eapp (mk_app Etuple, [], None))
-

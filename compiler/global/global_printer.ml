@@ -7,11 +7,33 @@ open Modules
 open Format
 open Pp_tools
 
-let print_qualname ff qn = match qn with
-  | { qual = "Pervasives"; name = n } -> print_name ff n
-  | { qual = m; name = n } when m = g_env.current_mod -> print_name ff n
-  | { qual = m; name = n } when m = local_qualname -> print_name ff n
-  | { qual = m; name = n } -> fprintf ff "%s.%a" m print_name n
+
+let rec _aux_print_modul ?(full=false) ff m = match m with
+  | Pervasives -> ()
+  | LocalModule -> ()
+  | _ when m = g_env.current_mod && not full -> ()
+  | Module m -> fprintf ff "%a." print_name m
+  | QualModule { qual = m; name = n } -> fprintf ff "%a%a." (_aux_print_modul ~full:full) m print_name n
+
+(** Prints a [modul] with a [.] at the end when not empty *)
+let _print_modul ?(full=false) ff m = match m with
+  | Pervasives -> ()
+  | LocalModule -> ()
+  | _ when m = g_env.current_mod && not full -> ()
+  | Module m -> fprintf ff "%a" print_name m
+  | QualModule { qual = m; name = n } -> fprintf ff "%a%a" (_aux_print_modul ~full:full) m print_name n
+let print_full_modul ff m = _print_modul ~full:true ff m
+let print_modul ff m = _print_modul ~full:false ff m
+
+let _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
+  | Pervasives -> print_name ff n
+  | LocalModule -> print_name ff n
+  | _ when q = g_env.current_mod && not full -> print_name ff n
+  | _ -> fprintf ff "%a%a" (_aux_print_modul ~full:full) q print_name n
+let print_qualname ff qn = _print_qualname ~full:false ff qn
+let print_full_qualname ff qn = _print_qualname ~full:true ff qn
+
+let print_shortname ff {name = n} = print_name ff n
 
 
 let rec print_static_exp ff se = match se.se_desc with
@@ -24,9 +46,8 @@ let rec print_static_exp ff se = match se.se_desc with
   | Sop (op, se_list) ->
       if is_infix (shortname op)
       then
-        let op_s = opname op ^ " " in
-        fprintf ff "@[%a@]"
-          (print_list_l print_static_exp "(" op_s ")") se_list
+        let e1,e2 = Misc.assert_2 se_list in
+        fprintf ff "(@[%a@ %a %a@])" print_static_exp e1 print_qualname op print_static_exp e2
       else
         fprintf ff "@[<2>%a@,%a@]"
           print_qualname op  print_static_exp_tuple se_list
@@ -43,13 +64,15 @@ and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l
 
 and print_type ff = function
+  | Tprod [] -> fprintf ff "INVALID TYPE"
   | Tprod ty_list ->
       fprintf ff "@[<hov2>%a@]" (print_list_r print_type "(" " *" ")") ty_list
   | Tid id -> print_qualname ff id
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
+  | Tmutable ty ->
+      fprintf ff "@[<hov2>mutable %a@]" print_type ty
   | Tunit -> fprintf ff "unit"
-
 
 let print_field ff field =
   fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type

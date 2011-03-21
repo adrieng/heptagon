@@ -209,8 +209,7 @@ let rec translate_op = function
   | Heptagon.Econcat -> Econcat
   | Heptagon.Earray -> Earray
   | Heptagon.Etuple -> Etuple
-  | Heptagon.Earrow ->
-      Error.message no_location Error.Eunsupported_language_construct
+  | Heptagon.Earrow -> Error.message no_location Error.Eunsupported_language_construct
 
 let translate_app app =
   mk_app ~params:app.Heptagon.a_params
@@ -238,10 +237,11 @@ let rec translate env
         mk_exp ~loc:loc ~ty:ty (Eapp (translate_app app,
                                           List.map (translate env) e_list,
                                           translate_reset reset))
-    | Heptagon.Eiterator(it, app, n, e_list, reset) ->
+    | Heptagon.Eiterator(it, app, n, pe_list, e_list, reset) ->
         mk_exp ~loc:loc ~ty:ty
           (Eiterator (translate_iterator_type it,
                     translate_app app, n,
+                    List.map (translate env) pe_list,
                     List.map (translate env) e_list,
                     translate_reset reset))
     | Heptagon.Efby _
@@ -377,7 +377,7 @@ let translate_contract env contract =
 
 let node
     { Heptagon.n_name = n; Heptagon.n_input = i; Heptagon.n_output = o;
-      Heptagon.n_contract = contract;
+      Heptagon.n_contract = contract; Heptagon.n_stateful = stateful;
       Heptagon.n_block = { Heptagon.b_local = v; Heptagon.b_equs = eq_list };
       Heptagon.n_loc = loc;
       Heptagon.n_params =  params;
@@ -390,10 +390,11 @@ let node
     translate_eqs env IdentSet.empty (locals, [], []) eq_list in
   let l_eqs, _ = add_locals IdentSet.empty l_eqs [] s_eqs in
   { n_name = n;
+    n_stateful = stateful;
     n_input = List.map translate_var i;
     n_output = List.map translate_var o;
     n_contract = contract;
-    n_controller_call = ([],[]);
+   (* n_controller_call = ([],[]); *)
     n_local = locals;
     n_equs = l_eqs;
     n_loc = loc ;

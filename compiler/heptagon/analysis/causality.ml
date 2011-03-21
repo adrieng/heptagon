@@ -106,8 +106,8 @@ let rec typing e =
     | Estruct(l) ->
         let l = List.map (fun (_, e) -> typing e) l in
         candlist l
-    | Eiterator (_, _, _, e_list, _) ->
-        ctuplelist (List.map typing e_list)
+    | Eiterator (_, _, _, pe_list, e_list, _) ->
+        ctuplelist (List.map typing (pe_list@e_list))
     | Ewhen (e, c, ce) ->
         let t = typing e in
         let tc = typing ce in

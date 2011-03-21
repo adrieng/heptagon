@@ -25,7 +25,7 @@ node mm(x: int) returns (o: int)
     end
   tel
 
-node mmm(x: int) returns (o': int)
+node mmm(x: int) returns (o2: int)
   var last m: int = 1; o: int;
   let
     automaton
@@ -34,21 +34,21 @@ node mmm(x: int) returns (o': int)
       state J
         do m = last m + 1; o = 0
     end;
-    o' = 1 -> pre o
+    o2 = 1 -> pre o
   tel
 
 node m(x: int) returns (o: int)
-  var last o' : int = 1;
+  var last o2 : int = 1;
   let
     automaton
       state I
-        do o' = 1
-        unless (last o' = 2) then J
+        do o2 = 1
+        unless (last o2 = 2) then J
       state J
-        do o' = 3
-        unless (last o' = 1) then I
+        do o2 = 3
+        unless (last o2 = 1) then I
     end;
-    o = o';
+    o = o2;
   tel
 
 node h(z: int; x, y: int) returns (o2: int)

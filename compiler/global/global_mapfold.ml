@@ -5,19 +5,17 @@ open Types
 open Signature
 
 type 'a global_it_funs = {
-  static_exp :
-    'a global_it_funs -> 'a -> static_exp -> static_exp * 'a;
-  static_exp_desc :
-    'a global_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
-  ty : 'a global_it_funs -> 'a -> ty -> ty * 'a;
-(*  ct : 'a global_it_funs -> 'a -> ct -> ct * 'a;
-  ck : 'a global_it_funs -> 'a -> ck -> ck * 'a;
-  link : 'a global_it_funs -> 'a -> link -> link * 'a; *)
-  param: 'a global_it_funs -> 'a -> param -> param * 'a;
-  arg: 'a global_it_funs -> 'a -> arg -> arg * 'a;
-  node : 'a global_it_funs -> 'a -> node -> node * 'a;
-  structure: 'a global_it_funs -> 'a -> structure -> structure * 'a;
-  field: 'a global_it_funs -> 'a -> field -> field * 'a; }
+  static_exp         : 'a global_it_funs -> 'a -> static_exp -> static_exp * 'a;
+  static_exp_desc    : 'a global_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
+  ty                 : 'a global_it_funs -> 'a -> ty -> ty * 'a;
+(*  ct               : 'a global_it_funs -> 'a -> ct -> ct * 'a;
+  ck                 : 'a global_it_funs -> 'a -> ck -> ck * 'a;
+  link               : 'a global_it_funs -> 'a -> link -> link * 'a; *)
+  param              : 'a global_it_funs -> 'a -> param -> param * 'a;
+  arg                : 'a global_it_funs -> 'a -> arg -> arg * 'a;
+  node               : 'a global_it_funs -> 'a -> node -> node * 'a;
+  structure          : 'a global_it_funs -> 'a -> structure -> structure * 'a;
+  field              : 'a global_it_funs -> 'a -> field -> field * 'a; }
 
 let rec static_exp_it funs acc se = funs.static_exp funs acc se
 and static_exp funs acc se =
@@ -59,6 +57,9 @@ and ty funs acc t = match t with
       let t, acc = ty_it funs acc t in
       let se, acc = static_exp_it funs acc se in
       Tarray (t, se), acc
+  | Tmutable t ->
+      let t, acc = ty_it funs acc t in
+      Tmutable t, acc
   | Tunit -> t, acc
 (*
 and ct_it funs acc c = try funs.ct funs acc c with Fallback -> ct funs acc t

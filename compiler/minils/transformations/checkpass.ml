@@ -46,7 +46,7 @@ let add_check prefix pass nd nd_list =
     Modules.add_value nd_check.n_name
       { node_inputs = [];
         node_outputs = [{ a_name = None; a_type = Tid Initial.pbool; }];
-        node_statefull = true;
+        node_stateful = true;
         node_params = [];
         node_params_constraints = [] };
 

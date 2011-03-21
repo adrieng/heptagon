@@ -76,10 +76,12 @@ let rec exp e (eq_list, var_list) = match e.e_desc with
               intro_vars e_list (eq_list, var_list) in
             let fnel = List.combine (List.map fst fnel) e_list in
             Estruct fnel, eq_list, var_list
-        | Eiterator (it, app, se, e_list, vio) ->
+        | Eiterator (it, app, se, pe_list, e_list, vio) ->
             let (e_list, eq_list, var_list) =
               intro_vars e_list (eq_list, var_list) in
-            Eiterator (it, app, se, e_list, vio), eq_list, var_list in
+            let (pe_list, eq_list, var_list) =
+              intro_vars pe_list (eq_list, var_list) in
+            Eiterator (it, app, se, pe_list, e_list, vio), eq_list, var_list in
       ({ e with e_desc = e_desc; }, eq_list, var_list)
 
 and intro_vars e_list (eq_list, var_list) =

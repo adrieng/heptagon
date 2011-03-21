@@ -246,7 +246,8 @@ let rec typing h e =
           List.fold_left
             (fun acc (_, e) -> imax acc (itype (typing h e))) izero l in
         skeleton i e.e_ty
-    | Eiterator (_, _, _, e_list, _) ->
+    | Eiterator (_, _, _, pe_list, e_list, _) ->
+        List.iter (fun e -> initialized_exp h e) pe_list;
         List.iter (fun e -> initialized_exp h e) e_list;
         skeleton izero e.e_ty
     | Ewhen (e, _, ce) ->

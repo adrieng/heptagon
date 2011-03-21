@@ -15,7 +15,7 @@ let version = "0.4"
 let date = "DATE"
 
 (* standard module *)
-let pervasives_module = "Pervasives"
+let pervasives_module = Pervasives
 let standard_lib = "STDLIB"
 let standard_lib = try Sys.getenv "HEPTLIB" with Not_found -> standard_lib
 
@@ -54,10 +54,10 @@ let assert_nodes : name list ref = ref []
 let add_assert nd = assert_nodes := nd :: !assert_nodes
 
 let simulation = ref false
-let simulation_node : name option ref = ref None
+let simulation_node : name ref = ref ""
 let set_simulation_node s =
   simulation := true;
-  simulation_node := Some s
+  simulation_node := s
 
 let create_object_file = ref false
 

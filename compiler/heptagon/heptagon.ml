@@ -36,7 +36,8 @@ and desc =
   | Econst of static_exp
   | Evar of var_ident
   | Elast of var_ident
-  | Epre of static_exp option * exp (* the static_exp purpose is the initialization of the mem_var *)
+  (* the static_exp purpose is the initialization of the mem_var *)
+  | Epre of static_exp option * exp
   | Efby of exp * exp
   | Estruct of (field_name * exp) list
   | Ewhen of exp * constructor_name * exp
@@ -44,7 +45,8 @@ and desc =
   | Emerge of exp * (constructor_name * exp) list
     (** merge ident (Constructor -> exp)+ *)
   | Eapp of app * exp list * exp option
-  | Eiterator of iterator_type * app * static_exp * exp list * exp option
+  | Eiterator of iterator_type * app * static_exp
+                  * exp list * exp list * exp option
 
 and app = {
   a_op     : op;
@@ -74,8 +76,8 @@ and pat =
 
 type eq = {
   eq_desc      : eqdesc;
-  eq_statefull : bool;
-  eq_loc       : location }
+  eq_stateful : bool;
+  eq_loc       : location; }
 
 and eqdesc =
   | Eautomaton of state_handler list
@@ -89,8 +91,8 @@ and block = {
   b_local     : var_dec list;
   b_equs      : eq list;
   b_defnames  : ty Env.t;
-  b_statefull : bool;
-  b_loc       : location }
+  b_stateful : bool;
+  b_loc       : location; }
 
 and state_handler = {
   s_state  : state_name;
@@ -139,7 +141,7 @@ type contract = {
 
 type node_dec = {
   n_name      : qualname;
-  n_statefull : bool;
+  n_stateful : bool;
   n_input     : var_dec list;
   n_output    : var_dec list;
   n_contract  : contract option;
@@ -155,8 +157,8 @@ type const_dec = {
   c_loc   : location }
 
 type program = {
-  p_modname : name;
-  p_opened  : name list;
+  p_modname : modul;
+  p_opened  : modul list;
   p_types   : type_dec list;
   p_nodes   : node_dec list;
   p_consts  : const_dec list }
@@ -164,7 +166,7 @@ type program = {
 type signature = {
   sig_name      : qualname;
   sig_inputs    : arg list;
-  sig_statefull : bool;
+  sig_stateful : bool;
   sig_outputs   : arg list;
   sig_params    : param list;
   sig_loc       : location }
@@ -176,7 +178,7 @@ and interface_decl = {
   interf_loc  : location }
 
 and interface_desc =
-  | Iopen of name
+  | Iopen of modul
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
@@ -186,25 +188,25 @@ let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
     e_base_ck = Cbase; e_loc = loc; }
 
-let mk_op ?(params=[]) ?(unsafe=false) op =
+let mk_app ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }
 
 let mk_op_app ?(params=[]) ?(unsafe=false) ?(reset=None) op args =
-  Eapp(mk_op ~params:params ~unsafe:unsafe op, args, reset)
+  Eapp(mk_app ~params:params ~unsafe:unsafe op, args, reset)
 
 let mk_type_dec name desc =
   { t_name = name; t_desc = desc; t_loc = no_location; }
 
-let mk_equation ?(statefull = true) desc =
-  { eq_desc = desc; eq_statefull = statefull; eq_loc = no_location; }
+let mk_equation ?(stateful = true) desc =
+  { eq_desc = desc; eq_stateful = stateful; eq_loc = no_location; }
 
 let mk_var_dec ?(last = Var) ?(ck = fresh_clock()) name ty =
   { v_ident = name; v_type = ty; v_clock = ck;
     v_last = last; v_loc = no_location }
 
-let mk_block ?(statefull = true) ?(defnames = Env.empty) ?(locals = []) eqs =
+let mk_block ?(stateful = true) ?(defnames = Env.empty) ?(locals = []) eqs =
   { b_local = locals; b_equs = eqs; b_defnames = defnames;
-    b_statefull = statefull; b_loc = no_location }
+    b_stateful = stateful; b_loc = no_location; }
 
 let dfalse =
   mk_exp (Econst (mk_static_bool false)) (Tid Initial.pbool)
@@ -215,15 +217,15 @@ let mk_ifthenelse e1 e2 e3 =
   { e3 with e_desc = mk_op_app Eifthenelse [e1; e2; e3] }
 
 let mk_simple_equation pat e =
-  mk_equation ~statefull:false (Eeq(pat, e))
+  mk_equation ~stateful:false (Eeq(pat, e))
 
-let mk_switch_equation ?(statefull = true) e l =
-  mk_equation ~statefull:statefull (Eswitch (e, l))
+let mk_switch_equation ?(stateful = true) e l =
+  mk_equation ~stateful:stateful (Eswitch (e, l))
 
-let mk_signature name ins outs statefull params loc =
+let mk_signature name ins outs stateful params loc =
   { sig_name = name;
     sig_inputs = ins;
-    sig_statefull = statefull;
+    sig_stateful = stateful;
     sig_outputs = outs;
     sig_params = params;
     sig_loc = loc }

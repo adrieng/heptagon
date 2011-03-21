@@ -132,7 +132,7 @@ let const e c =
 (* normal form for expressions and equations:                              *)
 (* - e ::= op(e,...,e) | x | C | e when C(x)                               *)
 (* - act ::= e | merge x (C1 -> act) ... (Cn -> act) | (act,...,act)       *)
-(* - eq ::= [x = v fby e] | [pat = act ] | [pat = f(e1,...,en) every n     *)
+(* - eq ::= [x = v fby e] | [pat = act] | [pat = f(e1,...,en) every n     *)
 (* - A-normal form: (e1,...,en) when c(x) = (e1 when c(x),...,en when c(x) *)
 type kind = VRef | Exp | Act | Any
 
@@ -199,7 +199,7 @@ let rec translate kind context e =
     | Eapp(app, e_list, r) ->
         let context, e_list = translate_app kind context app.a_op e_list in
           context, { e with e_desc = Eapp(app, e_list, r) }
-    | Eiterator (it, app, n, e_list, reset) ->
+    | Eiterator (it, app, n, pe_list, e_list, reset) ->
       (* normalize anonymous nodes *)
       (match app.a_op with
         | Enode f when Itfusion.is_anon_node f ->
@@ -218,9 +218,11 @@ let rec translate kind context e =
             translate kind context e in
           Misc.mapfold_right add e_list context in
 
+        let context, pe_list =
+          translate_list function_args_kind context pe_list in
         let context, e_list =
           translate_iterator_arg_list context e_list in
-        context, { e with e_desc = Eiterator(it, app, n,
+        context, { e with e_desc = Eiterator(it, app, n, flatten_e_list pe_list,
                                              flatten_e_list e_list, reset) }
   in add context kind e
 

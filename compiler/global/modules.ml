@@ -23,7 +23,7 @@ exception Already_defined
     interface_format_version in signature.ml should be incremented. *)
 (** Object serialized in compiled interfaces. *)
 type module_object =
-  { m_name    : string;
+  { m_name    : Names.modul;
     m_values  : node NamesEnv.t;
     m_types   : type_def NamesEnv.t;
     m_consts  : const_def NamesEnv.t;
@@ -33,11 +33,11 @@ type module_object =
 
 type env = {
   (** Current module name *)
-  mutable current_mod : module_name;
+  mutable current_mod : modul;
   (** Modules opened and loaded into the env *)
-  mutable opened_mod  : module_name list;
+  mutable opened_mod  : modul list;
   (** Modules loaded into the env *)
-  mutable loaded_mod  : module_name list;
+  mutable loaded_mod  : modul list;
   (** Node definitions *)
   mutable values  : node QualEnv.t;
   (** Type definitions *)
@@ -53,12 +53,12 @@ type env = {
 
 (** The global environnement *)
 let g_env =
-  { current_mod = "";
+  { current_mod = Module "";
     opened_mod  = [];
     loaded_mod = [];
     values  = QualEnv.empty;
     types   = QualEnv.empty;
-    constrs  = QualEnv.empty;
+    constrs = QualEnv.empty;
     fields  = QualEnv.empty;
     consts  = QualEnv.empty;
     format_version = interface_format_version }
@@ -86,23 +86,28 @@ let _append_module mo =
   g_env.fields <- QualEnv.append (qualify_all mo.m_fields) g_env.fields;
   g_env.consts <- QualEnv.append (qualify mo.m_consts) g_env.consts
 
-(** Load a module into the global environnement unless already loaded *)
-let _load_module modname =
-  if is_loaded modname then ()
+(** Load a module into the global environment unless already loaded *)
+let _load_module modul =
+  if is_loaded modul then ()
   else
+    let modname = match modul with
+      | Names.Pervasives -> "Pervasives"
+      | Names.Module n -> n
+      | Names.LocalModule -> Misc.internal_error "modules" 0
+      | Names.QualModule _ -> Misc.unsupported "modules" 0
+    in
     let name = String.uncapitalize modname in
     try
       let filename = Compiler_utils.findfile (name ^ ".epci") in
       let ic = open_in_bin filename in
       let mo:module_object =
-        try
-          input_value ic
-        with
-          | End_of_file | Failure _ ->
-              close_in ic;
-              Format.eprintf "Corrupted compiled interface file %s.@\n\
-                              Please recompile %s.ept first.@." filename name;
-              raise Errors.Error in
+        try input_value ic
+        with End_of_file | Failure _ ->
+          close_in ic;
+          Format.eprintf "Corrupted compiled interface file %s.@\n\
+                          Please recompile %s.ept first.@." filename name;
+          raise Errors.Error
+      in
       if mo.m_format_version <> interface_format_version
       then (
         Format.eprintf "The file %s was compiled with an older version \
@@ -118,20 +123,20 @@ let _load_module modname =
 
 
 (** Opens a module unless already opened
-    by loading it into the global environnement and seting it as opened *)
-let open_module modname =
-  if is_opened modname then ()
+    by loading it into the global environment and setting it as opened *)
+let open_module modul =
+  if is_opened modul then ()
   else
-    _load_module modname;
-    g_env.opened_mod <- modname::g_env.opened_mod
+    _load_module modul;
+    g_env.opened_mod <- modul::g_env.opened_mod
 
 
-(** Initialize the global environnement :
+(** Initialize the global environment :
     set current module and open default modules *)
-let initialize modname =
-  g_env.current_mod <- modname;
+let initialize modul =
+  g_env.current_mod <- modul;
   g_env.opened_mod <- [];
-  g_env.loaded_mod <- [modname];
+  g_env.loaded_mod <- [modul];
   List.iter open_module !default_used_modules
 
 
@@ -160,7 +165,7 @@ let add_const f v =
 let replace_value f v =
   g_env.values <- QualEnv.add f v g_env.values
 
-(** { 3 Find functions look in the global environnement, nothing more } *)
+(** { 3 Find functions look in the global environement, nothing more } *)
 
 let find_value x = QualEnv.find x g_env.values
 let find_type x = QualEnv.find x g_env.types
@@ -286,6 +291,7 @@ let rec unalias_type t = match t with
       with Not_found -> raise (Undefined_type ty_name))
   | Tarray (ty, n) -> Tarray(unalias_type ty, n)
   | Tprod ty_list -> Tprod (List.map unalias_type ty_list)
+  | Tmutable t -> Tmutable (unalias_type t)
   | Tunit -> Tunit
 
 
