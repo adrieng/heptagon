@@ -1,0 +1,58 @@
+(* Deal with matrix of size n*m, apply coeff :
+		kt
+	kl	k	kr
+		kb
+	centered on [i][j]. *)
+fun kernel_1 << n, m, k, kl, kt, kr, kb >> (t :int^n^m; i,j :int; x :int) returns (r :int)
+let
+  r = k*t[i][j] + kl*t[i][j-1] + kt*t[i-1][j] + kr*t[i][j+1] + kb*t[i+1][j]
+tel
+
+fun convol_1_h <<n,m,k,kl,kt,kr,kb>> (t:int^n^m; i :int; line : int^m) returns (r :int^m)
+let
+  r = mapi<<m>> (kernel_1_1<<n,m,k,kl,kt,kr,kb>>) (<t,i>) (line)
+tel
+
+fun convol_1 <<n,m,k,kl,kt,kr,kb>> (t:int^n^m) returns (r :int^n^m)
+let
+  r = mapi<<n>> (convol_h<<n,m,k,kl,kt,kr,kb>>) (<t>) (t)
+tel
+
+
+(* Deal with matrix of size n*m, apply coeff :
+			ktt
+		klt	kt	ktr
+	kll	kl	k	kr	krr
+		kbl	kb	krb
+			kbb
+	centered on [i][j]. *)
+fun kernel_2 <<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>> (t :int^n^m; i,j :int; x :int) returns (r :int)
+let
+  r = 						ktt*t[i-2][j]+
+			klt*t[i-1][j-1]+	kt*t[i-1][j]+	ktr*t[i-1][j+1]+
+	kll*t[i][j-2]+	kl*t[i][j-1]+		k*t[i][j]+	kr*t[i][j+1]	krr*t[i][j+2]+
+			kbl*t[i+1][j-1]+	kb*t[i+1][j]+	krb*t[i+1][j+1]+
+						kbb*t[i+2][j];
+tel
+
+fun convol_1_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>> (t:int^n^m; i :int; line : int^m) returns (r :int^m)
+let
+  r = mapi<<m>> (kernel_1_1<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t,i>) (line)
+tel
+
+fun convol_1<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>(t:int^n^m) returns (r :int^n^m)
+let
+  r = mapi<<n>> (convol_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t>) (t)
+tel
+
+
+fun pip_line<<m1,m2,y>> (line1 :int^m1; line2 :int^m2) returns (r :int^m1)
+let
+  r = line1[0 .. y-1] @ line2 @ line1[y+m2 .. m1-1]
+tel
+
+fun pip<<n1,m1,n2,m2,x,y>> (t1 :int^n1^m1; t2 :int^n2^m2) returns (r :int^n1^m1)
+let
+  t12 = map<<n2>> (pip_line<<m1,m2,y>>) (t1[x..x+n2-1], t2);
+  r = t1[0 .. x-1] @ t12 @ t1[x+n2 .. n1-1]; 
+tel
