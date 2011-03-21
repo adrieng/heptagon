@@ -272,12 +272,15 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                    | _, _ -> action @ s) in
         v' @ v, si'@si, j'@j, s
 
-    | pat, Minils.Eiterator (it, app, n, e_list, reset) ->
+    | pat, Minils.Eiterator (it, app, n, pe_list, e_list, reset) ->
         let name_list = translate_pat map pat in
+        let p_list = List.map (translate map) pe_list in
         let c_list = List.map (translate map) e_list in
         let x, xd = fresh_it () in
-        let call_context = Some { oa_index = mk_pattern_int (Lvar x); oa_size = n} in
-        let si', j', action = translate_iterator map call_context it name_list app loc n x xd c_list e.Minils.e_ty in
+        let call_context =
+          Some { oa_index = mk_pattern_int (Lvar x); oa_size = n} in
+        let si', j', action = translate_iterator map call_context it
+          name_list app loc n x xd p_list c_list e.Minils.e_ty in
         let action = List.map (Control.control map ck) action in
         let s =
           (match reset, app.Minils.a_op with
@@ -303,7 +306,8 @@ and mk_node_call map call_context app loc name_list args ty =
         [], [], [], [Aassgn(List.hd name_list, e)]
 
     | Minils.Enode f when Itfusion.is_anon_node f ->
-        let add_input env vd = Env.add vd.Minils.v_ident (mk_pattern vd.Minils.v_type (Lvar vd.Minils.v_ident)) env in
+        let add_input env vd = Env.add vd.Minils.v_ident
+          (mk_pattern vd.Minils.v_type (Lvar vd.Minils.v_ident)) env in
         let build env vd a = Env.add vd.Minils.v_ident a env in
         let subst_act_list env act_list =
           let exp funs env e = match e.e_desc with
@@ -341,26 +345,33 @@ and mk_node_call map call_context app loc name_list args ty =
         [], si, [obj], s
     | _ -> assert false
 
-and translate_iterator map call_context it name_list app loc n x xd c_list ty =
+and translate_iterator map call_context it name_list
+    app loc n x xd p_list c_list ty =
   let unarray ty = match ty with
     | Tarray (t,_) -> t
-    | _ -> Format.eprintf "%a" Global_printer.print_type ty; internal_error "mls2obc" 6
+    | _ ->
+        Format.eprintf "%a" Global_printer.print_type ty;
+        internal_error "mls2obc" 6
   in
   let array_of_output name_list ty_list =
-    List.map2 (fun l ty -> mk_pattern ty (Larray (l, mk_evar_int x))) name_list ty_list
+    List.map2 (fun l ty -> mk_pattern ty (Larray (l, mk_evar_int x)))
+      name_list ty_list
   in
-  let array_of_input c_list = List.map (array_elt_of_exp (mk_pattern_int (Lvar x))) c_list in
+  let array_of_input c_list =
+    List.map (array_elt_of_exp (mk_pattern_int (Lvar x))) c_list in
   match it with
     | Minils.Imap ->
         let c_list = array_of_input c_list in
         let ty_list = List.map unarray (Types.unprod ty) in
         let name_list = array_of_output name_list ty_list in
         let node_out_ty = Types.prod ty_list in
-        let v, si, j, action = mk_node_call map call_context app loc name_list c_list node_out_ty in
+        let v, si, j, action = mk_node_call map call_context
+          app loc name_list (p_list@c_list) node_out_ty in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_static_int 0, n, bi)], j, [Afor (xd, mk_static_int 0, n, b)]
+          [Afor (xd, mk_static_int 0, n, bi)], j,
+           [Afor (xd, mk_static_int 0, n, b)]
 
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
@@ -370,37 +381,44 @@ and translate_iterator map call_context it name_list app loc n x xd c_list ty =
         let (name_list, acc_out) = Misc.split_last name_list in
         let name_list = array_of_output name_list ty_name_list in
         let node_out_ty = Types.prod ty_list in
-        let v, si, j, action = mk_node_call map call_context app loc (name_list @ [ acc_out ])
-                                            (c_list @ [ mk_exp acc_out.pat_ty (Epattern acc_out) ]) node_out_ty
+        let v, si, j, action = mk_node_call map call_context app loc
+          (name_list @ [ acc_out ])
+          (p_list @ c_list @ [ mk_exp acc_out.pat_ty (Epattern acc_out) ])
+          node_out_ty
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_static_int 0, n, bi)], j, [Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b)]
+          [Afor (xd, mk_static_int 0, n, bi)], j,
+           [Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b)]
 
     | Minils.Ifold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
         let acc_out = last_element name_list in
         let v, si, j, action =
-          mk_node_call map call_context app loc name_list (c_list @ [ mk_exp acc_out.pat_ty (Epattern acc_out) ]) ty
+          mk_node_call map call_context app loc name_list
+            (p_list @ c_list @ [ mk_exp acc_out.pat_ty (Epattern acc_out) ]) ty
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_static_int 0, n, bi)], j, [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
+          [Afor (xd, mk_static_int 0, n, bi)], j,
+           [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
 
     | Minils.Ifoldi ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
         let acc_out = last_element name_list in
         let v, si, j, action = mk_node_call map call_context app loc name_list
-                                            (c_list @ [ mk_evar_int x; mk_exp acc_out.pat_ty (Epattern acc_out) ]) ty
+          (p_list @ c_list @ [ mk_evar_int x;
+                               mk_exp acc_out.pat_ty (Epattern acc_out) ]) ty
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_static_int 0, n, bi)], j, [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
+          [Afor (xd, mk_static_int 0, n, bi)], j,
+           [ Aassgn (acc_out, acc_in); Afor (xd, mk_static_int 0, n, b) ]
 
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list

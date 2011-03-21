@@ -206,9 +206,12 @@ let behead e =
           List.split
             (List.map (fun (ln, e) -> ((ln, dummy_exp), e)) lne_list) in
         (Estruct lne_list, e_list)
-    | Eiterator (it, op, s, e_list, rst) ->
+    | Eiterator (it, op, s, pe_list, e_list, rst) ->
         let (rst, l) = encode_reset rst in
-        (Eiterator (it, op, s, [], rst), l @ e_list) in
+        (* count is the number of partial arguments *)
+        let count = mk_exp ~ty:Initial.tint
+          (Econst (Initial.mk_static_int (List.length pe_list))) in
+        (Eiterator (it, op, s, [], [], rst), count :: (pe_list @ l @ e_list)) in
   ({ e with e_desc = e_desc; }, children)
 
 let pat_name pat =
@@ -425,11 +428,19 @@ let rec reconstruct input_type (env : PatEnv.t) =
                   List.combine (List.map fst cnel) (List.tl e_list))
       | Estruct fnel, e_list ->
           Estruct (List.combine (List.map fst fnel) e_list)
-      | Eiterator (it, app, se, [], rst), e_list ->
+      | Eiterator (it, app, se, [], [], rst), e_list ->
+          (* the first element is the number of partial arguments *)
+          let count, e_list = assert_1min e_list in
+          let c = (match count.e_desc with
+            | Econst { se_desc = Sint c } -> c
+            | _ -> assert false)
+          in
+          let pe_list, e_list = Misc.split_at c e_list in
           let rst, e_list = rst_of_e_list rst e_list in
-          Eiterator (it, app, se, e_list, rst)
+          Eiterator (it, app, se, pe_list, e_list, rst)
 
-      | (Eiterator (_, _, _, _ :: _, _) | Ewhen _ | Efby _ | Evar _ | Econst _)
+      | (Eiterator (_, _, _, _, _, _) | Ewhen _
+        | Efby _ | Evar _ | Econst _)
           , _ -> assert false (* invariant *) in
     (mk_equation pat { head with e_desc = e_desc; } :: eq_list,
      mk_var_decs pat head.e_ty var_list) in

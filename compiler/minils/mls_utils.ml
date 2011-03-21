@@ -80,7 +80,7 @@ struct
     (* special cases *)
     let acc = match e.e_desc with
       | Evar x | Emerge(x,_) | Ewhen(_, _, x)
-      | Eapp(_, _, Some x) | Eiterator (_, _, _, _, Some x) ->
+      | Eapp(_, _, Some x) | Eiterator (_, _, _, _, _, Some x) ->
           add x acc
       | Efby(_, e) ->
           if is_left then

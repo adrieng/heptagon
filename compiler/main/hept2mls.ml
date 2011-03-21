@@ -237,10 +237,11 @@ let rec translate env
         mk_exp ~loc:loc ~ty:ty (Eapp (translate_app app,
                                           List.map (translate env) e_list,
                                           translate_reset reset))
-    | Heptagon.Eiterator(it, app, n, e_list, reset) ->
+    | Heptagon.Eiterator(it, app, n, pe_list, e_list, reset) ->
         mk_exp ~loc:loc ~ty:ty
           (Eiterator (translate_iterator_type it,
                     translate_app app, n,
+                    List.map (translate env) pe_list,
                     List.map (translate env) e_list,
                     translate_reset reset))
     | Heptagon.Efby _

@@ -43,11 +43,15 @@ let rec typing h e =
           | None -> fresh_clock ()
           | Some(reset) -> typ_of_name h reset in
         typing_op op args h e ck
-    | Eiterator (_, _, _, args, r) -> (* Typed exactly as a fun or a node... *)
+    (* Typed exactly as a fun or a node... *)
+    | Eiterator (_, _, _, pargs, args, r) ->
         let ck = match r with
           | None -> fresh_clock()
           | Some(reset) -> typ_of_name h reset
-        in (List.iter (expect h (Ck ck)) args; skeleton ck e.e_ty)
+        in
+          List.iter (expect h (Ck ck)) pargs;
+          List.iter (expect h (Ck ck)) args;
+          skeleton ck e.e_ty
     | Ewhen (e, c, n) ->
         let ck_n = typ_of_name h n in
         (expect h (skeleton ck_n e.e_ty) e; skeleton (Con (ck_n, c, n)) e.e_ty)

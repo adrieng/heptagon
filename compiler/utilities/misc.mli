@@ -36,6 +36,11 @@ val last_element : 'a list -> 'a
     and the last element of the list .*)
 val split_last : 'a list -> ('a list * 'a)
 
+exception List_too_short
+(** [split_at n l] splits [l] in two after the [n]th value.
+    Raises List_too_short exception if the list is too short. *)
+val split_at : int -> 'a list -> 'a list * 'a list
+
 (** [remove x l] removes all occurrences of x from list l.*)
 val remove : 'a -> 'a list -> 'a list
 

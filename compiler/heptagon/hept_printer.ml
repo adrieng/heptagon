@@ -105,11 +105,12 @@ and print_exp_desc ff = function
         print_app (app, args) print_every reset
   | Estruct(f_e_list) ->
       print_record (print_couple print_qualname print_exp """ = """) ff f_e_list
-  | Eiterator (it, f, param, args, reset) ->
-      fprintf ff "@[<2>(%s (%a)<<%a>>)@,%a@]%a"
+  | Eiterator (it, f, param, pargs, args, reset) ->
+      fprintf ff "@[<2>(%s (%a)<<%a>>)@,(%a)%a@]%a"
         (iterator_to_string it)
         print_app (f, [])
         print_static_exp param
+        print_exp_tuple pargs
         print_exp_tuple args
         print_every reset
   | Ewhen (e, c, ec) ->

@@ -66,8 +66,8 @@ let edesc funs (res,s) ed =
         ifres res e1 e2
     | Eapp({ a_op = Enode _ } as op, e_list, re) ->
         Eapp(op, e_list, merge_resets res re)
-    | Eiterator(it, ({ a_op = Enode _ } as op), n, e_list, re) ->
-        Eiterator(it, op, n, e_list, merge_resets res re)
+    | Eiterator(it, ({ a_op = Enode _ } as op), n, pe_list, e_list, re) ->
+        Eiterator(it, op, n, pe_list, e_list, merge_resets res re)
     | _ -> ed
   in
     ed, (res,s)

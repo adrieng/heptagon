@@ -156,13 +156,15 @@ struct
             let op = Enode (node_for_params_call ln (instantiate m params)) in
             Eapp ({ app with a_op = op; a_params = [] }, e_list, r)
         | Eiterator(it, ({ a_op = Efun ln; a_params = params } as app),
-                      n, e_list, r) ->
+                      n, pe_list, e_list, r) ->
             let op = Efun (node_for_params_call ln (instantiate m params)) in
-            Eiterator(it, {app with a_op = op; a_params = [] }, n, e_list, r)
+            Eiterator(it, {app with a_op = op; a_params = [] },
+                     n, pe_list, e_list, r)
         | Eiterator(it, ({ a_op = Enode ln; a_params = params } as app),
-                     n, e_list, r) ->
+                     n, pe_list, e_list, r) ->
             let op = Enode (node_for_params_call ln (instantiate m params)) in
-            Eiterator(it,{app with a_op = op; a_params = [] }, n, e_list, r)
+            Eiterator(it,{app with a_op = op; a_params = [] },
+                     n, pe_list, e_list, r)
         | _ -> ed
       in ed, m
 
@@ -269,7 +271,7 @@ let collect_node_calls ln =
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
         ed, add_called_node ln params acc
     | Eiterator(_, { a_op = (Enode ln | Efun ln); a_params = params },
-                _, _, _) ->
+                _, _, _, _) ->
         ed, add_called_node ln params acc
     | _ -> raise Errors.Fallback
   in

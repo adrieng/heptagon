@@ -52,7 +52,7 @@ struct
       | Evar vi -> add_var_use vi use_counts
       | Emerge (vi, _) -> add_clock_use vi use_counts
       | Ewhen (_, _, vi) -> add_clock_use vi use_counts
-      | Eapp (_, _, Some vi) | Eiterator (_, _, _, _, Some vi) ->
+      | Eapp (_, _, Some vi) | Eiterator (_, _, _, _, _, Some vi) ->
           add_reset_use vi use_counts
       | _ -> use_counts in
     (edesc, use_counts)

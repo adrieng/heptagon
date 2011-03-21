@@ -9,7 +9,7 @@ open Hept_parsetree
 
 %}
 
-%token DOT LPAREN RPAREN LBRACE RBRACE COLON SEMICOL
+%token DOT LPAREN LPARENLPAREN RPAREN RPARENRPAREN LBRACE RBRACE COLON SEMICOL
 %token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
@@ -96,6 +96,10 @@ slist(S, x) :
   |                        {[]}
   | x=x                    {[x]}
   | x=x S r=slist(S,x)     {x::r}
+/* Separated list with delimiter*/
+delim_slist(S, L, R, x) :
+  |                        {[]}
+  | L l=slist(S, x) R      {l}
 /*Separated Nonempty list */
 snlist(S, x) :
   | x=x                    {[x]}
@@ -503,11 +507,15 @@ _exp:
   | exp AROBASE exp
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
-  | iterator qualname DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_iterator_call $1 $2 [] $4 $7 }
-  | iterator LPAREN qualname DOUBLE_LESS array_exp_list DOUBLE_GREATER
-      RPAREN DOUBLE_LESS simple_exp DOUBLE_GREATER LPAREN exps RPAREN
-      { mk_iterator_call $1 $3 $5 $9 $12 }
+  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER q=qualname
+      pargs=delim_slist(COMMA, LPARENLPAREN, RPARENRPAREN, exp)
+      LPAREN args=exps RPAREN
+      { mk_iterator_call it q [] n pargs args }
+  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
+      LPAREN q=qualname DOUBLE_LESS sa=array_exp_list DOUBLE_GREATER RPAREN
+      pargs=delim_slist(COMMA, LPARENLPAREN, RPARENRPAREN, exp)
+      LPAREN args=exps RPAREN
+      { mk_iterator_call it q sa n pargs args }
 /*Records operators */
   | LBRACE simple_exp WITH DOT c=qualname EQUAL exp RBRACE
       { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))]

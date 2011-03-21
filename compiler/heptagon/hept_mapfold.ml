@@ -129,12 +129,13 @@ and edesc funs acc ed = match ed with
       let args, acc = mapfold (exp_it funs) acc args in
       let reset, acc = optional_wacc (exp_it funs) acc reset in
       Eapp (app, args, reset), acc
-  | Eiterator (i, app, param, args, reset) ->
+  | Eiterator (i, app, param, pargs, args, reset) ->
       let app, acc = app_it funs acc app in
       let param, acc = static_exp_it funs.global_funs acc param in
+      let pargs, acc = mapfold (exp_it funs) acc pargs in
       let args, acc = mapfold (exp_it funs) acc args in
       let reset, acc = optional_wacc (exp_it funs) acc reset in
-      Eiterator (i, app, param, args, reset), acc
+      Eiterator (i, app, param, pargs, args, reset), acc
   | Ewhen (e, c, n) ->
       let e, acc = exp_it funs acc e in
       Ewhen (e, c, n), acc

@@ -519,7 +519,7 @@ let rec typing const_env h e =
 
       | Eiterator (it, ({ a_op = (Enode f | Efun f);
                           a_params = params } as app),
-                   n, e_list, reset) ->
+                   n, pe_list, e_list, reset) ->
           let ty_desc = find_value f in
           let op, expected_ty_list, result_ty_list = kind f ty_desc in
           let node_params =
@@ -529,6 +529,11 @@ let rec typing const_env h e =
             List.map (subst_type_vars m) expected_ty_list in
           let result_ty_list = List.map (subst_type_vars m) result_ty_list in
           let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
+          (*typing of partial application*)
+          let p_ty_list, expected_ty_list =
+            Misc.split_at (List.length pe_list) expected_ty_list in
+          let typed_pe_list = typing_args const_env h p_ty_list pe_list in
+          (*typing of other arguments*)
           let ty, typed_e_list = typing_iterator const_env h it n
             expected_ty_list result_ty_list e_list in
           let typed_params = typing_node_params const_env
@@ -540,7 +545,7 @@ let rec typing const_env h e =
             List.iter add_size_constraint size_constrs;
             (* return the type *)
             Eiterator(it, { app with a_op = op; a_params = typed_params }
-                        , typed_n, typed_e_list, reset), ty
+                        , typed_n, typed_pe_list, typed_e_list, reset), ty
       | Eiterator _ -> assert false
 
       | Ewhen (e, c, ce) ->

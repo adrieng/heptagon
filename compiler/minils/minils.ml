@@ -58,7 +58,7 @@ and edesc =
                        (** merge ident (Constructor -> exp)+ *)
   | Estruct of (field_name * exp) list
                        (** { field=exp; ... } *)
-  | Eiterator of iterator_type * app * static_exp * exp list * var_ident option
+  | Eiterator of iterator_type * app * static_exp * exp list * exp list * var_ident option
                        (** map f <<n>> (exp, exp...) reset ident *)
 
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }

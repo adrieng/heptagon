@@ -18,9 +18,10 @@ let edesc funs (v,acc_eq_list) ed =
     | Eapp (op, e_list, Some re) when not (is_var re) ->
         let re, vre, eqre = Reset.bool_var_from_exp re in
         Eapp(op, e_list, Some re), (vre::v, eqre::acc_eq_list)
-    | Eiterator(it, op, n, e_list, Some re) when not (is_var re) ->
+    | Eiterator(it, op, n, pe_list, e_list, Some re) when not (is_var re) ->
         let re, vre, eqre = Reset.bool_var_from_exp re in
-          Eiterator(it, op, n, e_list, Some re), (vre::v, eqre::acc_eq_list)
+          Eiterator(it, op, n, pe_list, e_list, Some re),
+             (vre::v, eqre::acc_eq_list)
     | _ -> ed, (v, acc_eq_list)
 
 let program p =

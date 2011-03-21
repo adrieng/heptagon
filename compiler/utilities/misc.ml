@@ -64,6 +64,16 @@ let rec split_last = function
       let l, a = split_last l in
       v::l, a
 
+exception List_too_short
+(** [split_at n l] splits [l] in two after the [n]th value.
+    Raises List_too_short exception if the list is too short. *)
+let rec split_at n l = match n, l with
+  | 0, l -> [], l
+  | _, [] -> raise List_too_short
+  | n, x::l ->
+      let l1, l2 = split_at (n-1) l in
+        x::l1, l2
+
 let remove x l =
   List.filter (fun y -> x <> y) l
 
