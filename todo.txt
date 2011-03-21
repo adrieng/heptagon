@@ -3,7 +3,7 @@ Plus ou moins ordonné du plus urgent au moins urgent.
 
 *- Bugs related to matching types without unaliasing it. In lots of parts. Use Modules.unalias_type. 
 
-*- Functions in Obc should not be objetcs.
+*- Les types des patterns dans les boucles crées par concatenate ( entre autres ) sont faux.
 
 *- Collision entre les noms de params et les idents dans les noeuds.
 

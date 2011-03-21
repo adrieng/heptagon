@@ -96,8 +96,14 @@ let rec eval_core partial env se = match se.se_desc with
          let cd = find_const ln in
          eval_core partial env cd.c_value
        with Not_found -> (* then try to find in local env *)
-         (try eval_core partial env (QualEnv.find ln env)
-          with Not_found ->
+         (try
+            let se = QualEnv.find ln env in
+            (match se.se_desc with
+               | Svar ln' when ln'=ln -> (* prevent basic infinite loop *)
+                  if partial then se else raise Not_found
+               | _ -> eval_core partial env se
+            )
+          with Not_found -> (* Could not evaluate the var *)
             if partial then se
             else raise (Partial_evaluation (Unknown_param ln, se.se_loc))
          )

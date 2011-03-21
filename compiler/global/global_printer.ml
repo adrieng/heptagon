@@ -70,6 +70,8 @@ and print_type ff = function
   | Tid id -> print_qualname ff id
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
+  | Tmutable ty ->
+      fprintf ff "@[<hov2>mutable %a@]" print_type ty
   | Tunit -> fprintf ff "unit"
 
 let print_field ff field =

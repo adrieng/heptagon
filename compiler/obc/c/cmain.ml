@@ -88,7 +88,7 @@ let assert_node_res cd =
     statements) needed for a main() function calling [cd]. *)
 let main_def_of_class_def cd =
   let format_for_type ty = match ty with
-    | Tarray _ | Tprod _ | Tunit -> assert false
+    | Tarray _ | Tprod _ | Tmutable _ | Tunit -> assert false
     | Types.Tid id when id = Initial.pfloat -> "%f"
     | Types.Tid id when id = Initial.pint -> "%d"
     | Types.Tid id when id = Initial.pbool -> "%d"
@@ -98,7 +98,7 @@ let main_def_of_class_def cd =
   (** Does reading type [ty] need a buffer? When it is the case,
       [need_buf_for_ty] also returns the type's name. *)
   let need_buf_for_ty ty = match ty with
-    | Tarray _ | Tprod _ | Tunit -> assert false
+    | Tarray _ | Tprod _ | Tmutable _ | Tunit -> assert false
     | Types.Tid id when id = Initial.pfloat -> None
     | Types.Tid id when id = Initial.pint -> None
     | Types.Tid id when id = Initial.pbool -> None
@@ -262,7 +262,7 @@ let mk_main name p =
   if !Compiler_options.simulation then (
       let n_names = !Compiler_options.assert_nodes in
       let find_class n =
-        try List.find (fun cd -> cd.cd_name.name = n) p.p_defs
+        try List.find (fun cd -> cd.cd_name.name = n) p.p_classes
         with Not_found ->
           Format.eprintf "Unknown node %s.@." n;
           exit 1 in

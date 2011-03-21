@@ -31,7 +31,7 @@ let op_from_string op = { qual = Pervasives; name = op; }
 let rec pattern_of_idx_list p l =
   let rec aux ty l = match ty, l with
     | _, [] -> p
-    | Tarray (ty',_), idx :: l -> mk_pattern ty (Larray (aux ty' l, idx))
+    | Tarray (ty',_), idx :: l -> mk_pattern ty' (Larray (aux ty' l, idx))
     | _ -> internal_error "mls2obc" 1
   in
   aux p.pat_ty l
@@ -140,12 +140,12 @@ and translate_act map pat
                let e2 = translate map e2 in
                let a1 =
                  Afor (cpt1d, mk_static_int 0, n1,
-                       mk_block [Aassgn (mk_pattern t (Larray (x, mk_evar_int cpt1)),
+                       mk_block [Aassgn (mk_pattern t1 (Larray (x, mk_evar_int cpt1)),
                                          mk_pattern_exp t1 (Larray (pattern_of_exp e1, mk_evar_int cpt1)))] ) in
                let idx = mk_exp_int (Eop (op_from_string "+", [ mk_exp_int (Econst n1); mk_evar_int cpt2])) in
                let a2 =
                  Afor (cpt2d, mk_static_int 0, n2,
-                       mk_block [Aassgn (mk_pattern t (Larray (x, idx)),
+                       mk_block [Aassgn (mk_pattern t2 (Larray (x, idx)),
                                          mk_pattern_exp t2 (Larray (pattern_of_exp e2, mk_evar_int cpt2)))] )
                in
                [a1; a2]
@@ -154,18 +154,26 @@ and translate_act map pat
         let cpt, cptd = fresh_it () in
         let e = translate map e in
         let x = Control.var_from_name map x in
-        [ Afor (cptd, mk_static_int 0, n, mk_block [Aassgn (mk_pattern x.pat_ty (Larray (x, mk_evar_int cpt)), e) ]) ]
+        let t = match x.pat_ty with
+          | Tarray (t,_) -> t
+          | _ -> Misc.internal_error "mls2obc select slice type" 5
+        in
+        [ Afor (cptd, mk_static_int 0, n, mk_block [Aassgn (mk_pattern t (Larray (x, mk_evar_int cpt)), e) ]) ]
     | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eselect_slice; Minils.a_params = [idx1; idx2] }, [e], _) ->
         let cpt, cptd = fresh_it () in
         let e = translate map e in
         let x = Control.var_from_name map x in
+        let t = match x.pat_ty with
+          | Tarray (t,_) -> t
+          | _ -> Misc.internal_error "mls2obc select slice type" 5
+        in
         let idx = mk_exp_int (Eop (op_from_string "+", [mk_evar_int cpt; mk_exp_int (Econst idx1) ])) in
         (* bound = (idx2 - idx1) + 1*)
         let bound = mk_static_int_op (op_from_string "+")
                                      [ mk_static_int 1; mk_static_int_op (op_from_string "-") [idx2;idx1] ] in
          [ Afor (cptd, mk_static_int 0, bound,
-                mk_block [Aassgn (mk_pattern x.pat_ty (Larray (x, mk_evar_int cpt)),
-                                  mk_pattern_exp e.e_ty (Larray (pattern_of_exp e, idx)))] ) ]
+                mk_block [Aassgn (mk_pattern t (Larray (x, mk_evar_int cpt)),
+                                  mk_pattern_exp t (Larray (pattern_of_exp e, idx)))] ) ]
     | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eselect_dyn }, e1::e2::idx, _) ->
         let x = Control.var_from_name map x in
         let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
@@ -191,7 +199,7 @@ and translate_act map pat
       Minils.Eapp ({ Minils.a_op = Minils.Efield_update; Minils.a_params = [{ se_desc = Sfield f }] }, [e1; e2], _) ->
         let x = Control.var_from_name map x in
         let copy = Aassgn (x, translate map e1) in
-        let action = Aassgn (mk_pattern x.pat_ty (Lfield (x, f)), translate map e2) in
+        let action = Aassgn (mk_pattern x.pat_ty (Lfield (x, f)), translate map e2) in (* TODO wrong type *)
         [copy; action]
 
     | Minils.Evarpat n, _ ->
@@ -449,15 +457,9 @@ let subst_map inputs outputs locals mem_tys =
   List.fold_left (fun map (x, x_ty) -> Env.add x (mk_pattern x_ty (Lmem x)) map) map mem_tys
 
 let translate_node
-    ({
-      Minils.n_name = f;
-      Minils.n_input = i_list;
-      Minils.n_output = o_list;
-      Minils.n_local = d_list;
-      Minils.n_equs = eq_list;
-      Minils.n_contract = contract;
-      Minils.n_params = params;
-      Minils.n_loc = loc;
+    ({ Minils.n_name = f; Minils.n_input = i_list; Minils.n_output = o_list;
+      Minils.n_local = d_list; Minils.n_equs = eq_list; Minils.n_stateful = stateful;
+      Minils.n_contract = contract; Minils.n_params = params; Minils.n_loc = loc;
     } as n) =
   Idents.enter_node f;
   let mem_var_tys = Mls_utils.node_memory_vars n in
@@ -467,20 +469,21 @@ let translate_node
   let i_list = translate_var_dec i_list in
   let o_list = translate_var_dec o_list in
   let d_list = translate_var_dec (v @ d_list) in
-  let m, d_list = List.partition
-    (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) d_list in
+  let m, d_list = List.partition (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) d_list in
   let s = Control.joinlist (s_list @ s_list') in
   let j = j' @ j in
   let si = Control.joinlist (si @ si') in
-  let stepm = {
-    m_name = Mstep; m_inputs = i_list; m_outputs = o_list;
-    m_body = mk_block ~locals:(d_list' @ d_list) s } in
-  let resetm = {
-    m_name = Mreset; m_inputs = []; m_outputs = [];
-    m_body = mk_block si } in
-    { cd_name = f; cd_mems = m; cd_params = params;
-      cd_objs = j; cd_methods = [stepm; resetm];
-      cd_loc = loc }
+  let stepm = { m_name = Mstep; m_inputs = i_list; m_outputs = o_list;
+                m_body = mk_block ~locals:(d_list' @ d_list) s }
+  in
+  let resetm = { m_name = Mreset; m_inputs = []; m_outputs = []; m_body = mk_block si } in
+  if stateful
+  then { cd_name = f; cd_stateful = true; cd_mems = m; cd_params = params;
+         cd_objs = j; cd_methods = [stepm; resetm]; cd_loc = loc; }
+  else ( (* Functions won't have [Mreset] or memories, they still have [params] and instances (of functions) *)
+    { cd_name = f; cd_stateful = false; cd_mems = []; cd_params = params;
+      cd_objs = j; cd_methods = [stepm]; cd_loc = loc; }
+  )
 
 let translate_ty_def { Minils.t_name = name; Minils.t_desc = tdesc;
                        Minils.t_loc = loc } =
@@ -488,8 +491,8 @@ let translate_ty_def { Minils.t_name = name; Minils.t_desc = tdesc;
     | Minils.Type_abs -> Type_abs
     | Minils.Type_alias ln -> Type_alias ln
     | Minils.Type_enum tag_name_list -> Type_enum tag_name_list
-    | Minils.Type_struct field_ty_list ->
-        Type_struct field_ty_list in
+    | Minils.Type_struct field_ty_list -> Type_struct field_ty_list
+  in
   { t_name = name; t_desc = tdesc; t_loc = loc }
 
 let translate_const_def { Minils.c_name = name; Minils.c_value = se;
@@ -499,19 +502,12 @@ let translate_const_def { Minils.c_name = name; Minils.c_value = se;
     c_type = ty;
     c_loc = loc }
 
-let program {
-  Minils.p_modname = p_modname;
-  Minils.p_opened = p_module_list;
-  Minils.p_types = p_type_list;
-  Minils.p_nodes = p_node_list;
-  Minils.p_consts = p_const_list
-} =
-    {
-      p_modname = p_modname;
-      p_opened = p_module_list;
-      p_types = List.map translate_ty_def p_type_list;
-      p_consts = List.map translate_const_def p_const_list;
-      p_defs = List.map translate_node p_node_list;
-    }
+let program { Minils.p_modname = p_modname; Minils.p_opened = p_module_list; Minils.p_types = p_type_list;
+              Minils.p_nodes = p_node_list; Minils.p_consts = p_const_list } =
+  { p_modname = p_modname;
+    p_opened = p_module_list;
+    p_types = List.map translate_ty_def p_type_list;
+    p_consts = List.map translate_const_def p_const_list;
+    p_classes = List.map translate_node p_node_list; }
 
 

@@ -25,48 +25,39 @@ public class Pervasives {
     	public V get(long timeout, TimeUnit unit) { return v; }	
     }
 	
-    public static class Tuple1<T> {
-    	public final T c0;
-    	public Tuple1(T v) {
+    public static class Tuple1 {
+    	public final Object c0;
+    	public Tuple1(Object v) {
     		c0 = v;
     	}
     }
     
-    public static class Tuple22 {
+    public static class Tuple2 {
     	public final Object c0;
     	public final Object c1;
-    	public Tuple22(Object v0, Object v1) {
+    	public Tuple2(Object v0, Object v1) {
     		c0 = v0;
     		c1 = v1;
     	}
     }
     
-    public static class Tuple2 <T0,T1> {
-    	public final T0 c0;
-    	public final T1 c1;
-    	public Tuple2(T0 v0, T1 v1) {
-    		c0 = v0;
-    		c1 = v1;
-    	}
-    }
-    
-    public static class Tuple3 <T0,T1,T2> {
-    	public final T0 c0;
-    	public final T1 c1;
-    	public final T2 c2;
-    	public Tuple3(T0 v0, T1 v1, T2 v2) {
+    public static class Tuple3 {
+    	public final Object c0;
+    	public final Object c1;
+    	public final Object c2;
+    	public Tuple3(Object v0, Object v1, Object v2) {
     		c0 = v0;
     		c1 = v1;
     		c2 = v2;
         }
     }
     
-    public static class Tuple4 <T0,T1,T2,T3> {
-    	public final T0 c0;
-    	public final T1 c1;
-    	public final T2 c2;
-    	public final T3 c3;
-    	public Tuple4(T0 v0, T1 v1, T2 v2, T3 v3) {
+    public static class Tuple4 {
+    	public final Object c0;
+    	public final Object c1;
+    	public final Object c2;
+    	public final Object c3;
+    	public Tuple4(Object v0, Object v1, Object v2, Object v3) {
     		c0 = v0;
     		c1 = v1;
     		c2 = v2;
@@ -74,13 +65,13 @@ public class Pervasives {
     	}
     }
     
-    public static class Tuple5 <T0,T1,T2,T3,T4> {
-    	public final T0 c0;
-    	public final T1 c1;
-    	public final T2 c2;
-    	public final T3 c3;
-    	public final T4 c4;
-    	public Tuple5(T0 v0, T1 v1, T2 v2, T3 v3, T4 v4) {
+    public static class Tuple5 {
+    	public final Object c0;
+    	public final Object c1;
+    	public final Object c2;
+    	public final Object c3;
+    	public final Object c4;
+    	public Tuple5(Object v0, Object v1, Object v2, Object v3, Object v4) {
     		c0 = v0;
     		c1 = v1;
     		c2 = v2;
@@ -89,14 +80,14 @@ public class Pervasives {
     	}
     }
     
-    public static class Tuple6 <T0,T1,T2,T3,T4,T5> {
-    	public final T0 c0;
-    	public final T1 c1;
-    	public final T2 c2;
-    	public final T3 c3;
-    	public final T4 c4;
-    	public final T5 c5;
-    	public Tuple6(T0 v0, T1 v1, T2 v2, T3 v3, T4 v4, T5 v5) {
+    public static class Tuple6 {
+    	public final Object c0;
+    	public final Object c1;
+    	public final Object c2;
+    	public final Object c3;
+    	public final Object c4;
+    	public final Object c5;
+    	public Tuple6(Object v0, Object v1, Object v2, Object v3, Object v4, Object v5) {
     		c0 = v0;
     		c1 = v1;
     		c2 = v2;
@@ -106,15 +97,15 @@ public class Pervasives {
     	}
     }
     
-    public static class Tuple7 <T0,T1,T2,T3,T4,T5,T6> {
-    	public final T0 c0;
-    	public final T1 c1;
-    	public final T2 c2;
-    	public final T3 c3;
-    	public final T4 c4;
-    	public final T5 c5;
-    	public final T6 c6;
-    	public Tuple7(T0 v0, T1 v1, T2 v2, T3 v3, T4 v4, T5 v5, T6 v6) {
+    public static class Tuple7 {
+    	public final Object c0;
+    	public final Object c1;
+    	public final Object c2;
+    	public final Object c3;
+    	public final Object c4;
+    	public final Object c5;
+    	public final Object c6;
+    	public Tuple7(Object v0, Object v1, Object v2, Object v3, Object v4, Object v5, Object v6) {
     		c0 = v0;
     		c1 = v1;
     		c2 = v2;

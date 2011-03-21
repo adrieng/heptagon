@@ -30,7 +30,8 @@ and static_exp_desc =
 and ty =
   | Tprod of ty list (** Product type used for tuples *)
   | Tid of type_name (** Usable type_name are alias or pervasives {bool,int,float} (see [Initial]) *)
-  | Tarray of ty * static_exp (** [base_type] * [size] *)
+  | Tarray of ty * static_exp (** [base_type] * [size] *) (* TODO obc : array of prod ?? nonono *)
+  | Tmutable of ty (* TODO obc : do not hack it here *)
   | Tunit
 
 let invalid_type = Tprod [] (** Invalid type given to untyped expression etc. *)

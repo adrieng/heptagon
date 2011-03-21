@@ -52,6 +52,10 @@ let rec translate_modul m = match m with
 let translate_const_name { qual = m; name = n } =
   { qual = QualModule { qual = translate_modul m; name = "CONSTANTES"}; name = String.uppercase n }
 
+(** a [Module.fun] becomes a [module.FUNS.fun] *)
+let translate_fun_name { qual = m; name = n } =
+  { qual = QualModule { qual = translate_modul m; name = "FUNS"}; name = n }
+
 (** a [Module.name] becomes a [module.Name]
     used for type_names, class_names, fun_names *)
 let qualname_to_class_name q =
@@ -94,7 +98,17 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield f -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
-  | Types.Sarray_power _ -> eprintf "ojSarray_power@."; assert false; (* TODO java array *)
+  | Types.Sarray_power (see,pow) ->
+      let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+                 with Errors.Error ->
+                   eprintf "%aStatic power of array should have integer power. \
+                            Please use callgraph or non-static exp in %a.@."
+                           Location.print_location se.Types.se_loc
+                           Global_printer.print_static_exp se;
+                   raise Errors.Error)
+      in
+      let se_l = Misc.repeat_list (static_exp param_env see) pow in
+      Enew_array (ty param_env se.Types.se_ty, se_l)
   | Types.Sarray se_l -> Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
@@ -106,11 +120,12 @@ and boxed_ty param_env t = match t with
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (boxed_ty param_env t, static_exp param_env size)
+  | Types.Tmutable t -> Tref (boxed_ty param_env t)
   | Types.Tunit -> Tunit
 
 and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
-  Tgeneric (java_pervasive_class ("Tuple"^ln), List.map (boxed_ty param_env) ty_l)
+  Tclass (java_pervasive_class ("Tuple"^ln))
 
 and ty param_env t :Java.ty = match t with
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
@@ -119,6 +134,7 @@ and ty param_env t :Java.ty = match t with
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
+  | Types.Tmutable t -> Tref (ty param_env t)
   | Types.Tunit -> Tunit
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
@@ -166,7 +182,15 @@ let rec act_list param_env act_l acts =
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         let assgn = Anewvar (return_vd, ecall) in
         let copy_return_to_var i p =
-          Aassgn (pattern param_env p, Eval (Pfield (Pvar return_id, "c"^(string_of_int i))))
+          let t = ty param_env p.pat_ty in
+          let cast t e = match t with
+            | Tbool -> Ecast(Tbool, Ecast(boxed_ty param_env p.pat_ty, e))
+            | Tint -> Ecast(Tint, Ecast(boxed_ty param_env p.pat_ty, e))
+            | Tfloat -> Ecast(Tfloat, Ecast(boxed_ty param_env p.pat_ty, e))
+            | _ -> Ecast(t, e)
+          in
+          let p = pattern param_env p in
+          Aassgn (p, cast t (Eval (Pfield (Pvar return_id, "c"^(string_of_int i)))))
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
@@ -231,8 +255,6 @@ let copy_to_this vd_l =
   List.map _vd vd_l
 
 
-
-
 let class_def_list classes cd_l =
   let class_def classes cd =
     Idents.enter_node cd.cd_name;
@@ -249,23 +271,24 @@ let class_def_list classes cd_l =
        [reset_mems] is the block to reset the members of the class
          without call to the reset method of inner instances, it retains [this.x = 0] but not [this.I.reset()] *)
     let reset, reset_mems =
-      let oreset = find_reset_method cd in
-      let body = block param_env oreset.Obc.m_body in
-      let reset_mems = block param_env (remove_resets oreset.Obc.m_body) in
-      mk_methode body "reset", reset_mems
+      try (* When there exist a reset method *)
+        let oreset = find_reset_method cd in
+        let body = block param_env oreset.Obc.m_body in
+        let reset_mems = block param_env (remove_resets oreset.Obc.m_body) in
+        mk_methode body "reset", reset_mems
+      with Not_found -> (* stub reset method *)
+        mk_methode (mk_block []) "reset", mk_block []
     in
      (* [obj_env] gives the type of an [obj_ident], needed in async because we change the classe for async obj *)
     let constructeur, obj_env =
-      let obj_env = (* In async we change the type of the async objects *)
+      let obj_env = (* Mapping between Obc class and Java class, useful at least with asyncs *)
         let aux obj_env od =
           let t = Tclass (qualname_to_class_name od.o_class)
           in Idents.Env.add od.o_ident t obj_env
         in List.fold_left aux Idents.Env.empty cd.cd_objs
       in
-
       let body =
-        (* TODO java array : also initialize arrays with [ new int[3] ] *)
-        (* Initialize the objects *)
+        (* Function to initialize the objects *)
         let obj_init_act acts od =
           let params = List.map (static_exp param_env) od.o_params in
           match od.o_size with
@@ -280,13 +303,23 @@ let class_def_list classes cd_l =
                  :: (fresh_for size assgn_elem)
                  :: acts
         in
+        (* function to allocate the arrays *)
+        let allocate acts vd = match vd.v_type with
+          | Types.Tarray (t, size) ->
+              let t = ty param_env vd.v_type in
+              ( Aassgn (Pthis vd.v_ident, Enew_array (t,[])) ):: acts
+          | _ -> acts
+        in
+        (* init actions [acts] in reverse order : *)
         (* init member variables *)
         let acts = [Ablock reset_mems] in
         (* init member objects *)
         let acts = List.fold_left obj_init_act acts cd.cd_objs in
+        (* allocate member arrays *)
+        let acts = List.fold_left allocate acts cd.cd_mems in
         (* init static params *)
         let acts = (copy_to_this vds_params)@acts in
-        { b_locals = []; b_body = acts }
+        { b_locals = []; b_body = List.rev acts }
       in mk_methode ~args:vds_params body (shortname class_name), obj_env
     in
     let fields =
@@ -367,7 +400,7 @@ let const_dec_list cd_l = match cd_l with
 let program p =
   let classes = const_dec_list p.p_consts in
   let classes = type_dec_list classes p.p_types in
-  let p = class_def_list classes p.p_defs in
+  let p = class_def_list classes p.p_classes in
   get_classes()@p
 
 

@@ -162,7 +162,7 @@ type contract =
 
 type node_dec =
   { n_name      : dec_name;
-    n_statefull : bool;
+    n_stateful : bool;
     n_input     : var_dec list;
     n_output    : var_dec list;
     n_contract  : contract option;
@@ -191,7 +191,7 @@ type arg =
 type signature =
   { sig_name      : dec_name;
     sig_inputs    : arg list;
-    sig_statefull : bool;
+    sig_stateful : bool;
     sig_outputs   : arg list;
     sig_params    : var_dec list;
     sig_loc       : location }

@@ -13,10 +13,10 @@ open Hept_mapfold
 
 let translate_present_handlers handlers cont =
   let translate_present_handler { p_cond = e; p_block = b } cont =
-    let statefull = b.b_statefull or cont.b_statefull in
-      mk_block ~statefull:statefull ~defnames:b.b_defnames
+    let stateful = b.b_stateful or cont.b_stateful in
+      mk_block ~stateful:stateful ~defnames:b.b_defnames
         [mk_switch_equation
-           ~statefull:statefull e
+           ~stateful:stateful e
            [{ w_name = Initial.ptrue; w_block = b };
             { w_name = Initial.pfalse; w_block = cont }]] in
   let b = List.fold_right translate_present_handler handlers cont in

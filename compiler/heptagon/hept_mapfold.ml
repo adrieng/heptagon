@@ -54,46 +54,25 @@ open Global_mapfold
 open Heptagon
 
 type 'a hept_it_funs = {
-  app:
-    'a hept_it_funs -> 'a -> Heptagon.app -> Heptagon.app * 'a;
-  block:
-    'a hept_it_funs -> 'a -> Heptagon.block -> Heptagon.block * 'a;
-  edesc:
-    'a hept_it_funs -> 'a -> Heptagon.desc -> Heptagon.desc * 'a;
-  eq:
-    'a hept_it_funs -> 'a -> Heptagon.eq -> Heptagon.eq * 'a;
-  eqdesc:
-    'a hept_it_funs -> 'a -> Heptagon.eqdesc -> Heptagon.eqdesc * 'a;
-  escape_unless :
-    'a hept_it_funs -> 'a -> Heptagon.escape -> Heptagon.escape * 'a;
-  escape_until:
-    'a hept_it_funs -> 'a -> Heptagon.escape -> Heptagon.escape * 'a;
-  exp:
-    'a hept_it_funs -> 'a -> Heptagon.exp -> Heptagon.exp * 'a;
-  pat:
-    'a hept_it_funs -> 'a -> pat -> Heptagon.pat * 'a;
-  present_handler:
-    'a hept_it_funs -> 'a -> Heptagon.present_handler
-                          -> Heptagon.present_handler * 'a;
-  state_handler:
-    'a hept_it_funs -> 'a -> Heptagon.state_handler
-                          -> Heptagon.state_handler * 'a;
-  switch_handler:
-    'a hept_it_funs -> 'a -> Heptagon.switch_handler
-                          -> Heptagon.switch_handler * 'a;
-  var_dec:
-    'a hept_it_funs -> 'a -> Heptagon.var_dec -> Heptagon.var_dec * 'a;
-  last:
-    'a hept_it_funs -> 'a -> Heptagon.last -> Heptagon.last * 'a;
-  contract:
-    'a hept_it_funs -> 'a -> Heptagon.contract -> Heptagon.contract * 'a;
-  node_dec:
-    'a hept_it_funs -> 'a -> Heptagon.node_dec -> Heptagon.node_dec * 'a;
-  const_dec:
-    'a hept_it_funs -> 'a -> Heptagon.const_dec -> Heptagon.const_dec * 'a;
-  program:
-    'a hept_it_funs -> 'a -> Heptagon.program -> Heptagon.program * 'a;
-  global_funs: 'a Global_mapfold.global_it_funs }
+  app            : 'a hept_it_funs -> 'a -> app -> app * 'a;
+  block          : 'a hept_it_funs -> 'a -> block -> block * 'a;
+  edesc          : 'a hept_it_funs -> 'a -> desc -> desc * 'a;
+  eq             : 'a hept_it_funs -> 'a -> eq -> eq * 'a;
+  eqdesc         : 'a hept_it_funs -> 'a -> eqdesc -> eqdesc * 'a;
+  escape_unless  : 'a hept_it_funs -> 'a -> escape -> escape * 'a;
+  escape_until   : 'a hept_it_funs -> 'a -> escape -> escape * 'a;
+  exp            : 'a hept_it_funs -> 'a -> exp -> exp * 'a;
+  pat            : 'a hept_it_funs -> 'a -> pat -> pat * 'a;
+  present_handler: 'a hept_it_funs -> 'a -> present_handler -> present_handler * 'a;
+  state_handler  : 'a hept_it_funs -> 'a -> state_handler -> state_handler * 'a;
+  switch_handler : 'a hept_it_funs -> 'a -> switch_handler -> switch_handler * 'a;
+  var_dec        : 'a hept_it_funs -> 'a -> var_dec -> var_dec * 'a;
+  last           : 'a hept_it_funs -> 'a -> last -> last * 'a;
+  contract       : 'a hept_it_funs -> 'a -> contract -> contract * 'a;
+  node_dec       : 'a hept_it_funs -> 'a -> node_dec -> node_dec * 'a;
+  const_dec      : 'a hept_it_funs -> 'a -> const_dec -> const_dec * 'a;
+  program        : 'a hept_it_funs -> 'a -> program -> program * 'a;
+  global_funs    : 'a Global_mapfold.global_it_funs }
 
 
 let rec exp_it funs acc e = funs.exp funs acc e
@@ -200,7 +179,7 @@ and eqdesc funs acc eqd = match eqd with
 
 and block_it funs acc b = funs.block funs acc b
 and block funs acc b =
-  (* defnames ty ?? *)
+  (* TODO defnames ty ?? *)
   let b_local, acc = mapfold (var_dec_it funs) acc b.b_local in
   let b_equs, acc = mapfold (eq_it funs) acc b.b_equs in
   { b with b_local = b_local; b_equs = b_equs }, acc
@@ -238,7 +217,7 @@ and present_handler funs acc ph =
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
-  (* v_type ??? *)
+  (* TODO v_type ??? *)
   let v_last, acc = last_it funs acc vd.v_last in
   { vd with v_last = v_last }, acc
 

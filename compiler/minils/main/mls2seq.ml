@@ -19,6 +19,7 @@ open Misc
 type target =
   | Obc of (Obc.program -> unit)
   | Obc_no_params of (Obc.program -> unit)
+  | Obc_scalar of (Obc.program ->unit)
   | Minils of (Minils.program -> unit)
   | Minils_no_params of (Minils.program -> unit)
 
@@ -38,8 +39,9 @@ let write_obc_file p =
     close_out obc;
     comment "Generation of Obc code"
 
+
 let targets = [ "c", Obc_no_params Cmain.program;
-                "java", Obc Java_main.program;
+                "java", Obc_scalar Java_main.program;
                 "obc", Obc write_obc_file;
                 "obc_np", Obc_no_params write_obc_file;
                 "epo", Minils write_object_file ]
@@ -69,6 +71,9 @@ let generate_target p s =
         if !verbose then
           List.iter (Obc_printer.print stdout) o_list;
         List.iter convert_fun o_list
+    | Obc_scalar convert_fun ->
+        let p = p |> Mls2obc.program |> Scalarize.program in
+        convert_fun p
 
 
 (** Translation into dataflow and sequential languages, defaults to obc. *)

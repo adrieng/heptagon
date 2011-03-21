@@ -155,11 +155,11 @@ let exp funs (env,h) e =
   | Evar _ -> Env.sample_var e env, (env,h)
   | _ -> Hept_mapfold.exp funs (env,h) e
 
-(* update statefull and loc *)
+(* update stateful and loc *)
 let eq funs (env,h) eq =
   let eqd = match eq.eq_desc with
-    | Eblock b -> (* probably created by eqdesc, so update statefull and loc *)
-        Eblock { b with b_statefull = eq.eq_statefull; b_loc = eq.eq_loc }
+    | Eblock b -> (* probably created by eqdesc, so update stateful and loc *)
+        Eblock { b with b_stateful = eq.eq_stateful; b_loc = eq.eq_loc }
     | _ -> eq.eq_desc in
   Hept_mapfold.eq funs (env,h) {eq with eq_desc = eqd}
 

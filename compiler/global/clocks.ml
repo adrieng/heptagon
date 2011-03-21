@@ -95,6 +95,7 @@ let rec skeleton ck = function
             assert false;
         | _ -> Cprod (List.map (skeleton ck) ty_list))
   | Tarray (t, _) -> skeleton ck t
+  | Tmutable t -> skeleton ck t
   | Tid _ | Tunit -> Ck ck
 
 (* TODO here it implicitely says that the base clock is Cbase

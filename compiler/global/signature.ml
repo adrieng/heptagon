@@ -30,7 +30,7 @@ type size_constraint =
 type node = {
   node_inputs : arg list;
   node_outputs : arg list;
-  node_statefull : bool;
+  node_stateful : bool;
   node_params : param list;
   node_params_constraints : size_constraint list }
 
@@ -58,10 +58,10 @@ let mk_field n ty = { f_name = n; f_type = ty }
 let mk_const_def ty value =
   { c_type = ty; c_value = value }
 
-let mk_node ?(constraints = []) ins outs statefull params =
+let mk_node ?(constraints = []) ins outs stateful params =
   { node_inputs = ins;
     node_outputs  = outs;
-    node_statefull = statefull;
+    node_stateful = stateful;
     node_params = params;
     node_params_constraints = constraints }
 

@@ -12,7 +12,7 @@ tel
 
 fun mean<<n: int>> (i: int^n) returns (m: int)
 let
-  m = fold sum <<n>> (i,0)
+  m = (fold (+) <<n>> (i,0)) /n
 tel
 
 

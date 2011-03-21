@@ -108,16 +108,19 @@ type method_def =
 
 type class_def =
     { cd_name : class_name;
+      cd_stateful : bool; (** when false, the class is a function with static parameters
+                              calling other functions with parameters *)
       cd_mems : var_dec list;
       cd_objs  : obj_dec list;
       cd_params : param list;
       cd_methods: method_def list;
       cd_loc : location }
 
+
 type program =
     { p_modname : modul;
       p_opened : modul list;
       p_types : type_dec list;
       p_consts : const_dec list;
-      p_defs  : class_def list }
+      p_classes  : class_def list; }
 

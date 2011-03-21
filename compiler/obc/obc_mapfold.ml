@@ -147,7 +147,9 @@ and method_def funs acc md =
   , acc
 
 
-and class_def_it funs acc cd = funs.class_def funs acc cd
+and class_def_it funs acc cd =
+    Idents.enter_node cd.cd_name;
+    funs.class_def funs acc cd
 and class_def funs acc cd =
   let cd_mems, acc = var_decs_it funs acc cd.cd_mems in
   let cd_objs, acc = obj_decs_it funs acc cd.cd_objs in
@@ -186,8 +188,8 @@ and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
   let td_list, acc = mapfold (type_dec_it funs) acc p.p_types in
   let cd_list, acc = mapfold (const_dec_it funs) acc p.p_consts in
-  let nd_list, acc = mapfold (class_def_it funs) acc p.p_defs in
-  { p with p_types = td_list; p_consts = cd_list; p_defs = nd_list }, acc
+  let nd_list, acc = mapfold (class_def_it funs) acc p.p_classes in
+  { p with p_types = td_list; p_consts = cd_list; p_classes = nd_list }, acc
 
 
 let defaults = {

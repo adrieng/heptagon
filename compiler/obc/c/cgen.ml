@@ -73,10 +73,10 @@ let output_names_list sig_info =
   in
   List.map remove_option sig_info.node_outputs
 
-let is_statefull n =
+let is_stateful n =
   try
     let sig_info = find_value n in
-      sig_info.node_statefull
+      sig_info.node_stateful
   with
       Not_found -> Error.message no_location (Error.Enode (fullname n))
 
@@ -100,8 +100,8 @@ let rec ctype_of_otype oty =
     | Types.Tid id when id = Initial.pfloat -> Cty_float
     | Types.Tid id when id = Initial.pbool -> Cty_int
     | Tid id -> Cty_id id
-    | Tarray(ty, n) -> Cty_arr(int_of_static_exp n,
-                               ctype_of_otype ty)
+    | Tarray(ty, n) -> Cty_arr(int_of_static_exp n, ctype_of_otype ty)
+    | Tmutable t -> ctype_of_otype t
     | Tprod _ -> assert false
     | Tunit -> assert false
 
@@ -362,7 +362,7 @@ let out_var_name_of_objn o =
     of the called node, [mem] represents the node context and [args] the
     argument list.*)
 let step_fun_call var_env sig_info objn out args =
-  if sig_info.node_statefull then (
+  if sig_info.node_stateful then (
     let mem =
       (match objn with
          | Oobj o -> Cfield (Cderef (Cvar "self"), local_qn (name o))
@@ -471,7 +471,7 @@ let rec cstm_of_act var_env obj_env act =
 
     (** For composition of statements, just recursively apply our
         translation function on sub-statements. *)
-    | Afor ({ v_ident = x; _ }, i1, i2, act) ->
+    | Afor ({ v_ident = x }, i1, i2, act) ->
         [Cfor(name x, int_of_static_exp i1,
               int_of_static_exp i2, cstm_of_act_list var_env obj_env act)]
 
@@ -541,7 +541,7 @@ let step_fun_args n md =
   let args = cvarlist_of_ovarlist md.m_inputs in
   let out_arg = [("out", Cty_ptr (Cty_id (qn_append n "_out")))] in
   let context_arg =
-    if is_statefull n then
+    if is_stateful n then
       [("self", Cty_ptr (Cty_id (qn_append n "_mem")))]
     else
       []
@@ -594,7 +594,7 @@ let mem_decl_of_class_def cd =
   (** This one just translates the class name to a struct name following the
       convention we described above. *)
   let struct_field_of_obj_dec l od =
-    if is_statefull od.o_class then
+    if is_stateful od.o_class then
       let ty = Cty_id (qn_append od.o_class "_mem") in
       let ty = match od.o_size with
         | Some se -> Cty_arr (int_of_static_exp se, ty)
@@ -603,7 +603,7 @@ let mem_decl_of_class_def cd =
     else
       l
   in
-    if is_statefull cd.cd_name then (
+    if is_stateful cd.cd_name then (
       (** Fields corresponding to normal memory variables. *)
       let mem_fields = List.map cvar_of_vd cd.cd_mems in
       (** Fields corresponding to object variables. *)
@@ -622,9 +622,13 @@ let out_decl_of_class_def cd =
 (** [reset_fun_def_of_class_def cd] returns the defintion of the C function
     tasked to reset the class [cd]. *)
 let reset_fun_def_of_class_def cd =
-  let var_env = List.map cvar_of_vd cd.cd_mems in
-  let reset = find_reset_method cd in
-  let body = cstm_of_act_list var_env cd.cd_objs reset.m_body in
+  let body =
+    try
+      let var_env = List.map cvar_of_vd cd.cd_mems in
+      let reset = find_reset_method cd in
+      cstm_of_act_list var_env cd.cd_objs reset.m_body
+    with Not_found -> [] (* TODO C : nicely deal with stateless objects *)
+  in
   Cfundef {
     f_name = (cname_of_qn cd.cd_name) ^ "_reset";
     f_retty = Cty_void;
@@ -634,6 +638,7 @@ let reset_fun_def_of_class_def cd =
       block_body = body;
     }
   }
+
 
 (** [cdecl_and_cfun_of_class_def cd] translates the class definition [cd] to
     a C program. *)
@@ -651,7 +656,7 @@ let cdefs_and_cdecls_of_class_def cd =
   let res_fun_decl = cdecl_of_cfundef reset_fun_def in
   let step_fun_decl = cdecl_of_cfundef step_fun_def in
   let (decls, defs) =
-    if is_statefull cd.cd_name then
+    if is_stateful cd.cd_name then
       ([res_fun_decl; step_fun_decl], [reset_fun_def; step_fun_def])
     else
       ([step_fun_decl], [step_fun_def]) in
@@ -748,7 +753,7 @@ let global_file_header name prog =
   let dependencies = List.map modul_to_string dependencies in
 
   let (decls, defs) =
-    List.split (List.map cdefs_and_cdecls_of_class_def prog.p_defs) in
+    List.split (List.map cdefs_and_cdecls_of_class_def prog.p_classes) in
   let decls = List.concat decls
   and defs = List.concat defs in
 

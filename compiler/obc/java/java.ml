@@ -23,6 +23,7 @@ type ty = Tclass of class_name
         | Tint
         | Tfloat
         | Tarray of ty * exp
+        | Tref of ty
         | Tunit
 
 and classe = { c_protection : protection;
@@ -81,6 +82,7 @@ and exp = Eval of pattern
         | Enew of ty * exp list
         | Enew_array of ty * exp list (** [ty] is the array base type *)
         | Evoid (*printed as nothing*)
+        | Ecast of ty * exp
         | Svar of const_name
         | Sint of int
         | Sfloat of float
@@ -99,13 +101,14 @@ and pattern = Pfield of pattern * field_name
 type program = classe list
 
 
-let default_value ty = match ty with
+let rec default_value ty = match ty with
   | Tclass _ -> Snull
   | Tgeneric _ -> Snull
   | Tbool -> Sbool true
   | Tint -> Sint 0
   | Tfloat -> Sfloat 0.0
   | Tunit -> Evoid
+  | Tref t ->  default_value t
   | Tarray _ -> Enew_array (ty,[])
 
 

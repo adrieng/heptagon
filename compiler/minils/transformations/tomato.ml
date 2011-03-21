@@ -405,7 +405,7 @@ let rec reconstruct input_type (env : PatEnv.t) =
     | Etuplepat pat_list, Tprod ty_list ->
         List.fold_right2 mk_var_decs pat_list ty_list var_list
     | Etuplepat [], Tunit -> var_list
-    | Etuplepat _, (Tarray _ | Tid _ | Tunit ) -> assert false (* ill-typed *) in
+    | Etuplepat _, (Tarray _ | Tid _ | Tunit | Tmutable _) -> assert false (* ill-typed *) in
 
   let add_to_lists pat (_, head, children) (eq_list, var_list) =
     (* Remember the encoding of resets given above. *)

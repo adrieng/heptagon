@@ -296,7 +296,7 @@ and translate_pat loc env = function
 
 let rec translate_eq env eq =
   { Heptagon.eq_desc = translate_eq_desc eq.eq_loc env eq.eq_desc ;
-    Heptagon.eq_statefull = false;
+    Heptagon.eq_stateful = false;
     Heptagon.eq_loc = eq.eq_loc; }
 
 and translate_eq_desc loc env = function
@@ -326,7 +326,7 @@ and translate_block env b =
   { Heptagon.b_local = translate_vd_list env b.b_local;
     Heptagon.b_equs = List.map (translate_eq env) b.b_equs;
     Heptagon.b_defnames = Env.empty;
-    Heptagon.b_statefull = false;
+    Heptagon.b_stateful = false;
     Heptagon.b_loc = b.b_loc; }, env
 
 and translate_state_handler env sh =
@@ -402,9 +402,9 @@ let translate_node node =
   let i = args_of_var_decs node.n_input in
   let o = args_of_var_decs node.n_output in
   let p = params_of_var_decs node.n_params in
-  add_value n (Signature.mk_node i o node.n_statefull p);
+  add_value n (Signature.mk_node i o node.n_stateful p);
   { Heptagon.n_name = n;
-    Heptagon.n_statefull = node.n_statefull;
+    Heptagon.n_stateful = node.n_stateful;
     Heptagon.n_input = inputs;
     Heptagon.n_output = outputs;
     Heptagon.n_contract = contract;
@@ -469,8 +469,8 @@ let translate_signature s =
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
-  add_value n (Signature.mk_node i o s.sig_statefull p);
-  Heptagon.mk_signature n i o s.sig_statefull p s.sig_loc
+  add_value n (Signature.mk_node i o s.sig_stateful p);
+  Heptagon.mk_signature n i o s.sig_stateful p s.sig_loc
 
 
 let translate_interface_desc = function

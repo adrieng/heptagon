@@ -8,7 +8,7 @@
 (**************************************************************************)
 (* removing reset statements *)
 
-(* REQUIRES automaton switch statefull present *)
+(* REQUIRES automaton switch stateful present *)
 
 open Misc
 open Idents
@@ -74,7 +74,7 @@ let edesc funs (res,s) ed =
 
 
 
-let eq funs (res,_) eq = Hept_mapfold.eq funs (res,eq.eq_statefull) eq
+let eq funs (res,_) eq = Hept_mapfold.eq funs (res,eq.eq_stateful) eq
 
 (* Transform reset blocks in blocks with reseted exps, create a var to store the reset condition evaluation. *)
 let eqdesc funs (res,stateful) = function
@@ -85,7 +85,7 @@ let eqdesc funs (res,stateful) = function
         let e, vd, eq = bool_var_from_exp e in
         let r = merge_resets res (Some e) in
         let b, _ = Hept_mapfold.block_it funs (r,true) b in
-        let b = { b with b_equs = eq::b.b_equs; b_local = vd::b.b_local; b_statefull = true } in
+        let b = { b with b_equs = eq::b.b_equs; b_local = vd::b.b_local; b_stateful = true } in
         Eblock(b), (res,true))
       else (
         let b, _ = Hept_mapfold.block_it funs (res,false) b in

@@ -14,7 +14,7 @@ module Error =
 struct
   type error =
     | Enode_unbound of qualname
-    | Epartial_evaluation of static_exp
+    | Epartial_evaluation of static_exp list
 
   let message loc kind =
     begin match kind with
@@ -22,10 +22,10 @@ struct
           Format.eprintf "%aUnknown node '%s'@."
             print_location loc
             (fullname ln)
-      | Epartial_evaluation se ->
-          Format.eprintf "%aUnable to fully instanciate the static exp '%a'@."
-            print_location se.se_loc
-            print_static_exp se
+      | Epartial_evaluation se_l ->
+          Format.eprintf "%aUnable to fully instanciate the static exps '%a'@."
+            print_location loc
+            print_static_exp_tuple se_l
     end;
     raise Errors.Error
 end
@@ -77,10 +77,10 @@ struct
   let nodes_instances = ref QualEnv.empty
 
   (** create a params instance *)
-  let instantiate m se =
-    try List.map (eval m) se
-    with Errors.Error se ->
-      Error.message no_location (Error.Epartial_evaluation se)
+  let instantiate m se_l =
+    try List.map (eval m) se_l
+    with Errors.Error ->
+      Error.message no_location (Error.Epartial_evaluation se_l)
 
   (** @return the name of the node corresponding to the instance of
       [ln] with the static parameters [params]. *)

@@ -152,6 +152,7 @@ let print_class_def ff
   print_list_r print_method "" "\n" "" ff m_list;
   fprintf ff "@]"
 
+
 let print_type_def ff { t_name = name; t_desc = tdesc } =
   match tdesc with
     | Type_abs -> fprintf ff "@[type %a@\n@]" print_qualname name
@@ -179,12 +180,12 @@ let print_const_dec ff c =
     print_static_exp c.c_value
 
 let print_prog ff { p_opened = modules; p_types = types;
-                    p_consts = consts; p_defs = defs } =
+                    p_consts = consts; p_classes = classes; } =
   List.iter (print_open_module ff) modules;
   List.iter (print_type_def ff) types;
   List.iter (print_const_dec ff) consts;
   fprintf ff "@\n";
-  List.iter (fun def -> (print_class_def ff def; fprintf ff "@\n@\n")) defs
+  List.iter (fun cdef -> (print_class_def ff cdef; fprintf ff "@\n@\n")) classes
 
 let print oc p =
   let ff = formatter_of_out_channel oc in

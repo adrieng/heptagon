@@ -107,4 +107,6 @@ and type_compare ty1 ty2 = match ty1, ty2 with
   | Tid _, _ -> 1
   | Tarray _, (Tprod _ | Tid _) -> -1
   | Tarray _, _ -> 1
+  | Tmutable _, (Tprod _ | Tid _ | Tarray _) -> -1
+  | Tmutable _, _ -> 1
   | Tunit, _ -> -1

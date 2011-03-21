@@ -291,6 +291,7 @@ let rec unalias_type t = match t with
       with Not_found -> raise (Undefined_type ty_name))
   | Tarray (ty, n) -> Tarray(unalias_type ty, n)
   | Tprod ty_list -> Tprod (List.map unalias_type ty_list)
+  | Tmutable t -> Tmutable (unalias_type t)
   | Tunit -> Tunit
 
 

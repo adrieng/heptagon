@@ -47,7 +47,6 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP FOLD FOLDI MAPFOLD
-%token ASYNC BANG
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -59,7 +58,6 @@ open Hept_parsetree
 
 
 %right AROBASE
-%nonassoc prec_ident
 %nonassoc DEFAULT
 %left ELSE
 %right ARROW
@@ -77,8 +75,7 @@ open Hept_parsetree
 %right PRE
 %left POWER
 %right PREFIX
-%left DOT
-%left BANG
+
 
 
 %start program
@@ -190,7 +187,7 @@ node_dec:
     RETURNS LPAREN out_params RPAREN
     contract b=block(LET) TEL
       {{ n_name = $2;
-         n_statefull = $1;
+         n_stateful = $1;
          n_input  = $5;
          n_output = $9;
          n_contract = $11;
@@ -547,7 +544,7 @@ modul:
   | m=modul DOT c=Constructor { Names.QualModule { Names.qual = m; Names.name = c} }
 
 constructor:
-  | Constructor { ToQ $1 } %prec prec_ident
+  | Constructor { ToQ $1 }
   | q=qualified(Constructor) { q }
 ;
 
@@ -626,7 +623,7 @@ _interface_decl:
     RETURNS LPAREN params_signature RPAREN
     { Isignature({ sig_name = $3;
                    sig_inputs = $6;
-                   sig_statefull = $2;
+                   sig_stateful = $2;
                    sig_outputs = $10;
                    sig_params = $4;
                    sig_loc = (Loc($startpos,$endpos)) }) }

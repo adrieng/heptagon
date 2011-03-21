@@ -106,11 +106,12 @@ type contract = {
 
 type node_dec = {
   n_name   : qualname;
+  n_stateful : bool;
   n_input  : var_dec list;
   n_output : var_dec list;
   n_contract : contract option;
-  (* GD: inglorious hack for controller call *)
-  mutable n_controller_call : var_ident list * var_ident list;
+  (* GD: inglorious hack for controller call
+  mutable n_controller_call : var_ident list * var_ident list; *)
   n_local  : var_dec list;
   n_equs   : eq list;
   n_loc    : location;
@@ -146,13 +147,14 @@ let mk_equation ?(loc = no_location) pat exp =
 
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
-    ?(loc = no_location) ?(param = []) ?(constraints = [])
+    ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
     ?(pinst = ([],[])) name =
   { n_name = name;
+    n_stateful = stateful;
     n_input = input;
     n_output = output;
     n_contract = contract;
-    n_controller_call = pinst;
+ (*   n_controller_call = pinst;*)
     n_local = local;
     n_equs = eq;
     n_loc = loc;
@@ -174,4 +176,3 @@ let mk_program o n t c =
     p_opened = o; p_nodes = n; p_types = t; p_consts = c }
 
 let void = mk_exp ~ty:Types.Tunit (Eapp (mk_app Etuple, [], None))
-

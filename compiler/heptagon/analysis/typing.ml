@@ -223,7 +223,7 @@ let unify t1 t2 =
 
 let kind f ty_desc =
   let ty_of_arg v = v.a_type in
-  let op = if ty_desc.node_statefull then Enode f else Efun f in
+  let op = if ty_desc.node_stateful then Enode f else Efun f in
     op, List.map ty_of_arg ty_desc.node_inputs,
   List.map ty_of_arg ty_desc.node_outputs
 
@@ -250,6 +250,7 @@ let build_subst names values =
 let rec subst_type_vars m = function
   | Tarray(ty, e) -> Tarray(subst_type_vars m ty, simplify m e)
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
+  | Tmutable t -> Tmutable (subst_type_vars m t)
   | t -> t
 
 let add_distinct_env id ty env =
@@ -384,6 +385,8 @@ let rec check_type const_env = function
   | Tid ty_name -> Tid ty_name (* TODO bug ? should check that ty_name exists ? *)
   | Tprod l ->
       Tprod (List.map (check_type const_env) l)
+  | Tmutable t ->
+      Tmutable (check_type const_env t)
   | Tunit -> Tunit
 
 and typing_static_exp const_env se =

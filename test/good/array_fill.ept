@@ -1,9 +1,10 @@
 const n : int = 33
 
 node stopbb(shiftenable : bool) returns (dataout : bool^n)
-var last dataint : bool^n = false^n;
+var last dataint : bool^n; f : bool; 
 let
-  dataout = (false^n) fby dataint;
+  f = false;
+  dataout = (f^n) fby dataint;
   switch shiftenable
     | true do dataint = [true] @ dataout[0 .. n - 2];
     | false do
