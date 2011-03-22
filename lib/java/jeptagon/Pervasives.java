@@ -7,6 +7,12 @@ import java.util.concurrent.TimeUnit;
 
 public class Pervasives {
 
+	public static int between(int i, int m) {
+		if (i<0) return 0;
+		else if (i>=m) return m-1;
+		else return i;
+	}
+
     public static final ExecutorService executor_cached = Executors.newCachedThreadPool();
 
     public static class StaticFuture<V> implements Future<V> {
@@ -125,4 +131,6 @@ public class Pervasives {
         }
         return x;
     }
+
+
 }

@@ -93,7 +93,7 @@ launch_check () {
   done
   echo
   echo "Tests goods"
-  for f in ../good/*.ept; do
+  for f in ../good/*.ept ../image_filters/*.ept; do
     echec=0
     if [ $verbose = 0 ]; then
       echo -n "."

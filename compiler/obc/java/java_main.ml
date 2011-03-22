@@ -37,19 +37,16 @@ let program p =
           let integer = Eval(Pclass(Names.pervasives_qn "Integer")) in
           let args1 = Eval(Parray_elem(pat_args, Sint 1)) in
           let out = Eval(Pclass(Names.qualname_of_string "java.lang.System.out")) in
-          let vd_r, pat_r = mk_var Tint "r" in
-          let step_call = Anewvar(vd_r, Emethod_call(e_main, "step", [])) in
           [ Anewvar(vd_main, Enew (Tclass q_main, []));
             Aifelse( Efun(Names.pervasives_qn ">", [Eval (Pfield (pat_args, "length")); Sint 1])
                    , mk_block [Aassgn(pat_step, Emethod_call(integer, "parseInt", [args1]))]
                    , mk_block [Aassgn(pat_step, Eval (Pvar id_step_dnb))]);
             Obc2java.fresh_for (Eval pat_step)
               (fun i ->
-                let printing =
-                  if !Compiler_options.verbose
-                  then [Amethod_call(out, "printf", [Sstring "%d => %d\\n"; Eval (Pvar i); Eval pat_r])]
-                  else []
-                in step_call::printing )
+                [ Amethod_call(out, "printf", [ Sstring "%d => %s\\n";
+                                                Eval (Pvar i);
+                                                Emethod_call(Emethod_call(e_main, "step", []), "toString", [])])]
+              )
           ]
         in
         mk_block ~locals:[vd_step] acts
@@ -59,11 +56,3 @@ let program p =
     let c = mk_classe ~fields:[field_step_dnb] ~methodes:[main_methode] class_name in
     output_program dir [c]
   )
-
-
-
-
-
-
-
-

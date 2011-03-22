@@ -43,13 +43,14 @@ let
 tel
 
 
-node test1() returns (r1,r2: int^3)
-var x,y : int^10; z,t : int^20;
+node main() returns (r :int)
+var x,y : int^10; z,t : int^20; r1,r2 :int^3;
 let
   x = ten(3);
   y = ten(4);
   (z,t) = concatenate(x,y);
   (r1,r2) = slicing(x);
+  r = r1[>0<];
 tel
 
 node elt_trunc (a:int^m^m; i,j:int) returns (o : int)
