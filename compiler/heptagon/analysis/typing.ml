@@ -48,6 +48,7 @@ type error =
   | Eempty_record
   | Eempty_array
   | Efoldi_bad_args of ty
+  | Emapi_bad_args of ty
   | Emerge_missing_constrs of QualSet.t
   | Emerge_uniq of qualname
   | Emerge_mix of qualname
@@ -159,6 +160,12 @@ let message loc kind =
         eprintf
           "%aThe function given to foldi should expect an integer \
                as the last but one argument (found: %a).@."
+          print_location loc
+          print_type ty
+    | Emapi_bad_args  ty ->
+        eprintf
+          "%aThe function given to mapi should expect an integer \
+               as the last argument (found: %a).@."
           print_location loc
           print_type ty
   end;
@@ -753,6 +760,18 @@ and typing_iterator const_env h
       let args_ty_list = List.map (fun ty -> Tarray(ty, n)) args_ty_list in
       let result_ty_list =
         List.map (fun ty -> Tarray(ty, n)) result_ty_list in
+      let typed_e_list = typing_args const_env h
+        args_ty_list e_list in
+      prod result_ty_list, typed_e_list
+
+  | Imapi ->
+      let args_ty_list, idx_ty = split_last args_ty_list in
+      let args_ty_list = List.map (fun ty -> Tarray(ty, n)) args_ty_list in
+      let result_ty_list =
+        List.map (fun ty -> Tarray(ty, n)) result_ty_list in
+      (* Last but one arg of the function should be integer *)
+        ( try unify idx_ty (Tid Initial.pint)
+          with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty)));
       let typed_e_list = typing_args const_env h
         args_ty_list e_list in
       prod result_ty_list, typed_e_list

@@ -43,3 +43,13 @@ let
    o = map<<n>> plusone (a);
   every (r & r)
 tel
+
+node m(t:int^n; a:int; i:int) returns (o:int)
+let
+  o = a * i + t[0];
+tel
+
+node itmapi(a:int^n) returns (o:int^n)
+let
+  o = mapi <<n>> m(<a>)(a);
+tel

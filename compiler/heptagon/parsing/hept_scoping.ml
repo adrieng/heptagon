@@ -164,6 +164,7 @@ let build_const loc vd_list =
 (** { 3 Translate the AST into Heptagon. } *)
 let translate_iterator_type = function
   | Imap -> Heptagon.Imap
+  | Imapi -> Heptagon.Imapi
   | Ifold -> Heptagon.Ifold
   | Ifoldi -> Heptagon.Ifoldi
   | Imapfold -> Heptagon.Imapfold

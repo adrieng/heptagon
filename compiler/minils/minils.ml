@@ -23,6 +23,7 @@ let minils_format_version = "1"
 
 type iterator_type =
   | Imap
+  | Imapi
   | Ifold
   | Ifoldi
   | Imapfold

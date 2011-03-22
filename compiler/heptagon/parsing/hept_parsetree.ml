@@ -50,6 +50,7 @@ and static_exp_desc =
 
 type iterator_type =
   | Imap
+  | Imapi
   | Ifold
   | Ifoldi
   | Imapfold

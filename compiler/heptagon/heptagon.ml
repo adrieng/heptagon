@@ -21,6 +21,7 @@ type state_name = name
 
 type iterator_type =
   | Imap
+  | Imapi
   | Ifold
   | Ifoldi
   | Imapfold

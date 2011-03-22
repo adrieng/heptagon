@@ -24,6 +24,7 @@ open Heptagon
 let iterator_to_string i =
   match i with
     | Imap -> "map"
+    | Imapi -> "mapi"
     | Ifold -> "fold"
     | Ifoldi -> "foldi"
     | Imapfold -> "mapfold"

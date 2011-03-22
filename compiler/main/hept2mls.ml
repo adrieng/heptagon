@@ -190,6 +190,7 @@ let translate_reset = function
 
 let translate_iterator_type = function
   | Heptagon.Imap -> Imap
+  | Heptagon.Imapi -> Imapi
   | Heptagon.Ifold -> Ifold
   | Heptagon.Ifoldi -> Ifoldi
   | Heptagon.Imapfold -> Imapfold

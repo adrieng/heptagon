@@ -384,6 +384,19 @@ and translate_iterator map call_context it name_list
           [Afor (xd, mk_static_int 0, n, bi)], j,
            [Afor (xd, mk_static_int 0, n, b)]
 
+    | Minils.Imapi ->
+        let c_list = array_of_input c_list in
+        let ty_list = List.map unarray (Types.unprod ty) in
+        let name_list = array_of_output name_list ty_list in
+        let node_out_ty = Types.prod ty_list in
+        let v, si, j, action = mk_node_call map call_context
+          app loc name_list (p_list@c_list@[mk_evar_int x]) node_out_ty in
+        let v = translate_var_dec v in
+        let b = mk_block ~locals:v action in
+        let bi = mk_block si in
+          [Afor (xd, mk_static_int 0, n, bi)], j,
+           [Afor (xd, mk_static_int 0, n, b)]
+
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
