@@ -41,8 +41,8 @@ open Hept_parsetree
 %token WITH
 %token WHEN MERGE
 %token POWER
-%token LBRACKET
-%token RBRACKET
+%token LBRACKET LBRACKETGREATER
+%token RBRACKET LESSRBRACKET
 %token DOUBLE_DOT
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
@@ -497,6 +497,8 @@ _exp:
       { mk_call ~params:$2 Eselect [$1] }
   | simple_exp DOT indexes DEFAULT exp
       { mk_call Eselect_dyn ([$1; $5]@$3) }
+  | a=simple_exp idx=trunc_indexes
+      { mk_call Eselect_trunc (a::idx) }
   | LBRACKET exp WITH indexes EQUAL exp RBRACKET
       { mk_call Eupdate ($2::$6::$4) }
   | simple_exp LBRACKET exp DOUBLE_DOT exp RBRACKET
@@ -535,6 +537,11 @@ iterator:
 indexes:
    LBRACKET exp RBRACKET { [$2] }
   | LBRACKET exp RBRACKET indexes { $2::$4 }
+;
+
+trunc_indexes:
+   LBRACKETGREATER exp LESSRBRACKET { [$2] }
+  | LBRACKETGREATER exp LESSRBRACKET trunc_indexes { $2::$4 }
 ;
 
 qualified(X):

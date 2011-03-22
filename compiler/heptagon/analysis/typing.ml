@@ -716,6 +716,13 @@ and typing_app const_env h app e_list =
           typing_array_subscript_dyn const_env h idx_list t1 in
         ty, app, typed_e1::typed_defe::typed_idx_list
 
+    | Eselect_trunc ->
+        let e1, idx_list = assert_1min e_list in
+        let typed_e1, t1 = typing const_env h e1 in
+        let ty, typed_idx_list =
+          typing_array_subscript_dyn const_env h idx_list t1 in
+        ty, app, typed_e1::typed_idx_list
+
     | Eupdate ->
         let e1, e2, idx_list = assert_2min e_list in
         let typed_e1, t1 = typing const_env h e1 in

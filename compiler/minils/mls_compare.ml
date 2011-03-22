@@ -91,8 +91,8 @@ and app_compare app1 app2 =
     | x, y when x = y -> 0 (* all constructors can be compared with P.compare *)
     | (Eequal | Etuple | Efun _ | Enode _ | Eifthenelse | Efield
       | Efield_update), _ -> -1
-    | (Earray | Earray_fill | Eselect | Eselect_slice | Eselect_dyn | Eupdate
-      | Econcat ), _ -> 1 in
+    | (Earray | Earray_fill | Eselect | Eselect_slice | Eselect_dyn
+      | Eselect_trunc | Eupdate | Econcat ), _ -> 1 in
 
   if cr <> 0 then cr
   else list_compare static_exp_compare app1.a_params app2.a_params

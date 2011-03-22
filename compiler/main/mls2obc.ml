@@ -34,7 +34,20 @@ let rec pattern_of_idx_list p l =
     | Tarray (ty',_), idx :: l -> mk_pattern ty' (Larray (aux ty' l, idx))
     | _ -> internal_error "mls2obc" 1
   in
-  aux p.pat_ty l
+  aux p.pat_ty (List.rev l)
+
+let rec pattern_of_trunc_idx_list p l =
+  let mk_between idx se =
+    mk_exp_int (Eop (mk_pervasives "between",
+                    [idx; mk_exp se.se_ty (Econst se)]))
+  in
+  let rec aux ty l = match ty, l with
+    | _, [] -> p
+    | Tarray (ty', se), idx :: l ->
+        mk_pattern ty' (Larray (aux ty' l, mk_between idx se))
+    | _ -> internal_error "mls2obc" 1
+  in
+  aux p.pat_ty (List.rev l)
 
 let array_elt_of_exp idx e =
   match e.e_desc, Modules.unalias_type e.e_ty with
@@ -104,7 +117,8 @@ let rec translate map e =
           Epattern (pattern_of_idx_list (pattern_of_exp e) idx_list)
   (* Already treated cases when translating the [eq] *)
     | Minils.Eiterator _ | Minils.Emerge _ | Minils.Efby _
-    | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat|Minils.Eupdate|Minils.Eselect_dyn
+    | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat
+                                 |Minils.Eupdate|Minils.Eselect_dyn|Minils.Eselect_trunc
                                  |Minils.Eselect_slice|Minils.Earray_fill|Minils.Efield_update|Minils.Eifthenelse
                                  |Minils.Etuple)}, _, _) ->
         (*Format.eprintf "%aThis should not be treated as an exp in mls2obc : %a@."
@@ -185,6 +199,15 @@ and translate_act map pat
         let false_act = Aassgn (x, translate map e2) in
         let cond = bound_check_expr idx bounds in
           [ Acase (cond, [ ptrue, mk_block [true_act]; pfalse, mk_block [false_act] ]) ]
+
+    | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eselect_trunc }, e1::idx, _) ->
+        let x = Control.var_from_name map x in
+        let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
+        let e1 = translate map e1 in
+        let idx = List.map (translate map) idx in
+        let p = pattern_of_trunc_idx_list (pattern_of_exp e1) idx in
+          [Aassgn (x, mk_exp p.pat_ty (Epattern p))]
+
     | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eupdate }, e1::e2::idx, _) ->
         let x = Control.var_from_name map x in
      (** TODO: remplacer par if 0 < e && e < n then for () ; o[e] = v; for () else o = a *)

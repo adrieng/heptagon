@@ -83,6 +83,9 @@ and print_index ff idx =
 and print_dyn_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_exp "[""][""]") idx
 
+and print_trunc_index ff idx =
+  fprintf ff "@[<2>%a@]" (print_list print_exp "[>""<][>""<]") idx
+
 and print_exps ff e_list =
   print_list_r print_exp "(" "," ")" ff e_list
 
@@ -169,6 +172,9 @@ and print_app ff (app, args) =
       let r, d, e = assert_2min args in
         fprintf ff "%a%a default %a"
           print_exp r  print_dyn_index e  print_exp d
+    | Eselect_trunc ->
+      let e, idx_list = assert_1min args in
+        fprintf ff "%a%a" print_exp e print_trunc_index idx_list
     | Eupdate ->
       let e1, e2, idx = assert_2min args in
           fprintf ff "@[<2>(%a with %a =@ %a)@]"

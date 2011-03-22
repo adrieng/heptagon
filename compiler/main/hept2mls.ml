@@ -207,6 +207,7 @@ let rec translate_op = function
   | Heptagon.Eselect_dyn -> Eselect_dyn
   | Heptagon.Eupdate -> Eupdate
   | Heptagon.Eselect_slice -> Eselect_slice
+  | Heptagon.Eselect_trunc -> Eselect_trunc
   | Heptagon.Econcat -> Econcat
   | Heptagon.Earray -> Earray
   | Heptagon.Etuple -> Etuple

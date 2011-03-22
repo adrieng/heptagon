@@ -136,7 +136,7 @@ and apply op e_list =
         let i3 = typing e3 in
         cseq t1 (cor i2 i3)
     | (Eequal | Efun _| Enode _ | Econcat | Eselect_slice
-      | Eselect_dyn| Eselect _ | Earray_fill) ->
+      | Eselect_dyn | Eselect_trunc | Eselect _ | Earray_fill) ->
         ctuplelist (List.map typing e_list)
     | (Earray | Etuple) ->
         candlist (List.map typing e_list)

@@ -67,6 +67,7 @@ and op =
   | Earray_fill
   | Eselect
   | Eselect_dyn
+  | Eselect_trunc
   | Eselect_slice
   | Eupdate
   | Econcat

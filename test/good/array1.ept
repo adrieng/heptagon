@@ -51,3 +51,8 @@ let
   (z,t) = concatenate(x,y);
   (r1,r2) = slicing(x);
 tel
+
+node elt_trunc (a:int^m^m; i,j:int) returns (o : int)
+let
+  o = a[>i<][>j<];
+tel

@@ -288,6 +288,7 @@ and translate_op = function
   | Eselect_slice -> Heptagon.Eselect_slice
   | Econcat -> Heptagon.Econcat
   | Eselect_dyn -> Heptagon.Eselect_dyn
+  | Eselect_trunc -> Heptagon.Eselect_trunc
   | Efun ln -> Heptagon.Efun (qualify_value ln)
   | Enode ln -> Heptagon.Enode (qualify_value ln)
 

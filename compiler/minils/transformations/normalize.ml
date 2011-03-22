@@ -261,6 +261,11 @@ and translate_app kind context op e_list =
         let context, idx = translate_list Exp context idx in
         let context, e2 = translate Exp context e2 in
         context, e1::e2::idx
+    | Eselect_trunc ->
+        let e1, idx = assert_1min e_list in
+        let context, e1 = translate VRef context e1 in
+        let context, idx = translate_list Exp context idx in
+        context, e1::idx
     | Eupdate ->
         let e1, e2, idx = assert_2min e_list in
         let context, e1 = translate VRef context e1 in

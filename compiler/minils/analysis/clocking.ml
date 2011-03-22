@@ -90,6 +90,10 @@ and typing_op op e_list h e ck = match op with
       let e1, defe, idx = assert_2min e_list in
       let ct = skeleton ck e1.e_ty
       in (List.iter (expect h ct) (e1::defe::idx); ct)
+  | Eselect_trunc ->
+      let e1, idx = assert_1min e_list in
+      let ct = skeleton ck e1.e_ty
+      in (List.iter (expect h ct) (e1::idx); ct)
   | Eupdate ->
       let e1, e2, idx = assert_2min e_list in
       let ct = skeleton ck e.e_ty

@@ -144,6 +144,8 @@ rule token = parse
   | "^"             {POWER}
   | "["             {LBRACKET}
   | "]"             {RBRACKET}
+  | "[>"            {LBRACKETGREATER}
+  | "<]"            {LESSRBRACKET}
   | "@"             {AROBASE}
   | ".."            {DOUBLE_DOT}
   | "<<"            {DOUBLE_LESS}
