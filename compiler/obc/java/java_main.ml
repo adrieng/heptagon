@@ -1,6 +1,8 @@
 open Misc
+open Signature
 open Java
 open Java_printer
+
 
 (** returns the vd and the pat of a fresh ident from [name] *)
 let mk_var ty name =
@@ -28,24 +30,31 @@ let program p =
       let vd_step, pat_step = mk_var Tint "step" in
       let vd_args, pat_args = mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
       let body =
-        let vd_main, e_main, q_main =
-          let q_main = !Compiler_options.simulation_node |> Modules.qualify_value |> Obc2java.qualname_to_package_classe
-          in let id = Idents.gen_var "java_main" "main" in
-          mk_var_dec id (Tclass q_main), Eval (Pvar id), q_main
+        let vd_main, e_main, q_main, ty_main =
+          let q_main = !Compiler_options.simulation_node |> Modules.qualify_value in (*qual*)
+          let ty_main = (Modules.find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
+          let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
+          let id = Idents.gen_var "java_main" "main" in
+          mk_var_dec id (Tclass q_main), Eval (Pvar id), q_main, ty_main
         in
         let acts =
           let integer = Eval(Pclass(Names.pervasives_qn "Integer")) in
           let args1 = Eval(Parray_elem(pat_args, Sint 1)) in
           let out = Eval(Pclass(Names.qualname_of_string "java.lang.System.out")) in
+          let jarrays = Eval(Pclass(Names.qualname_of_string "java.util.Arrays")) in
+          let ret = Emethod_call(e_main, "step", []) in
+          let print_ret = match ty_main with
+            | Types.Tarray (Types.Tarray _, _) -> Emethod_call(jarrays, "deepToString", [ret])
+            | Types.Tarray _ -> Emethod_call(jarrays, "toString", [ret])
+            | _ -> Emethod_call(ret, "toString", [])
+          in
           [ Anewvar(vd_main, Enew (Tclass q_main, []));
             Aifelse( Efun(Names.pervasives_qn ">", [Eval (Pfield (pat_args, "length")); Sint 1])
                    , mk_block [Aassgn(pat_step, Emethod_call(integer, "parseInt", [args1]))]
                    , mk_block [Aassgn(pat_step, Eval (Pvar id_step_dnb))]);
             Obc2java.fresh_for (Eval pat_step)
               (fun i ->
-                [ Amethod_call(out, "printf", [ Sstring "%d => %s\\n";
-                                                Eval (Pvar i);
-                                                Emethod_call(Emethod_call(e_main, "step", []), "toString", [])])]
+                [ Amethod_call(out, "printf", [ Sstring "%d => %s\\n"; Eval (Pvar i); print_ret]) ]
               )
           ]
         in
