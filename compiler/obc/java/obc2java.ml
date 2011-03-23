@@ -313,13 +313,13 @@ let class_def_list classes cd_l =
         (* init actions [acts] in reverse order : *)
         (* init member variables *)
         let acts = [Ablock reset_mems] in
-        (* init member objects *)
-        let acts = List.fold_left obj_init_act acts cd.cd_objs in
         (* allocate member arrays *)
         let acts = List.fold_left allocate acts cd.cd_mems in
+        (* init member objects *)
+        let acts = List.fold_left obj_init_act acts cd.cd_objs in
         (* init static params *)
         let acts = (copy_to_this vds_params)@acts in
-        { b_locals = []; b_body = List.rev acts }
+        { b_locals = []; b_body = acts }
       in mk_methode ~args:vds_params body (shortname class_name), obj_env
     in
     let fields =
