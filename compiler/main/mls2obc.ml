@@ -29,25 +29,23 @@ let gen_obj_ident n = Idents.gen_var "mls2obc" ((shortname n) ^ "_inst")
 let op_from_string op = { qual = Pervasives; name = op; }
 
 let rec pattern_of_idx_list p l =
-  let rec aux ty l = match ty, l with
+  let rec aux p l = match p.pat_ty, l with
     | _, [] -> p
-    | Tarray (ty',_), idx :: l -> mk_pattern ty' (Larray (aux ty' l, idx))
+    | Tarray (ty',_), idx :: l -> aux (mk_pattern ty' (Larray (p, idx))) l
     | _ -> internal_error "mls2obc" 1
   in
-  aux p.pat_ty (List.rev l)
+  aux p l
 
 let rec pattern_of_trunc_idx_list p l =
   let mk_between idx se =
-    mk_exp_int (Eop (mk_pervasives "between",
-                    [idx; mk_exp se.se_ty (Econst se)]))
+    mk_exp_int (Eop (mk_pervasives "between", [idx; mk_exp se.se_ty (Econst se)]))
   in
-  let rec aux ty l = match ty, l with
+  let rec aux p l = match p.pat_ty, l with
     | _, [] -> p
-    | Tarray (ty', se), idx :: l ->
-        mk_pattern ty' (Larray (aux ty' l, mk_between idx se))
+    | Tarray (ty', se), idx :: l -> aux (mk_pattern ty' (Larray (p, mk_between idx se))) l
     | _ -> internal_error "mls2obc" 1
   in
-  aux p.pat_ty (List.rev l)
+  aux p l
 
 let array_elt_of_exp idx e =
   match e.e_desc, Modules.unalias_type e.e_ty with
