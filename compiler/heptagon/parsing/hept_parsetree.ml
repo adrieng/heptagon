@@ -225,17 +225,17 @@ and interface_desc =
 let mk_exp desc ?(ct_annot = Clocks.invalid_clock) loc =
   { e_desc = desc; e_ct_annot = ct_annot; e_loc = loc }
 
-let mk_app op ?(async=None) params =
+let mk_app op async params =
   { a_op = op; a_params = params; a_async = async; }
 
-let mk_call ?(params=[]) op exps =
-  Eapp (mk_app op params, exps)
+let mk_call ?(async=None) ?(params=[]) op exps =
+  Eapp (mk_app op async params, exps)
 
 let mk_op_call ?(params=[]) s exps =
   mk_call ~params:params (Efun (Q (Names.pervasives_qn s))) exps
 
-let mk_iterator_call it ln params n pexps exps =
-  Eiterator (it, mk_app (Enode ln) params, n, pexps, exps)
+let mk_iterator_call it app n pexps exps =
+  Eiterator (it, app, n, pexps, exps)
 
 let mk_static_exp desc loc =
   { se_desc = desc; se_loc = loc }

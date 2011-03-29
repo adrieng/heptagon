@@ -194,6 +194,10 @@ let rec translate map e =
     | Minils.Eapp ({ Minils.a_op = Minils.Efun n }, e_list, _)
         when Mls_utils.is_op n ->
         Eop (n, List.map (translate_extvalue map ) e_list)
+    (* Async operators *)
+    | Minils.Eapp ({Minils.a_op = Minils.Ebang }, e_list, _) ->
+        let e = translate map (assert_1 e_list) in
+          Ebang e
     | Minils.Estruct f_e_list ->
         let type_name = (match e.Minils.e_ty with
                            | Tid name -> name
@@ -209,10 +213,6 @@ let rec translate map e =
         let e = translate_extvalue map (assert_1 e_list) in
         let idx_list = List.map (fun idx -> mk_exp tint (Econst idx)) idx in
           Epattern (pattern_of_idx_list (pattern_of_exp e) idx_list)
-  (* Async operators *)
-    | Minils.Eapp ({Minils.a_op = Minils.Ebang }, e_list, _) ->
-        let e = translate map (assert_1 e_list) in
-          Ebang e
   (* Already treated cases when translating the [eq] *)
     | Minils.Eiterator _ | Minils.Emerge _ | Minils.Efby _
     | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat
@@ -437,7 +437,10 @@ and mk_node_call map call_context app loc name_list args ty =
     | Minils.Efun f when Mls_utils.is_op f ->
         let e = mk_exp ty (Eop(f, args)) in
         [], [], [], [Aassgn(List.hd name_list, e)]
-
+    | Minils.Ebang ->
+        let arg = assert_1 args in
+        let e = mk_exp ty (Ebang arg) in
+        [], [], [], [Aassgn(List.hd name_list, e)]
     | Minils.Enode f when Itfusion.is_anon_node f ->
         let add_input env vd = Env.add vd.Minils.v_ident
           (mk_pattern vd.Minils.v_type (Lvar vd.Minils.v_ident)) env in

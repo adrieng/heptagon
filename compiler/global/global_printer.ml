@@ -74,7 +74,7 @@ and print_type ff = function
   | Tid id -> print_qualname ff id
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
-  | Tasync (a, t) -> fprintf ff "%a%a" print_async (Some a) print_type t
+  | Tasync (a, t) -> fprintf ff "(%a%a)" print_async (Some a) print_type t
 
 let print_field ff field =
   fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type

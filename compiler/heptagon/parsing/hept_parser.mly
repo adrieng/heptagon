@@ -64,7 +64,7 @@ open Hept_parsetree
 %right ARROW
 %left OR
 %left AMPERSAND
-%left INFIX0 EQUAL LESS_GREATER
+%left INFIX0 EQUAL LESS_GREATER ASYNC BANG
 %right INFIX1
 %right WHEN
 %left INFIX2 SUBTRACTIVE
@@ -76,8 +76,6 @@ open Hept_parsetree
 %right PRE
 %left POWER
 %right PREFIX
-
-%left BANG
 
 
 %start program
@@ -266,6 +264,8 @@ ident_list:
 ty_ident:
   | qualname
       { Tid $1 }
+  | LPAREN t=ty_ident RPAREN
+      { t }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
   | ASYNC t=ty_ident
@@ -431,10 +431,8 @@ _exp:
   | PRE exp
       { Epre (None, $2) }
   /* node call*/
-  | n=qualname p=call_params LPAREN args=exps RPAREN
-      { Eapp(mk_app (Enode n) p , args) }
-  | ASYNC n=qualname p=call_params LPAREN args=exps RPAREN
-      { Eapp(mk_app (Enode n) ~async:(Some ()) p, args) }
+  | a=async n=qualname p=call_params LPAREN args=exps RPAREN
+      { Eapp(mk_app (Enode n) a p , args) }
   | BANG e=exp
       { mk_call Ebang [e] }
   | NOT exp
@@ -492,25 +490,37 @@ _exp:
   | exp AROBASE exp
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
-  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER q=qualname
+/*  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER a=async q=qualname
       pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
       LPAREN args=exps RPAREN
-      { mk_iterator_call it q [] n pargs args }
-  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
-      LPAREN q=qualname DOUBLE_LESS sa=array_exp_list DOUBLE_GREATER RPAREN
+      { mk_iterator_call it q ~async:a [] n pargs args }
+*/  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
+      app=app
       pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
       LPAREN args=exps RPAREN
-      { mk_iterator_call it q sa n pargs args }
+      { mk_iterator_call it app n pargs args }
 /*Records operators */
   | LBRACE simple_exp WITH DOT c=qualname EQUAL exp RBRACE
       { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))]
                 Efield_update [$2; $7] }
 ;
 
+
+
 call_params:
   | /* empty */ { [] }
   | DOUBLE_LESS array_exp_list DOUBLE_GREATER { $2 }
 ;
+
+%inline async:
+  | /*empty*/ { None }
+  | ASYNC     { Some () }
+
+app:
+  | LPAREN app=app RPAREN { app }
+  | a=async BANG p=call_params { mk_app Ebang a p }
+  | a=async q=qualname p=call_params { mk_app (Enode q) a p }
+
 
 iterator:
   | MAP { Imap }

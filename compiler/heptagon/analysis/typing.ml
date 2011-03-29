@@ -552,6 +552,7 @@ let rec typing const_env h e =
           let expected_ty_list =
             List.map (subst_type_vars m) expected_ty_list in
           let result_ty_list = List.map (subst_type_vars m) result_ty_list in
+          let result_ty_list = asyncify app.a_async result_ty_list in
           let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
           (*typing of partial application*)
           let p_ty_list, expected_ty_list =
@@ -563,13 +564,24 @@ let rec typing const_env h e =
           let typed_params = typing_node_params const_env
             ty_desc.node_params params in
             (* add size constraints *)
-          let size_constrs =
-            instanciate_constr m ty_desc.node_params_constraints in
-            add_size_constraint (Clequal (mk_static_int 1, typed_n));
-            List.iter add_size_constraint size_constrs;
-            (* return the type *)
-            Eiterator(it, { app with a_op = op; a_params = typed_params }
-                        , typed_n, typed_pe_list, typed_e_list, reset), ty
+          let size_constrs = instanciate_constr m ty_desc.node_params_constraints in
+          add_size_constraint (Clequal (mk_static_int 1, typed_n));
+          List.iter add_size_constraint size_constrs;
+          (* return the type *)
+          Eiterator(it, { app with a_op = op; a_params = typed_params }
+                    , typed_n, typed_pe_list, typed_e_list, reset), ty
+      | Eiterator (it, ({ a_op = Ebang; } as app), n, [], [e], reset) ->
+          let typed_e, ty = typing const_env h e in
+          let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
+          let result_ty, expect_ty = (match ty with
+            | Tarray (Tasync (a, t), s) -> t, Tasync(a,t)
+            | _ -> message e.e_loc (Eshould_be_async ty))
+          in
+          let ty, typed_e_l = typing_iterator const_env h it n [expect_ty] [result_ty] [e] in
+          (* add size constraints *)
+          add_size_constraint (Clequal (mk_static_int 1, typed_n));
+          (* return the type *)
+          Eiterator(it, app, typed_n, [], typed_e_l, reset), ty
       | Eiterator _ -> assert false
 
       | Ewhen (e, c, ce) ->
