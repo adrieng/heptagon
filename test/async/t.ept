@@ -1,0 +1,10 @@
+
+fun substr (x,m: int) returns (d: int)
+let
+  d = x - m;
+tel
+
+fun mean<<n: int>> (i: int^n) returns (m: int^n)
+let
+  m = map<<n>> (!) (map<<n>> (async substr) (i,1^n))
+tel

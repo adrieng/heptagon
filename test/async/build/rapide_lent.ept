@@ -1,24 +1,25 @@
 
-
-node lent(coeff:int) returns (y:int)
+node lent<<n:int>>() returns (y:int)
 let
-  y = do_stuff(coeff);
+  y = do_stuff(n);
 tel
 
 
-node rapide<<size:int>>() returns (z:int)
+node rapide<<n:int>>() returns (z:int)
 var y,cpt : int; big_step : bool;
 let
-  big_step = cpt = 0;
-  cpt = size fby (if big_step then size else cpt - 1);
-  y = merge big_step
-        (true  -> 0 -> (pre (lent(size))))
-	(false -> 0 fby y when false(big_step));
+  big_step = false fby (cpt = 0);
+  reset
+    cpt = n fby cpt - 1;
+  every big_step;
+  y = 0 fby merge big_step
+                  (true  -> lent<<n>>())
+	          (false -> y when false(big_step));
   z = do_stuff(1) - y;
 tel
 
 
 node main() returns(r: int)
 let
-  r = rapide<<1000>>();
+  r = rapide<<100>>();
 tel

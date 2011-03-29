@@ -15,7 +15,7 @@ tel
 
 fun convol_1 <<n,m,k,kl,kt,kr,kb :int>> (t:int^n^m) returns (r :int^n^m)
 let
-  r = mapi<<n>> ( convol_1_h<<n,m,k,kl,kt,kr,kb>> ) (<t>) (t)
+  r = map<<n>> ( ! ) (mapi<<n>> ( async convol_1_h<<n,m,k,kl,kt,kr,kb>> ) (<t>) (t))
 tel
 
 
@@ -42,6 +42,6 @@ tel
 
 fun convol_2<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb :int>>(t:int^n^m) returns (r :int^n^m)
 let
-  r = mapi<<n>> (convol_2_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t>) (t)
+  r = map<<n>> (!) (mapi<<n>> (async convol_2_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t>) (t))
 tel
 

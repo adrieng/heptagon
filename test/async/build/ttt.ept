@@ -3,13 +3,13 @@ let
   o = if res then 0 else if tick then 1 -> pre o + 1 else 0 -> pre o;
 tel
 
-node counter3() returns (t: async bool)
-var last async t: int; cpt: int;
+node counter3() returns (b: bool)
+var last t: async int; cpt: int;
 let
   cpt = counter(false,true);
   automaton
     state I do
-      t = async counter(false,true)));
+      t = async counter(false,true);
       until true continue III
     state III do
       until cpt/3 = 0 continue I

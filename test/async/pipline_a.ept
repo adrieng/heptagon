@@ -7,7 +7,7 @@ tel
 
 fun mean<<n: int>> (i: int^n) returns (m: int)
 let
-  m = (fold (+) <<n>> (i,0) )/n
+  m = (fold<<n>> (+) (i,0) )/n
 tel
 
 
@@ -15,7 +15,7 @@ node normalized_movie<<n: int>> (i: int^n) returns (im: int^n)
 var m: async int; trash: int;
 let
   m = async mean<<n>>(i);
-  (im,trash) = mapfold substr <<n>> (i fby i, 0 -> !(pre m))
+  (im,trash) = mapfold<<n>> substr (i fby i, 0 -> !(pre m))
 tel
 
 
