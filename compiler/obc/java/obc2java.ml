@@ -47,7 +47,7 @@ let rec translate_modul m = m (*match m with
   | Pervasives
   | LocalModule -> m
   | _ when m = g_env.current_mod -> m
-  | Module n ->  Module (String.lowercase n)
+  | Module n ->  Module n
   | QualModule { qual = q; name = n} ->
       QualModule { qual = translate_modul q; name = String.lowercase n }
 *)
@@ -126,7 +126,7 @@ and boxed_ty param_env t = match t with
   | Types.Tid t when t = Initial.pint -> Tclass (Names.local_qn "Integer")
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
-  | Types.Tarray (t,size) -> Tarray (boxed_ty param_env t, static_exp param_env size)
+  | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
 
 and tuple_ty param_env ty_l =

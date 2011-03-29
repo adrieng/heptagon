@@ -35,16 +35,19 @@ let static ff s = if s then fprintf ff "static " else ()
 
 let final ff f = if f then fprintf ff "final " else ()
 
-let rec _ty size ff t = match t with
+let rec _ty news ff t = match t with
   | Tbool -> fprintf ff "boolean"
   | Tint -> fprintf ff "int"
   | Tfloat -> fprintf ff "float"
   | Tclass n -> class_name ff n
-  | Tgeneric (n, ty_l) -> fprintf ff "%a<@[%a@]>" class_name n (print_list_r ty """,""") ty_l
-  | Tarray (t,s) -> if size then fprintf ff "%a[%a]" full_ty t exp s else fprintf ff "%a[]" ty t
+  | Tgeneric (n, ty_l) ->
+      if news
+      then fprintf ff "%a" class_name n
+      else fprintf ff "%a<@[%a@]>" class_name n (print_list_r ty """,""") ty_l
+  | Tarray (t,s) -> if news then fprintf ff "%a[%a]" new_ty t exp s else fprintf ff "%a[]" ty t
   | Tunit -> pp_print_string ff "void"
 
-and full_ty ff t = _ty true ff t
+and new_ty ff t = _ty true ff t
 
 and ty ff t = _ty false ff t
 
@@ -72,10 +75,10 @@ and exp ff = function
   | Eval p -> pattern ff p
   | Efun (f,e_l) -> op ff (f, e_l)
   | Emethod_call (o,m,e_l) -> fprintf ff "%a.%a%a" exp o method_name m args e_l
-  | Enew (c,e_l) -> fprintf ff "new %a%a" full_ty c args e_l
+  | Enew (c,e_l) -> fprintf ff "new %a%a" new_ty c args e_l
   | Enew_array (t,e_l) ->
     (match e_l with
-      | [] -> fprintf ff "new %a" full_ty t
+      | [] -> fprintf ff "new %a" new_ty t
       | _ -> fprintf ff "new %a@[<2>%a@]" ty t (print_list_r exp "{"",""}") e_l )
   | Evoid -> ()
   | Ecast (t,e) -> fprintf ff "(%a)(%a)" ty t exp e
@@ -114,7 +117,8 @@ and op ff (f, e_l) =
         | "~-" ->
             let e = Misc.assert_1 e_l in
             fprintf ff "-%a" exp e
-        | s -> fprintf ff "jeptagon.Pervasives.%s%a" s args e_l) (* TODO java deal with this correctly
+        | s -> fprintf ff "jeptagon.Pervasives.%s%a" s args e_l)
+           (* TODO java deal with this correctly
             bug when using Pervasives.ggg in the code but works when using ggg directly *)
   | _ -> fprintf ff "%a%a" Global_printer.print_qualname f args e_l
 
@@ -134,7 +138,8 @@ let rec block ff b =
 
 (*
 and switch_hack ff c_b_l =
-  fprintf ff "@[<hv 2> default :\\Dead code. Hack to prevent \"may not be initialized\" java error.@ %a@ break;@]"
+  fprintf ff "@[<hv 2> default :
+          \\Dead code. Hack to prevent \"may not be initialized\" java error.@ %a@ break;@]"
     block (c_b_l |> List.hd |> snd)
 *)
 
@@ -143,10 +148,12 @@ and act ff = function
   | Aassgn (p,e) -> fprintf ff "@[<4>%a =@ %a;@]" pattern p exp e
   | Amethod_call (o,m,e_l) -> fprintf ff "@[%a.%a%a;@]" exp o method_name m args e_l
   | Aswitch (e, c_b_l) ->
-      let pcb ff (c,b) = fprintf ff "@[<v4>case %a:@ %a@ break;@]" bare_constructor_name c block b in
+      let pcb ff (c,b) =
+        fprintf ff "@[<v4>case %a:@ %a@ break;@]" bare_constructor_name c block b in
     (*  let switch_hack ff c_b_l = (* TODO java : better thing to do ? *)
         fprintf ff "@[<2>default ://Dead code. Hack to prevent \
-                    \"may not be initialized\" java error.@ %a@ break;@]" block (c_b_l |> List.hd |> snd)
+                    \"may not be initialized\"
+                    java error.@ %a@ break;@]" block (c_b_l |> List.hd |> snd)
       in*)
       fprintf ff "@[<v4>switch (%a) {@ %a@]@\n}"
         exp e

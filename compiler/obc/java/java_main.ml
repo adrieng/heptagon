@@ -1,4 +1,5 @@
 open Misc
+open Names
 open Signature
 open Java
 open Java_printer
@@ -45,10 +46,16 @@ let program p =
           let args1 = Eval(Parray_elem(pat_args, Sint 1)) in
           let out = Eval(Pclass(Names.qualname_of_string "java.lang.System.out")) in
           let jarrays = Eval(Pclass(Names.qualname_of_string "java.util.Arrays")) in
+          let jint = Eval(Pclass(Names.qualname_of_string "Integer")) in
+          let jfloat = Eval(Pclass(Names.qualname_of_string "Float")) in
+          let jbool = Eval(Pclass(Names.qualname_of_string "Boolean")) in
           let ret = Emethod_call(e_main, "step", []) in
           let print_ret = match ty_main with
             | Types.Tarray (Types.Tarray _, _) -> Emethod_call(jarrays, "deepToString", [ret])
             | Types.Tarray _ -> Emethod_call(jarrays, "toString", [ret])
+            | t when t = Initial.tint -> Emethod_call(jint, "toString", [ret])
+            | t when t = Initial.tfloat -> Emethod_call(jfloat, "toString", [ret])
+            | t when t = Initial.tbool -> Emethod_call(jbool, "toString", [ret])
             | _ -> Emethod_call(ret, "toString", [])
           in
           [ Anewvar(vd_main, Enew (Tclass q_main, []));
