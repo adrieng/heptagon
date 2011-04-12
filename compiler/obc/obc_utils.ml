@@ -16,8 +16,8 @@ open Obc
 open Obc_mapfold
 open Global_mapfold
 
-let mk_var_dec ?(loc=no_location) ident ty =
-  { v_ident = ident; v_type = ty; v_loc = loc }
+let mk_var_dec ?(loc=no_location) ?(mut=false) ident ty =
+  { v_ident = ident; v_type = ty; v_mutable = mut; v_loc = loc }
 
 let mk_exp ?(loc=no_location) ty desc =
   { e_desc = desc; e_ty = ty; e_loc = loc }

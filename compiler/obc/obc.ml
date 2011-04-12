@@ -8,19 +8,7 @@
 (**************************************************************************)
 (* Object code internal representation *)
 
-(** { 3 Semantics }
-  Any variable is a reference to a constant memory.
-    Thus [p = e] is not the change of the reference,
-    but a recursive copy of what is referenced (deep copy).
-    As an example, [x = 3] but also [x = \[3; 4; 5\]]
-    and [t1 = t2] with the content of the array [t2] copied into the array [t1].
-  Obc is also "SSA" in the sens that a variable is assigned a value only once per call of [step] etc.
-    Thus arguments are passed as constant references to a constant memory.
-
-  One exception to the SSA rule is through the [mutable] variables.
-    Theses variables can be assigned multiple times.
-    Thus a [mutable] argument is passed as a reference to a constant memory.
-*)
+(** See the manual for the semantics of the language *)
 
 
 open Misc
@@ -91,13 +79,15 @@ and block =
 and var_dec =
     { v_ident : var_ident;
       v_type : ty;
+      v_mutable : bool;
       v_loc : location }
 
 type obj_dec =
     { o_ident : obj_ident;
       o_class : class_name;
       o_params : static_exp list;
-      o_size : static_exp option; (** size of the array if the declaration is an array of obj *)
+      (** size of the array if the declaration is an array of obj *)
+      o_size : static_exp option;
       o_loc : location }
 
 type method_def =
@@ -108,8 +98,9 @@ type method_def =
 
 type class_def =
     { cd_name : class_name;
-      cd_stateful : bool; (** when false, the class is a function with static parameters
-                              calling other functions with parameters *)
+      (** when false, the class is a function with static parameters
+          calling other functions with parameters *)
+      cd_stateful : bool;
       cd_mems : var_dec list;
       cd_objs  : obj_dec list;
       cd_params : param list;

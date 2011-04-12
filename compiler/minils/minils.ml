@@ -39,28 +39,38 @@ and tdesc =
   | Type_enum of constructor_name list
   | Type_struct of structure
 
+and extvalue = {
+  w_desc      : edesc;
+  mutable w_ck: ck;
+  w_ty        : ty;
+  w_loc       : location }
+
+and extvalue_desc =
+  | Wconst of static_exp
+  | Wvar of var_ident
+  | Wfield of ext_value * field_name
+  | Wwhen of extvalue * constructor_name * var_ident
+                       (** extvalue when Constructor(ident) *)
+
 and exp = {
   e_desc      : edesc;
-  e_base_ck   : ck;
   mutable e_ck: ck;
-  mutable e_ty: ty;
+  e_ty        : ty;
   e_loc       : location }
 
 and edesc =
-  | Econst of static_exp
-  | Evar of var_ident
-  | Efby of static_exp option * exp
-                       (** static_exp fby exp *)
-  | Eapp of app * exp list * var_ident option
-                       (** app ~args=(exp,exp...) reset ~r=ident *)
-  | Ewhen of exp * constructor_name * var_ident
-                       (** exp when Constructor(ident) *)
-  | Emerge of var_ident * (constructor_name * exp) list
-                       (** merge ident (Constructor -> exp)+ *)
-  | Estruct of (field_name * exp) list
-                       (** { field=exp; ... } *)
-  | Eiterator of iterator_type * app * static_exp * exp list * exp list * var_ident option
-                       (** map f <<n>> (exp, exp...) reset ident *)
+  | Eextvalue of extvalue
+  | Efby of static_exp option * extvalue
+                       (** static_exp fby extvalue *)
+  | Eapp of app * extvalue list * var_ident option
+                       (** app ~args=(extvalue,extvalue...) reset ~r=ident *)
+  | Emerge of var_ident * (constructor_name * extvalue) list
+                       (** merge ident (Constructor -> extvalue)+ *)
+  | Estruct of (field_name * extvalue) list
+                       (** { field=extvalue; ... } *)
+  | Eiterator of iterator_type * app * static_exp
+                 * extvalue list * extvalue list * var_ident option
+                       (** map f <<n>> (extvalue, extvalue...) reset ident *)
 
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
     (** Unsafe applications could have side effects
@@ -136,10 +146,13 @@ type program = {
 
 (*Helper functions to build the AST*)
 
-let mk_exp ~ty ?(clock = fresh_clock())
-           ?(loc = no_location) ?(base_clock = Cbase) desc =
+let mk_extvalue ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
+  { w_desc = desc; w_ty = ty;
+    w_ck = clock; w_loc = loc }
+
+let mk_exp ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = ty;
-    e_base_ck = base_clock; e_ck = clock; e_loc = loc }
+    e_ck = clock; e_loc = loc }
 
 let mk_var_dec ?(loc = no_location) ?(clock = fresh_clock()) ident ty =
   { v_ident = ident; v_type = ty; v_clock = clock; v_loc = loc }
