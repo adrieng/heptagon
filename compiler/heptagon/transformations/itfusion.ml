@@ -2,9 +2,14 @@ open Signature
 open Modules
 open Names
 open Static
-open Mls_mapfold
-open Minils
+open Hept_mapfold
+open Heptagon
 (* Iterator fusion *)
+
+let is_stateful app =
+  match app.a_op with 
+    | Enode _ -> true 
+    | _ -> false
 
 (* Functions to temporarily store anonymous nodes*)
 let mk_fresh_node_name () = Modules.fresh_value "itfusion" "temp"
@@ -21,8 +26,8 @@ let anon_nodes = ref QualEnv.empty
 
 let add_anon_node inputs outputs locals eqs =
   let n = mk_fresh_node_name () in
-  let nd = mk_node ~input:inputs ~output:outputs ~local:locals
-    ~eq:eqs n in
+  let b = mk_block ~locals:locals eqs in
+  let nd = mk_node ~input:inputs ~output:outputs ~local:locals n b in
   anon_nodes := QualEnv.add n nd !anon_nodes;
   n
 
@@ -46,9 +51,9 @@ match l with
   | _ -> Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) l)
 
 let tuple_of_vd_list l =
-  let el = List.map (fun vd -> mk_exp ~ty:vd.v_type (Evar vd.v_ident)) l in
+  let el = List.map (fun vd -> mk_exp (Evar vd.v_ident) vd.v_type) l in
   let ty = Types.prod (List.map (fun vd -> vd.v_type) l) in
-    mk_exp ~ty:ty (Eapp (mk_app Etuple, el, None))
+    mk_exp (Eapp (mk_app Etuple, el, None)) ty
 
 let vd_of_arg ad =
     mk_var_dec (fresh_vd_of_arg ad) ad.a_type
@@ -70,24 +75,25 @@ let get_node_inp_outp app = match app.a_op with
 
 (** Creates the equation to call the node [app].
     @return the list of new inputs required by the call, the expression
-    used to retrieve the resul of the call and [acc_eq_list] with the
+    used to retrieve the result of the call and [acc_eq_list] with the
     added equations. *)
 let mk_call app acc_eq_list =
   let new_inp, new_outp = get_node_inp_outp app in
-  let args = List.map (fun vd -> mk_exp ~ty:vd.v_type
-                         (Evar vd.v_ident)) new_inp in
+  let args = List.map (fun vd -> mk_exp
+                         (Evar vd.v_ident) vd.v_type) new_inp in
   let out_ty = Types.prod (List.map (fun vd -> vd.v_type) new_outp) in
-  let e = mk_exp ~ty:out_ty (Eapp (app, args, None)) in
+  let e = mk_exp (Eapp (app, args, None)) out_ty in
   match List.length new_outp with
     | 1 -> new_inp, e, acc_eq_list
     | _ ->
         (*more than one output, we need to create a new equation *)
-        let eq = mk_equation (pat_of_vd_list new_outp) e in
+        let eq = mk_equation ~stateful:(is_stateful app)
+	                     (Eeq(pat_of_vd_list new_outp, e)) in
         let e = tuple_of_vd_list new_outp in
           new_inp, e, eq::acc_eq_list
 
 let edesc funs acc ed =
-  let ed, acc = Mls_mapfold.edesc funs acc ed in
+  let ed, acc = Hept_mapfold.edesc funs acc ed in
   match ed with
     | Eiterator(Imap, f, n, [], e_list, r) ->
         (** @return the list of inputs of the anonymous function,
@@ -107,7 +113,7 @@ let edesc funs acc ed =
               new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->
               let vd = mk_var_dec (fresh_var ()) e.e_ty in
-              let x = mk_exp ~ty:vd.v_type (Evar vd.v_ident) in
+              let x = mk_exp (Evar vd.v_ident) vd.v_type in
               vd::inp, acc_eq_list, x::largs, e::args, b
         in
 
@@ -118,10 +124,12 @@ let edesc funs acc ed =
           (* create the call to f in the lambda fun *)
           let _, outp = get_node_inp_outp f in
           let f_out_type = Types.prod (List.map (fun v -> v.v_type) outp) in
-          let call = mk_exp ~ty:f_out_type (Eapp(f, largs, None)) in
-          let eq = mk_equation (pat_of_vd_list outp) call in
+          let call = mk_exp (Eapp(f, largs, None)) f_out_type in
+          let eq = mk_equation ~stateful:(is_stateful f) 
+	                         (Eeq(pat_of_vd_list outp, call)) in
           (* create the lambda *)
-          let anon = mk_app (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
+          let anon = mk_app 
+	    (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in
           Eiterator(Imap, anon, n, [], args, r), acc)
         else
           ed, acc
@@ -131,6 +139,6 @@ let edesc funs acc ed =
 
 
 let program p =
-  let funs = { Mls_mapfold.defaults with edesc = edesc } in
-  let p, _ = Mls_mapfold.program_it funs false p in
+  let funs = { Hept_mapfold.defaults with edesc = edesc } in
+  let p, _ = Hept_mapfold.program_it funs false p in
     p

@@ -10,8 +10,8 @@ open Misc
 open Initial
 open Names
 open Idents
-open Signature
 open Heptagon
+open Hept_mapfold
 open Types
 open Clocks
 
@@ -50,6 +50,8 @@ let flatten_e_list l =
   in
     List.flatten (List.map flatten l)
 
+(** Creates a new equation x = e, adds x to d_list 
+    and the equation to eq_list. *)
 let equation (d_list, eq_list) e =
   let add_one_var ty d_list =
     let n = Idents.gen_var "normalize" "v" in
@@ -93,6 +95,7 @@ let const e c =
 
 type kind = ExtValue | Any
 
+(** Creates an equation and add it to the context if necessary. *)
 let add context expected_kind ({ e_desc = de } as e) =
   let up = match de, expected_kind with
     | (Evar _ | Eapp ({ a_op = Efield }, _, _) | Ewhen _

@@ -232,6 +232,19 @@ let mk_signature name ins outs stateful params loc =
     sig_params = params;
     sig_loc = loc }
 
+let mk_node
+    ?(input = []) ?(output = []) ?(contract = None) ?(local = [])
+    ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
+    name block =
+  { n_name = name;
+    n_stateful = stateful;
+    n_input = input;
+    n_output = output;
+    n_contract = contract;
+    n_block = block;
+    n_loc = loc;
+    n_params = param;
+    n_params_constraints = constraints }
 
 (** @return the set of variables defined in [pat]. *)
 let vars_pat pat =
