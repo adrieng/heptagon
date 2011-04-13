@@ -202,8 +202,8 @@ let mk_type_dec name desc =
 let mk_equation ?(stateful = true) desc =
   { eq_desc = desc; eq_stateful = stateful; eq_loc = no_location; }
 
-let mk_var_dec ?(last = Var) ?(ck = fresh_clock()) name ty =
-  { v_ident = name; v_type = ty; v_clock = ck;
+let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty =
+  { v_ident = name; v_type = ty; v_clock = clock;
     v_last = last; v_loc = no_location }
 
 let mk_block ?(stateful = true) ?(defnames = Env.empty) ?(locals = []) eqs =
@@ -256,4 +256,8 @@ let vars_pat pat =
     | Etuplepat pat_list -> List.fold_left (_vars_pat locals) acc pat_list
   in _vars_pat IdentSet.empty IdentSet.empty pat
 
-
+(** @return whether an object of name [n] belongs to
+    a list of [var_dec]. *)
+let rec vd_mem n = function
+  | [] -> false
+  | vd::l -> vd.v_ident = n or (vd_mem n l)
