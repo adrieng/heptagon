@@ -53,6 +53,9 @@ let compile_program p =
   (* Every *)
   let p = pass "Every" true Every.program p pp in
 
+  (* Normalization *)
+  let p = pass "Normalization" true Normalize.program p pp in
+
   (* Block flatten *)
   let p = pass "Block" true Block.program p pp in
 

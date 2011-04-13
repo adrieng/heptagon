@@ -48,7 +48,7 @@ and extvalue = {
 and extvalue_desc =
   | Wconst of static_exp
   | Wvar of var_ident
-  | Wfield of ext_value * field_name
+  | Wfield of extvalue * field_name
   | Wwhen of extvalue * constructor_name * var_ident
                        (** extvalue when Constructor(ident) *)
 
