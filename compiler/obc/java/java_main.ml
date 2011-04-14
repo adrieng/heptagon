@@ -3,6 +3,8 @@ open Signature
 open Java
 open Java_printer
 
+let java_conf () =
+  Compiler_options.do_scalarize := true
 
 (** returns the vd and the pat of a fresh ident from [name] *)
 let mk_var ty name =

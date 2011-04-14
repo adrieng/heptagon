@@ -51,6 +51,8 @@ let compile_program modname source_f =
   let close_all_files () = close_in source_c; close_out epci_c; close_out mls_c in
 
   try
+  (* Activates passes according to the backend used *)
+    Mls2seq.load_conf ();
   (* Process the [lexbuf] to an Heptagon AST *)
     let p = Hept_parser_scoper.parse_program modname lexbuf in
   (* Process the Heptagon AST *)

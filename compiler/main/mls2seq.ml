@@ -19,7 +19,6 @@ open Misc
 type target =
   | Obc of (Obc.program -> unit)
   | Obc_no_params of (Obc.program -> unit)
-  | Obc_scalar of (Obc.program ->unit)
   | Minils of (Minils.program -> unit)
   | Minils_no_params of (Minils.program -> unit)
 
@@ -39,12 +38,13 @@ let write_obc_file p =
     close_out obc;
     comment "Generation of Obc code"
 
+let no_conf () = ()
 
-let targets = [ "c", Obc_no_params Cmain.program;
-                "java", Obc_scalar Java_main.program;
-                "obc", Obc write_obc_file;
-                "obc_np", Obc_no_params write_obc_file;
-                "epo", Minils write_object_file ]
+let targets = [ "c",(Obc_no_params Cmain.program, no_conf);
+                "java", (Obc_scalar Java_main.program, java_conf);
+                "obc", (Obc write_obc_file, no_conf;
+                "obc_np", (Obc_no_params write_obc_file, no_conf);
+                "epo", (Minils write_object_file, no_conf) ]
 
 let generate_target p s =
   let print_unfolded p_list =
@@ -52,7 +52,7 @@ let generate_target p s =
     if !Compiler_options.verbose
     then List.iter (Mls_printer.print stderr) p_list in
   let target =
-    (try List.assoc s targets
+    (try fst (List.assoc s targets)
      with Not_found -> language_error s; raise Errors.Error) in
   match target with
     | Minils convert_fun ->
@@ -69,10 +69,16 @@ let generate_target p s =
         let o_list = List.map Mls2obc.program p_list in
         let o_list = List.map Obc_compiler.program o_list in
           List.iter convert_fun o_list
-    | Obc_scalar convert_fun ->
-        let p = p |> Mls2obc.program |> Scalarize.program in
-        convert_fun p
 
+let load_conf () =
+  let target_conf s =
+    try
+      let conf = snd (List.assoc s targets) in
+        conf ()
+    with
+        Not_found -> language_error s; raise Errors.Error
+  in
+    List.iter target_conf !target_languages
 
 (** Translation into dataflow and sequential languages, defaults to obc. *)
 let program p =

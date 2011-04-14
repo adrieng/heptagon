@@ -97,6 +97,8 @@ let add_tomato_check s = tomato_check := s :: !tomato_check
 
 let do_iterator_fusion = ref false
 
+let do_scalarize = ref false
+
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
 and doc_print_types = "\t\t\tPrint types"
