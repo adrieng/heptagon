@@ -307,7 +307,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                     | None -> si
                     | Some c -> (Aassgn (x, mk_exp x.pat_ty (Econst c))) :: si) in
         let action = Aassgn (var_from_name map n, translate_extvalue map e) in
-        v, si, j, (Control.control map ck action) :: s
+        v, si, j, (control map ck action) :: s
 (* should be unnecessary
     | Minils.Etuplepat p_list,
         Minils.Eapp({ Minils.a_op = Minils.Etuple }, act_list, _) ->
@@ -326,18 +326,18 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let action =
           Acase (cond, [ptrue, mk_block ~locals:vt true_act;
                         pfalse, mk_block ~locals:vf false_act]) in
-          v, si, j, (Control.control map ck action) :: s
+          v, si, j, (control map ck action) :: s
 
     | pat, Minils.Eapp ({ Minils.a_op = Minils.Efun _ | Minils.Enode _ } as app, e_list, r) ->
         let name_list = translate_pat map pat in
         let c_list = List.map (translate_extvalue map) e_list in
         let v', si', j', action = mk_node_call map call_context
           app loc name_list c_list e.Minils.e_ty in
-        let action = List.map (Control.control map ck) action in
+        let action = List.map (control map ck) action in
         let s = (match r, app.Minils.a_op with
                    | Some r, Minils.Enode _ ->
                        let ck = Clocks.Con (ck, Initial.ptrue, r) in
-                       let ra = List.map (Control.control map ck) si' in
+                       let ra = List.map (control map ck) si' in
                        ra @ action @ s
                    | _, _ -> action @ s) in
         v' @ v, si'@si, j'@j, s
@@ -351,19 +351,19 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
           Some { oa_index = mk_pattern_int (Lvar x); oa_size = n} in
         let si', j', action = translate_iterator map call_context it
           name_list app loc n x xd p_list c_list e.Minils.e_ty in
-        let action = List.map (Control.control map ck) action in
+        let action = List.map (control map ck) action in
         let s =
           (match reset, app.Minils.a_op with
              | Some r, Minils.Enode _ ->
                  let ck = Clocks.Con (ck, Initial.ptrue, r) in
-                 let ra = List.map (Control.control map ck) si' in
+                 let ra = List.map (control map ck) si' in
                    ra @ action @ s
              | _, _ -> action @ s)
         in (v, si' @ si, j' @ j, s)
 
     | (pat, _) ->
         let action = translate_act map pat e in
-        let action = List.map (Control.control map ck) action in
+        let action = List.map (control map ck) action in
           v, si, j, action @ s
 
 and translate_eq_list map call_context act_list =
@@ -545,9 +545,9 @@ let translate_node
   let d_list = translate_var_dec (v @ d_list) in
   let m, d_list = List.partition
     (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) d_list in
-  let s = Control.joinlist (s_list @ s_list') in
+  let s = s_list @ s_list' in
   let j = j' @ j in
-  let si = Control.joinlist (si @ si') in
+  let si = si @ si' in
   let stepm = { m_name = Mstep; m_inputs = i_list; m_outputs = o_list;
                 m_body = mk_block ~locals:(d_list' @ d_list) s }
   in
