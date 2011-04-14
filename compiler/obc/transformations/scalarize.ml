@@ -17,14 +17,7 @@ open Obc
 open Obc_utils
 open Obc_mapfold
 
-
-(** fresh Afor from 0 to [size] with [body] a function from [var_ident] (the iterator) to [act] list *)
-let fresh_for size body =
-  let i = Idents.gen_var "scalarize" "i" in
-  let id = mk_var_dec i Initial.tint in
-  let ei = mk_evar_int i in
-  Afor (id, Initial.mk_static_int 0, size, mk_block (body ei))
-
+let fresh_for = fresh_for "scalarize"
 
 let act funs () a = match a with
   | Aassgn (p,e) ->

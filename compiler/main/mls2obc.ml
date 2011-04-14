@@ -31,6 +31,8 @@ let fresh_it () =
   id, mk_var_dec id Initial.tint
 
 let gen_obj_ident n = Idents.gen_var "mls2obc" ((shortname n) ^ "_inst")
+let fresh_for = fresh_for "mls2obc"
+let copy_array = copy_array "mls2obc"
 
 let op_from_string op = { qual = Pervasives; name = op; }
 
@@ -80,6 +82,48 @@ let rec bound_check_expr idx_list bounds =
           mk_exp_bool (Eop (op_from_string "&",
                            [e; bound_check_expr idx_list bounds]))
     | (_, _) -> internal_error "mls2obc" 3
+
+(** Creates the action list that copies [src] to [dest],
+    updating the value at index [idx_list] with the value [v]. *)
+let rec update_array dest src idx_list v = match dest.l_ty, idx_list with
+  | Tarray (t, n), idx::idx_list ->
+      (*Body of the copy loops*)
+      let copy i =
+        let src_i = mk_pattern_exp t (Larray (src, i)) in
+        let dest_i = mk_pattern t (Larray (dest, i)) in
+          [Aassgn(dest_i, src_i)]
+      in
+
+      (*Copy values < idx*)
+      let a_lower = fresh_for (mk_static_int 0) idx copy in
+
+      (* Update the correct element*)
+      let src_idx = mk_pattern_exp t (Larray (src, idx)) in
+      let dest_idx = mk_pattern t (Larray (dest, idx)) in
+      let a_update = update_array dest_idx src_idx v idx_list in
+
+      (*Copy values > idx*)
+      let idx_plus_one = mk_static_int_op (mk_pervasives "+") [idx; mk_static_int 1] in
+      let a_upper = fresh_for idx_plus_one n copy in
+        [a_lower] @ a_update @ [a_upper]
+
+  | _, _ ->
+      [Aassgn(dest, v)]
+
+(** Creates the action list that copies [src] to [dest],
+    updating the value of field [f] with the value [v]. *)
+let update_record dest src f v =
+  let assgn_act { f_name = l; f_type = ty } =
+    let dest_l = mk_pattern ty (Lfield(dest, l)) in
+    let src_l = mk_pattern_exp ty (Lfield(src, l)) in
+    if f = l then
+      Aassgn(dest_l, v)
+    else
+      Aassgn(dest_l, src_l)
+  in
+  let n = struct_name dest.l_ty in
+  let fields = find_struct n in
+    List.map assgn_act fields
 
 let rec control map ck s =
   match ck with
@@ -233,7 +277,7 @@ and translate_act map pat
         let true_act = Aassgn (x, mk_exp p.pat_ty (Epattern p)) in
         let false_act = Aassgn (x, translate_extvalue map e2) in
         let cond = bound_check_expr idx bounds in
-          [ Acase (cond, [ ptrue, mk_block [true_act]; pfalse, mk_block [false_act] ]) ]
+          [ mk_ifthenelse cond true_act false_act ]
 
     | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eselect_trunc }, e1::idx, _) ->
         let x = var_from_name map x in
@@ -245,25 +289,18 @@ and translate_act map pat
 
     | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eupdate }, e1::e2::idx, _) ->
         let x = var_from_name map x in
-     (** TODO: remplacer par if 0 < e && e < n then for () ; o[e] = v; for () else o = a *)
         let bounds = Mls_utils.bounds_list e1.Minils.e_ty in
         let idx = List.map (translate_extvalue map) idx in
-        let action = Aassgn (pattern_of_idx_list x idx,
-                            translate_extvalue map e2) in
         let cond = bound_check_expr idx bounds in
-        let action = Acase (cond, [ ptrue, mk_block [action] ]) in
-        let copy = Aassgn (x, translate_extvalue map e1) in
-          [copy; action]
+        let true_act = update_array x e1 e2 idx in
+        let false_act = Aassgn (x, e1) in
+          [ mk_ifthenelse cond true_act false_act ]
 
-    (** TODO: remplacer par o = { f = v; g = a.g; h = a.h; ... } *)
     | Minils.Evarpat x,
       Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
                      Minils.a_params = [{ se_desc = Sfield f }] }, [e1; e2], _) ->
         let x = var_from_name map x in
-        let copy = Aassgn (x, translate_extvalue map e1) in
-        let action = Aassgn (mk_pattern x.pat_ty (Lfield (x, f)),
-                            translate_extvalue map e2) in (* TODO wrong type *)
-        [copy; action]
+          update_record x e1 f e2
 
     | Minils.Evarpat n, _ ->
         [Aassgn (var_from_name map n, translate map act)]

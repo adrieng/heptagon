@@ -48,6 +48,9 @@ let mk_block ?(locals=[]) eq_list =
   { b_locals = locals;
     b_body = eq_list }
 
+let mk_ifthenelse cond true_act false_act =
+  Acase (cond, [ ptrue, mk_block [true_act]; pfalse, mk_block [false_act] ])
+
 let rec var_name x =
   match x.pat_desc with
     | Lvar x -> x
@@ -166,3 +169,23 @@ struct
     let (_, deps) = Obc_mapfold.program funs ModulSet.empty p in
     ModulSet.remove p.p_modname deps
 end
+
+(** Creates a new for loop. Expects the size of the iteration
+    and the body as a function of the variable iterating. *)
+let fresh_for pass down up body =
+  let i = Idents.gen_var pass "i" in
+  let id = mk_var_dec i Initial.tint in
+  let ei = mk_evar_int i in
+    Afor (id, down, up, mk_block (body ei))
+
+(** Creates the action copying [src] to [dest].*)
+let rec copy_array pass dest src = match dest.l_ty with
+  | Tarray (t, n) ->
+      let copy i =
+        let src_i = mk_pattern_exp t (Larray (src, i)) in
+        let dest_i = mk_pattern t (Larray (dest, i)) in
+          [copy_array dest_i src_i]
+      in
+        fresh_for pass (mk_static_int 0) n copy
+  | _ ->
+      Aassgn(dest, Epattern src)
