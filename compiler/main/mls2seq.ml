@@ -59,6 +59,7 @@ let generate_target p s =
         convert_fun p
     | Obc convert_fun ->
         let o = Mls2obc.program p in
+        let o = Obc_compiler.compile_program o in
           convert_fun o
     | Minils_no_params convert_fun ->
         let p_list = Callgraph.program p in
@@ -66,11 +67,8 @@ let generate_target p s =
     | Obc_no_params convert_fun ->
         let p_list = Callgraph.program p in
         let o_list = List.map Mls2obc.program p_list in
-        print_unfolded p_list;
-        comment "Obc Callgraph";
-        if !verbose then
-          List.iter (Obc_printer.print stdout) o_list;
-        List.iter convert_fun o_list
+        let o_list = List.map Obc_compiler.program o_list in
+          List.iter convert_fun o_list
     | Obc_scalar convert_fun ->
         let p = p |> Mls2obc.program |> Scalarize.program in
         convert_fun p

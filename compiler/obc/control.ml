@@ -9,20 +9,12 @@
 
 (* control optimisation *)
 
-
-open Minils
 open Idents
 open Misc
 open Obc
 open Obc_utils
 open Clocks
-
-let var_from_name map x =
-  begin try
-    Env.find x map
-  with
-      _ -> assert false
-  end
+open Obc_mapfold
 
 let fuse_blocks b1 b2 =
   { b1 with b_locals = b1.b_locals @ b2.b_locals;
@@ -32,14 +24,6 @@ let rec find c = function
   | []    -> raise Not_found
   | (c1, s1) :: h  ->
       if c = c1 then s1, h else let s, h = find c h in s, (c1, s1) :: h
-
-let rec control map ck s =
-  match ck with
-    | Cbase | Cvar { contents = Cindex _ } -> s
-    | Cvar { contents = Clink ck } -> control map ck s
-    | Con(ck, c, n)  ->
-        let x = var_from_name map n in
-        control map ck (Acase(mk_exp x.pat_ty (Epattern x), [(c, mk_block [s])]))
 
 let is_deadcode = function
     | Aassgn (lhs, e) ->
@@ -74,3 +58,10 @@ and joinhandlers h1 h2 =
           try let s2, h2'' = find c1 h2 in fuse_blocks s1 s2, h2''
           with Not_found -> s1, h2 in
         (c1, join_block s1') :: joinhandlers h1' h2'
+
+let block funs acc b =
+  { b with b_body = joinlist b.b_body }, acc
+
+let program p =
+  let p, _ = program_it { defaults with block = block } () p in
+  p
