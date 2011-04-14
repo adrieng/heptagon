@@ -1,3 +1,6 @@
+const n:int = 10000
+const m:int = 10
+
 (* Deal with matrix of size n*m, apply coeff :
 		kt
 	kl	k	kr
@@ -8,16 +11,24 @@ let
   r = k*t[>i<][>j<] + kl*t[>i<][>j-1<] + kt*t[>i-1<][>j<] + kr*t[>i<][>j+1<] + kb*t[>i+1<][>j<]
 tel
 
-fun convol_1_h <<n,m,k,kl,kt,kr,kb :int>> (t:int^n^m; line : int^m; i :int) returns (r :int^m)
+fun convol_1_h <<n,m,k,kl,kt,kr,kb :int>> (t:int^n^m; line : int^n; i :int) returns (r :int^n)
 let
-  r = mapi<<m>> (kernel_1<<n,m,k,kl,kt,kr,kb>>)(<t,i>) (line)
+  r = mapi<<n>> (kernel_1<<n,m,k,kl,kt,kr,kb>>)(<t,i>) (line)
 tel
 
 fun convol_1 <<n,m,k,kl,kt,kr,kb :int>> (t:int^n^m) returns (r :int^n^m)
 let
-  r = mapi<<n>> ( convol_1_h<<n,m,k,kl,kt,kr,kb>> ) (<t>) (t)
+  r = mapi<<m>> ( convol_1_h<<n,m,k,kl,kt,kr,kb>> ) (<t>) (t)
 tel
 
+
+(* pb du 0^m^m inlined
+node main_1 () returns ()
+var r :int^m^m;
+let
+  r = convol_1<<m,m,0,1,2,3,4>>(0^m^m);
+tel
+*)
 
 (* Deal with matrix of size n*m, apply coeff :
 			ktt
@@ -35,13 +46,19 @@ let
 						kbb*t[>i+2<][>j<];
 tel
 
-fun convol_2_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb :int>> (t:int^n^m; line : int^m; i :int) returns (r :int^m)
+fun convol_2_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb :int>> (t:int^n^m; line : int^n; i :int) returns (r :int^n)
 let
-  r = mapi<<m>> (kernel_2<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t,i>) (line)
+  r = mapi<<n>> (kernel_2<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t,i>) (line)
 tel
 
 fun convol_2<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb :int>>(t:int^n^m) returns (r :int^n^m)
 let
-  r = mapi<<n>> (convol_2_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t>) (t)
+  r = mapi<<m>> (convol_2_h<<n,m,ktt,klt,kt,ktr,kll,kl,k,kr,krr,kbl,kb,krb,kbb>>) (<t>) (t)
 tel
 
+node main_2 () returns ()
+var r :int^n^m; s :int;
+let
+  s = 3;
+  r = convol_2<<n,m,0,1,2,3,4,5,6,7,8,9,10,11,12>>(s^n^m);
+tel

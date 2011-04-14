@@ -1,0 +1,19 @@
+
+node lent() returns (r : int)
+let
+  r = 1 fby (do_stuff(10) + r + 1)
+tel
+
+node main() returns (r : int; half : bool)
+var c :int;
+let
+  half = true fby not half;
+  reset
+    c = lent()
+  every half;
+  r = 0 fby 0 fby 0 fby 0 fby
+      0 fby 0 fby 0 fby 0 fby
+      0 fby 0 fby 0 fby 0 fby
+      0 fby 0 fby 0 fby 0 fby
+      0 fby 0 fby 0 fby 0 fby c;
+tel

@@ -21,6 +21,7 @@ type ty = Tclass of class_name
         | Tgeneric of class_name * ty list
         | Tbool
         | Tint
+        | Tlong
         | Tfloat
         | Tarray of ty * exp
         | Tunit
@@ -107,6 +108,7 @@ let rec default_value ty = match ty with
   | Tgeneric _ -> Snull
   | Tbool -> Sbool true
   | Tint -> Sint 0
+  | Tlong -> Sint 0
   | Tfloat -> Sfloat 0.0
   | Tunit -> Evoid
   | Tarray _ -> Enew_array (ty,[])
@@ -156,5 +158,5 @@ let mk_field ?(protection = Ppublic) ?(static = false) ?(final = false) ?(value 
 
 let vds_to_exps vd_l = List.map (fun { vd_ident = x } -> mk_var x) vd_l
 
-let vds_to_fields ?(protection=Ppublic) vd_l =
-  List.map (fun { vd_ident = x; vd_type = t } -> mk_field ~protection:protection t x) vd_l
+let vds_to_fields ?(protection=Ppublic) ?(final=false) vd_l =
+  List.map (fun { vd_ident = x; vd_type = t } -> mk_field ~protection:protection ~final:final t x) vd_l

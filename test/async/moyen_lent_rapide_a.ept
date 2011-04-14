@@ -1,0 +1,21 @@
+
+node lent_rapide<<k,n :int>>(lent :bool) returns (r : int)
+let
+  r = 1 fby merge lent (true -> do_stuff(n*k) + r when true(lent) + 1)
+                           (false -> do_stuff(1) + r when false(lent) + 1);
+tel
+
+node moyenne<<n :int>>() returns (r : int; big_step : bool)
+var cpt :int;
+let
+  big_step = true fby (cpt = 0); (*lent's clock*)
+  reset
+    cpt = 3 fby cpt - 1; (*timer*)
+  every big_step;
+  r = (!(async 0 fby async 0 fby async 0 fby async lent_rapide<<3,n>>(big_step))) + do_stuff(n);
+tel
+
+node main() returns (r :int; big_step :bool)
+let
+  (r, big_step) = moyenne<<10>>();
+tel

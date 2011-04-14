@@ -1,2 +1,2 @@
 #!/bin/bash
-for i in *.ept; do ./java_m $i; done;
+for i in *.ept; do ./java_m $i $@; done;

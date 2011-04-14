@@ -267,6 +267,7 @@ let rec cexpr_of_static_exp se =
             Error.message se.se_loc Error.Estatic_exp_compute_failed
           else
             cexpr_of_static_exp se'
+    | Sasync _ -> assert false (** TODO async *)
     | Stuple _ -> assert false (** TODO *)
 
 

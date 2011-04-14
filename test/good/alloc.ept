@@ -10,8 +10,10 @@ let
   automaton
 
     state IDLE0
-      do g0 = false;
+      var x: bool;
+      do g0 = false & x & r0;
          g1 = false;
+	 x = r1;
       unless r0 then ALLOC0 | (r1 & not r0) then ALLOC1
 
     state IDLE1

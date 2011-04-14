@@ -1,0 +1,14 @@
+
+node lent_rapide<<n :int>>() returns (r : int; lent : bool)
+let
+  lent = true fby (not lent);
+  r = 1 fby merge lent (true -> do_stuff(n*20) + r when true(lent) + 1)
+                           (false -> do_stuff(n) + r when false(lent) + 1);
+tel
+
+node main() returns (r : int; lent : bool)
+var r1 : async int; lent1 : async bool;
+let
+  (r1,lent1) = async lent_rapide<<5>>();
+  (r,lent) = (-1,false) fby (-1,false) fby (!r1,!lent1);
+tel

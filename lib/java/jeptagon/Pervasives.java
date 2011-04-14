@@ -14,6 +14,7 @@ public class Pervasives {
 	}
 
 	public static final ExecutorService executor_cached = Executors.newCachedThreadPool();
+	public static final int max_tasks = 25;
 
 	public static class StaticFuture<V> implements Future<V> {
 		V v;
@@ -152,7 +153,7 @@ public class Pervasives {
 				x = (x + j) % (x + j/x) + 13;
 			}
 		}
-		return x;
+		return 0;
 	}
 
 

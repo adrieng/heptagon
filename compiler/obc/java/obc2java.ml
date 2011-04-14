@@ -287,7 +287,7 @@ let create_async_classe async base_classe =
   (* [params] : fields to stock the static parameters, arguments of the constructors *)
   let fields_params, vds_params, exps_params, param_env =
     let v, env = sig_params_to_vds b_params in
-    let f = vds_to_fields ~protection:Pprotected v in
+    let f = vds_to_fields ~protection:Pprotected ~final:true v in
     let e = vds_to_exps v in
     f, v, e, env
   in
@@ -344,7 +344,9 @@ let create_async_classe async base_classe =
         in Aassgn (Pthis id_result, exp_call)
       in
       let act_return = Areturn var_result in
-      mk_block [act_syncronize; act_result; act_return]
+      if b_stateful
+      then mk_block [act_syncronize; act_result; act_return]
+      else mk_block [act_result; act_return] (* no synchro if a fun *)
     in mk_methode ~throws:throws_async  ~args:vds_step ~returns:ty_aresult body "step"
   in
 
@@ -378,7 +380,7 @@ let class_def_list classes cd_l =
     (* [params] : fields to stock the static parameters, arguments of the constructors *)
     let fields_params, vds_params, exps_params, param_env =
       let v, env = sig_params_to_vds cd.cd_params in
-      let f = vds_to_fields ~protection:Pprotected v in
+      let f = vds_to_fields ~protection:Pprotected ~final:true v in
       let e = vds_to_exps v in
       f, v, e, env
     in
@@ -516,7 +518,7 @@ let const_dec_list cd_l = match cd_l with
         (* thus [translate_const_name] will gives the right result anywhere it is used. *)
         let value = Some (static_exp param_env ovalue) in
         let t = ty param_env otype in
-        mk_field ~static: true ~final: true ~value: value t name
+        mk_field ~static:true ~final:true ~value:value t name
       in
       let fields = List.map mk_const_field cd_l in
       [mk_classe ~fields: fields classe_name]

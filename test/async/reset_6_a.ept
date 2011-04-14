@@ -1,0 +1,19 @@
+
+node lent() returns (r : int)
+let
+  r = 1 fby (do_stuff(10) + r + 1)
+tel
+
+node main() returns (r : int; half : bool)
+var c : async int;
+let
+  half = true fby not half;
+  reset
+    c = async lent()
+  every half;
+  r = !(async 0 fby async 0 fby async 0 fby async 0 fby
+	async 0 fby async 0 fby async 0 fby async 0 fby
+	async 0 fby async 0 fby async 0 fby async 0 fby
+	async 0 fby async 0 fby async 0 fby async 0 fby
+	async 0 fby async 0 fby async 0 fby async 0 fby c);
+tel

@@ -1,0 +1,11 @@
+
+fun lent<<n:int>>() returns (y:int)
+let
+  y = do_stuff(n*20);
+tel
+
+node main () returns ()
+var y: async int;
+let
+  y = async lent<<5>>();
+tel

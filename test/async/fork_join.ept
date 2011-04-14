@@ -1,0 +1,11 @@
+const n:int = 24
+
+fun f(i:int) returns (r:int)
+let
+  r = do_stuff(i);
+tel
+
+fun main () returns (r:int^n)
+let
+  r = map<<n>> f (2^n);
+tel

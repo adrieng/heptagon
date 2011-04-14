@@ -1,25 +1,24 @@
 
-node lent<<n :int>>() returns (y :int)
+node lent<<n:int>>() returns (y:int)
 let
   y = 1 fby (do_stuff(n*20) + y + 1);
 tel
 
 
-node rapide<<n :int>>() returns (z,cpt :int)
-var big_step :bool; r : async int;
+node rapide<<n:int>>() returns (z,cpt:int)
+var big_step : bool;
 let
   big_step = true fby (cpt = 0);
   reset
     cpt = n fby cpt - 1;
   every big_step;
-  r = async 0 fby async lent<<n>>();
   z = merge big_step
-            (true -> !r)
+            (true -> 0 -> ! pre (async lent<<n>>()))
             (false -> do_stuff(20));
 tel
 
 
-node main() returns(r,c :int)
+node main() returns(r,c: int)
 let
   (r,c) = rapide<<5>>();
 tel
