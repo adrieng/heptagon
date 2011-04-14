@@ -6,7 +6,7 @@ check_file() {
   name=$1
   tmp=$2
 
-  if [  `awk ' { if ( length > x ) { x = length } } END { print x }' $tmp` -gt 120 ]; then
+  if [  `awk ' { if ( length > x ) { x = length } } END { print x }' $tmp` -gt 100 ]; then
     echo "File \"$name\" has lines with more than 120 columns."
     bad=1
   fi
