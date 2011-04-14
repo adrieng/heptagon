@@ -40,7 +40,7 @@ let mk_exp_fby_false e =
     (Tid Initial.pbool)
 
 let mk_constructor constr ty =
-  mk_static_exp ~ty:ty (Sconstructor constr)
+  mk_static_exp ty (Sconstructor constr)
 
 (* Be sure that [initial] is of the right type [e.e_ty] before using this *)
 let mk_exp_fby_state initial e =

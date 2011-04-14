@@ -22,7 +22,7 @@ let fresh_for = fresh_for "scalarize"
 let act funs () a = match a with
   | Aassgn (p,e) ->
       (match e.e_ty with
-        | Types.Tarray (t, size) ->
+        | Types.Tarray (t, size) -> (* TODO ayayayaye *)
           (* a reference (alias) to the array, since we could have a full expression *)
           let array_ref = Idents.gen_var "scalarize" "a_ref" in
           let vd_array_ref = mk_var_dec array_ref (Types.Tmutable p.pat_ty) in

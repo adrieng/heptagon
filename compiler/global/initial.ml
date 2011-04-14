@@ -28,13 +28,13 @@ let tfloat = Types.Tid pfloat
 let mk_pervasives s = { qual = Pervasives; name = s }
 
 let mk_static_int_op op args =
-  mk_static_exp ~ty:tint (Sop (op,args))
+  mk_static_exp tint (Sop (op,args))
 
 let mk_static_int i =
-  mk_static_exp ~ty:tint (Sint i)
+  mk_static_exp tint (Sint i)
 
 let mk_static_bool b =
-  mk_static_exp ~ty:tbool (Sbool b)
+  mk_static_exp tbool (Sbool b)
 
 
 

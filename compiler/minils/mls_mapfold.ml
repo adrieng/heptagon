@@ -17,22 +17,23 @@ open Minils
   either yours either the default version named according to the type. *)
 
 type 'a mls_it_funs = {
-  app:        'a mls_it_funs -> 'a -> Minils.app -> Minils.app * 'a;
-  edesc:      'a mls_it_funs -> 'a -> Minils.edesc -> Minils.edesc * 'a;
-  eq:         'a mls_it_funs -> 'a -> Minils.eq -> Minils.eq * 'a;
-  eqs:        'a mls_it_funs -> 'a -> Minils.eq list -> Minils.eq list * 'a;
-  exp:        'a mls_it_funs -> 'a -> Minils.exp -> Minils.exp * 'a;
-  pat:        'a mls_it_funs -> 'a -> Minils.pat -> Minils.pat * 'a;
-  var_dec:    'a mls_it_funs -> 'a -> Minils.var_dec -> Minils.var_dec * 'a;
-  var_decs:   'a mls_it_funs -> 'a -> Minils.var_dec list
-                                   -> Minils.var_dec list * 'a;
-  contract:   'a mls_it_funs -> 'a -> Minils.contract -> Minils.contract * 'a;
-  node_dec:   'a mls_it_funs -> 'a -> Minils.node_dec -> Minils.node_dec * 'a;
-  const_dec:  'a mls_it_funs -> 'a -> Minils.const_dec -> Minils.const_dec * 'a;
-  type_dec:   'a mls_it_funs -> 'a -> Minils.type_dec -> Minils.type_dec * 'a;
-  tdesc:      'a mls_it_funs -> 'a -> Minils.tdesc -> Minils.tdesc * 'a;
-  program:    'a mls_it_funs -> 'a -> Minils.program -> Minils.program * 'a;
-  global_funs:'a Global_mapfold.global_it_funs }
+  app:           'a mls_it_funs -> 'a -> Minils.app -> Minils.app * 'a;
+  edesc:         'a mls_it_funs -> 'a -> Minils.edesc -> Minils.edesc * 'a;
+  eq:            'a mls_it_funs -> 'a -> Minils.eq -> Minils.eq * 'a;
+  eqs:           'a mls_it_funs -> 'a -> Minils.eq list -> Minils.eq list * 'a;
+  exp:           'a mls_it_funs -> 'a -> Minils.exp -> Minils.exp * 'a;
+  extvalue:      'a mls_it_funs -> 'a -> Minils.extvalue -> Minils.extvalue * 'a;
+  extvalue_desc: 'a mls_it_funs -> 'a -> Minils.extvalue_desc -> Minils.extvalue_desc * 'a;
+  pat:           'a mls_it_funs -> 'a -> Minils.pat -> Minils.pat * 'a;
+  var_dec:       'a mls_it_funs -> 'a -> Minils.var_dec -> Minils.var_dec * 'a;
+  var_decs:      'a mls_it_funs -> 'a -> Minils.var_dec list -> Minils.var_dec list * 'a;
+  contract:      'a mls_it_funs -> 'a -> Minils.contract -> Minils.contract * 'a;
+  node_dec:      'a mls_it_funs -> 'a -> Minils.node_dec -> Minils.node_dec * 'a;
+  const_dec:     'a mls_it_funs -> 'a -> Minils.const_dec -> Minils.const_dec * 'a;
+  type_dec:      'a mls_it_funs -> 'a -> Minils.type_dec -> Minils.type_dec * 'a;
+  tdesc:         'a mls_it_funs -> 'a -> Minils.tdesc -> Minils.tdesc * 'a;
+  program:       'a mls_it_funs -> 'a -> Minils.program -> Minils.program * 'a;
+  global_funs:   'a Global_mapfold.global_it_funs }
 
 
 let rec exp_it funs acc e = funs.exp funs acc e
@@ -41,43 +42,59 @@ and exp funs acc e =
   let ed, acc = edesc_it funs acc e.e_desc in
   { e with e_desc = ed; e_ty = e_ty }, acc
 
+and extvalue_it funs acc w = funs.extvalue funs acc w
+and extvalue funs acc w =
+  let w_ty, acc = ty_it funs.global_funs acc w.w_ty in
+  let wd, acc = extvalue_desc_it funs acc w.w_desc in
+  { w with w_desc = wd; w_ty = w_ty }, acc
+
+and extvalue_desc_it funs acc wd =
+  try funs.extvalue_desc funs acc wd
+  with Fallback -> extvalue_desc funs acc wd
+and extvalue_desc funs acc wd = match wd with
+  | Wconst se ->
+      let se, acc = static_exp_it funs.global_funs acc se in
+      Wconst se, acc
+  | Wvar _ -> wd, acc
+  | Wfield (w,f) ->
+      let w, acc = extvalue_it funs acc w in
+      Wfield (w,f), acc
+  | Wwhen (w, c, v) ->
+      let w, acc = extvalue_it funs acc w in
+      Wwhen (w,c,v), acc
 
 and edesc_it funs acc ed =
   try funs.edesc funs acc ed
   with Fallback -> edesc funs acc ed
 and edesc funs acc ed = match ed with
-  | Econst se ->
-      let se, acc = static_exp_it funs.global_funs acc se in
-        Econst se, acc
-  | Evar _ -> ed, acc
-  | Efby (se, e) ->
+  | Eextvalue w ->
+      let w, acc = extvalue_it funs acc w in
+      Eextvalue w, acc
+  | Efby (se, w) ->
       let se, acc = optional_wacc (static_exp_it funs.global_funs) acc se in
-      let e, acc = exp_it funs acc e in
-        Efby (se, e), acc
+      let w, acc = extvalue_it funs acc w in
+        Efby (se, w), acc
   | Eapp(app, args, reset) ->
       let app, acc = app_it funs acc app in
-      let args, acc = mapfold (exp_it funs) acc args in
+      let args, acc = mapfold (extvalue_it funs) acc args in
         Eapp (app, args, reset), acc
-  | Ewhen(e, c, x) ->
-      let e, acc = exp_it funs acc e in
-        Ewhen(e, c, x), acc
-  | Emerge(x, c_e_list) ->
-      let aux acc (c,e) =
-        let e, acc = exp_it funs acc e in
-          (c,e), acc in
-      let c_e_list, acc = mapfold aux acc c_e_list in
-        Emerge(x, c_e_list), acc
-  | Estruct n_e_list ->
-      let aux acc (n,e) =
-        let e, acc = exp_it funs acc e in
-          (n,e), acc in
-      let n_e_list, acc = mapfold aux acc n_e_list in
-        Estruct n_e_list, acc
+  | Emerge(x, c_w_list) ->
+      let aux acc (c,w) =
+        let w, acc = extvalue_it funs acc w in
+          (c,w), acc in
+      let c_w_list, acc = mapfold aux acc c_w_list in
+        Emerge(x, c_w_list), acc
+  | Estruct n_w_list ->
+      let aux acc (n,w) =
+        let w, acc = extvalue_it funs acc w in
+          (n,w), acc in
+      let n_w_list, acc = mapfold aux acc n_w_list in
+        Estruct n_w_list, acc
   | Eiterator (i, app, param, pargs, args, reset) ->
       let app, acc = app_it funs acc app in
       let param, acc = static_exp_it funs.global_funs acc param in
-      let pargs, acc = mapfold (exp_it funs) acc pargs in
-      let args, acc = mapfold (exp_it funs) acc args in
+      let pargs, acc = mapfold (extvalue_it funs) acc pargs in
+      let args, acc = mapfold (extvalue_it funs) acc args in
         Eiterator (i, app, param, pargs, args, reset), acc
 
 
@@ -183,6 +200,8 @@ let defaults = {
   eq = eq;
   eqs = eqs;
   exp = exp;
+  extvalue = extvalue;
+  extvalue_desc = extvalue_desc;
   pat = pat;
   var_dec = var_dec;
   var_decs = var_decs;

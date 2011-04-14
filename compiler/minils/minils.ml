@@ -40,7 +40,7 @@ and tdesc =
   | Type_struct of structure
 
 and extvalue = {
-  w_desc      : edesc;
+  w_desc      : extvalue_desc;
   mutable w_ck: ck;
   w_ty        : ty;
   w_loc       : location }
@@ -82,7 +82,6 @@ and op =
   | Efun of fun_name   (** "Stateless" longname <<a_params>> (args) reset r *)
   | Enode of fun_name  (** "Stateful" longname <<a_params>> (args) reset r *)
   | Eifthenelse        (** if arg1 then arg2 else arg3 *)
-  | Efield             (** arg1.a_param1 *)
   | Efield_update      (** { arg1 with a_param1 = arg2 } *)
   | Earray             (** [ args ] *)
   | Earray_fill        (** [arg1^a_param1] *)
@@ -150,7 +149,7 @@ let mk_extvalue ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
   { w_desc = desc; w_ty = ty;
     w_ck = clock; w_loc = loc }
 
-let mk_exp ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
+let mk_exp ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = ty;
     e_ck = clock; e_loc = loc }
 
@@ -189,4 +188,4 @@ let mk_program o n t c =
   { p_modname = Module ""; p_format_version = "";
     p_opened = o; p_nodes = n; p_types = t; p_consts = c }
 
-let void = mk_exp ~ty:Types.Tunit (Eapp (mk_app Etuple, [], None))
+let void = mk_exp (Types.Tprod []) (Eapp (mk_app Etuple, [], None))

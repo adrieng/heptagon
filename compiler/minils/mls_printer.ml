@@ -68,6 +68,9 @@ and print_node_params ff l =
 and print_exp_tuple ff l =
   fprintf ff "@[<2>(%a)@]" (print_list_r print_exp """,""") l
 
+and print_w_tuple ff l =
+  fprintf ff "@[<2>(%a)@]" (print_list_r print_extvalue """,""") l
+
 and print_vd_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_vd "("";"")") l
 
@@ -75,10 +78,10 @@ and print_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_static_exp "[""][""]") idx
 
 and print_dyn_index ff idx =
-  fprintf ff "@[<2>%a@]" (print_list print_exp "[""][""]") idx
+  fprintf ff "@[<2>%a@]" (print_list print_extvalue "[""][""]") idx
 
 and print_trunc_index ff idx =
-  fprintf ff "@[<2>%a@]" (print_list print_exp "[>""<][>""<]") idx
+  fprintf ff "@[<2>%a@]" (print_list print_extvalue "[>""<][>""<]") idx
 
 and print_exp ff e =
   if !Compiler_options.full_type_info then
@@ -89,87 +92,90 @@ and print_exp ff e =
 and print_every ff reset =
   print_opt (fun ff id -> fprintf ff " every %a" print_ident id) ff reset
 
+and print_extvalue ff w =
+  if !Compiler_options.full_type_info then
+    fprintf ff "(%a : %a :: %a)"
+      print_extvalue_desc w.w_desc print_type w.w_ty print_ck w.w_ck
+  else fprintf ff "%a" print_extvalue_desc w.w_desc
+
+
+and print_extvalue_desc ff = function
+  | Wconst c -> print_static_exp ff c
+  | Wvar x -> print_ident ff x
+  | Wfield (w,f) -> fprintf ff "%a.%a" print_extvalue w print_qualname f
+  | Wwhen (w, c, n) ->
+      fprintf ff "@[<2>(%a@ when %a(%a))@]" print_extvalue w print_qualname c print_ident n
+
 and print_exp_desc ff = function
-  | Econst c -> print_static_exp ff c
-  | Evar x -> print_ident ff x
-  | Efby ((Some c), e) ->
-      fprintf ff "@[<2>%a fby@ %a@]" print_static_exp c print_exp e
-  | Efby (None, e) -> fprintf ff "pre %a" print_exp e
+  | Eextvalue w -> print_extvalue ff w
+  | Efby ((Some c), w) -> fprintf ff "@[<2>%a fby@ %a@]" print_static_exp c print_extvalue w
+  | Efby (None, w) -> fprintf ff "pre %a" print_extvalue w
   | Eapp (app, args, reset) ->
-      fprintf ff "@[<2>%a@,%a@]"
-        print_app (app, args) print_every reset
-  | Ewhen (e, c, n) ->
-      fprintf ff "@[<2>(%a@ when %a(%a))@]"
-        print_exp e print_qualname c print_ident n
-  | Emerge (x, tag_e_list) ->
-      fprintf ff "@[<2>merge %a@ %a@]"
-        print_ident x print_tag_e_list tag_e_list
-  | Estruct f_e_list ->
-      print_record (print_couple print_qualname print_exp """ = """) ff f_e_list
+      fprintf ff "@[<2>%a@,%a@]" print_app (app, args) print_every reset
+  | Emerge (x, tag_w_list) ->
+      fprintf ff "@[<2>merge %a@ %a@]" print_ident x print_tag_w_list tag_w_list
+  | Estruct f_w_list ->
+      print_record (print_couple print_qualname print_extvalue """ = """) ff f_w_list
   | Eiterator (it, f, param, pargs, args, reset) ->
       fprintf ff "@[<2>(%s (%a)<<%a>>)@,(%a)%a@]%a"
         (iterator_to_string it)
         print_app (f, [])
         print_static_exp param
-        print_exp_tuple pargs
-        print_exp_tuple args
+        print_w_tuple pargs
+        print_w_tuple args
         print_every reset
 
 and print_app ff (app, args) =
   match app.a_op with
     | Eequal ->
       let e1, e2 = assert_2 args in
-        fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
-    | Etuple -> print_exp_tuple ff args
+        fprintf ff "@[<2>%a@ = %a@]" print_extvalue e1  print_extvalue e2
+    | Etuple -> print_w_tuple ff args
     | Efun f | Enode f ->
         fprintf ff "@[%a@,%a@,%a@]"
-          print_qualname f print_params app.a_params  print_exp_tuple args
+          print_qualname f print_params app.a_params  print_w_tuple args
     | Eifthenelse ->
       let e1, e2, e3 = assert_3 args in
         fprintf ff "@[<hv>if %a@ then %a@ else %a@]"
-          print_exp e1 print_exp e2 print_exp e3
-    | Efield ->
-      let r = assert_1 args in
-      let f = assert_1 app.a_params in
-      fprintf ff "%a.%a" print_exp r print_static_exp f
+          print_extvalue e1 print_extvalue e2 print_extvalue e3
     | Efield_update ->
       let r,e = assert_2 args in
       let f = assert_1 app.a_params in
         fprintf ff "@[<2>{%a with .%a =@ %a}@]"
-          print_exp r print_static_exp f print_exp e
-    | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") args
+          print_extvalue r print_static_exp f print_extvalue e
+    | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_extvalue "["";""]") args
     | Earray_fill ->
       let e = assert_1 args in
       let n = assert_1 app.a_params in
-        fprintf ff "%a^%a" print_exp e print_static_exp n
+        fprintf ff "%a^%a" print_extvalue e print_static_exp n
     | Eselect ->
       let e = assert_1 args in
-        fprintf ff "%a%a" print_exp e print_index app.a_params
+        fprintf ff "%a%a" print_extvalue e print_index app.a_params
     | Eselect_slice ->
       let e = assert_1 args in
       let idx1, idx2 = assert_2 app.a_params in
         fprintf ff "%a[%a..%a]"
-          print_exp e  print_static_exp idx1  print_static_exp idx2
+          print_extvalue e  print_static_exp idx1  print_static_exp idx2
     | Eselect_dyn ->
       let r, d, e = assert_2min args in
         fprintf ff "%a%a default %a"
-          print_exp r  print_dyn_index e  print_exp d
+          print_extvalue r  print_dyn_index e  print_extvalue d
     | Eselect_trunc ->
       let e, idx_list = assert_1min args in
-        fprintf ff "%a%a" print_exp e print_trunc_index idx_list
+        fprintf ff "%a%a" print_extvalue e print_trunc_index idx_list
     | Eupdate ->
       let e1, e2, idx = assert_2min args in
           fprintf ff "@[<2>(%a with %a =@ %a)@]"
-            print_exp e1 print_dyn_index idx print_exp e2
+            print_extvalue e1 print_dyn_index idx print_extvalue e2
     | Econcat ->
       let e1, e2 = assert_2 args in
-        fprintf ff "@[<2>%a@ @@ %a@]" print_exp e1  print_exp e2
+        fprintf ff "@[<2>%a@ @@ %a@]" print_extvalue e1  print_extvalue e2
 
 and print_handler ff c =
-  fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c
+  fprintf ff "@[<2>%a@]" (print_couple print_qualname print_extvalue "("" -> "")") c
 
-and print_tag_e_list ff tag_e_list =
-  fprintf ff "@[%a@]" (print_list print_handler """""") tag_e_list
+and print_tag_w_list ff tag_w_list =
+  fprintf ff "@[%a@]" (print_list print_handler """""") tag_w_list
 
 
 and print_eq ff { eq_lhs = p; eq_rhs = e } =

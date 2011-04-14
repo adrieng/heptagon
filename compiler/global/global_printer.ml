@@ -64,15 +64,12 @@ and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l
 
 and print_type ff = function
-  | Tprod [] -> fprintf ff "INVALID TYPE"
+  | Tinvalid -> fprintf ff "INVALID TYPE"
   | Tprod ty_list ->
       fprintf ff "@[<hov2>%a@]" (print_list_r print_type "(" " *" ")") ty_list
   | Tid id -> print_qualname ff id
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
-  | Tmutable ty ->
-      fprintf ff "@[<hov2>mutable %a@]" print_type ty
-  | Tunit -> fprintf ff "unit"
 
 let print_field ff field =
   fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type

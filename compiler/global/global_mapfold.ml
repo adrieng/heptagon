@@ -57,10 +57,7 @@ and ty funs acc t = match t with
       let t, acc = ty_it funs acc t in
       let se, acc = static_exp_it funs acc se in
       Tarray (t, se), acc
-  | Tmutable t ->
-      let t, acc = ty_it funs acc t in
-      Tmutable t, acc
-  | Tunit -> t, acc
+  | Tinvalid -> t, acc
 (*
 and ct_it funs acc c = try funs.ct funs acc c with Fallback -> ct funs acc t
 and ct funs acc c = match c with

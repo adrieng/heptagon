@@ -11,6 +11,7 @@
 open Misc
 open Names
 open Idents
+open Clocks
 open Signature
 open Obc
 open Obc_utils
@@ -32,7 +33,7 @@ let fresh_it () =
 
 let gen_obj_ident n = Idents.gen_var "mls2obc" ((shortname n) ^ "_inst")
 let fresh_for = fresh_for "mls2obc"
-let copy_array = copy_array "mls2obc"
+(*let copy_array = copy_array "mls2obc"*)
 
 let op_from_string op = { qual = Pervasives; name = op; }
 
@@ -72,7 +73,7 @@ let rec bound_check_expr idx_list bounds =
         let e1 = mk_exp_bool (Eop (op_from_string "<",
                                  [idx; mk_exp_int (Econst n)])) in
         let e2 = mk_exp_bool (Eop (op_from_string "<=",
-                                 [mk_exp_int (Econst (Sint 0)); idx])) in
+                                 [mk_exp_int (Econst (mk_static_int 0)); idx])) in
           mk_exp_bool (Eop (op_from_string "&", [e1;e2]))
   in
   match (idx_list, bounds) with
@@ -85,28 +86,24 @@ let rec bound_check_expr idx_list bounds =
 
 (** Creates the action list that copies [src] to [dest],
     updating the value at index [idx_list] with the value [v]. *)
-let rec update_array dest src idx_list v = match dest.l_ty, idx_list with
+let rec update_array dest src idx_list v = match dest.pat_ty, idx_list with
   | Tarray (t, n), idx::idx_list ->
       (*Body of the copy loops*)
       let copy i =
         let src_i = mk_pattern_exp t (Larray (src, i)) in
         let dest_i = mk_pattern t (Larray (dest, i)) in
-          [Aassgn(dest_i, src_i)]
+        [Aassgn(dest_i, src_i)]
       in
-
       (*Copy values < idx*)
       let a_lower = fresh_for (mk_static_int 0) idx copy in
-
       (* Update the correct element*)
-      let src_idx = mk_pattern_exp t (Larray (src, idx)) in
-      let dest_idx = mk_pattern t (Larray (dest, idx)) in
-      let a_update = update_array dest_idx src_idx v idx_list in
-
+      let src_idx = mk_pattern t (Larray (src, mk_exp_int (Econst idx))) in
+      let dest_idx = mk_pattern t (Larray (dest, mk_exp_int (Econst idx))) in
+      let a_update = update_array dest_idx src_idx idx_list v in
       (*Copy values > idx*)
       let idx_plus_one = mk_static_int_op (mk_pervasives "+") [idx; mk_static_int 1] in
       let a_upper = fresh_for idx_plus_one n copy in
-        [a_lower] @ a_update @ [a_upper]
-
+      [a_lower] @ a_update @ [a_upper]
   | _, _ ->
       [Aassgn(dest, v)]
 
@@ -121,9 +118,11 @@ let update_record dest src f v =
     else
       Aassgn(dest_l, src_l)
   in
-  let n = struct_name dest.l_ty in
-  let fields = find_struct n in
-    List.map assgn_act fields
+  let fields = match dest.pat_ty with
+    | Tid n -> Modules.find_struct n
+    | _ -> Misc.internal_error "mls2obc field of nonstruct" 1
+  in
+  List.map assgn_act fields
 
 let rec control map ck s =
   match ck with
@@ -149,23 +148,23 @@ let translate_var_dec l =
   List.map one_var l
 
 let rec translate_extvalue map w =
-  let desc = match w.w_desc with
-  | Wconst v -> Econst v
-  | Wvar x -> Epattern (var_from_name map n)
-  | Wfield (w1, f) ->
-      let w1 = translate_extvalue map (assert_1 e_list) in
-        Epattern (mk_pattern e.e_ty (Lfield (pattern_of_exp e, f)))
-  | Wwhen (w1, c, x) ->
-      let e1 = translate_extvalue map w1 in
+  let desc = match w.Minils.w_desc with
+    | Minils.Wconst v -> Econst v
+    | Minils.Wvar x -> Epattern (var_from_name map x)
+    | Minils.Wfield (w1, f) ->
+        let e = translate_extvalue map w1 in
+        Epattern (mk_pattern w.Minils.w_ty (Lfield (pattern_of_exp e, f)))
+    | Minils.Wwhen (w1, c, x) ->
+        let e1 = translate_extvalue map w1 in
         e1.e_desc
   in
-    mk_exp e.Minils.e_ty desc
+  mk_exp w.Minils.w_ty desc
 
 (* [translate e = c] *)
 let rec translate map e =
   let desc = match e.Minils.e_desc with
     | Minils.Eextvalue w ->
-        let e = translate_ext_value map e in e.e_desc
+        let e = translate_extvalue map w   in e.e_desc
     | Minils.Eapp ({ Minils.a_op = Minils.Eequal }, e_list, _) ->
         Eop (op_from_string "=", List.map (translate_extvalue map ) e_list)
     | Minils.Eapp ({ Minils.a_op = Minils.Efun n }, e_list, _)
@@ -189,10 +188,10 @@ let rec translate map e =
   (* Already treated cases when translating the [eq] *)
     | Minils.Eiterator _ | Minils.Emerge _ | Minils.Efby _
     | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat
-                                 |Minils.Eupdate|Minils.Eselect_dyn
-                                 |Minils.Eselect_trunc|Minils.Eselect_slice
-                                 |Minils.Earray_fill|Minils.Efield_update
-                                 |Minils.Eifthenelse|Minils.Etuple)}, _, _) ->
+                                |Minils.Eupdate|Minils.Eselect_dyn
+                                |Minils.Eselect_trunc|Minils.Eselect_slice
+                                |Minils.Earray_fill|Minils.Efield_update
+                                |Minils.Eifthenelse|Minils.Etuple)}, _, _) ->
         internal_error "mls2obc" 5
   in
     mk_exp e.Minils.e_ty desc
@@ -204,7 +203,8 @@ and translate_act map pat
     | Minils.Etuplepat p_list,
         Minils.Eapp ({ Minils.a_op = Minils.Etuple }, act_list, _) ->
         List.flatten (List.map2 (translate_act map) p_list act_list)
-    | Minils.Etuplepat p_list, Minils.Econst { se_desc = Stuple se_list } ->
+    | Minils.Etuplepat p_list,
+      Minils.Eextvalue { Minils.w_desc = Minils.Wconst { se_desc = Stuple se_list }} ->
         let const_list = Mls_utils.exp_list_of_static_exp_list se_list in
         List.flatten (List.map2 (translate_act map) p_list const_list)
    (* When Merge *)

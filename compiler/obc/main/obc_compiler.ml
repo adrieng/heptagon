@@ -16,6 +16,6 @@ let pp p = if !verbose then Obc_printer.print stdout p
 let compile_program p =
   (*Control optimization*)
   let p = pass "Control optimization" true Control.program p pp in
-  (*Scalarize*)
-  let p = pass "Scalarize" !do_scalarize Scalarize.program p pp in
+(*  (*Scalarize*)
+  let p = pass "Scalarize" !do_scalarize Scalarize.program p pp in *)
     p

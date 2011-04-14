@@ -90,13 +90,10 @@ and unify_list t1_list t2_list =
 let rec skeleton ck = function
   | Tprod ty_list ->
       (match ty_list with
-        | [] ->
-            Format.eprintf "Internal error, an exp with invalid type@.";
-            assert false;
+        | [] -> Ck ck
         | _ -> Cprod (List.map (skeleton ck) ty_list))
   | Tarray (t, _) -> skeleton ck t
-  | Tmutable t -> skeleton ck t
-  | Tid _ | Tunit -> Ck ck
+  | Tid _ | Tinvalid -> Ck ck
 
 (* TODO here it implicitely says that the base clock is Cbase
     and that all tuple is on Cbase *)

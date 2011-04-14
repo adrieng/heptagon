@@ -49,7 +49,7 @@ let mk_block ?(locals=[]) eq_list =
     b_body = eq_list }
 
 let mk_ifthenelse cond true_act false_act =
-  Acase (cond, [ ptrue, mk_block [true_act]; pfalse, mk_block [false_act] ])
+  Acase (cond, [ Initial.ptrue, mk_block [true_act]; Initial.pfalse, mk_block [false_act] ])
 
 let rec var_name x =
   match x.pat_desc with
@@ -73,12 +73,10 @@ let rec vd_find n = function
 
 (** Returns the type of a [var_dec list] *)
 let vd_list_to_type vd_l = match vd_l with
-  | [] -> Types.Tunit
   | [vd] -> vd.v_type
   | _ -> Tprod (List.map (fun vd -> vd.v_type) vd_l)
 
 let pattern_list_to_type p_l = match p_l with
-  | [] -> Types.Tunit
   | [p] -> p.pat_ty
   | _ -> Tprod (List.map (fun p -> p.pat_ty) p_l)
 
@@ -178,6 +176,7 @@ let fresh_for pass down up body =
   let ei = mk_evar_int i in
     Afor (id, down, up, mk_block (body ei))
 
+(*
 (** Creates the action copying [src] to [dest].*)
 let rec copy_array pass dest src = match dest.l_ty with
   | Tarray (t, n) ->
@@ -189,3 +188,4 @@ let rec copy_array pass dest src = match dest.l_ty with
         fresh_for pass (mk_static_int 0) n copy
   | _ ->
       Aassgn(dest, Epattern src)
+*)

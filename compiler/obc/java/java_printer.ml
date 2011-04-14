@@ -42,7 +42,6 @@ let rec _ty size ff t = match t with
   | Tclass n -> class_name ff n
   | Tgeneric (n, ty_l) -> fprintf ff "%a<@[%a@]>" class_name n (print_list_r ty """,""") ty_l
   | Tarray (t,s) -> if size then fprintf ff "%a[%a]" full_ty t exp s else fprintf ff "%a[]" ty t
-  | Tref t -> ty ff t
   | Tunit -> pp_print_string ff "void"
 
 and full_ty ff t = _ty true ff t

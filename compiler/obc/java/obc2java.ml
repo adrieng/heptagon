@@ -114,28 +114,28 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
 
 and boxed_ty param_env t = match t with
+  | Types.Tprod [] -> Tunit
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
   | Types.Tid t when t = Initial.pbool -> Tclass (Names.local_qn "Boolean")
   | Types.Tid t when t = Initial.pint -> Tclass (Names.local_qn "Integer")
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (boxed_ty param_env t, static_exp param_env size)
-  | Types.Tmutable t -> Tref (boxed_ty param_env t)
-  | Types.Tunit -> Tunit
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
 
 and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
   Tclass (java_pervasive_class ("Tuple"^ln))
 
 and ty param_env t :Java.ty = match t with
+  | Types.Tprod [] -> Tunit
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
   | Types.Tid t when t = Initial.pbool -> Tbool
   | Types.Tid t when t = Initial.pint -> Tint
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tmutable t -> Tref (ty param_env t)
-  | Types.Tunit -> Tunit
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
 

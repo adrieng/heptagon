@@ -181,7 +181,7 @@ let static_app_from_app app args=
 let rec translate_static_exp se =
   try
     let se_d = translate_static_exp_desc se.se_desc in
-    Types.mk_static_exp ~loc:se.se_loc se_d
+    Types.mk_static_exp Tinvalid ~loc:se.se_loc se_d
   with
     | ScopingError err -> message se.se_loc err
 

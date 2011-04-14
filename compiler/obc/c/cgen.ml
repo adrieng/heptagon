@@ -101,9 +101,8 @@ let rec ctype_of_otype oty =
     | Types.Tid id when id = Initial.pbool -> Cty_int
     | Tid id -> Cty_id id
     | Tarray(ty, n) -> Cty_arr(int_of_static_exp n, ctype_of_otype ty)
-    | Tmutable t -> ctype_of_otype t
     | Tprod _ -> assert false
-    | Tunit -> assert false
+    | Tinvalid -> assert false
 
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =

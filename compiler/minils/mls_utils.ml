@@ -22,7 +22,9 @@ let err_message ?(exp=void) ?(loc=exp.e_loc) = function
 
 let rec static_exp_of_exp e =
   match e.e_desc with
-    | Econst se -> se
+    | Eextvalue w -> (match w.w_desc with
+      | Wconst se -> se
+      | _ -> err_message ~exp:e Enot_static_exp)
     | _ -> err_message ~exp:e Enot_static_exp
 
 (** @return the list of bounds of an array type*)
@@ -54,7 +56,7 @@ let is_record_type ty = match ty with
 
 let is_op = function
   | { qual = Pervasives; name = _ } -> true | _ -> false
-
+(*
 module Vars =
 struct
   let add x acc = if List.mem x acc then acc else x :: acc
@@ -71,6 +73,7 @@ struct
   let read_exp read_funs (is_left, acc_init) e =
     (* recursive call *)
     let _,(_, acc) = Mls_mapfold.exp read_funs (is_left, acc_init) e in
+
     (* special cases *)
     let acc = match e.e_desc with
       | Evar x | Emerge(x,_) | Ewhen(_, _, x)
@@ -163,3 +166,4 @@ module AllDep = Dep.Make
    end)
 
 let eq_find id = List.find (fun eq -> List.mem id (Vars.def [] eq))
+*)

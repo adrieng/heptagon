@@ -23,7 +23,6 @@ type ty = Tclass of class_name
         | Tint
         | Tfloat
         | Tarray of ty * exp
-        | Tref of ty
         | Tunit
 
 and classe = { c_protection : protection;
@@ -108,7 +107,6 @@ let rec default_value ty = match ty with
   | Tint -> Sint 0
   | Tfloat -> Sfloat 0.0
   | Tunit -> Evoid
-  | Tref t ->  default_value t
   | Tarray _ -> Enew_array (ty,[])
 
 
