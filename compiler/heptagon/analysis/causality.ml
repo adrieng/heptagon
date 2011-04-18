@@ -217,7 +217,7 @@ let typing_node { n_contract = contract;
   let _ = typing_contract loc contract in
     ignore (typing_block b)
 
-let program ({ p_nodes = p_node_list } as p) =
-  List.iter typing_node p_node_list;
+let program ({ p_desc = pd } as p) =
+  List.iter (function Pnode n -> typing_node n | _ -> ()) pd;
   p
 

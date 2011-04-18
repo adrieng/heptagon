@@ -1096,8 +1096,10 @@ let typing_const_dec cd =
   let se = expect_static_exp QualEnv.empty ty cd.c_value in
     { cd with c_value = se; c_type = ty }
 
-let program
-    ({ p_nodes = p_node_list; p_consts = p_consts_list } as p) =
-  let typed_cd_list = List.map typing_const_dec p_consts_list in
-  let typed_node_list = List.map node p_node_list in
-    { p with p_nodes = typed_node_list; p_consts = typed_cd_list }
+let program p =
+	let program_desc pd = match pd with
+		| Pnode n -> Pnode (node n)
+		| Pconst c -> Pconst (typing_const_dec c)
+		| _ -> pd
+	in
+	{ p with p_desc = List.map program_desc p.p_desc }

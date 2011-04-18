@@ -63,7 +63,7 @@ let intro_type type_name state_env =
   Modules.add_type type_name (Signature.Tenum state_constrs);
   (* Add the new type to the types to add to the Ast *)
   state_type_dec_list :=
-    (mk_type_dec type_name (Type_enum state_constrs)) :: !state_type_dec_list
+    Ptype (mk_type_dec type_name (Type_enum state_constrs)) :: !state_type_dec_list
 
 (** Allows to classify an automaton :
     Moore automatons doesn't have strong transitions,
@@ -182,4 +182,4 @@ let program p =
   let funs = { Hept_mapfold.defaults
                with eq = eq; block = block } in
   let p, _ = Hept_mapfold.program_it funs ([],[]) p in
-    { p with p_types = !state_type_dec_list @ p.p_types }
+    { p with p_desc = !state_type_dec_list @ p.p_desc }

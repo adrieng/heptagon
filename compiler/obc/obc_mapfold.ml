@@ -13,25 +13,24 @@ open Global_mapfold
 open Obc
 
 type 'a obc_it_funs = {
-  exp:        'a obc_it_funs -> 'a -> Obc.exp -> Obc.exp * 'a;
-  edesc:      'a obc_it_funs -> 'a -> Obc.exp_desc -> Obc.exp_desc * 'a;
-  lhs:        'a obc_it_funs -> 'a -> Obc.pattern -> Obc.pattern * 'a;
-  lhsdesc:    'a obc_it_funs -> 'a -> Obc.pat_desc -> Obc.pat_desc * 'a;
-  act:        'a obc_it_funs -> 'a -> Obc.act -> Obc.act * 'a;
-  block:      'a obc_it_funs -> 'a -> Obc.block -> Obc.block * 'a;
-  var_dec:    'a obc_it_funs -> 'a -> Obc.var_dec -> Obc.var_dec * 'a;
-  var_decs:   'a obc_it_funs -> 'a -> Obc.var_dec list
-                                   -> Obc.var_dec list * 'a;
-  obj_dec:    'a obc_it_funs -> 'a -> Obc.obj_dec -> Obc.obj_dec * 'a;
-  obj_decs:   'a obc_it_funs -> 'a -> Obc.obj_dec list
-                                   -> Obc.obj_dec list * 'a;
-  method_def: 'a obc_it_funs -> 'a -> Obc.method_def -> Obc.method_def * 'a;
-  class_def:  'a obc_it_funs -> 'a -> Obc.class_def -> Obc.class_def * 'a;
-  const_dec:  'a obc_it_funs -> 'a -> Obc.const_dec -> Obc.const_dec * 'a;
-  type_dec:   'a obc_it_funs -> 'a -> Obc.type_dec -> Obc.type_dec * 'a;
-  tdesc:      'a obc_it_funs -> 'a -> Obc.tdesc -> Obc.tdesc * 'a;
-  program:    'a obc_it_funs -> 'a -> Obc.program -> Obc.program * 'a;
-  global_funs:'a Global_mapfold.global_it_funs }
+  exp:          'a obc_it_funs -> 'a -> Obc.exp -> Obc.exp * 'a;
+  edesc:        'a obc_it_funs -> 'a -> Obc.exp_desc -> Obc.exp_desc * 'a;
+  lhs:          'a obc_it_funs -> 'a -> Obc.pattern -> Obc.pattern * 'a;
+  lhsdesc:      'a obc_it_funs -> 'a -> Obc.pat_desc -> Obc.pat_desc * 'a;
+  act:          'a obc_it_funs -> 'a -> Obc.act -> Obc.act * 'a;
+  block:        'a obc_it_funs -> 'a -> Obc.block -> Obc.block * 'a;
+  var_dec:      'a obc_it_funs -> 'a -> Obc.var_dec -> Obc.var_dec * 'a;
+  var_decs:     'a obc_it_funs -> 'a -> Obc.var_dec list -> Obc.var_dec list * 'a;
+  obj_dec:      'a obc_it_funs -> 'a -> Obc.obj_dec -> Obc.obj_dec * 'a;
+  obj_decs:     'a obc_it_funs -> 'a -> Obc.obj_dec list -> Obc.obj_dec list * 'a;
+  method_def:   'a obc_it_funs -> 'a -> Obc.method_def -> Obc.method_def * 'a;
+  class_def:    'a obc_it_funs -> 'a -> Obc.class_def -> Obc.class_def * 'a;
+  const_dec:    'a obc_it_funs -> 'a -> Obc.const_dec -> Obc.const_dec * 'a;
+  type_dec:     'a obc_it_funs -> 'a -> Obc.type_dec -> Obc.type_dec * 'a;
+  tdesc:        'a obc_it_funs -> 'a -> Obc.tdesc -> Obc.tdesc * 'a;
+  program:      'a obc_it_funs -> 'a -> Obc.program -> Obc.program * 'a;
+	program_desc: 'a obc_it_funs -> 'a -> Obc.program_desc -> Obc.program_desc * 'a;
+  global_funs:  'a Global_mapfold.global_it_funs }
 
 
 let rec exp_it funs acc e = funs.exp funs acc e
@@ -186,11 +185,16 @@ and tdesc funs acc td = match td with
 
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
-  let td_list, acc = mapfold (type_dec_it funs) acc p.p_types in
-  let cd_list, acc = mapfold (const_dec_it funs) acc p.p_consts in
-  let nd_list, acc = mapfold (class_def_it funs) acc p.p_classes in
-  { p with p_types = td_list; p_consts = cd_list; p_classes = nd_list }, acc
+  let p_desc, acc = mapfold (program_desc_it funs) acc p.p_desc in
+  { p with p_desc = p_desc }, acc
 
+and program_desc_it funs acc pd =
+  try funs.program_desc funs acc pd
+  with Fallback -> program_desc funs acc pd
+and program_desc funs acc pd = match pd with
+	| Pconst cd -> let cd, acc = const_dec_it funs acc cd in Pconst cd, acc
+	| Ptype td -> let td, acc = type_dec_it funs acc td in Ptype td, acc
+	| Pclass n -> let n, acc = class_def_it funs acc n in Pclass n, acc
 
 let defaults = {
   lhs = lhs;
@@ -209,4 +213,5 @@ let defaults = {
   type_dec = type_dec;
   tdesc = tdesc;
   program = program;
+	program_desc = program_desc;
   global_funs = Global_mapfold.defaults }

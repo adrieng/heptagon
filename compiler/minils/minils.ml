@@ -138,9 +138,12 @@ type program = {
   p_modname : modul;
   p_format_version : string;
   p_opened : modul list;
-  p_types  : type_dec list;
-  p_nodes  : node_dec list;
-  p_consts : const_dec list }
+  p_desc  : program_desc list }
+
+and program_desc =
+	| Pnode of node_dec
+	| Pconst of const_dec
+	| Ptype of type_dec
 
 (*Helper functions to build the AST*)
 

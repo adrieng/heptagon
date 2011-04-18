@@ -110,8 +110,11 @@ type class_def =
 
 type program =
     { p_modname : modul;
-      p_opened : modul list;
-      p_types : type_dec list;
-      p_consts : const_dec list;
-      p_classes  : class_def list; }
+      p_opened  : modul list;
+      p_desc    : program_desc list }
+
+and program_desc =
+	| Pclass of class_def
+	| Pconst of const_dec
+	| Ptype of type_dec
 

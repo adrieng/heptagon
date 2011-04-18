@@ -23,21 +23,18 @@ open Initial
 
 let build_anon, find_anon =
   let anon_nodes = ref QualEnv.empty in
-
   let build_anon nodes =
-    let build env nd =
-      if Itfusion.is_anon_node nd.Minils.n_name then
-        QualEnv.add nd.Minils.n_name nd env
-      else
-        env
+    let build env nd = match nd with
+			| Minils.Pnode nd ->
+          if Itfusion.is_anon_node nd.Minils.n_name
+          then QualEnv.add nd.Minils.n_name nd env
+          else env
+			| _ -> env
     in
-      anon_nodes := List.fold_left build QualEnv.empty nodes
+    anon_nodes := List.fold_left build QualEnv.empty nodes
   in
-
-  let find_anon qn =
-    QualEnv.find qn !anon_nodes
-  in
-    build_anon, find_anon
+  let find_anon qn = QualEnv.find qn !anon_nodes in
+  build_anon, find_anon
 
 let var_from_name map x =
   begin try
@@ -642,17 +639,19 @@ let translate_const_def { Minils.c_name = name; Minils.c_value = se;
     c_type = ty;
     c_loc = loc }
 
-let program { Minils.p_modname = p_modname; Minils.p_opened = p_module_list;
-              Minils.p_types = p_type_list;
-              Minils.p_nodes = p_node_list; Minils.p_consts = p_const_list } =
-  build_anon p_node_list;
-  (* dont't translate anonymous nodes, they will be inlined *)
-  let p_nodes_list = List.filter
-    (fun nd -> not (Itfusion.is_anon_node nd.Minils.n_name)) p_node_list in
+let program { Minils.p_modname = p_modname; Minils.p_opened = p_o; Minils.p_desc = pd; } =
+  build_anon pd;
+  
+  let program_desc pd acc = match pd with
+		| Minils.Pnode n when not (Itfusion.is_anon_node n.Minils.n_name) ->
+			  Pclass (translate_node n) :: acc
+    (* dont't translate anonymous nodes, they will be inlined TODO ?? inline obc code hein ?*)
+	  | Minils.Pnode n -> acc
+		| Minils.Ptype t -> Ptype (translate_ty_def t) :: acc
+		| Minils.Pconst c -> Pconst (translate_const_def c) :: acc
+	in
+	let p_desc = List.fold_right program_desc [] pd in
   { p_modname = p_modname;
     p_opened = p_module_list;
-    p_types = List.map translate_ty_def p_type_list;
-    p_consts = List.map translate_const_def p_const_list;
-    p_classes = List.map translate_node p_nodes_list; }
-
+    p_desc = p_desc }
 

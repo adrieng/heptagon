@@ -15,65 +15,34 @@ open Hept_parsetree
 
 type 'a hept_it_funs = {
   ty : 'a hept_it_funs -> 'a -> Hept_parsetree.ty -> Hept_parsetree.ty * 'a;
-  static_exp :
-    'a hept_it_funs -> 'a -> Hept_parsetree.static_exp -> static_exp * 'a;
-  static_exp_desc :
-    'a hept_it_funs -> 'a -> Hept_parsetree.static_exp_desc ->
-    Hept_parsetree.static_exp_desc * 'a;
-  app:
-    'a hept_it_funs -> 'a -> Hept_parsetree.app -> Hept_parsetree.app * 'a;
-  block:
-    'a hept_it_funs -> 'a -> Hept_parsetree.block -> Hept_parsetree.block * 'a;
-  edesc:
-    'a hept_it_funs -> 'a -> Hept_parsetree.edesc -> Hept_parsetree.edesc * 'a;
-  eq:
-    'a hept_it_funs -> 'a -> Hept_parsetree.eq -> Hept_parsetree.eq * 'a;
-  eqdesc:
-    'a hept_it_funs -> 'a -> Hept_parsetree.eqdesc ->
-        Hept_parsetree.eqdesc * 'a;
-  escape_unless :
-    'a hept_it_funs -> 'a -> Hept_parsetree.escape ->
-        Hept_parsetree.escape * 'a;
-  escape_until:
-    'a hept_it_funs -> 'a -> Hept_parsetree.escape ->
-        Hept_parsetree.escape * 'a;
-  exp:
-    'a hept_it_funs -> 'a -> Hept_parsetree.exp -> Hept_parsetree.exp * 'a;
-  pat:
-    'a hept_it_funs -> 'a -> pat -> Hept_parsetree.pat * 'a;
-  present_handler:
-    'a hept_it_funs -> 'a -> Hept_parsetree.present_handler
-                          -> Hept_parsetree.present_handler * 'a;
-  state_handler:
-    'a hept_it_funs -> 'a -> Hept_parsetree.state_handler
-                          -> Hept_parsetree.state_handler * 'a;
-  switch_handler:
-    'a hept_it_funs -> 'a -> Hept_parsetree.switch_handler
-                          -> Hept_parsetree.switch_handler * 'a;
-  var_dec:
-    'a hept_it_funs -> 'a -> Hept_parsetree.var_dec ->
-        Hept_parsetree.var_dec * 'a;
-  last:
-    'a hept_it_funs -> 'a -> Hept_parsetree.last -> Hept_parsetree.last * 'a;
-  contract:
-    'a hept_it_funs -> 'a -> Hept_parsetree.contract ->
-        Hept_parsetree.contract * 'a;
-  node_dec:
-    'a hept_it_funs -> 'a -> Hept_parsetree.node_dec ->
-        Hept_parsetree.node_dec * 'a;
-  const_dec:
-    'a hept_it_funs -> 'a -> Hept_parsetree.const_dec ->
-        Hept_parsetree.const_dec * 'a;
-  type_dec:
-    'a hept_it_funs -> 'a -> Hept_parsetree.type_dec ->
-        Hept_parsetree.type_dec * 'a;
-  type_desc:
-    'a hept_it_funs -> 'a -> Hept_parsetree.type_desc ->
-        Hept_parsetree.type_desc * 'a;
-  program:
-    'a hept_it_funs -> 'a -> Hept_parsetree.program ->
-        Hept_parsetree.program * 'a; }
-
+  static_exp : 'a hept_it_funs -> 'a -> Hept_parsetree.static_exp -> static_exp * 'a;
+  static_exp_desc : 'a hept_it_funs -> 'a -> Hept_parsetree.static_exp_desc
+	                                        -> Hept_parsetree.static_exp_desc * 'a;
+  app: 'a hept_it_funs -> 'a -> Hept_parsetree.app -> Hept_parsetree.app * 'a;
+  block: 'a hept_it_funs -> 'a -> Hept_parsetree.block -> Hept_parsetree.block * 'a;
+  edesc: 'a hept_it_funs -> 'a -> Hept_parsetree.edesc -> Hept_parsetree.edesc * 'a;
+  eq: 'a hept_it_funs -> 'a -> Hept_parsetree.eq -> Hept_parsetree.eq * 'a;
+  eqdesc: 'a hept_it_funs -> 'a -> Hept_parsetree.eqdesc -> Hept_parsetree.eqdesc * 'a;
+  escape_unless : 'a hept_it_funs -> 'a -> Hept_parsetree.escape -> Hept_parsetree.escape * 'a;
+  escape_until: 'a hept_it_funs -> 'a -> Hept_parsetree.escape -> Hept_parsetree.escape * 'a;
+  exp: 'a hept_it_funs -> 'a -> Hept_parsetree.exp -> Hept_parsetree.exp * 'a;
+  pat: 'a hept_it_funs -> 'a -> pat -> Hept_parsetree.pat * 'a;
+  present_handler: 'a hept_it_funs -> 'a -> Hept_parsetree.present_handler
+                                         -> Hept_parsetree.present_handler * 'a;
+  state_handler: 'a hept_it_funs -> 'a -> Hept_parsetree.state_handler
+                                       -> Hept_parsetree.state_handler * 'a;
+  switch_handler: 'a hept_it_funs -> 'a -> Hept_parsetree.switch_handler
+                                        -> Hept_parsetree.switch_handler * 'a;
+  var_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.var_dec -> Hept_parsetree.var_dec * 'a;
+  last: 'a hept_it_funs -> 'a -> Hept_parsetree.last -> Hept_parsetree.last * 'a;
+  contract: 'a hept_it_funs -> 'a -> Hept_parsetree.contract -> Hept_parsetree.contract * 'a;
+  node_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.node_dec -> Hept_parsetree.node_dec * 'a;
+  const_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.const_dec -> Hept_parsetree.const_dec * 'a;
+  type_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.type_dec -> Hept_parsetree.type_dec * 'a;
+  type_desc: 'a hept_it_funs -> 'a -> Hept_parsetree.type_desc -> Hept_parsetree.type_desc * 'a;
+  program: 'a hept_it_funs -> 'a -> Hept_parsetree.program -> Hept_parsetree.program * 'a;
+  program_desc: 'a hept_it_funs -> 'a -> Hept_parsetree.program_desc
+	                                    -> Hept_parsetree.program_desc * 'a; }
 
 let rec static_exp_it funs acc se = funs.static_exp funs acc se
 and static_exp funs acc se =
@@ -329,11 +298,17 @@ and type_desc funs acc td = match td with
 
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
-  let cd_list, acc = mapfold (const_dec_it funs) acc p.p_consts in
-  let td_list, acc = mapfold (type_dec_it funs) acc p.p_types in
-  let nd_list, acc = mapfold (node_dec_it funs) acc p.p_nodes in
-  { p with p_consts = cd_list; p_nodes = nd_list; p_types = td_list }, acc
-
+	let p_desc, acc = mapfold (program_desc funs) acc p.p_desc in
+	{ p with p_desc = p_desc }, acc
+	
+and program_desc_it funs acc pd =
+	try funs.program_desc funs acc pd
+	with Fallback -> program_desc funs acc pd
+and program_desc funs acc pd = match pd with
+	| Pconst c -> let c, acc = const_dec_it funs acc c in Pconst c, acc
+  | Ptype t -> let t, acc = type_dec_it funs acc t in Ptype t, acc
+  | Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
+	| Ppragma _ -> pd, acc
 
 let defaults = {
   ty = ty;
@@ -358,7 +333,8 @@ let defaults = {
   const_dec = const_dec;
   type_dec = type_dec;
   type_desc = type_desc;
-  program = program }
+  program = program;
+	program_desc = program_desc }
 
 
 
@@ -385,5 +361,6 @@ let defaults_stop = {
   const_dec = stop;
   type_dec = stop;
   type_desc = stop;
-  program = stop }
+  program = stop;
+	program_desc = stop }
 

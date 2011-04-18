@@ -112,38 +112,20 @@ optsnlist(S,x) :
   |/* empty */    { None }
   | P v=x         { Some(v) }
 
-program:
-  | pragma_headers open_modules const_decs type_decs node_decs EOF
-      {{ p_modname = "";
-         p_pragmas = $1;
-         p_opened = List.rev $2;
-         p_types = $4;
-         p_nodes = $5;
-         p_consts = $3; }}
+program: o=list(opens) p=list(program_desc) { {p_modname = ""; p_opened = o; p_desc = p} }
+
+program_desc:
+  | p=PRAGMA     { Ppragma p }
+	| c=const_dec  { Pconst c }
+  | t=type_dec   { Ptype t }
+	| n=node_dec   { Pnode n }
 ;
 
-pragma_headers:
-  | /* empty */ { [] }
-  | PRAGMA pragma_headers { $1 :: $2 }
-
-open_modules:
-  | /* empty */ { [] }
-  | open_modules OPEN modul { $3 :: $1 }
-;
-
-const_decs:
-  | /* empty */        { [] }
-  | const_dec const_decs { $1 :: $2 }
-;
+opens: OPEN m=modul { m }
 
 const_dec:
-  | CONST IDENT COLON ty_ident EQUAL exp
-      { mk_const_dec $2 $4 $6 (Loc($startpos,$endpos)) }
-;
-
-type_decs:
-  | /* empty */        { [] }
-  | type_dec type_decs { $1 :: $2 }
+  | CONST x=IDENT COLON t=ty_ident EQUAL e=exp
+	    { mk_const_dec x t e (Loc($startpos,$endpos)) }
 ;
 
 type_dec:
@@ -175,11 +157,6 @@ label_ty_list:
 
 label_ty:
   IDENT COLON ty_ident { $1, $3 }
-;
-
-node_decs:
-  | /* empty */        {[]}
-  | node_dec node_decs {$1 :: $2}
 ;
 
 node_dec:

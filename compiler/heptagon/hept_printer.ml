@@ -57,12 +57,11 @@ let print_local_vars s ff l = match l with
 
 let print_const_dec ff c =
   if !Compiler_options.full_type_info then
-    fprintf ff "const %a : %a = %a"
+    fprintf ff "const %a : %a = %a@."
       print_qualname c.c_name print_type c.c_type print_static_exp c.c_value
   else
-    fprintf ff "const %a = %a"
-      print_qualname c.c_name print_static_exp c.c_value;
-  fprintf ff "@."
+    fprintf ff "const %a = %a@."
+      print_qualname c.c_name print_static_exp c.c_value
 
 
 let rec print_params ff l =
@@ -290,12 +289,15 @@ let print_node ff
     (print_local_vars "") nb.b_local
     print_eq_list nb.b_equs
 
+let print_pdesc ff pd = match pd with
+	| Pnode n -> print_node ff n
+	| Pconst c -> print_const_dec ff c
+	| Ptype t -> print_type_def ff t
+
 let print_open_module ff name = fprintf ff "open %s@." (modul_to_string name)
 
-let print oc { p_opened = po; p_types = pt; p_nodes = pn; p_consts = pc } =
+let print oc { p_opened = po; p_desc = pd; } =
   let ff = Format.formatter_of_out_channel oc in
   List.iter (print_open_module ff) po;
-  List.iter (print_const_dec ff) pc;
-  List.iter (print_type_def ff) pt;
-  List.iter (print_node ff) pn;
+  List.iter (print_pdesc ff) pd;
   fprintf ff "@?"

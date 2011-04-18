@@ -387,8 +387,8 @@ let typing_node { n_input = i_list; n_output = o_list;
   let h = typing_contract h contract in
     ignore (typing_block h b)
 
-let program ({ p_nodes = p_node_list } as p) =
-  List.iter typing_node p_node_list;
+let program ({ p_desc = pd } as p) =
+  List.iter (function Pnode n -> typing_node n | _ -> ()) pd;
   p
 
 

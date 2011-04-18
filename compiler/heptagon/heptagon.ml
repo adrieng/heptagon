@@ -161,9 +161,13 @@ type const_dec = {
 type program = {
   p_modname : modul;
   p_opened  : modul list;
-  p_types   : type_dec list;
-  p_nodes   : node_dec list;
-  p_consts  : const_dec list }
+	p_desc    : program_desc list }
+	
+and program_desc =
+	| Ptype of type_dec
+	| Pnode of node_dec
+	| Pconst of const_dec
+
 
 type signature = {
   sig_name      : qualname;

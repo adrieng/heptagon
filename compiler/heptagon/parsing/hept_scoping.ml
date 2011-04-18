@@ -454,15 +454,17 @@ let translate_const_dec cd =
     Heptagon.c_loc = cd.c_loc; }
 
 let translate_program p =
+	let translate_program_desc pd = match pd with
+		| Ppragma _ -> Misc.unsupported "pragma in scoping" 1
+		| Pconst c -> Heptagon.Pconst (translate_const_dec c)
+		| Ptype t -> Heptagon.Ptype (translate_typedec t)
+		| Pnode n -> Heptagon.Pnode (translate_node n)
+	in
   List.iter open_module p.p_opened;
-  let consts = List.map translate_const_dec p.p_consts in
-  let types = List.map translate_typedec p.p_types in
-  let nodes = List.map translate_node p.p_nodes in
+	let desc = List.map translate_program_desc p.p_desc in
   { Heptagon.p_modname = Names.modul_of_string p.p_modname;
     Heptagon.p_opened = p.p_opened;
-    Heptagon.p_types = types;
-    Heptagon.p_nodes = nodes;
-    Heptagon.p_consts = consts; }
+    Heptagon.p_desc = desc; }
 
 let translate_signature s =
   let translate_arg a =

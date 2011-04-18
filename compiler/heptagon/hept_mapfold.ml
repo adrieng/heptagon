@@ -72,6 +72,7 @@ type 'a hept_it_funs = {
   node_dec       : 'a hept_it_funs -> 'a -> node_dec -> node_dec * 'a;
   const_dec      : 'a hept_it_funs -> 'a -> const_dec -> const_dec * 'a;
   program        : 'a hept_it_funs -> 'a -> program -> program * 'a;
+	program_desc   : 'a hept_it_funs -> 'a -> program_desc -> program_desc * 'a;
   global_funs    : 'a Global_mapfold.global_it_funs }
 
 
@@ -276,10 +277,16 @@ and const_dec funs acc c =
 
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
-  let cd_list, acc = mapfold (const_dec_it funs) acc p.p_consts in
-  let nd_list, acc = mapfold (node_dec_it funs) acc p.p_nodes in
-  { p with p_consts = cd_list; p_nodes = nd_list }, acc
+  let p_desc, acc = mapfold (program_desc_it funs) acc p.p_desc in
+  { p with p_desc = p_desc }, acc
 
+and program_desc_it funs acc pd =
+  try funs.program_desc funs acc pd
+  with Fallback -> program_desc funs acc pd
+and program_desc funs acc pd = match pd with
+	| Pconst cd -> let cd, acc = const_dec_it funs acc cd in Pconst cd, acc
+	| Ptype td -> (*let td, acc = Global_mapfold.ty_it funs.global_funs acc td in Ptype td, acc*) pd, acc
+	| Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
 
 let defaults = {
   app = app;
@@ -300,6 +307,7 @@ let defaults = {
   node_dec = node_dec;
   const_dec = const_dec;
   program = program;
+	program_desc = program_desc;
   global_funs = Global_mapfold.defaults }
 
 
@@ -323,6 +331,7 @@ let defaults_stop = {
   node_dec = stop;
   const_dec = stop;
   program = stop;
+	program_desc = stop;
   global_funs = Global_mapfold.defaults_stop }
 
 
