@@ -113,6 +113,13 @@ let add context expected_kind e =
   else
     context, e
 
+let add_list context expected_kind e_list =
+  let aux context e =
+    let context, e = add context expected_kind e in
+      e, context
+  in
+    mapfold aux context e_list
+
 let rec translate kind context e =
   let context, e' = match e.e_desc with
     | Econst _
@@ -188,15 +195,17 @@ and ifthenelse context e e1 e2 e3 =
   let context, e2 = translate ExtValue context e2 in
   let context, e3 = translate ExtValue context e3 in
   let mk_ite_list e2_list e3_list =
-    let mk_ite e2 e3 =
+    let mk_ite e'2 e'3 =
       mk_exp ~loc:e.e_loc
-        (Eapp (mk_app Eifthenelse, [e1; e2; e3], None)) e2.e_ty
+        (Eapp (mk_app Eifthenelse, [e1; e'2; e'3], None)) e'2.e_ty
     in
     let e_list = List.map2 mk_ite e2_list e3_list in
       { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
   in
     if is_list e2 then (
-      context, mk_ite_list (e_to_e_list e2) (e_to_e_list e3)
+      let e2_list, context = add_list context ExtValue (e_to_e_list e2) in
+      let e3_list, context = add_list context ExtValue (e_to_e_list e3) in
+        context, mk_ite_list e2_list e3_list
     ) else
       context, { e with e_desc = Eapp (mk_app Eifthenelse, [e1; e2; e3], None) }
 
@@ -220,6 +229,8 @@ and merge context e x c_e_list =
             if is_list e then (
               let c_list = List.map (fun (t,_) -> t) c_e_list in
               let e_lists = List.map (fun (_,e) -> e_to_e_list e) c_e_list in
+              let e_lists, context =
+                mapfold (fun context e_list -> add_list context ExtValue e_list) context e_lists in
               let e_list = List.map (mk_merge x c_list) e_lists in
                 context, { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
             ) else

@@ -89,25 +89,23 @@ let translate_app app =
   mk_app ~params:app.Heptagon.a_params
     ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
 
-let rec translate_extvalue
-    { Heptagon.e_desc = desc; Heptagon.e_ty = ty;
-      Heptagon.e_loc = loc } =
-  let mk_extvalue = mk_extvalue ~loc:loc ~ty:ty in
-  match desc with
+let rec translate_extvalue e =
+  let mk_extvalue = mk_extvalue ~loc:e.Heptagon.e_loc ~ty:e.Heptagon.e_ty in
+  match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue (Wconst c)
     | Heptagon.Evar x -> mk_extvalue (Wvar x)
     | Heptagon.Ewhen (e, c, ce) ->
         (match ce.Heptagon.e_desc with
           | Heptagon.Evar x ->
               mk_extvalue (Wwhen (translate_extvalue e, c, x))
-          | _ -> Error.message loc Error.Enormalization)
+          | _ -> Error.message e.Heptagon.e_loc Error.Enormalization)
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield;
                       Heptagon.a_params = params }, e_list, reset) ->
         let e = assert_1 e_list in
         let f = assert_1 params in
         let fn = match f.se_desc with Sfield fn -> fn | _ -> assert false in
           mk_extvalue (Wfield (translate_extvalue e, fn))
-    | _ -> Error.message loc Error.Enormalization
+    | _ -> Error.message e.Heptagon.e_loc Error.Enormalization
 
 let translate
     ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
