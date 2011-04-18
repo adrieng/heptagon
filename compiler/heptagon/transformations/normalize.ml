@@ -101,12 +101,12 @@ let rec whenc context e c n =
 type kind = ExtValue | Any
 
 (** Creates an equation and add it to the context if necessary. *)
-let add context expected_kind ({ e_desc = de } as e) =
-  let up = match de, expected_kind with
+let add context expected_kind e =
+  let up = match e.e_desc, expected_kind with
     | (Evar _ | Eapp ({ a_op = Efield }, _, _) | Ewhen _
       | Eapp ({ a_op = Etuple }, _, _) | Econst _) , ExtValue -> false
     | _ , ExtValue -> true
-    | _ -> false in
+    | _ -> Format.printf "Not normalizing \n"; false in
   if up then
     let context, n = equation context e in
       context, { e with e_desc = n }
@@ -114,7 +114,7 @@ let add context expected_kind ({ e_desc = de } as e) =
     context, e
 
 let rec translate kind context e =
-  let context, e = match e.e_desc with
+  let context, e' = match e.e_desc with
     | Econst _
     | Evar _ -> context, e
     | Epre(v, e1) -> fby kind context e v e1
@@ -143,7 +143,7 @@ let rec translate kind context e =
                                              flatten_e_list e_list, reset) }
     | Elast _ | Efby _ ->
         Error.message e.e_loc Error.Eunsupported_language_construct
-  in add context kind e
+  in add context kind e'
 
 and translate_list kind context e_list =
   match e_list with
@@ -196,7 +196,7 @@ and ifthenelse context e e1 e2 e3 =
       { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
   in
     if is_list e2 then (
-      context, mk_ite_list (e_to_e_list e2) (e_to_e_list e2)
+      context, mk_ite_list (e_to_e_list e2) (e_to_e_list e3)
     ) else
       context, { e with e_desc = Eapp (mk_app Eifthenelse, [e1; e2; e3], None) }
 
@@ -244,13 +244,19 @@ and distribute ((d_list, eq_list) as context) eq pat e =
           dist_e_list pat_list e_list
       | Etuplepat(pat_list), Econst { se_desc = Stuple se_list } ->
           dist_e_list pat_list (exp_list_of_static_exp_list se_list)
-      | _ -> d_list, eq :: eq_list
+      | _ ->
+          let eq = { eq with eq_desc = Eeq(pat, e) } in
+            d_list,  eq :: eq_list
 
-and translate_eq context eq = match eq.eq_desc with
+and translate_eq ((d_list, eq_list) as context) eq = match eq.eq_desc with
   | Eeq (pat, e) ->
       let context, e = translate Any context e in
         distribute context eq pat e
-  | _ -> raise Errors.Fallback
+  | Eblock b ->
+      let v, eqs = translate_eq_list [] b.b_equs in
+      let eq = { eq with eq_desc = Eblock { b with b_local = v @ b.b_local; b_equs = eqs} } in
+        d_list, eq :: eq_list
+  | _ -> Misc.internal_error "normalize" 0
 
 and translate_eq_list d_list eq_list =
   List.fold_left
