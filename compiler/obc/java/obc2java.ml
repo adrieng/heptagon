@@ -213,7 +213,8 @@ let rec act_list param_env act_l acts =
         let acase = Aswitch (exp param_env e, List.map _c_b c_b_l) in
         acase::acts
     | Obc.Afor (v, se, se', b) ->
-        let afor = Afor (var_dec param_env v, static_exp param_env se, static_exp param_env se', block param_env b) in
+        let afor = Afor (var_dec param_env v,
+                        exp param_env se, exp param_env se', block param_env b) in
         afor::acts
     | Obc.Ablock b ->
         let ablock = Ablock (block param_env b) in

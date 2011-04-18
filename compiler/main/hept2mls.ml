@@ -27,6 +27,7 @@ struct
   type error =
     | Ereset_not_var
     | Eunsupported_language_construct
+    | Enormalization
 
   let message loc kind =
     begin match kind with
@@ -71,7 +72,7 @@ let rec translate_op = function
   | Heptagon.Eifthenelse -> Eifthenelse
   | Heptagon.Efun f -> Efun f
   | Heptagon.Enode f -> Enode f
-  | Heptagon.Efield -> Efield
+  | Heptagon.Efield -> assert false
   | Heptagon.Efield_update -> Efield_update
   | Heptagon.Earray_fill -> Earray_fill
   | Heptagon.Eselect -> Eselect
@@ -88,55 +89,55 @@ let translate_app app =
   mk_app ~params:app.Heptagon.a_params
     ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
 
-let translate_extvalue
+let rec translate_extvalue
     { Heptagon.e_desc = desc; Heptagon.e_ty = ty;
       Heptagon.e_loc = loc } =
   let mk_extvalue = mk_extvalue ~loc:loc ~ty:ty in
   match desc with
-    | Heptagon.Econst c ->
-        Env.const env (mk_extvalue (Wconst c))
-    | Heptagon.Evar x ->
-        Env.con env x (mk_extvalue (Wvar x))
+    | Heptagon.Econst c -> mk_extvalue (Wconst c)
+    | Heptagon.Evar x -> mk_extvalue (Wvar x)
     | Heptagon.Ewhen (e, c, ce) ->
         (match ce.Heptagon.e_desc with
           | Heptagon.Evar x ->
-              mk_exp (Wwhen (translate_ext_value e, c, x))
+              mk_extvalue (Wwhen (translate_extvalue e, c, x))
           | _ -> Error.message loc Error.Enormalization)
-    | Heptagon.Eapp({ a_op = Efield; a_params = params }, e_list, reset) ->
+    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield;
+                      Heptagon.a_params = params }, e_list, reset) ->
         let e = assert_1 e_list in
         let f = assert_1 params in
-        let fn = match f with Sfield fn -> fn | _ -> asssert false in
-          mk_extvalue (Wfield (translate_ext_value e, fn))
+        let fn = match f.se_desc with Sfield fn -> fn | _ -> assert false in
+          mk_extvalue (Wfield (translate_extvalue e, fn))
     | _ -> Error.message loc Error.Enormalization
 
 let translate
-    { Heptagon.e_desc = desc; Heptagon.e_ty = ty;
-      Heptagon.e_loc = loc } =
+    ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
+      Heptagon.e_loc = loc } as e) =
+  let mk_exp = mk_exp ~loc:loc in
   match desc with
     | Heptagon.Econst _
     | Heptagon.Evar _
     | Heptagon.Ewhen _
-    | Heptagon.Eapp({ a_op = Efield }, _, _) ->
+    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield }, _, _) ->
         let w = translate_extvalue e in
-          mk_exp ~loc:loc ~ty:ty (Eextvalue w)
+          mk_exp ty (Eextvalue w)
     | Heptagon.Epre(None, e) ->
-        mk_exp ~loc:loc ~ty:ty (Efby(None, translate_ext_value e))
+        mk_exp ty (Efby(None, translate_extvalue e))
     | Heptagon.Epre(Some c, e) ->
-        mk_exp ~loc:loc ~ty:ty (Efby(Some c, translate_extvalue e))
+        mk_exp ty (Efby(Some c, translate_extvalue e))
     | Heptagon.Efby ({ Heptagon.e_desc = Heptagon.Econst c }, e) ->
-        mk_exp ~loc:loc ~ty:ty (Efby(Some c, translate_extvalue e))
+        mk_exp ty (Efby(Some c, translate_extvalue e))
     | Heptagon.Estruct f_e_list ->
         let f_e_list = List.map
           (fun (f, e) -> (f, translate_extvalue e)) f_e_list in
-        mk_exp ~loc:loc ~ty:ty (Estruct f_e_list)
-    | Heptagon.Eapp({ a_op = Earrow }, _, _) ->
+        mk_exp ty (Estruct f_e_list)
+    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Earrow }, _, _) ->
          Error.message loc Error.Eunsupported_language_construct
     | Heptagon.Eapp(app, e_list, reset) ->
-        mk_exp ~loc:loc ~ty:ty (Eapp (translate_app app,
+        mk_exp ty (Eapp (translate_app app,
                                      List.map translate_extvalue e_list,
                                      translate_reset reset))
     | Heptagon.Eiterator(it, app, n, pe_list, e_list, reset) ->
-        mk_exp ~loc:loc ~ty:ty
+        mk_exp ty
           (Eiterator (translate_iterator_type it,
                     translate_app app, n,
                     List.map translate_extvalue pe_list,
@@ -148,7 +149,7 @@ let translate
     | Heptagon.Emerge (e, c_e_list) ->
         (match e.Heptagon.e_desc with
           | Heptagon.Evar x ->
-              mk_exp ~loc:loc ~ty:ty
+              mk_exp ty
                 (Emerge (x, List.map (fun (c,e)->c,
                   translate_extvalue e) c_e_list))
           | _ -> Error.message loc Error.Enormalization)
@@ -157,12 +158,12 @@ let rec translate_pat = function
   | Heptagon.Evarpat(n) -> Evarpat n
   | Heptagon.Etuplepat(l) -> Etuplepat (List.map translate_pat l)
 
-let rec translate_eq env
+let rec translate_eq
     { Heptagon.eq_desc = desc; Heptagon.eq_loc = loc } =
   match desc with
     | Heptagon.Eeq(p, e) ->
-        mk_equation ~loc:loc (translate_pat p) (translate env e)
-    | Heptagon.Eblock _ | Heptagon.Eswitch
+        mk_equation ~loc:loc (translate_pat p) (translate e)
+    | Heptagon.Eblock _ | Heptagon.Eswitch _
     | Heptagon.Epresent _ | Heptagon.Eautomaton _ | Heptagon.Ereset _ ->
         Error.message loc Error.Eunsupported_language_construct
 
@@ -183,11 +184,11 @@ let translate_contract contract =
 let node n =
   { n_name = n.Heptagon.n_name;
     n_stateful = n.Heptagon.n_stateful;
-    n_input = List.map translate_var n.Heptagon.n_inputs;
-    n_output = List.map translate_var n.Heptagon.n_outputs;
+    n_input = List.map translate_var n.Heptagon.n_input;
+    n_output = List.map translate_var n.Heptagon.n_output;
     n_contract = translate_contract n.Heptagon.n_contract;
-    n_local = List.map translate_var n.Heptagon.n_block.Heptagon.n_locals;
-    n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.n_equs;
+    n_local = List.map translate_var n.Heptagon.n_block.Heptagon.b_local;
+    n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
     n_params_constraints = n.Heptagon.n_params_constraints }

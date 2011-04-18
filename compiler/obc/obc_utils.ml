@@ -25,6 +25,12 @@ let mk_exp ?(loc=no_location) ty desc =
 let mk_exp_int ?(loc=no_location) desc =
   { e_desc = desc; e_ty = Initial.tint; e_loc = loc }
 
+let mk_exp_static_int ?(loc=no_location) se =
+  mk_exp_int ~loc:loc (Econst se)
+
+let mk_exp_const_int ?(loc=no_location) i =
+  mk_exp_int ~loc:loc (Econst (Initial.mk_static_int i))
+
 let mk_exp_bool ?(loc=no_location) desc =
   { e_desc = desc; e_ty = Initial.tbool; e_loc = loc }
 
@@ -49,7 +55,7 @@ let mk_block ?(locals=[]) eq_list =
     b_body = eq_list }
 
 let mk_ifthenelse cond true_act false_act =
-  Acase (cond, [ Initial.ptrue, mk_block [true_act]; Initial.pfalse, mk_block [false_act] ])
+  Acase (cond, [ Initial.ptrue, mk_block true_act; Initial.pfalse, mk_block false_act ])
 
 let rec var_name x =
   match x.pat_desc with

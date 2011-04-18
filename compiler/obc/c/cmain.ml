@@ -112,7 +112,7 @@ let main_def_of_class_def cd =
         let iter_var = fresh "i" in
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = read_lhs_of_ty lhs ty in
-        ([Cfor (iter_var, 0, int_of_static_exp n, reads)], bufs)
+        ([Cfor (iter_var, Cconst (Ccint 0), cexpr_of_static_exp n, reads)], bufs)
     | _ ->
         let rec mk_prompt lhs = match lhs with
           | Cvar vn -> (vn, [])
@@ -149,7 +149,7 @@ let main_def_of_class_def cd =
         let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
         let (reads, bufs) = write_lhs_of_ty lhs ty in
         ([cprint_string "[ ";
-          Cfor (iter_var, 0, int_of_static_exp n, reads);
+          Cfor (iter_var, Cconst (Ccint 0), cexpr_of_static_exp n, reads);
           cprint_string "]"], bufs)
     | _ ->
         let varn = fresh "buf" in

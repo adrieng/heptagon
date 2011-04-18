@@ -33,11 +33,29 @@ let error_message loc = function
 
 let typ_of_name h x = Env.find x h
 
+let rec typing_extvalue h w =
+  let ct = match w.w_desc with
+    | Wconst se -> skeleton (fresh_clock ()) se.se_ty
+    | Wvar x -> Ck (typ_of_name h x)
+    | Wwhen (w1, c, n) ->
+        let ck_n = typ_of_name h n in
+        (expect h (skeleton ck_n w1.w_ty) w1; skeleton (Con (ck_n, c, n)) w1.w_ty)
+    | Wfield (w1, f) ->
+        let ck = fresh_clock () in
+        let ct = skeleton ck w1.w_ty in (expect h (Ck ck) w1; ct)
+  in (w.w_ck <- ckofct ct; ct)
+
+and expect h expected_ty e =
+  let actual_ty = typing_extvalue h e in
+  try unify actual_ty expected_ty
+  with
+  | Unify -> eprintf "%a : " print_extvalue e;
+      error_message e.w_loc (Etypeclash (actual_ty, expected_ty))
+
 let rec typing h e =
   let ct = match e.e_desc with
-    | Econst se -> skeleton (fresh_clock ()) se.se_ty
-    | Evar x -> Ck (typ_of_name h x)
-    | Efby (_, e) -> typing h e
+    | Eextvalue w -> typing_extvalue h w
+    | Efby (_, e) -> typing_extvalue h e
     | Eapp({a_op = op}, args, r) ->
         let ck = match r with
           | None -> fresh_clock ()
@@ -52,72 +70,66 @@ let rec typing h e =
           List.iter (expect h (Ck ck)) pargs;
           List.iter (expect h (Ck ck)) args;
           skeleton ck e.e_ty
-    | Ewhen (e, c, n) ->
-        let ck_n = typ_of_name h n in
-        (expect h (skeleton ck_n e.e_ty) e; skeleton (Con (ck_n, c, n)) e.e_ty)
     | Emerge (n, c_e_list) ->
         let ck_c = typ_of_name h n in
         (typing_c_e_list h ck_c n c_e_list; skeleton ck_c e.e_ty)
     | Estruct l ->
         let ck = fresh_clock () in
         (List.iter
-           (fun (_, e) -> let ct = skeleton ck e.e_ty in expect h ct e) l;
+           (fun (_, e) -> let ct = skeleton ck e.w_ty in expect h ct e) l;
          Ck ck)
   in (e.e_ck <- ckofct ct; ct)
 
 and typing_op op e_list h e ck = match op with
   | (Eequal | Efun _ | Enode _) -> (*LA*)
-      List.iter (fun e -> expect h (skeleton ck e.e_ty) e) e_list;
+      List.iter (fun e -> expect h (skeleton ck e.w_ty) e) e_list;
       skeleton ck e.e_ty
   | Etuple ->
-      Cprod (List.map (typing h) e_list)
+      Cprod (List.map (typing_extvalue h) e_list)
   | Eifthenelse ->
       let e1, e2, e3 = assert_3 e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; expect h ct e3; ct)
-  | Efield ->
-      let e1 = assert_1 e_list in
-      let ct = skeleton ck e1.e_ty in (expect h (Ck ck) e1; ct)
   | Efield_update ->
       let e1, e2 = assert_2 e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; ct)
   | Earray ->
       (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
-  | Earray_fill -> let e = assert_1 e_list in typing h e
-  | Eselect -> let e = assert_1 e_list in typing h e
+  | Earray_fill -> let e = assert_1 e_list in typing_extvalue h e
+  | Eselect -> let e = assert_1 e_list in typing_extvalue h e
   | Eselect_dyn -> (* TODO defe not treated ? *)
       let e1, defe, idx = assert_2min e_list in
-      let ct = skeleton ck e1.e_ty
+      let ct = skeleton ck e1.w_ty
       in (List.iter (expect h ct) (e1::defe::idx); ct)
   | Eselect_trunc ->
       let e1, idx = assert_1min e_list in
-      let ct = skeleton ck e1.e_ty
+      let ct = skeleton ck e1.w_ty
       in (List.iter (expect h ct) (e1::idx); ct)
   | Eupdate ->
       let e1, e2, idx = assert_2min e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; List.iter (expect h ct) idx; ct)
-  | Eselect_slice -> let e = assert_1 e_list in typing h e
+  | Eselect_slice -> let e = assert_1 e_list in typing_extvalue h e
   | Econcat ->
       let e1, e2 = assert_2 e_list in
       let ct = skeleton ck e.e_ty
       in (expect h (Ck ck) e1; expect h ct e2; ct)
-
-and expect h expected_ty e =
-  let actual_ty = typing h e in
-  try unify actual_ty expected_ty
-  with
-  | Unify -> eprintf "%a : " print_exp e;
-      error_message e.e_loc (Etypeclash (actual_ty, expected_ty))
 
 and typing_c_e_list h ck_c n c_e_list =
   let rec typrec =
     function
       | [] -> ()
       | (c, e) :: c_e_list ->
-          (expect h (skeleton (Con (ck_c, c, n)) e.e_ty) e; typrec c_e_list)
+          (expect h (skeleton (Con (ck_c, c, n)) e.w_ty) e; typrec c_e_list)
   in typrec c_e_list
+
+let expect_exp h expected_ty e =
+  let actual_ty = typing h e in
+  try unify actual_ty expected_ty
+  with
+  | Unify -> eprintf "%a : " print_exp e;
+      error_message e.e_loc (Etypeclash (actual_ty, expected_ty))
 
 let rec typing_pat h =
   function
@@ -127,7 +139,7 @@ let rec typing_pat h =
 let typing_eqs h eq_list = (*TODO FIXME*)
   let typing_eq { eq_lhs = pat; eq_rhs = e } =
     let ty_pat = typing_pat h pat in
-    (try expect h ty_pat e with
+    (try expect_exp h ty_pat e with
       | Errors.Error -> (* DEBUG *)
           Format.eprintf "Complete expression: %a@\nClock pattern: %a@."
             Mls_printer.print_exp e
@@ -153,8 +165,8 @@ let typing_contract h contract base =
         (* assumption *)
         (* property *)
         typing_eqs h' eq_list;
-        expect h' (Ck base) e_a;
-        expect h' (Ck base) e_g;
+        expect_exp h' (Ck base) e_a;
+        expect_exp h' (Ck base) e_g;
         sbuild h c_list base
 
 let typing_node ({ n_input = i_list;

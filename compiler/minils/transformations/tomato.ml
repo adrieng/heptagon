@@ -20,6 +20,8 @@ open Clocks
 open Pp_tools
 open Mls_compare
 
+(** TODO: remove all references to Introvars *)
+
 let debug_do = Introvars.debug_do
 
 module IntMap = Map.Make(struct
@@ -159,7 +161,7 @@ struct
 end
 
 let empty_var = Idents.gen_var "tomato" "EMPTY"
-let dummy_exp = mk_exp ~ty:Types.Tunit (Evar empty_var)
+let dummy_exp = mk_exp Types.Tinvalid (Evar empty_var)
 
 let exp_of_ident ~ty vi = mk_exp ~ty:ty (Evar vi)
 and ident_of_exp { e_desc = e_d; } = match e_d with
@@ -536,9 +538,9 @@ let node nd =
     Format.printf
       "TOMATO: factored out %d expressions.@."
       (orig_eq_count - List.length nd.n_equs);
-
+(*
   let nd = Singletonvars.node nd in
-
+*)
   debug_do (fun _ ->
               Format.printf "Factored node:@\n%a@\n" print_node nd);
 
@@ -556,5 +558,7 @@ let node nd =
 
 let program p = { p with p_nodes = List.map node p.p_nodes; }
 
+(*
 let tomato_checks p =
   Checkpass.add_checks "tomato" node !Compiler_options.tomato_check p
+*)

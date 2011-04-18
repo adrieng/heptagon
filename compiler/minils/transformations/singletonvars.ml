@@ -44,14 +44,14 @@ struct
     let uses = find_uses ident use_count in
     match uses with
       | Clock | Reset -> false
-      | Var i -> i < 2 || (match e.e_desc with Econst _ -> true | _ -> false)
+      | Var i -> i < 2 || (match e.e_desc with Eextvalue { w_desc = Wconst _ } -> true | _ -> false)
 
   let edesc funs use_counts edesc =
     let (edesc, use_counts) = Mls_mapfold.edesc funs use_counts edesc in
     let use_counts = match edesc with
-      | Evar vi -> add_var_use vi use_counts
+      | Eextvalue { w_desc = Wvar vi } -> add_var_use vi use_counts
       | Emerge (vi, _) -> add_clock_use vi use_counts
-      | Ewhen (_, _, vi) -> add_clock_use vi use_counts
+      | Eextvalue { w_desc = Wwhen (_, _, vi) } -> add_clock_use vi use_counts
       | Eapp (_, _, Some vi) | Eiterator (_, _, _, _, _, Some vi) ->
           add_reset_use vi use_counts
       | _ -> use_counts in
@@ -67,7 +67,7 @@ struct
   let exp funs subst exp =
     let (exp, subst) = Mls_mapfold.exp funs subst exp in
     match exp.e_desc with
-      | Evar vi -> (try Env.find vi subst with Not_found -> exp), subst
+      | Eextvalue { w_desc = Wvar vi } -> (try Env.find vi subst with Not_found -> exp), subst
       | _ -> (exp, subst)
 
   let inline_node subst nd =

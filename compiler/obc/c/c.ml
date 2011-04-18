@@ -95,7 +95,7 @@ and cstm =
   | Cif of cexpr * cstm list * cstm list (** Alternative *)
   | Cswitch of cexpr * (string * cstm list) list (** Case/switch over an enum.*)
   | Cwhile of cexpr * cstm list (** While loop. *)
-  | Cfor of string * int * int * cstm list (** For loop. int <= string < int *)
+  | Cfor of string * cexpr * cexpr * cstm list (** For loop. int <= string < int *)
   | Creturn of cexpr (** Ends a procedure/function by returning an expression.*)
 
 (** C type declarations ; will {b always} correspond to a typedef in emitted
@@ -221,9 +221,9 @@ and pp_cstm fmt stm = match stm with
       fprintf fmt "@[<v>@[<v 2>if (%a) {%a@]@ @[<v 2>} else {%a@]@ }@]"
         pp_cexpr c pp_cstm_list t pp_cstm_list e
   | Cfor(x, lower, upper, e) ->
-      fprintf fmt "@[<v>@[<v 2>for (int %a = %d; %a < %d; ++%a) {%a@]@ }@]"
-        pp_string x  lower  pp_string x
-        upper  pp_string x  pp_cstm_list e
+      fprintf fmt "@[<v>@[<v 2>for (int %a = %a; %a < %a; ++%a) {%a@]@ }@]"
+        pp_string x  pp_cexpr lower  pp_string x
+        pp_cexpr upper  pp_string x  pp_cstm_list e
   | Cwhile (e, b) ->
       fprintf fmt "@[<v>@[<v 2>while (%a) {%a@]@ }@]" pp_cexpr e pp_cstm_list b
   | Csblock cb -> pp_cblock fmt cb

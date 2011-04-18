@@ -41,7 +41,7 @@ let write_obc_file p =
 let no_conf () = ()
 
 let targets = [ "c",(Obc_no_params Cmain.program, no_conf);
-                "java", (Obc Java_main.program, java_conf);
+                "java", (Obc Java_main.program, Java_main.java_conf);
                 "obc", (Obc write_obc_file, no_conf);
                 "obc_np", (Obc_no_params write_obc_file, no_conf);
                 "epo", (Minils write_object_file, no_conf) ]
@@ -67,7 +67,7 @@ let generate_target p s =
     | Obc_no_params convert_fun ->
         let p_list = Callgraph.program p in
         let o_list = List.map Mls2obc.program p_list in
-        let o_list = List.map Obc_compiler.program o_list in
+        let o_list = List.map Obc_compiler.compile_program o_list in
           List.iter convert_fun o_list
 
 let load_conf () =

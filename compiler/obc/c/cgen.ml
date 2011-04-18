@@ -141,7 +141,7 @@ let rec copy_array src dest bounds =
     | [] -> [Caffect (dest, Clhs src)]
     | n::bounds ->
         let x = gen_symbol () in
-        [Cfor(x, 0, n,
+        [Cfor(x, Cconst (Ccint 0), n,
               copy_array (Carray (src, Clhs (Cvar x)))
                 (Carray (dest, Clhs (Cvar x))) bounds)]
 
@@ -208,7 +208,7 @@ and create_affect_stm dest src ty =
            | Carraylit l -> create_affect_lit dest l bty
            | Clhs src ->
                let x = gen_symbol () in
-               [Cfor(x, 0, n,
+               [Cfor(x, Cconst (Ccint 0), Cconst (Ccint n),
                      create_affect_stm (Carray (dest, Clhs (Cvar x)))
                        (Clhs (Carray (src, Clhs (Cvar x)))) bty)]
            | _ -> assert false (** TODO: add missing cases eg for records *)
@@ -420,7 +420,7 @@ let rec create_affect_const var_env dest c =
         create_affect_const var_env dest se
     | Sarray_power(c, n) ->
         let x = gen_symbol () in
-        [Cfor(x, 0, int_of_static_exp n,
+        [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp n,
               create_affect_const var_env (Carray (dest, Clhs (Cvar x))) c)]
     | Sarray cl ->
         let create_affect_idx c (i, affl) =
@@ -471,8 +471,8 @@ let rec cstm_of_act var_env obj_env act =
     (** For composition of statements, just recursively apply our
         translation function on sub-statements. *)
     | Afor ({ v_ident = x }, i1, i2, act) ->
-        [Cfor(name x, int_of_static_exp i1,
-              int_of_static_exp i2, cstm_of_act_list var_env obj_env act)]
+        [Cfor(name x, cexpr_of_exp var_env i1,
+              cexpr_of_exp var_env i2, cstm_of_act_list var_env obj_env act)]
 
     (** Special case for x = 0^n^n...*)
     | Aassgn (vn, { e_desc = Econst c }) ->
@@ -503,7 +503,7 @@ let rec cstm_of_act var_env obj_env act =
                let x = gen_symbol () in
                let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
                let elt = [Caddrof( Carray(field, Clhs (Cvar x)) )] in
-                 [Cfor(x, 0, int_of_static_exp size,
+                 [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp size,
                        [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
         )
 

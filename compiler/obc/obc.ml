@@ -69,7 +69,7 @@ type act =
   | Aassgn of pattern * exp
   | Acall of pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
-  | Afor of var_dec * static_exp * static_exp * block
+  | Afor of var_dec * exp * exp * block
   | Ablock of block
 
 and block =

@@ -137,16 +137,6 @@ let rec translate kind context e =
         let context, e_list = translate_list ExtValue context e_list in
           context, { e with e_desc = Eapp(app, flatten_e_list e_list, r) }
     | Eiterator (it, app, n, pe_list, e_list, reset) ->
-      (* normalize anonymous nodes *)
-      (match app.a_op with
-        | Enode f when Itfusion.is_anon_node f ->
-            let nd = Itfusion.find_anon_node f in
-            let d_list, eq_list =
-              translate_eq_list nd.n_block.b_local nd.n_block.b_equs in
-            let b = { nd.n_block with b_local = d_list; b_equs = eq_list } in
-            let nd = { nd with n_block = b } in
-              Itfusion.replace_anon_node f nd
-        | _ -> () );
         let context, pe_list = translate_list ExtValue context pe_list in
         let context, e_list = translate_list ExtValue context e_list in
         context, { e with e_desc = Eiterator(it, app, n, flatten_e_list pe_list,

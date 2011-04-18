@@ -20,19 +20,16 @@ let compile_program p =
   (* Check that the dataflow code is well initialized *)
   (*let p = silent_pass "Initialization check" !init Init.program p in *)
 
-  (* Iterator fusion *)
-  let p = pass "Iterator fusion" !do_iterator_fusion Itfusion.program  p pp in
-
   (* Automata minimization *)
+(*
   let p =
     let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
     pass "Automata minimization" call_tomato Tomato.program p pp in
-
+*)
+(** TODO: re enable when ported to the new AST
   let p =
     pass "Automata minimization checks" true Tomato.tomato_checks p pp in
-
-  (* Normalization to maximize opportunities *)
-  let p = pass "Normalization" true Normalize.program p pp in
+*)
 
   (* Scheduling *)
   let p = pass "Scheduling" true Schedule.program p pp in

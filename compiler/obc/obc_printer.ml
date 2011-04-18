@@ -90,8 +90,8 @@ let rec print_act ff a =
     | Afor(x, i1, i2, act_list) ->
         fprintf ff "@[<v>@[<v 2>for %a = %a to %a {@  %a @]@,}@]"
           print_vd x
-          print_static_exp i1
-          print_static_exp i2
+          print_exp i1
+          print_exp i2
           print_block act_list
     | Acall (var_list, o, meth, es) ->
         fprintf ff "@[<2>%a%a.%a(%a)@]"

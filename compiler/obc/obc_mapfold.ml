@@ -104,8 +104,8 @@ and act funs acc a = match a with
       let c_b_list, acc = mapfold aux acc c_b_list in
         Acase(x, c_b_list), acc
   | Afor(x, idx1, idx2, b) ->
-      let idx1, acc = static_exp_it funs.global_funs acc idx1 in
-      let idx2, acc = static_exp_it funs.global_funs acc idx2 in
+      let idx1, acc = exp_it funs acc idx1 in
+      let idx2, acc = exp_it funs acc idx2 in
       let b, acc = block_it funs acc b in
         Afor(x, idx1, idx2, b), acc
   | Ablock b ->

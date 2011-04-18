@@ -67,7 +67,7 @@ and cstm =
   | Cif of cexpr * cstm list * cstm list (** Alternative *)
   | Cswitch of cexpr * (string * cstm list) list (** Case/switch over an enum.*)
   | Cwhile of cexpr * cstm list (** While loop. *)
-  | Cfor of string * int * int * cstm list (** For loop. int <= string < int *)
+  | Cfor of string * cexpr * cexpr * cstm list (** For loop. int <= string < int *)
   | Creturn of cexpr (** Ends a procedure/function by returning an expression.*)
 
 (** C type declarations ; will {b always} correspond to a typedef in emitted

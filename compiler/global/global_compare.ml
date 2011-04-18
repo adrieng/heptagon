@@ -101,12 +101,8 @@ and type_compare ty1 ty2 = match ty1, ty2 with
   | Tarray (ty1, se1), Tarray (ty2, se2) ->
       let cr = type_compare ty1 ty2 in
       if cr <> 0 then cr else static_exp_compare se1 se2
-  | Tunit, Tunit -> 0
+  | Tinvalid, _ | _, Tinvalid -> -1
   | Tprod _, _ -> 1
   | Tid _, Tprod _ -> -1
   | Tid _, _ -> 1
   | Tarray _, (Tprod _ | Tid _) -> -1
-  | Tarray _, _ -> 1
-  | Tmutable _, (Tprod _ | Tid _ | Tarray _) -> -1
-  | Tmutable _, _ -> 1
-  | Tunit, _ -> -1

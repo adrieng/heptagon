@@ -141,4 +141,5 @@ let edesc funs acc ed =
 let program p =
   let funs = { Hept_mapfold.defaults with edesc = edesc } in
   let p, _ = Hept_mapfold.program_it funs false p in
-    p
+  let added_nodes = QualEnv.fold (fun _ nd l -> nd::l) !anon_nodes [] in
+    { p with p_nodes = added_nodes @ p.p_nodes }

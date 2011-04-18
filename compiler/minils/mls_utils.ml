@@ -56,7 +56,7 @@ let is_record_type ty = match ty with
 
 let is_op = function
   | { qual = Pervasives; name = _ } -> true | _ -> false
-(*
+
 module Vars =
 struct
   let add x acc = if List.mem x acc then acc else x :: acc
@@ -65,10 +65,22 @@ struct
     | Evarpat x -> x :: acc
     | Etuplepat pat_list -> List.fold_left vars_pat acc pat_list
 
+  let def acc { eq_lhs = pat } = vars_pat acc pat
+
   let rec vars_ck acc = function
     | Con(_, _, n) -> add n acc
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
+
+  let read_extvalue read_funs (is_left, acc_init) w =
+    (* recursive call *)
+    let _,(_, acc) = Mls_mapfold.extvalue read_funs (is_left, acc_init) w in
+    let acc = match w.w_desc with
+      | Wvar x | Wwhen(_, _, x) ->
+          add x acc
+      | _ -> acc
+    in
+      w, (is_left, vars_ck acc w.w_ck)
 
   let read_exp read_funs (is_left, acc_init) e =
     (* recursive call *)
@@ -76,14 +88,14 @@ struct
 
     (* special cases *)
     let acc = match e.e_desc with
-      | Evar x | Emerge(x,_) | Ewhen(_, _, x)
+      | Emerge(x,_)
       | Eapp(_, _, Some x) | Eiterator (_, _, _, _, _, Some x) ->
           add x acc
       | Efby(_, e) ->
           if is_left then
             (* do not consider variables to the right
                of the fby, only clocks*)
-            vars_ck acc_init e.e_ck
+            vars_ck acc_init e.w_ck
           else acc
       | _ -> acc
     in
@@ -92,7 +104,16 @@ struct
   let read_exp is_left acc e =
     let _, (_, acc) =
       Mls_mapfold.exp_it
-        { Mls_mapfold.defaults with Mls_mapfold.exp = read_exp }
+        { Mls_mapfold.defaults with
+          Mls_mapfold.exp = read_exp;
+          Mls_mapfold.extvalue = read_extvalue }
+        (is_left, acc) e in
+    acc
+
+  let read_extvalue is_left acc e =
+    let _, (_, acc) =
+      Mls_mapfold.extvalue_it
+        { Mls_mapfold.defaults with Mls_mapfold.extvalue = read_extvalue }
         (is_left, acc) e in
     acc
 
@@ -100,20 +121,18 @@ struct
     | [] -> []
     | y :: l -> if x = y then l else y :: remove x l
 
-  let def acc { eq_lhs = pat } = vars_pat acc pat
-
   let read is_left { eq_lhs = pat; eq_rhs = e } = match pat, e.e_desc with
     |  Evarpat(n), Efby(_, e1) ->
          if is_left
-         then remove n (read_exp is_left [] e1)
-         else read_exp is_left [] e1
+         then remove n (read_extvalue is_left [] e1)
+         else read_extvalue is_left [] e1
     | _ -> read_exp is_left [] e
 
   let antidep { eq_rhs = e } =
     match e.e_desc with Efby _ -> true | _ -> false
 
   let clock { eq_rhs = e } = match e.e_desc with
-    | Emerge(_, (_, e) :: _) -> e.e_ck
+    | Emerge(_, (_, e) :: _) -> e.w_ck
     | _ -> e.e_ck
 
   let head ck =
@@ -166,4 +185,4 @@ module AllDep = Dep.Make
    end)
 
 let eq_find id = List.find (fun eq -> List.mem id (Vars.def [] eq))
-*)
+
