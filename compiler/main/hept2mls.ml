@@ -82,7 +82,7 @@ let rec translate_op = function
   | Heptagon.Eselect_trunc -> Eselect_trunc
   | Heptagon.Econcat -> Econcat
   | Heptagon.Earray -> Earray
-  | Heptagon.Etuple -> Etuple
+  | Heptagon.Etuple -> Misc.internal_error "hept2mls Etuple" 1
   | Heptagon.Earrow -> assert false
 
 let translate_app app =

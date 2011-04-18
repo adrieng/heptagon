@@ -19,7 +19,7 @@ open Clocks
 
 (** Warning: Whenever Minils ast is modified,
     minils_format_version should be incremented. *)
-let minils_format_version = "1"
+let minils_format_version = "2"
 
 type iterator_type =
   | Imap
@@ -78,7 +78,6 @@ and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
 
 and op =
   | Eequal             (** arg1 = arg2 *)
-  | Etuple             (** (args) *)
   | Efun of fun_name   (** "Stateless" longname <<a_params>> (args) reset r *)
   | Enode of fun_name  (** "Stateful" longname <<a_params>> (args) reset r *)
   | Eifthenelse        (** if arg1 then arg2 else arg3 *)
@@ -183,9 +182,3 @@ let mk_const_dec id ty e loc =
 let mk_app ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }
 
-(** The modname field has to be set when known, TODO LG : format_version *)
-let mk_program o n t c =
-  { p_modname = Module ""; p_format_version = "";
-    p_opened = o; p_nodes = n; p_types = t; p_consts = c }
-
-let void = mk_exp (Types.Tprod []) (Eapp (mk_app Etuple, [], None))

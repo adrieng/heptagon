@@ -13,7 +13,7 @@ open Misc
 (** Error Kind *)
 type err_kind = | Enot_static_exp
 
-let err_message ?(exp=void) ?(loc=exp.e_loc) = function
+let err_message exp ?(loc=exp.e_loc) = function
   | Enot_static_exp ->
       Format.eprintf "%aThe expression %a should be a static_exp.@."
         print_location loc
@@ -24,8 +24,8 @@ let rec static_exp_of_exp e =
   match e.e_desc with
     | Eextvalue w -> (match w.w_desc with
       | Wconst se -> se
-      | _ -> err_message ~exp:e Enot_static_exp)
-    | _ -> err_message ~exp:e Enot_static_exp
+      | _ -> err_message e Enot_static_exp)
+    | _ -> err_message e Enot_static_exp
 
 (** @return the list of bounds of an array type*)
 let rec bounds_list ty =

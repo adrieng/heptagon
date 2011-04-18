@@ -84,8 +84,6 @@ and typing_op op e_list h e ck = match op with
   | (Eequal | Efun _ | Enode _) -> (*LA*)
       List.iter (fun e -> expect h (skeleton ck e.w_ty) e) e_list;
       skeleton ck e.e_ty
-  | Etuple ->
-      Cprod (List.map (typing_extvalue h) e_list)
   | Eifthenelse ->
       let e1, e2, e3 = assert_3 e_list in
       let ct = skeleton ck e.e_ty

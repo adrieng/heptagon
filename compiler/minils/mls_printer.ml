@@ -130,7 +130,6 @@ and print_app ff (app, args) =
     | Eequal ->
       let e1, e2 = assert_2 args in
         fprintf ff "@[<2>%a@ = %a@]" print_extvalue e1  print_extvalue e2
-    | Etuple -> print_w_tuple ff args
     | Efun f | Enode f ->
         fprintf ff "@[%a@,%a@,%a@]"
           print_qualname f print_params app.a_params  print_w_tuple args
