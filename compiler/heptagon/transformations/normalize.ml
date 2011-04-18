@@ -238,18 +238,23 @@ and merge context e x c_e_list =
 (* applies distribution rules *)
 (* [(p1,...,pn) = (e1,...,en)] into [p1 = e1;...;pn = en] *)
 and distribute ((d_list, eq_list) as context) eq pat e =
-  match pat, e.e_desc with
-    | Etuplepat(pat_list), Eapp({ a_op = Etuple }, e_list, _) ->
-        let mk_eq pat e =
-          mk_equation ~stateful:eq.eq_stateful (Eeq (pat, e))
-        in
-        let dis context eq = match eq.eq_desc with
-          | Eeq (pat, e) -> distribute context eq pat e
-          | _ -> assert false
-        in
-        let eqs = List.map2 mk_eq pat_list e_list in
-          List.fold_left dis context eqs
-    | _ -> d_list, eq :: eq_list
+  let dist_e_list pat_list e_list =
+    let mk_eq pat e =
+      mk_equation ~stateful:eq.eq_stateful (Eeq (pat, e))
+    in
+    let dis context eq = match eq.eq_desc with
+      | Eeq (pat, e) -> distribute context eq pat e
+      | _ -> assert false
+    in
+    let eqs = List.map2 mk_eq pat_list e_list in
+      List.fold_left dis context eqs
+  in
+    match pat, e.e_desc with
+      | Etuplepat(pat_list), Eapp({ a_op = Etuple }, e_list, _) ->
+          dist_e_list pat_list e_list
+      | Etuplepat(pat_list), Econst { se_desc = Stuple se_list } ->
+          dist_e_list pat_list (exp_list_of_static_exp_list se_list)
+      | _ -> d_list, eq :: eq_list
 
 and translate_eq context eq = match eq.eq_desc with
   | Eeq (pat, e) ->
