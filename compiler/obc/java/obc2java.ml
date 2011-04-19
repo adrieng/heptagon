@@ -399,9 +399,16 @@ let const_dec_list cd_l = match cd_l with
 
 
 let program p =
-  let classes = const_dec_list p.p_consts in
-  let classes = type_dec_list classes p.p_types in
-  let p = class_def_list classes p.p_classes in
+	let rec program_descs pds (ns,cs,ts) = match pds with
+		| [] -> ns,cs,ts
+		| Obc.Pclass n :: pds -> program_descs pds (n::ns,cs,ts)
+		| Obc.Pconst c :: pds -> program_descs pds (ns,c::cs,ts)
+		| Obc.Ptype t :: pds -> program_descs pds (ns,cs,t::ts)
+	in
+	let ns,cs,ts = program_descs p.p_desc ([],[],[]) in
+  let classes = const_dec_list cs in
+  let classes = type_dec_list classes ts in
+  let p = class_def_list classes ns in
   get_classes()@p
 
 
