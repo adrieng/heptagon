@@ -43,13 +43,14 @@ let fresh_for size body =
 
  (* current module is not translated to keep track,
     there is no issue since printed without the qualifier *)
-let rec translate_modul m = match m with
+let rec translate_modul m = m (*match m with
   | Pervasives
   | LocalModule -> m
   | _ when m = g_env.current_mod -> m
   | Module n ->  Module (String.lowercase n)
   | QualModule { qual = q; name = n} ->
       QualModule { qual = translate_modul q; name = String.lowercase n }
+*)
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
 let translate_const_name { qual = m; name = n } =
