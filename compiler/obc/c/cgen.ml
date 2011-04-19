@@ -737,7 +737,8 @@ let cdefs_and_cdecls_of_type_decl otd =
 (** [cfile_list_of_oprog oprog] translates the Obc program [oprog] to a list of
     C source and header files. *)
 let cfile_list_of_oprog_ty_decls name oprog =
-  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_type_decl oprog.p_types in
+  let types = Obc_utils.program_types oprog in
+  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_type_decl types in
 
   let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
   let filename_types = name ^ "_types" in
@@ -751,8 +752,9 @@ let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
   let dependencies = List.map modul_to_string dependencies in
 
+  let classes = program_classes prog in
   let (decls, defs) =
-    List.split (List.map cdefs_and_cdecls_of_class_def prog.p_classes) in
+    List.split (List.map cdefs_and_cdecls_of_class_def classes) in
   let decls = List.concat decls
   and defs = List.concat defs in
 

@@ -195,3 +195,17 @@ let rec copy_array pass dest src = match dest.l_ty with
   | _ ->
       Aassgn(dest, Epattern src)
 *)
+
+let program_types p =
+  let add_type acc pd = match pd with
+    | Ptype ty -> ty :: acc
+    | _ -> acc
+  in
+    List.fold_left add_type [] p.p_desc
+
+let program_classes p =
+  let add_class acc pd = match pd with
+    | Pclass cd -> cd :: acc
+    | _ -> acc
+  in
+    List.fold_left add_class [] p.p_desc

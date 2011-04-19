@@ -106,7 +106,7 @@ let add context expected_kind e =
     | (Evar _ | Eapp ({ a_op = Efield }, _, _) | Ewhen _
       | Eapp ({ a_op = Etuple }, _, _) | Econst _) , ExtValue -> false
     | _ , ExtValue -> true
-    | _ -> Format.printf "Not normalizing \n"; false in
+    | _ -> false in
   if up then
     let context, n = equation context e in
       context, { e with e_desc = n }
