@@ -3,15 +3,14 @@ open Signature
 open Java
 open Java_printer
 
-let java_conf () =
-  Compiler_options.do_scalarize := true
-
 (** returns the vd and the pat of a fresh ident from [name] *)
 let mk_var ty name =
   let id = Idents.gen_var "java_main" name in
   mk_var_dec id ty, Pvar id
 
 let program p =
+  (*Scalarize*)
+  let p = Compiler_utils.pass "Scalarize" true Scalarize.program p Obc_compiler.pp in
   let p_java = Obc2java.program p in
   let dir = Compiler_utils.build_path "java" in
   Compiler_utils.ensure_dir dir;
@@ -30,11 +29,13 @@ let program p =
     in
     let main_methode =
       let vd_step, pat_step = mk_var Tint "step" in
-      let vd_args, pat_args = mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
+      let vd_args, pat_args =
+        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
       let body =
         let vd_main, e_main, q_main, ty_main =
           let q_main = !Compiler_options.simulation_node |> Modules.qualify_value in (*qual*)
-          let ty_main = (Modules.find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
+          let ty_main =
+            (Modules.find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
           let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
           let id = Idents.gen_var "java_main" "main" in
           mk_var_dec id (Tclass q_main), Eval (Pvar id), q_main, ty_main

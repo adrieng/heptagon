@@ -181,8 +181,8 @@ let print_const_dec ff c =
 
 let print_prog_desc ff pd = match pd with
   | Pclass cd -> print_class_def ff cd; fprintf ff "@\n@\n"
-	| Pconst cd -> print_const_dec ff cd
-	| Ptype td -> print_type_def ff td
+  | Pconst cd -> print_const_dec ff cd
+  | Ptype td -> print_type_def ff td
 
 let print_prog ff { p_opened = modules; p_desc = descs } =
   List.iter (print_open_module ff) modules;

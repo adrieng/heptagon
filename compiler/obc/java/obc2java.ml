@@ -15,8 +15,8 @@
        Obc.Oobj and Oarray are simply Pvar and Parray_elem
        Obc.Types_alias are dereferenced since no simple type alias is possible in Java *)
 
-(** Requires scalar Obc : [p = e] when [e] is an array is understand as a copy of the reference,
-  not a copy of the array. *)
+(** Requires scalarized Obc :
+  [p = e] when [e] is an array is understand as a copy of the reference, not a copy of the array.*)
 
 open Format
 open Misc
@@ -34,19 +34,22 @@ let add_classe, get_classes =
    (fun c -> extra_classes := c :: !extra_classes)
   ,(fun () -> !extra_classes)
 
-(** fresh Afor from 0 to [size] with [body] a function from [var_ident] (the iterator) to [act] list *)
+(** fresh Afor from 0 to [size]
+    with [body] a function from [var_ident] (the iterator) to [act] list *)
 let fresh_for size body =
   let i = Idents.gen_var "obc2java" "i" in
   let id = mk_var_dec i Tint in
   Afor (id, Sint 0, size, mk_block (body i))
 
- (* current module is not translated to keep track, there is no issue since printed without the qualifier *)
+ (* current module is not translated to keep track,
+    there is no issue since printed without the qualifier *)
 let rec translate_modul m = match m with
   | Pervasives
   | LocalModule -> m
   | _ when m = g_env.current_mod -> m
   | Module n ->  Module (String.lowercase n)
-  | QualModule { qual = q; name = n} -> QualModule { qual = translate_modul q; name = String.lowercase n }
+  | QualModule { qual = q; name = n} ->
+      QualModule { qual = translate_modul q; name = String.lowercase n }
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
 let translate_const_name { qual = m; name = n } =
@@ -68,7 +71,8 @@ let qualname_to_package_classe q =
 (** Create a fresh class qual from a name *)
 let fresh_classe n = Modules.fresh_value "obc2java" n |> qualname_to_package_classe
 
-(** a [Module.Constr] of an [Module.enum] type becomes a [module.Enum.CONSTR] of the [module.Enum] class *)
+(** a [Module.Constr] of an [Module.enum] type
+    becomes a [module.Enum.CONSTR] of the [module.Enum] class *)
 let translate_constructor_name_2 q q_ty =
   let classe = qualname_to_class_name q_ty in
   { qual = QualModule classe; name = String.uppercase q.name }
@@ -109,7 +113,8 @@ let rec static_exp param_env se = match se.Types.se_desc with
       in
       let se_l = Misc.repeat_list (static_exp param_env see) pow in
       Enew_array (ty param_env se.Types.se_ty, se_l)
-  | Types.Sarray se_l -> Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
+  | Types.Sarray se_l ->
+      Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
 
@@ -270,7 +275,8 @@ let class_def_list classes cd_l =
     in
     (* [reset] is the reset method of the class,
        [reset_mems] is the block to reset the members of the class
-         without call to the reset method of inner instances, it retains [this.x = 0] but not [this.I.reset()] *)
+         without call to the reset method of inner instances,
+         it retains [this.x = 0] but not [this.I.reset()] *)
     let reset, reset_mems =
       try (* When there exist a reset method *)
         let oreset = find_reset_method cd in
@@ -280,7 +286,8 @@ let class_def_list classes cd_l =
       with Not_found -> (* stub reset method *)
         mk_methode (mk_block []) "reset", mk_block []
     in
-     (* [obj_env] gives the type of an [obj_ident], needed in async because we change the classe for async obj *)
+     (* [obj_env] gives the type of an [obj_ident],
+        needed in async because we change the classe for async obj *)
     let constructeur, obj_env =
       let obj_env = (* Mapping between Obc class and Java class, useful at least with asyncs *)
         let aux obj_env od =
@@ -299,7 +306,9 @@ let class_def_list classes cd_l =
             | Some size ->
                 let size = static_exp param_env size in
                 let t = Idents.Env.find od.o_ident obj_env in
-                let assgn_elem i = [ Aassgn (Parray_elem (Pthis od.o_ident, mk_var i), Enew (t, params)) ] in
+                let assgn_elem i =
+                  [ Aassgn (Parray_elem (Pthis od.o_ident, mk_var i), Enew (t, params)) ]
+                in
                 (Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size), [])))
                  :: (fresh_for size assgn_elem)
                  :: acts
@@ -324,7 +333,9 @@ let class_def_list classes cd_l =
       in mk_methode ~args:vds_params body (shortname class_name), obj_env
     in
     let fields =
-      let mem_to_field fields vd = (mk_field ~protection:Pprotected (ty param_env vd.v_type) vd.v_ident) :: fields in
+      let mem_to_field fields vd =
+        (mk_field ~protection:Pprotected (ty param_env vd.v_type) vd.v_ident) :: fields
+      in
       let obj_to_field fields od =
         let jty = match od.o_size with
           | None -> Idents.Env.find od.o_ident obj_env
@@ -340,10 +351,11 @@ let class_def_list classes cd_l =
       let ostep = find_step_method cd in
       let vd_output = var_dec_list param_env ostep.m_outputs in
       let return_ty = ostep.m_outputs |> vd_list_to_type |> (ty param_env) in
-      let return_act = Areturn (match vd_output with
-                                 | [] -> Evoid
-                                 | [vd] -> Eval (Pvar vd.vd_ident)
-                                 | vd_l -> Enew (return_ty, List.map (fun vd -> Eval (Pvar vd.vd_ident)) vd_l))
+      let return_act =
+        Areturn (match vd_output with
+                  | [] -> Evoid
+                  | [vd] -> Eval (Pvar vd.vd_ident)
+                  | vd_l -> Enew (return_ty, List.map (fun vd -> Eval (Pvar vd.vd_ident)) vd_l))
       in
       let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
       mk_methode ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
@@ -371,7 +383,8 @@ let type_dec_list classes td_l =
             let jty = ty param_env oty in
             let field = Idents.ident_of_name (translate_field_name oname) in
             (* [translate_field_name] will give the right result anywhere it is used,
-            since the [ident_of_name] will keep it as it is unique in the class, see [Idents.enter_node classe_name] *)
+            since the [ident_of_name] will keep it as it is unique in the class,
+            see [Idents.enter_node classe_name] *)
             mk_field jty field
           in
           (mk_classe ~fields:(List.map mk_field_jfield f_l) classe_name) :: classes
@@ -387,7 +400,8 @@ let const_dec_list cd_l = match cd_l with
       let param_env = NamesEnv.empty in
       let mk_const_field { Obc.c_name = oname ; Obc.c_value = ovalue; Obc.c_type = otype } =
         let name = oname |> translate_const_name |> shortname |> Idents.ident_of_name in
-        (* name should always keep the shortname unchanged since we enter a special node free of existing variables *)
+        (* name should always keep the shortname unchanged
+            since we enter a special node free of existing variables *)
         (* thus [translate_const_name] will gives the right result anywhere it is used. *)
         let value = Some (static_exp param_env ovalue) in
         let t = ty param_env otype in
@@ -399,13 +413,13 @@ let const_dec_list cd_l = match cd_l with
 
 
 let program p =
-	let rec program_descs pds (ns,cs,ts) = match pds with
-		| [] -> ns,cs,ts
-		| Obc.Pclass n :: pds -> program_descs pds (n::ns,cs,ts)
-		| Obc.Pconst c :: pds -> program_descs pds (ns,c::cs,ts)
-		| Obc.Ptype t :: pds -> program_descs pds (ns,cs,t::ts)
-	in
-	let ns,cs,ts = program_descs p.p_desc ([],[],[]) in
+  let rec program_descs pds (ns,cs,ts) = match pds with
+    | [] -> ns,cs,ts
+    | Obc.Pclass n :: pds -> program_descs pds (n::ns,cs,ts)
+    | Obc.Pconst c :: pds -> program_descs pds (ns,c::cs,ts)
+    | Obc.Ptype t :: pds -> program_descs pds (ns,cs,t::ts)
+  in
+  let ns,cs,ts = program_descs p.p_desc ([],[],[]) in
   let classes = const_dec_list cs in
   let classes = type_dec_list classes ts in
   let p = class_def_list classes ns in

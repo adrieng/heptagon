@@ -1097,9 +1097,9 @@ let typing_const_dec cd =
     { cd with c_value = se; c_type = ty }
 
 let program p =
-	let program_desc pd = match pd with
-		| Pnode n -> Pnode (node n)
-		| Pconst c -> Pconst (typing_const_dec c)
-		| _ -> pd
-	in
-	{ p with p_desc = List.map program_desc p.p_desc }
+  let program_desc pd = match pd with
+    | Pnode n -> Pnode (node n)
+    | Pconst c -> Pconst (typing_const_dec c)
+    | _ -> pd
+  in
+  { p with p_desc = List.map program_desc p.p_desc }

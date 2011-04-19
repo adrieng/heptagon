@@ -227,11 +227,11 @@ let print_node ff { n_name = n; n_input = ni; n_output = no;
 
 let print oc { p_opened = pm; p_desc = pd } =
   let print_program_desc ff pd = match pd with
-		| Pnode n -> print_node ff n
-		| Ptype t -> print_type_dec ff t
-		| Pconst c -> print_const_dec ff c
-	in
-	let ff = formatter_of_out_channel oc in
+    | Pnode n -> print_node ff n
+    | Ptype t -> print_type_dec ff t
+    | Pconst c -> print_const_dec ff c
+  in
+  let ff = formatter_of_out_channel oc in
   List.iter (print_open_module ff) pm;
   List.iter (print_program_desc ff) pd;
   fprintf ff "@?"

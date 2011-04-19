@@ -141,9 +141,9 @@ type program = {
   p_desc  : program_desc list }
 
 and program_desc =
-	| Pnode of node_dec
-	| Pconst of const_dec
-	| Ptype of type_dec
+  | Pnode of node_dec
+  | Pconst of const_dec
+  | Ptype of type_dec
 
 (*Helper functions to build the AST*)
 

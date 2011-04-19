@@ -116,16 +116,16 @@ program: o=list(opens) p=list(program_desc) EOF { {p_modname = ""; p_opened = o;
 
 program_desc:
   | p=PRAGMA     { Ppragma p }
-	| c=const_dec  { Pconst c }
+  | c=const_dec  { Pconst c }
   | t=type_dec   { Ptype t }
-	| n=node_dec   { Pnode n }
+  | n=node_dec   { Pnode n }
 ;
 
 opens: OPEN m=modul { m }
 
 const_dec:
   | CONST x=IDENT COLON t=ty_ident EQUAL e=exp
-	    { mk_const_dec x t e (Loc($startpos,$endpos)) }
+      { mk_const_dec x t e (Loc($startpos,$endpos)) }
 ;
 
 type_dec:

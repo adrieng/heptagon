@@ -33,7 +33,7 @@ type 'a mls_it_funs = {
   type_dec:      'a mls_it_funs -> 'a -> Minils.type_dec -> Minils.type_dec * 'a;
   tdesc:         'a mls_it_funs -> 'a -> Minils.tdesc -> Minils.tdesc * 'a;
   program:       'a mls_it_funs -> 'a -> Minils.program -> Minils.program * 'a;
-	program_desc:  'a mls_it_funs -> 'a -> Minils.program_desc -> Minils.program_desc * 'a;
+  program_desc:  'a mls_it_funs -> 'a -> Minils.program_desc -> Minils.program_desc * 'a;
   global_funs:   'a Global_mapfold.global_it_funs }
 
 
@@ -197,9 +197,9 @@ and program_desc_it funs acc pd =
   try funs.program_desc funs acc pd
   with Fallback -> program_desc funs acc pd
 and program_desc funs acc pd = match pd with
-	| Pconst cd -> let cd, acc = const_dec_it funs acc cd in Pconst cd, acc
-	| Ptype td -> let td, acc = type_dec_it funs acc td in Ptype td, acc
-	| Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
+  | Pconst cd -> let cd, acc = const_dec_it funs acc cd in Pconst cd, acc
+  | Ptype td -> let td, acc = type_dec_it funs acc td in Ptype td, acc
+  | Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
 
 
 let defaults = {
@@ -219,5 +219,5 @@ let defaults = {
   type_dec = type_dec;
   tdesc = tdesc;
   program = program;
-	program_desc = program_desc;
+  program_desc = program_desc;
   global_funs = Global_mapfold.defaults }

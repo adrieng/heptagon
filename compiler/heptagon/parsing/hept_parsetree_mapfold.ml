@@ -17,7 +17,7 @@ type 'a hept_it_funs = {
   ty : 'a hept_it_funs -> 'a -> Hept_parsetree.ty -> Hept_parsetree.ty * 'a;
   static_exp : 'a hept_it_funs -> 'a -> Hept_parsetree.static_exp -> static_exp * 'a;
   static_exp_desc : 'a hept_it_funs -> 'a -> Hept_parsetree.static_exp_desc
-	                                        -> Hept_parsetree.static_exp_desc * 'a;
+                                          -> Hept_parsetree.static_exp_desc * 'a;
   app: 'a hept_it_funs -> 'a -> Hept_parsetree.app -> Hept_parsetree.app * 'a;
   block: 'a hept_it_funs -> 'a -> Hept_parsetree.block -> Hept_parsetree.block * 'a;
   edesc: 'a hept_it_funs -> 'a -> Hept_parsetree.edesc -> Hept_parsetree.edesc * 'a;
@@ -42,7 +42,7 @@ type 'a hept_it_funs = {
   type_desc: 'a hept_it_funs -> 'a -> Hept_parsetree.type_desc -> Hept_parsetree.type_desc * 'a;
   program: 'a hept_it_funs -> 'a -> Hept_parsetree.program -> Hept_parsetree.program * 'a;
   program_desc: 'a hept_it_funs -> 'a -> Hept_parsetree.program_desc
-	                                    -> Hept_parsetree.program_desc * 'a; }
+                                      -> Hept_parsetree.program_desc * 'a; }
 
 let rec static_exp_it funs acc se = funs.static_exp funs acc se
 and static_exp funs acc se =
@@ -298,17 +298,17 @@ and type_desc funs acc td = match td with
 
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
-	let p_desc, acc = mapfold (program_desc funs) acc p.p_desc in
-	{ p with p_desc = p_desc }, acc
-	
+  let p_desc, acc = mapfold (program_desc funs) acc p.p_desc in
+  { p with p_desc = p_desc }, acc
+
 and program_desc_it funs acc pd =
-	try funs.program_desc funs acc pd
-	with Fallback -> program_desc funs acc pd
+  try funs.program_desc funs acc pd
+  with Fallback -> program_desc funs acc pd
 and program_desc funs acc pd = match pd with
-	| Pconst c -> let c, acc = const_dec_it funs acc c in Pconst c, acc
+  | Pconst c -> let c, acc = const_dec_it funs acc c in Pconst c, acc
   | Ptype t -> let t, acc = type_dec_it funs acc t in Ptype t, acc
   | Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
-	| Ppragma _ -> pd, acc
+  | Ppragma _ -> pd, acc
 
 let defaults = {
   ty = ty;
@@ -334,7 +334,7 @@ let defaults = {
   type_dec = type_dec;
   type_desc = type_desc;
   program = program;
-	program_desc = program_desc }
+  program_desc = program_desc }
 
 
 
@@ -362,5 +362,5 @@ let defaults_stop = {
   type_dec = stop;
   type_desc = stop;
   program = stop;
-	program_desc = stop }
+  program_desc = stop }
 

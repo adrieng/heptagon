@@ -180,13 +180,13 @@ type const_dec =
 
 type program =
   { p_modname : dec_name;
-	  p_opened : module_name list;
+    p_opened : module_name list;
     p_desc : program_desc list }
 
 and program_desc =
-	| Ppragma of (var_name * string)
-	| Ptype of type_dec
-	| Pconst of const_dec
+  | Ppragma of (var_name * string)
+  | Ptype of type_dec
+  | Pconst of const_dec
   | Pnode of node_dec
 
 

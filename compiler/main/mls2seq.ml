@@ -41,7 +41,7 @@ let write_obc_file p =
 let no_conf () = ()
 
 let targets = [ "c",(Obc_no_params Cmain.program, no_conf);
-                "java", (Obc Java_main.program, Java_main.java_conf);
+                "java", (Obc Java_main.program, no_conf);
                 "obc", (Obc write_obc_file, no_conf);
                 "obc_np", (Obc_no_params write_obc_file, no_conf);
                 "epo", (Minils write_object_file, no_conf) ]

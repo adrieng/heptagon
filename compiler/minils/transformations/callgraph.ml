@@ -193,12 +193,12 @@ struct
       List.map (node_dec_instance n) (get_node_instances n.n_name)
 
     let program p =
-			let program_desc pd acc = match pd with
-				| Pnode n ->
-					  let nds = node_dec n in
-				    List.fold_left (fun pds n -> Pnode n :: pds) acc nds
-				| _ -> pd :: acc
-			in
+      let program_desc pd acc = match pd with
+        | Pnode n ->
+            let nds = node_dec n in
+            List.fold_left (fun pds n -> Pnode n :: pds) acc nds
+        | _ -> pd :: acc
+      in
       { p with p_desc = List.fold_right program_desc p.p_desc [] }
   end
 
@@ -259,9 +259,9 @@ let node_by_longname node =
   try
     let p = ModulEnv.find node.qual info.opened in
     let n = List.find (function Pnode n -> n.n_name = node | _ -> false) p.p_desc in
-		(match n with
-			| Pnode n -> n
-			| _ -> Misc.internal_error "callgraph" 0)
+    (match n with
+      | Pnode n -> n
+      | _ -> Misc.internal_error "callgraph" 0)
   with
     Not_found -> Error.message no_location (Error.Enode_unbound node)
 
@@ -318,7 +318,7 @@ let program p =
   (* Find the nodes without static parameters *)
   let main_nodes = List.filter (function Pnode n -> is_empty n.n_params | _ -> false) p.p_desc in
   let main_nodes = List.map (function Pnode n -> n.n_name, []
-	                            | _ -> Misc.internal_error "callgraph" 0) main_nodes in
+                              | _ -> Misc.internal_error "callgraph" 0) main_nodes in
   info.opened <- ModulEnv.add p.p_modname p ModulEnv.empty;
   (* Creates the list of instances starting from these nodes *)
   List.iter call_node main_nodes;

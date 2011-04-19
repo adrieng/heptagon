@@ -290,9 +290,9 @@ let print_node ff
     print_eq_list nb.b_equs
 
 let print_pdesc ff pd = match pd with
-	| Pnode n -> print_node ff n
-	| Pconst c -> print_const_dec ff c
-	| Ptype t -> print_type_def ff t
+  | Pnode n -> print_node ff n
+  | Pconst c -> print_const_dec ff c
+  | Ptype t -> print_type_def ff t
 
 let print_open_module ff name = fprintf ff "open %s@." (modul_to_string name)
 

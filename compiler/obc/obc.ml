@@ -114,7 +114,7 @@ type program =
       p_desc    : program_desc list }
 
 and program_desc =
-	| Pclass of class_def
-	| Pconst of const_dec
-	| Ptype of type_dec
+  | Pclass of class_def
+  | Pconst of const_dec
+  | Ptype of type_dec
 
