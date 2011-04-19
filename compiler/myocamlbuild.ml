@@ -9,6 +9,9 @@ let df = function
       (* Tell ocamlbuild about Menhir library (needed by --table). *)
       ocaml_lib ~extern:true ~dir:"+menhirLib" "menhirLib";
 
+      (* Tell ocamlbuild about the ocamlgraph library. *)
+      ocaml_lib ~extern:true ~dir:"+ocamlgraph" "ocamlgraph";
+
       (* Menhir does not come with menhirLib.cmxa so we have to manually by-pass
          OCamlbuild's built-in logic and add the needed menhirLib.cmxa. *)
       flag ["link"; "native"; "link_menhirLib"] (S [A "-I"; A "+menhirLib";
