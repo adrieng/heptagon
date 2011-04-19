@@ -1,5 +1,6 @@
 open Misc
 open Names
+open Modules
 open Signature
 open Java
 open Java_printer
@@ -34,9 +35,9 @@ let program p =
         mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
       let body =
         let vd_main, e_main, q_main, ty_main =
-          let q_main = !Compiler_options.simulation_node |> Modules.qualify_value in (*qual*)
+          let q_main = !Compiler_options.simulation_node |> qualify_value in (*qual*)
           let ty_main =
-            (Modules.find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
+            (find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
           let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
           let id = Idents.gen_var "java_main" "main" in
           mk_var_dec id (Tclass q_main), Eval (Pvar id), q_main, ty_main
@@ -53,12 +54,13 @@ let program p =
           let jminus = pervasives_qn "-" in
           let ret = Emethod_call(e_main, "step", []) in
           let print_ret, separate = match ty_main with
-            | Types.Tarray (Types.Tarray _, _) -> Emethod_call(jarrays, "deepToString", [ret]), false
+            | Types.Tarray (Types.Tarray _, _) ->
+                Emethod_call(jarrays, "deepToString", [ret]), false
             | Types.Tarray _ -> Emethod_call(jarrays, "toString", [ret]), false
             | t when t = Initial.tint -> Emethod_call(jint, "toString", [ret]), false
             | t when t = Initial.tfloat -> Emethod_call(jfloat, "toString", [ret]), false
             | t when t = Initial.tbool -> Emethod_call(jbool, "toString", [ret]), false
-            | Types.Tunit -> Java.Sstring "_", true
+            | Types.Tprod [] -> Java.Sstring "_", true
             | _ -> Emethod_call(ret, "toString", []), false
           in
           let vd_t1, e_t1 =
@@ -69,7 +71,7 @@ let program p =
             if separate
             then [ Amethod_call(e_main, "step", []);
                    Amethod_call(out, "printf", [ Sstring "%d => _\\n"; Eval (Pvar i)]) ]
-            else [ Amethod_call(out, "printf", [ Sstring "%d => %s\\n"; Eval (Pvar i); print_ret]) ]
+            else [ Amethod_call(out, "printf", [ Sstring "%d => %s\\n"; Eval (Pvar i);print_ret]) ]
           in
           [ Anewvar(vd_main, Enew (Tclass q_main, []));
             Aifelse( Efun(Names.pervasives_qn ">", [Eval (Pfield (pat_args, "length")); Sint 1])
@@ -86,6 +88,8 @@ let program p =
       in
       mk_methode ~static:true ~args:[vd_args] ~throws:throws_async body "main"
     in
-    let c = mk_classe ~imports:import_async ~fields:[field_step_dnb] ~methodes:[main_methode] class_name in
+    let c = mk_classe ~imports:import_async ~fields:[field_step_dnb]
+                                            ~methodes:[main_methode] class_name
+    in
     output_program dir [c]
   )

@@ -195,6 +195,7 @@ let rec copy_array pass dest src = match dest.l_ty with
         fresh_for pass (mk_static_int 0) n copy
   | _ ->
       Aassgn(dest, Epattern src)
+*)
 
 let program_types p =
   let add_type pd acc = match pd with

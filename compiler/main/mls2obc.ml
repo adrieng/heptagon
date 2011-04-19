@@ -196,8 +196,8 @@ let rec translate map e =
         Eop (n, List.map (translate_extvalue map ) e_list)
     (* Async operators *)
     | Minils.Eapp ({Minils.a_op = Minils.Ebang }, e_list, _) ->
-        let e = translate map (assert_1 e_list) in
-          Ebang e
+        let e = translate_extvalue map (assert_1 e_list) in
+        Ebang e
     | Minils.Estruct f_e_list ->
         let type_name = (match e.Minils.e_ty with
                            | Tid name -> name

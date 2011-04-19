@@ -115,9 +115,11 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
-  | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
+  | Types.Sop (f, se_l) ->
+      Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
   | Types.Sasync se ->
-      let t_c = Tgeneric (java_pervasive_class "StaticFuture", [boxed_ty param_env se.Types.se_ty]) in
+      let t_c = Tgeneric (java_pervasive_class "StaticFuture", [boxed_ty param_env se.Types.se_ty])
+      in
       Enew (t_c, [static_exp param_env se])
 
 and boxed_ty param_env t = match t with
@@ -271,7 +273,8 @@ let copy_to_this vd_l =
 
 
 let create_async_classe async base_classe =
-  let classe_name = base_classe.o_class |> Names.shortname |> (fun n -> "Async_factory_"^n) |> fresh_classe in
+  let classe_name = base_classe.o_class |> Names.shortname
+                                        |> (fun n -> "Async_factory_"^n) |> fresh_classe in
   let callable_name = base_classe.o_class |> Names.shortname |> (fun n -> "Async_"^n) in
   let callable_classe_name = {qual = QualModule classe_name; name = callable_name } in
   Idents.enter_node classe_name;
@@ -471,7 +474,8 @@ let class_def_list classes cd_l =
                   | vd_l -> Enew (return_ty, List.map (fun vd -> Eval (Pvar vd.vd_ident)) vd_l))
       in
       let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
-      mk_methode ~throws:throws_async ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
+      mk_methode ~throws:throws_async ~args:(var_dec_list param_env ostep.Obc.m_inputs)
+                 ~returns:return_ty body "step"
     in
     let classe = mk_classe ~fields:fields
                            ~constrs:[constructeur] ~methodes:[step;reset] class_name in

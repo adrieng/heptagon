@@ -171,8 +171,8 @@ and print_app ff (app, args) =
       let e1, e2 = assert_2 args in
         fprintf ff "@[<2>%a@ @@ %a@]" print_extvalue e1  print_extvalue e2
     | Ebang ->
-        (*     let e = assert_1 args in *)
-        fprintf ff "!%a" print_exp_tuple args
+        (*let e = assert_1 args in *)
+        fprintf ff "!%a" print_w_tuple args
 
 
 and print_handler ff c =
