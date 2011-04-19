@@ -77,7 +77,7 @@ let array_elt_of_exp idx e =
     | Econst ({ se_desc = Sarray_power (c, _) }), Tarray (ty,_) ->
         mk_exp ty (Econst c)
     | _, Tarray (ty,_) ->
-        mk_pattern_exp ty (Larray(pattern_of_exp e, mk_exp Initial.tint (Epattern idx)))
+        mk_pattern_exp ty (Larray(pattern_of_exp e, idx))
     | _ -> internal_error "mls2obc" 2
 
 (** Creates the expression that checks that the indices
@@ -114,14 +114,14 @@ let rec update_array dest src idx_list v = match dest.pat_ty, idx_list with
   | Tarray (t, n), idx::idx_list ->
       (*Body of the copy loops*)
       let copy i =
-        let src_i = mk_pattern_exp t (Larray (src, i)) in
+        let src_i = array_elt_of_exp i src in
         let dest_i = mk_pattern t (Larray (dest, i)) in
         [Aassgn(dest_i, src_i)]
       in
       (*Copy values < idx*)
       let a_lower = fresh_for (mk_exp_const_int 0) idx copy in
       (* Update the correct element*)
-      let src_idx = mk_pattern t (Larray (src, idx)) in
+      let src_idx = array_elt_of_exp idx src in
       let dest_idx = mk_pattern t (Larray (dest, idx)) in
       let a_update = update_array dest_idx src_idx idx_list v in
       (*Copy values > idx*)
@@ -253,11 +253,10 @@ and translate_act map pat
                let a1 =
                  Afor (cpt1d, mk_exp_const_int 0, mk_exp_static_int n1,
                       mk_block [Aassgn (mk_pattern t1 (Larray (x, mk_evar_int cpt1)),
-                                       mk_pattern_exp t1 (Larray (pattern_of_exp e1,
-                                                                 mk_evar_int cpt1)))] ) in
+                                       array_elt_of_exp (mk_evar_int cpt1) e1)] ) in
                let idx = mk_exp_int (Eop (op_from_string "+",
                                          [ mk_exp_int (Econst n1); mk_evar_int cpt2])) in
-               let p2 = mk_pattern_exp t2 (Larray (pattern_of_exp e2, mk_evar_int cpt2)) in
+               let p2 = array_elt_of_exp (mk_evar_int cpt2) e2 in
                let a2 = Afor (cpt2d, mk_exp_const_int 0, mk_exp_static_int n2,
                              mk_block [Aassgn (mk_pattern t2 (Larray (x, idx)), p2)] )
                in
@@ -293,7 +292,7 @@ and translate_act map pat
           [ mk_static_int 1; mk_static_int_op (op_from_string "-") [idx2;idx1] ] in
          [ Afor (cptd, mk_exp_const_int 0, mk_exp_static_int bound,
                 mk_block [Aassgn (mk_pattern t (Larray (x, mk_evar_int cpt)),
-                                  mk_pattern_exp t (Larray (pattern_of_exp e, idx)))] ) ]
+                                  array_elt_of_exp idx e)] ) ]
 
     | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eselect_dyn }, e1::e2::idx, _) ->
         let x = var_from_name map x in
@@ -321,7 +320,7 @@ and translate_act map pat
         let e1 = translate_extvalue map e1 in
         let e2 = translate_extvalue map e2 in
         let cond = bound_check_expr idx bounds in
-        let true_act = update_array x (pattern_of_exp e1) idx e2 in
+        let true_act = update_array x e1 idx e2 in
         let false_act = Aassgn (x, e1) in
           [ mk_ifthenelse cond true_act [false_act] ]
 
@@ -487,7 +486,7 @@ and translate_iterator map call_context it name_list
     List.map2 (fun l ty -> mk_pattern ty (Larray (l, mk_evar_int x))) name_list ty_list
   in
   let array_of_input c_list =
-    List.map (array_elt_of_exp (mk_pattern_int (Lvar x))) c_list in
+    List.map (array_elt_of_exp (mk_evar_int x)) c_list in
   match it with
     | Minils.Imap ->
         let c_list = array_of_input c_list in
