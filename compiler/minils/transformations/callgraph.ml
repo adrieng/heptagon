@@ -199,7 +199,7 @@ struct
 				    List.fold_left (fun pds n -> Pnode n :: pds) acc nds
 				| _ -> pd :: acc
 			in
-      { p with p_desc = List.fold_right program_desc [] p.p_desc }
+      { p with p_desc = List.fold_right program_desc p.p_desc [] }
   end
 
 end
