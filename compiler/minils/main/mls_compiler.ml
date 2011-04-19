@@ -34,4 +34,7 @@ let compile_program p =
   (* Scheduling *)
   let p = pass "Scheduling" true Schedule.program p pp in
 
+   (* Normalize memories*)
+  let p = pass "Normalize memories" true Normalize_mem.program p pp in
+
   p
