@@ -179,13 +179,14 @@ let print_const_dec ff c =
   fprintf ff "const %a = %a@." print_qualname c.c_name
     print_static_exp c.c_value
 
-let print_prog ff { p_opened = modules; p_types = types;
-                    p_consts = consts; p_classes = classes; } =
+let print_prog_desc ff pd = match pd with
+  | Pclass cd -> print_class_def ff cd; fprintf ff "@\n@\n"
+	| Pconst cd -> print_const_dec ff cd
+	| Ptype td -> print_type_def ff td
+
+let print_prog ff { p_opened = modules; p_desc = descs } =
   List.iter (print_open_module ff) modules;
-  List.iter (print_type_def ff) types;
-  List.iter (print_const_dec ff) consts;
-  fprintf ff "@\n";
-  List.iter (fun cdef -> (print_class_def ff cdef; fprintf ff "@\n@\n")) classes
+  List.iter (print_prog_desc ff) descs
 
 let print oc p =
   let ff = formatter_of_out_channel oc in

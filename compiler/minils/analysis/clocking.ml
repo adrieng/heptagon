@@ -186,6 +186,10 @@ let typing_node ({ n_input = i_list;
        n_output = List.map set_clock o_list;
        n_local = List.map set_clock l_list })
 
-let program (({ p_nodes = p_node_list } as p)) =
-  { (p) with p_nodes = List.map typing_node p_node_list; }
+let program p =
+  let program_desc pd = match pd with
+    | Pnode nd -> Pnode (typing_node nd)
+    | _ -> pd
+  in
+    { p with p_desc = List.map program_desc p.p_desc; }
 

@@ -207,15 +207,16 @@ let const_dec cd =
     Minils.c_type = cd.Heptagon.c_type;
     Minils.c_loc = cd.Heptagon.c_loc; }
 
+let program_desc pd = match pd with
+  | Heptagon.Ptype td -> Ptype (typedec td)
+  | Heptagon.Pnode nd -> Pnode (node nd)
+  | Heptagon.Pconst cd -> Pconst (const_dec cd)
+
 let program
     { Heptagon.p_modname = modname;
       Heptagon.p_opened = modules;
-      Heptagon.p_types = pt_list;
-      Heptagon.p_nodes = n_list;
-      Heptagon.p_consts = c_list; } =
+      Heptagon.p_desc = desc_list } =
   { p_modname = modname;
     p_format_version = minils_format_version;
     p_opened = modules;
-    p_types = List.map typedec pt_list;
-    p_nodes = List.map node n_list;
-    p_consts = List.map const_dec c_list}
+    p_desc = List.map program_desc desc_list }

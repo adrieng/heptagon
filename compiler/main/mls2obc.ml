@@ -641,17 +641,17 @@ let translate_const_def { Minils.c_name = name; Minils.c_value = se;
 
 let program { Minils.p_modname = p_modname; Minils.p_opened = p_o; Minils.p_desc = pd; } =
   build_anon pd;
-  
+
   let program_desc pd acc = match pd with
 		| Minils.Pnode n when not (Itfusion.is_anon_node n.Minils.n_name) ->
 			  Pclass (translate_node n) :: acc
-    (* dont't translate anonymous nodes, they will be inlined TODO ?? inline obc code hein ?*)
+    (* dont't translate anonymous nodes, they will be inlined *)
 	  | Minils.Pnode n -> acc
 		| Minils.Ptype t -> Ptype (translate_ty_def t) :: acc
 		| Minils.Pconst c -> Pconst (translate_const_def c) :: acc
 	in
-	let p_desc = List.fold_right program_desc [] pd in
+	let p_desc = List.fold_right program_desc pd [] in
   { p_modname = p_modname;
-    p_opened = p_module_list;
+    p_opened = p_o;
     p_desc = p_desc }
 

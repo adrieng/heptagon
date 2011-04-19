@@ -260,9 +260,10 @@ let main_skel var_list prologue body =
 
 let mk_main name p =
   if !Compiler_options.simulation then (
+      let classes = program_classes p in
       let n_names = !Compiler_options.assert_nodes in
       let find_class n =
-        try List.find (fun cd -> cd.cd_name.name = n) p.p_classes
+        try List.find (fun cd -> cd.cd_name.name = n) classes
         with Not_found ->
           Format.eprintf "Unknown node %s.@." n;
           exit 1 in
