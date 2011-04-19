@@ -197,15 +197,15 @@ let rec copy_array pass dest src = match dest.l_ty with
 *)
 
 let program_types p =
-  let add_type acc pd = match pd with
+  let add_type pd acc = match pd with
     | Ptype ty -> ty :: acc
     | _ -> acc
   in
-    List.fold_left add_type [] p.p_desc
+    List.fold_right add_type p.p_desc []
 
 let program_classes p =
-  let add_class acc pd = match pd with
+  let add_class pd acc = match pd with
     | Pclass cd -> cd :: acc
     | _ -> acc
   in
-    List.fold_left add_class [] p.p_desc
+    List.fold_right add_class p.p_desc []
