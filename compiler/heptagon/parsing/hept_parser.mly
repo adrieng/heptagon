@@ -112,7 +112,7 @@ optsnlist(S,x) :
   |/* empty */    { None }
   | P v=x         { Some(v) }
 
-program: o=list(opens) p=list(program_desc) { {p_modname = ""; p_opened = o; p_desc = p} }
+program: o=list(opens) p=list(program_desc) EOF { {p_modname = ""; p_opened = o; p_desc = p} }
 
 program_desc:
   | p=PRAGMA     { Ppragma p }
