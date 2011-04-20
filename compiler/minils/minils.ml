@@ -125,7 +125,8 @@ type node_dec = {
   n_equs   : eq list;
   n_loc    : location;
   n_params : param list;
-  n_params_constraints : size_constraint list }
+  n_params_constraints : size_constraint list;
+  n_mem_alloc : (ty * Interference_graph.ivar list) list; }
 
 type const_dec = {
   c_name : qualname;
@@ -155,7 +156,7 @@ let mk_exp ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
     e_ck = clock; e_loc = loc }
 
 let extvalue_exp ?(clock = fresh_clock()) ?(loc = no_location) ty desc =
-  mk_exp ~clock:clock ~loc:loc ty (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ty desc))
+  mk_exp ~clock:clock ~loc:loc ty (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ~ty:ty desc))
 
 let mk_var_dec ?(loc = no_location) ?(clock = fresh_clock()) ident ty =
   { v_ident = ident; v_type = ty; v_clock = clock; v_loc = loc }
@@ -166,6 +167,7 @@ let mk_equation ?(loc = no_location) pat exp =
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
     ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
+    ?(mem_alloc=[])
     name =
   { n_name = name;
     n_stateful = stateful;
@@ -176,7 +178,8 @@ let mk_node
     n_equs = eq;
     n_loc = loc;
     n_params = param;
-    n_params_constraints = constraints }
+    n_params_constraints = constraints;
+    n_mem_alloc = mem_alloc }
 
 let mk_type_dec type_desc name loc =
   { t_name = name; t_desc = type_desc; t_loc = loc }

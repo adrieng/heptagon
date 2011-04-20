@@ -227,4 +227,28 @@ let split_string s separator = Str.split (separator |> Str.quote |> Str.regexp) 
 
 let file_extension s = split_string s "." |> last_element
 
+let memoize f =
+  let map = Hashtbl.create 100 in
+    fun x ->
+      try
+        Hashtbl.find map x
+      with
+        | Not_found -> let r = f x in Hashtbl.add map x r; r
+
+let memoize_couple f =
+  let map = Hashtbl.create 100 in
+    fun (x,y) ->
+      try
+        Hashtbl.find map (x,y)
+      with
+        | Not_found ->
+            let r = f (x,y) in Hashtbl.add map (x,y) r; Hashtbl.add map (y,x) r; r
+
+(** [iter_couple f l] calls f for all x and y distinct in [l].  *)
+let rec iter_couple f l = match l with
+  | [] -> ()
+  | x::l ->
+      List.iter (f x) l;
+      iter_couple f l
+
 

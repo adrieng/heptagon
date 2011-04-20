@@ -1,49 +1,13 @@
 open Idents
 open Interference_graph
 
-let memoize f =
-  let map = Hashtbl.create 100 in
-    fun x ->
-      try
-        Hashtbl.find map x
-      with
-        | Not_found -> let r = f x in Hashtbl.add map x r; r
-
-let memoize_couple f =
-  let map = Hashtbl.create 100 in
-    fun (x,y) ->
-      try
-        Hashtbl.find map (x,y)
-      with
-        | Not_found ->
-            let r = f (x,y) in Hashtbl.add map (x,y) r; Hashtbl.add map (y,x) r; r
-
-(** [iter_couple f l] calls f for all x and y distinct in [l].  *)
-let rec iter_couple f l = match l with
-  | [] -> ()
-  | x::l ->
-      List.iter (f x) l;
-      iter_couple f l
-
-module ListMap = functor (Ord:OrderedType) ->
-struct
-  include Map.Make(Ord)
-
-  let add_element k v m =
-    try
-      add k (v::(find k m)) m
-    with
-      | Not_found -> add k [v] m
-end
-
-type TyEnv =
+module TyEnv =
     ListMap.Make (struct
       type t = Types.ty
       let compare = Global_compare.type_compare
     end)
 
-
-module world = struct
+module World = struct
   let vds = ref Idents.Env.empty
   let memories = ref IvarSet.empty
 
@@ -56,17 +20,12 @@ module world = struct
     let env = build env f.n_output in
     let env = build env f.n_local in
       vds := env;
-    (* build the set of memories *)ml
+    (* build the set of memories *)
       let mems = Mls_utils.node_memory_vars f in
         memories := List.fold_left (fun s (x, _) -> IvarSet.add (Ivar x) s) IvarSet.empty mems
 
   let vd_from_ident x =
     Idents.Env.find x !vds
-
-  let is_optimized_ty ty = true
-
-  let is_memory x =
-    Idents.IdentSet.mem x !memories
 
   let rec ivar_type iv = match iv with
     | Ivar x ->
@@ -74,6 +33,21 @@ module world = struct
           vd.v_type
     | Ifield(_, f) ->
         Modules.find_field f
+
+  let is_optimized_ty ty =
+    match unalias_type ty with
+      | Tarray _ -> true
+      | Tid n ->
+          (match find_type n with
+            | Tstruct _ -> true
+            | _ -> false)
+      | Tinvalid -> false
+
+  let is_optimized iv =
+    is_optimized_ty (ivar_type iv)
+
+  let is_memory x =
+    Idents.IdentSet.mem x !memories
 
   let igs = ref []
 
@@ -193,7 +167,7 @@ let should_interfere = memoize_couple should_interfere
 (** Builds the (empty) interference graphs corresponding to the
     variable declaration list vds. It just creates one graph per type
     and one node per declaration. *)
-let init_interference_graph () =
+let init_interference_graph f =
   (** Adds a node to the list of nodes for the given type. *)
   let add_node env iv ty =
     let ty = unalias_type ty in
@@ -217,8 +191,10 @@ let init_interference_graph () =
        | _ -> env
     )
   in
+  (* do not add not linear inputs*)
+  let vds = (*List.filter is_linear f.n_input @ *) f.n_output @ f.n_local in
   let env = Idents.Env.fold
-    (fun _ vd env -> add_ivar env (Ivar vd.v_ident) vd.v_type) TyEnv.empty !World.vds in
+    (fun _ vd env -> add_ivar env (Ivar vd.v_ident) vd.v_type) TyEnv.empty vds in
     World.igs := TyEnv.fold mk_graph [] env
 
 
@@ -324,7 +300,7 @@ let add_init_return_eq f =
 let build_interf_graph f =
   World.init f;
   (** Init interference graph *)
-  init_interference_graph ();
+  init_interference_graph f;
 
   let eqs = add_init_return_eq f in
   (** Build live vars sets for each equation *)
@@ -342,3 +318,51 @@ let build_interf_graph f =
 
     (* Return the graphs *)
     !World.igs
+
+
+
+(** Color the nodes corresponding to fields using
+    the color attributed to the record. This makes sure that
+    if a and b are shared, then a.f and b.f are too. *)
+let color_fields ig =
+  let process n =
+    let fields = filter_fields (G.label n) in
+    match fields with
+      | [] -> ()
+      | id::_ -> (* we only look at the first as they will all have the same color *)
+        let _, top_node = node_for_name id in
+          G.Mark.set n (G.Mark.get top_node)
+  in
+    G.iter_vertex process ig.g_graph
+
+(** Color an interference graph.*)
+let color_interf_graphs igs =
+  let record_igs, igs =
+    List.partition (fun ig -> is_record_type ig.g_info) igs in
+    (* First color interference graphs of record types *)
+    List.iter color record_igs;
+    (* Then update fields colors *)
+    List.iter (color_fields record_igs) igs;
+    (* and finish the coloring *)
+    List.iter color igs
+
+(** Create the list of lists of variables stored together,
+    from the interference graph.*)
+let create_subst_lists igs =
+  let create_one_ig ig =
+    List.map (fun x -> ig.g_info, x) (values_by_color ig)
+  in
+    List.flatten (List.map create_one_ig igs)
+
+let node f =
+  (** Build the interference graphs *)
+  let igs = build_interf_graph f in
+    (** Color the graph *)
+    color_interf_graphs igs;
+    (** Remember the choice we made for code generation *)
+      { f with n_mem_alloc = create_subst_lists igs }
+
+let program p =
+  let funs = { Mls_mapfold.defaults with node_dec = node } in
+  let p, _ = Mls_mapfold.program_it funs ([], []) p in
+    p

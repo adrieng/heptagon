@@ -9,29 +9,46 @@ type ivar =
     | Ivar of Idents.var_ident
     | Ifield of ivar * Names.field_name
 
-type IvarEnv =
+module ListMap (Ord:Map.OrderedType) =
+struct
+  include Map.Make(Ord)
+
+  let add_element k v m =
+    try
+      add k (v::(find k m)) m
+    with
+      | Not_found -> add k [v] m
+
+  let add_elements k vl m =
+    try
+      add k (vl @ (find k m)) m
+    with
+      | Not_found -> add k vl m
+end
+
+module IvarEnv =
     Map.Make (struct
       type t = ivar
       let compare = compare
     end)
 
-type IvarSet =
+module IvarSet =
     Set.Make (struct
       type t = ivar
       let compare = compare
     end)
 
 let rec ivar_to_string = function
-  | IVar n -> Idents.name n
-  | IField(iv,f) -> (ivar_to_string iv)^"."^(shortname f)
+  | Ivar n -> Idents.name n
+  | Ifield(iv,f) -> (ivar_to_string iv)^"."^(Names.shortname f)
 
 
 module VertexValue = struct
   type t = ivar list ref
-  let compare = compare
+  (*let compare = compare
   let hash = Hashtbl.hash
   let equal = (=)
-  let default = []
+  let default = []*)
 end
 
 module EdgeValue = struct
@@ -42,7 +59,7 @@ end
 
 module G =
 struct
-  include Imperative.Graph.ConcreteLabeled(VertexValue)(EdgeValue)
+  include Imperative.Graph.AbstractLabeled(VertexValue)(EdgeValue)
 
   let add_edge_v g n1 v n2 =
     add_edge_e g (E.create n1 v n2)
@@ -63,7 +80,6 @@ struct
         r := !(V.label n2) @ !r;
         remove_vertex g n2
     )
-
 end
 
 type interference_graph = {
@@ -156,5 +172,69 @@ let iter_interf f g =
     if G.E.label e = Iinterference then
       f (G.V.label (G.E.src e)) (G.V.label (G.E.dst e))
   in
-    G.iter_edges do_f g.g_graph
+    G.iter_edges_e do_f g.g_graph
 
+(** Coloring*)
+module KColor = Coloring.Mark(G)
+module ColorEnv =
+  ListMap(struct
+      type t = int
+      let compare = compare
+    end)
+
+let color g =
+  KColor.coloring g.g_graph (Hashtbl.length g.g_hash)
+
+let values_by_color g =
+  let env = G.fold_vertex
+    (fun n env -> ColorEnv.add_elements (G.Mark.get n) !(G.V.label n) env)
+    g.g_graph ColorEnv.empty
+  in
+    ColorEnv.fold (fun _ v acc -> v::acc) env []
+
+(** Printing *)
+
+module DotG = struct
+  include G
+
+  let name = ref ""
+
+  (*Functions for printing the graph *)
+  let default_vertex_attributes _ = []
+  let default_edge_attributes _ = []
+  let get_subgraph _ = None
+
+  let graph_attributes _ =
+    [`Label !name]
+
+  let vertex_name v =
+    let rec ivar_name iv =
+      match iv with
+        | Ivar id -> Idents.name id
+        | Ifield(ivar, f) -> (ivar_name ivar)^"_"^(Names.shortname f)
+    in
+      Misc.sanitize_string (ivar_name (List.hd !(V.label v)))
+
+  let vertex_attributes v =
+    let s = String.concat ", " (List.map (fun iv -> ivar_to_string iv) !(V.label v)) in
+      [`Label s]
+
+  let edge_attributes e =
+    let style =
+      match E.label e with
+        | Iinterference -> `Solid
+        | Iaffinity -> `Dashed
+        | Isame_value -> `Dotted
+    in
+      [`Style style]
+end
+
+module DotPrint = Graphviz.Dot(DotG)
+
+let print_graph label filename g =
+  Global_printer.print_type Format.str_formatter g.g_type;
+  let ty_str = Format.flush_str_formatter () in
+  DotG.name := label^" : "^ty_str;
+  let oc = open_out (filename ^ ".dot") in
+    DotPrint.output_graph oc g.g_graph;
+    close_out oc
