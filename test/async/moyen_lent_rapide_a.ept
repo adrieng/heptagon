@@ -1,8 +1,8 @@
 
 node lent_rapide<<k,n :int>>(lent :bool) returns (r : int)
 let
-  r = 1 fby merge lent (true -> do_stuff(n*k) + r when true(lent) + 1)
-                           (false -> do_stuff(1) + r when false(lent) + 1);
+  r = 1 fby merge lent (true -> do_stuff(n*k))
+                       (false -> do_stuff(0));
 tel
 
 node moyenne<<n :int>>() returns (r : int; big_step : bool)
