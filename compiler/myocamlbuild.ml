@@ -10,7 +10,7 @@ let df = function
       ocaml_lib ~extern:true ~dir:"+menhirLib" "menhirLib";
 
       (* Tell ocamlbuild about the ocamlgraph library. *)
-      ocaml_lib ~extern:true ~dir:"+ocamlgraph" "ocamlgraph";
+      ocaml_lib ~extern:true ~dir:"+ocamlgraph" "graph";
 
       (* Menhir does not come with menhirLib.cmxa so we have to manually by-pass
          OCamlbuild's built-in logic and add the needed menhirLib.cmxa. *)

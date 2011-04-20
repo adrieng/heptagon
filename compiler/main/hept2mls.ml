@@ -181,7 +181,8 @@ let node n =
     n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
-    n_params_constraints = n.Heptagon.n_params_constraints }
+    n_params_constraints = n.Heptagon.n_params_constraints;
+    n_mem_alloc = [] }
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =
