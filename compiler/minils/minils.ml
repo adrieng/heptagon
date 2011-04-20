@@ -166,7 +166,8 @@ let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
 
 let mk_node
-    ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
+    ?(input = []) ?(output = []) ?(contract = None) ?(pinst = ([],[]))
+    ?(local = []) ?(eq = [])
     ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
     name =
   { n_name = name;
@@ -174,6 +175,7 @@ let mk_node
     n_input = input;
     n_output = output;
     n_contract = contract;
+    n_controller_call = pinst;
     n_local = local;
     n_equs = eq;
     n_loc = loc;

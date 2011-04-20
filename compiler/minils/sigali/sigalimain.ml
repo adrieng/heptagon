@@ -22,8 +22,8 @@ open Sigali
 type mtype = Tint | Tbool | Tother
 
 let actual_ty = function
-  | Tid({ qual = "Pervasives"; name = "bool"}) -> Tbool
-  | Tid({ qual = "Pervasives"; name = "int"}) -> Tint
+  | Tid({ qual = Pervasives; name = "bool"}) -> Tbool
+  | Tid({ qual = Pervasives; name = "int"}) -> Tint
   | _ -> Tother
 
 let var_list prefix n =
@@ -73,7 +73,7 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
 	end
     | Minils.Evar(n) -> Svar(prefix ^ (name n))
     | Minils.Eapp (* pervasives binary or unary stateless operations *)
-	({ Minils.a_op = Minils.Efun({qual="Pervasives";name=n})},
+	({ Minils.a_op = Minils.Efun({qual=Pervasives;name=n})},
 	 e_list, _) ->
 	begin
 	  match n, e_list with
@@ -134,7 +134,7 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
 	end
     | Minils.Estruct(_) ->
 	failwith("Sigali: structures not implemented")
-    | Minils.Eiterator(_,_,_,_,_) ->
+    | Minils.Eiterator(_,_,_,_,_,_) ->
 	failwith("Sigali: iterators not implemented")
     | Minils.Eapp({Minils.a_op = Minils.Enode(_)},_,_) ->
 	failwith("Sigali: node in expressions; programs should be normalized")
@@ -657,7 +657,7 @@ let program p =
       (NamesEnv.empty,[])
       p.Minils.p_nodes in
   let procs = List.rev acc_proc in
-  let filename = filename_of_name p.Minils.p_modname in
+  let filename = filename_of_name (modul_to_string p.Minils.p_modname) in
   let dirname = build_path (filename ^ "_z3z") in
   let dir = clean_dir dirname in
   Sigali.Printer.print dir procs

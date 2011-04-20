@@ -463,8 +463,8 @@ and mk_node_call map call_context app loc name_list args ty =
     | Minils.Enode f | Minils.Efun f ->
 	let id =
 	  begin match app.Minils.a_id with
-	    None -> gen_obj_name f
-	  | Some id -> name id
+	    None -> gen_obj_ident f
+	  | Some id -> id
 	  end in
         let o = mk_obj_call_from_context call_context id in
         let obj =

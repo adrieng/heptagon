@@ -51,7 +51,7 @@ open Minils
 
 let fresh = Idents.gen_fresh "bool" (fun s -> s)
 
-let ty_bool = Tid({ qual = "Pervasives"; name = "bool"})
+let ty_bool = Tid({ qual = Pervasives; name = "bool"})
 
 let strue = mk_static_exp ~ty:ty_bool (Sbool(true))
 let sfalse = mk_static_exp ~ty:ty_bool (Sbool(false))
@@ -60,8 +60,8 @@ let sbool = function
   | true -> strue
   | false -> sfalse
 
-let ctrue = { qual = "Pervasives"; name = "true" }
-let cfalse = { qual = "Pervasives"; name = "false" }
+let ctrue = { qual = Pervasives; name = "true" }
+let cfalse = { qual = Pervasives; name = "false" }
 
 let mk_tuple e_l =
   Eapp((mk_app Etuple),e_l,None)
@@ -224,7 +224,7 @@ let translate_pat env pat =
 let translate_ty ty =
   let rec trans ty =
     match ty with
-    | Tid({ qual = "Pervasives"; name = "bool" }) -> ty
+    | Tid({ qual = Pervasives; name = "bool" }) -> ty
     | Tid(name) ->
 	begin
 	  try
@@ -240,6 +240,7 @@ let translate_ty ty =
 	end
     | Tprod(ty_list) -> Tprod(List.map trans ty_list)
     | Tarray(ty,se) -> Tarray(trans ty,se)
+    | Tmutable ty -> Tmutable(trans ty)
     | Tunit -> Tunit
   in
   trans ty
@@ -271,7 +272,7 @@ let rec translate_ck env ck =
 
 let translate_const c ty e =
   match c.se_desc,ty with
-  | _, Tid({ qual = "Pervasives"; name = "bool" }) -> Econst(c)
+  | _, Tid({ qual = Pervasives; name = "bool" }) -> Econst(c)
   | Sconstructor(cname),Tid(tname) ->
       begin
 	try
@@ -352,11 +353,11 @@ let rec when_ck desc ty ck =
 
 let rec base_value ck ty =
   match ty with
-  | Tid({qual = "Pervasives"; name = "int" }) -> 
+  | Tid({qual = Pervasives; name = "int" }) -> 
       when_ck (Econst(mk_static_exp ~ty:ty (Sint(0)))) ty ck
-  | Tid({qual = "Pervasives"; name = "float"}) ->
+  | Tid({qual = Pervasives; name = "float"}) ->
       when_ck (Econst(mk_static_exp ~ty:ty (Sfloat(0.)))) ty ck
-  | Tid({qual = "Pervasives"; name = "bool" }) ->  
+  | Tid({qual = Pervasives; name = "bool" }) ->  
       when_ck (Econst(strue)) ty ck
   | Tid(sname) ->
       begin
@@ -411,6 +412,9 @@ let rec base_value ck ty =
 	e_ck = ck;
 	e_loc = no_location;
       }
+  | Tmutable ty ->
+      let e = base_value ck ty in
+      e
   | Tunit ->
       { e_desc = Eapp (mk_app Etuple, [], None);
         e_ty = Tunit;
@@ -530,9 +534,10 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ck = ck} as e) =
 	       (context,(c,e)::acc)) 
 	    (context,[]) l in
 	context,Estruct(List.rev acc)
-    | Eiterator(it,app,se,e_list,r) ->
+    | Eiterator(it,app,se,pe_list,e_list,r) ->
+	let context,pe_list = translate_list env context pe_list in
 	let context,e_list = translate_list env context e_list in
-	context,Eiterator(it,app,se,e_list,r)
+	context,Eiterator(it,app,se,pe_list,e_list,r)
   in
   context,{ e with
 	      e_desc = desc;
@@ -678,11 +683,12 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 
 let buildenv_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
   match ty with
-  | Tprod _ | Tarray _ | Tunit -> v::acc_vd, acc_loc, acc_eq, env
+  | Tprod _ | Tarray _ | Tmutable _ | Tunit ->
+      v::acc_vd, acc_loc, acc_eq, env
   | Tid(tname) ->
       begin
 	match tname with
-	| { qual = "Pervasives"; name = ("bool" | "int" | "float") } ->
+	| { qual = Pervasives; name = ("bool" | "int" | "float") } ->
 	    v::acc_vd, acc_loc, acc_eq, env
 	| _ ->
 	    begin
