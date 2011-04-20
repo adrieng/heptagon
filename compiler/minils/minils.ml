@@ -155,7 +155,7 @@ let mk_exp ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = ty;
     e_ck = clock; e_loc = loc }
 
-let extvalue_exp ?(clock = fresh_clock()) ?(loc = no_location) ty desc =
+let mk_extvalue_exp ?(clock = fresh_clock()) ?(loc = no_location) ty desc =
   mk_exp ~clock:clock ~loc:loc ty (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ~ty:ty desc))
 
 let mk_var_dec ?(loc = no_location) ?(clock = fresh_clock()) ident ty =

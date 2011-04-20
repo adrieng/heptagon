@@ -42,7 +42,6 @@ let rec ivar_to_string = function
   | Ivar n -> Idents.name n
   | Ifield(iv,f) -> (ivar_to_string iv)^"."^(Names.shortname f)
 
-
 module VertexValue = struct
   type t = ivar list ref
   (*let compare = compare
@@ -170,7 +169,7 @@ let coalesce g n1 n2 =
 let iter_interf f g =
   let do_f e =
     if G.E.label e = Iinterference then
-      f (G.V.label (G.E.src e)) (G.V.label (G.E.dst e))
+      f g (G.E.src e) (G.E.dst e)
   in
     G.iter_edges_e do_f g.g_graph
 

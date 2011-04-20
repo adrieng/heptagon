@@ -227,6 +227,7 @@ let split_string s separator = Str.split (separator |> Str.quote |> Str.regexp) 
 
 let file_extension s = split_string s "." |> last_element
 
+(** Memoize the result of the function [f]*)
 let memoize f =
   let map = Hashtbl.create 100 in
     fun x ->
@@ -235,6 +236,8 @@ let memoize f =
       with
         | Not_found -> let r = f x in Hashtbl.add map x r; r
 
+(** Memoize the result of the function [f], taht should expect a
+   tuple as input and be reflexive (f (x,y) = f (y,x)) *)
 let memoize_couple f =
   let map = Hashtbl.create 100 in
     fun (x,y) ->
@@ -251,4 +254,6 @@ let rec iter_couple f l = match l with
       List.iter (f x) l;
       iter_couple f l
 
-
+(** [iter_couple_2 f l1 l2] calls f for all x in [l1] and y in [l2].  *)
+let iter_couple_2 f l1 l2 =
+  List.iter (fun v1 -> List.iter (f v1) l2) l1
