@@ -14,7 +14,7 @@ open Names
 open Idents
 open Heptagon
 open Location
-open Graph
+open Sgraph
 open Causal
 
 let cempty = Cempty
