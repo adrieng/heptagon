@@ -4,6 +4,9 @@ open Clocks
 open Signature
 open Minils
 open Interference_graph
+open Printf
+
+let memalloc_debug = true
 
 module TyEnv =
     ListMap(struct
@@ -179,20 +182,23 @@ let number_uses iv uses =
     | Not_found -> 0
 
 let add_uses uses iv env =
-  if World.is_optimized iv then
+  if World.is_optimized iv then (
+    Format.printf "Adding uses of %s@." (ivar_to_string iv);
     IvarEnv.add iv (number_uses iv uses) env
-  else
+  ) else (
+    Format.printf "Ignoring uses of %s@." (ivar_to_string iv);
     env
+  )
 
 let compute_live_vars eqs =
   let uses = compute_uses eqs in
-  let aux eq (env,res) =
+  let aux (env,res) eq =
     let decr_uses iv env =
       if World.is_optimized iv then
         try
           IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
         with
-          | Not_found -> assert false
+          | Not_found -> Format.printf "var not found : %s@." (ivar_to_string iv); assert false
       else
         env
     in
@@ -203,7 +209,7 @@ let compute_live_vars eqs =
       env, res
   in
   let env = IvarSet.fold (add_uses uses) !World.memories IvarEnv.empty in
-  let _, res = List.fold_right aux eqs (env, []) in
+  let _, res = List.fold_left aux (env, []) eqs in
     res
 
 
@@ -430,6 +436,15 @@ let color_interf_graphs igs =
     (* and finish the coloring *)
     List.iter color igs
 
+let print_graphs f igs =
+  let cpt = ref 0 in
+  let print_graph ig =
+    let s = (Names.shortname f.n_name)^ (string_of_int !cpt) in
+      print_graph (Names.fullname f.n_name) s ig;
+      cpt := !cpt + 1
+  in
+    List.iter print_graph igs
+
 (** Create the list of lists of variables stored together,
     from the interference graph.*)
 let create_subst_lists igs =
@@ -438,11 +453,13 @@ let create_subst_lists igs =
   in
     List.flatten (List.map create_one_ig igs)
 
-let node funs acc f =
+let node _ acc f =
   (** Build the interference graphs *)
   let igs = build_interf_graph f in
     (** Color the graph *)
     color_interf_graphs igs;
+    if memalloc_debug then
+      print_graphs f igs;
     (** Remember the choice we made for code generation *)
       { f with n_mem_alloc = create_subst_lists igs }, acc
 
