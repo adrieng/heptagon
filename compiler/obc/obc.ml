@@ -106,7 +106,8 @@ type class_def =
       cd_objs  : obj_dec list;
       cd_params : param list;
       cd_methods: method_def list;
-      cd_loc : location }
+      cd_loc : location;
+      cd_mem_alloc : (ty * Interference_graph.ivar list) list; }
 
 
 type program =

@@ -98,7 +98,9 @@ module World = struct
         let vd = vd_from_ident x in
           vd.v_type
     | Ifield(_, f) ->
-        Tid (Modules.find_field f)
+        let n = Modules.find_field f in
+        let fields = Modules.find_struct n in
+          Signature.field_assoc f fields
 
   let is_optimized_ty ty =
     match Modules.unalias_type ty with
