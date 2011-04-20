@@ -1,11 +1,30 @@
 open Graph
 
 type ilink =
-  | Iinterference
-  | Iaffinity
-  | Isame_value
+    | Iinterference
+    | Iaffinity
+    | Isame_value
 
-type ivar = Minils.extvalue_desc
+type ivar =
+    | Ivar of Idents.var_ident
+    | Ifield of ivar * Names.field_name
+
+type IvarEnv =
+    Map.Make (struct
+      type t = ivar
+      let compare = compare
+    end)
+
+type IvarSet =
+    Set.Make (struct
+      type t = ivar
+      let compare = compare
+    end)
+
+let rec ivar_to_string = function
+  | IVar n -> Idents.name n
+  | IField(iv,f) -> (ivar_to_string iv)^"."^(shortname f)
+
 
 module VertexValue = struct
   type t = ivar list ref
@@ -130,4 +149,12 @@ let coalesce g n1 n2 =
     List.iter (fun x -> Hashtbl.replace g.g_hash x n1) !(G.V.label n2);
     (* coalesce nodes in the graph*)
     G.coalesce g.g_graph n1 n2
+
+(** Iterates [f] on all the couple of nodes interfering in the graph g *)
+let iter_interf f g =
+  let do_f e =
+    if G.E.label e = Iinterference then
+      f (G.V.label (G.E.src e)) (G.V.label (G.E.dst e))
+  in
+    G.iter_edges do_f g.g_graph
 
