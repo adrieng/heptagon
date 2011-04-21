@@ -260,7 +260,7 @@ let rec disjoint_clock is_mem ck1 ck2 =
   match ck1, ck2 with
     | Cbase, Cbase -> false
     | Con(ck1, c1, n1), Con(ck2,c2,n2) ->
-        if ck1 = ck2 & n1 = n2  & c1 <> c2 then
+        if ck1 = ck2 & n1 = n2  & c1 <> c2 & not is_mem then
           true
         else
           disjoint_clock is_mem ck1 ck2
@@ -279,7 +279,7 @@ let should_interfere (x, y) =
     false
   else (
     let x_is_mem = World.is_memory x in
-    let y_is_mem = World.is_memory y  in
+    let y_is_mem = World.is_memory y in
     let are_copies = have_same_value_from_name x y in
     let disjoint_clocks = disjoint_clock (x_is_mem && y_is_mem) vdx.v_clock vdy.v_clock in
       not (disjoint_clocks or are_copies)
