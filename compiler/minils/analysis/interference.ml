@@ -122,7 +122,7 @@ module World = struct
   let node_for_ivar iv =
     let rec _node_for_ivar igs iv =
       match igs with
-        | [] -> (*Format.eprintf "Var not in graph: %s\n" (ivar_to_string x); *) raise Not_found
+        | [] -> Format.printf "Var not in graph: %s@." (ivar_to_string iv); raise Not_found
         | ig::igs ->
             (try
                 ig, node_for_value ig iv
@@ -162,6 +162,12 @@ let add_same_value_link_from_ivar = by_ivar () add_affinity_link
 let coalesce_from_name = by_name () coalesce
 let have_same_value_from_name = by_name false have_same_value
 
+let remove_from_name x =
+  try
+    let ig, v = World.node_for_name x in
+      G.remove_vertex ig.g_graph v
+  with
+    | Not_found -> (* var not in graph, just ignore it *) ()
 
 
 (** Returns a map giving the number of uses of each ivar in the equations [eqs]. *)
@@ -252,7 +258,7 @@ let should_interfere = Misc.memoize_couple should_interfere
 (** Builds the (empty) interference graphs corresponding to the
     variable declaration list vds. It just creates one graph per type
     and one node per declaration. *)
-let init_interference_graph f =
+let init_interference_graph () =
   (** Adds a node to the list of nodes for the given type. *)
   let add_node env iv ty =
     let ty = Modules.unalias_type ty in
@@ -276,10 +282,8 @@ let init_interference_graph f =
        | _ -> env
     )
   in
-  (* do not add not linear inputs*)
-  let vds = (*List.filter is_linear f.n_input @ *) f.n_output @ f.n_local in
-  let env = List.fold_left
-    (fun env vd -> add_ivar env (Ivar vd.v_ident) vd.v_type) TyEnv.empty vds in
+  let env = Env.fold
+    (fun _ vd env -> add_ivar env (Ivar vd.v_ident) vd.v_type) !World.vds TyEnv.empty in
     World.igs := TyEnv.fold (fun ty l acc -> (mk_graph l ty)::acc) env []
 
 
@@ -302,6 +306,10 @@ let rec add_interferences_from_list force vars =
     stored in hash. *)
 let add_interferences live_vars =
   List.iter (fun (_, vars) -> add_interferences_from_list false vars) live_vars
+
+let spill_inputs f =
+  let spilled_inp = (*List.filter is_linear*) f.n_input in
+    List.iter (fun vd -> remove_from_name vd.v_ident) spilled_inp
 
 
 (** @return whether [ty] corresponds to a record type. *)
@@ -395,7 +403,7 @@ let add_init_return_eq f =
 let build_interf_graph f =
   World.init f;
   (** Init interference graph *)
-  init_interference_graph f;
+  init_interference_graph ();
 
   let eqs = add_init_return_eq f in
   (** Build live vars sets for each equation *)
@@ -410,6 +418,8 @@ let build_interf_graph f =
     add_interferences live_vars;
     (* Add interferences between records implied by IField values*)
     add_records_field_interferences ();
+    (* Splill inputs that are not modified *)
+    spill_inputs f;
 
     (* Return the graphs *)
     !World.igs

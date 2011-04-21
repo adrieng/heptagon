@@ -88,8 +88,9 @@ let lhs funs (env, mut) l = match l.pat_desc with
         with
           | Not_found -> l, (env, mut)
 
-let act _ acc a = match a with
+let act funs acc a = match a with
   | Acall(_, _, Mstep, _) ->
+      let a, acc = Obc_mapfold.act funs acc a in
       (* remove targeted outputs *) a, acc
   | _ -> raise Errors.Fallback
 
