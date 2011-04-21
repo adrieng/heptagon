@@ -43,15 +43,14 @@ let choose_representative m inputs outputs mems ty vars =
       | [], [Ivar vout], [] -> Lvar vout
       | [Ivar vin], [Ivar _], [] -> Lvar vin
       | _, _, _ ->
-      (*  Format.printf "Something is wrong with the coloring : ";
-        List.iter (fun vd -> Format.printf "%s," (ivar_to_string vd)) vars;
-        Format.printf "\n Inputs : ";
-        List.iter (fun vd -> Format.printf "%s," (ivar_to_string vd)) inputs;
-        Format.printf "\n Outputs : ";
-        List.iter (fun vd -> Format.printf "%s," (ivar_to_string vd)) outputs;
-        Format.printf "\n Mem : ";
-        List.iter (fun vd -> Format.printf "%s," (ivar_to_string vd)) mems;
-        Format.printf "\n"; *)
+        Interference.print_debug0 "@.Something is wrong with the coloring : ";
+        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string vars));
+        Interference.print_debug0 "\tInputs : ";
+        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string inputs));
+        Interference.print_debug0 "\tOutputs : ";
+        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string outputs));
+        Interference.print_debug0 "\tMem : ";
+        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string mems));
         assert false (*something went wrong in the coloring*)
   in
     mk_pattern ty desc

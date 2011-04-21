@@ -8,6 +8,26 @@ open Printf
 
 let memalloc_debug = true
 
+let verbose_mode = true
+let print_debug0 s =
+  if verbose_mode then
+    Format.printf s
+
+let print_debug1 fmt x =
+  if verbose_mode then
+    Format.printf fmt x
+
+let print_debug2 fmt x y =
+  if verbose_mode then
+    Format.printf fmt x y
+
+let print_debug_ivar_env name env =
+  if verbose_mode then (
+    Format.printf "%s:  " name;
+    IvarEnv.iter (fun k v -> Format.printf "%s : %d; " (ivar_to_string k) v) env;
+    Format.printf "@."
+  )
+
 module TyEnv =
     ListMap(struct
       type t = ty
@@ -122,7 +142,7 @@ module World = struct
   let node_for_ivar iv =
     let rec _node_for_ivar igs iv =
       match igs with
-        | [] -> Format.printf "Var not in graph: %s@." (ivar_to_string iv); raise Not_found
+        | [] -> (*Format.printf "Var not in graph: %s@." (ivar_to_string iv);*) raise Not_found
         | ig::igs ->
             (try
                 ig, node_for_value ig iv
@@ -190,34 +210,31 @@ let number_uses iv uses =
     | Not_found -> 0
 
 let add_uses uses iv env =
-  if World.is_optimized iv then (
-    Format.printf "Adding uses of %s@." (ivar_to_string iv);
+  if World.is_optimized iv then
     IvarEnv.add iv (number_uses iv uses) env
-  ) else (
-    Format.printf "Ignoring uses of %s@." (ivar_to_string iv);
+  else
     env
-  )
 
 let compute_live_vars eqs =
   let uses = compute_uses eqs in
+  print_debug_ivar_env "Uses" uses;
   let aux (env,res) eq =
     let decr_uses iv env =
       if World.is_optimized iv then
         try
           IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
         with
-          | Not_found -> Format.printf "var not found : %s@." (ivar_to_string iv); assert false
+          | Not_found ->(* Format.printf "var not found : %s@." (ivar_to_string iv);*) assert false
       else
         env
     in
-    let env = IvarSet.fold decr_uses (InterfRead.read eq) env in
     let alive_vars = IvarEnv.fold (fun iv n acc -> if n > 0 then iv::acc else acc) env [] in
-
-      Format.printf " Alive vars : %s@." (String.concat " " (List.map ivar_to_string alive_vars));
-
-    let res = (eq, alive_vars)::res in
-    let env = IvarSet.fold (add_uses uses) (InterfRead.def eq) env in
-      env, res
+      print_debug1 "Alive vars : %s@." (String.concat " " (List.map ivar_to_string alive_vars));
+      let env = IvarSet.fold decr_uses (InterfRead.read eq) env in
+      let res = (eq, alive_vars)::res in
+      let env = IvarSet.fold (add_uses uses) (InterfRead.def eq) env in
+        print_debug_ivar_env "Remaining uses" env;
+        env, res
   in
   let env = IvarSet.fold (add_uses uses) !World.memories IvarEnv.empty in
   let _, res = List.fold_left aux (env, []) eqs in
@@ -483,7 +500,6 @@ let node _ acc f =
       { f with n_mem_alloc = create_subst_lists igs }, acc
 
 let program p =
-  Format.printf "is_directe %b@." (G.is_directed);
   let funs = { Mls_mapfold.defaults with Mls_mapfold.node_dec = node } in
   let p, _ = Mls_mapfold.program_it funs () p in
     p

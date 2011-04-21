@@ -48,6 +48,5 @@ let print_graph label filename g =
   let ty_str = Format.flush_str_formatter () in
   DotG.name := label^" : "^ty_str;
   let oc = open_out (filename ^ ".dot") in
-    Format.printf "Wrriting to %s.dot@." filename;
     DotPrint.output_graph oc g.g_graph;
     close_out oc

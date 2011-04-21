@@ -63,7 +63,8 @@ module Dsatur = struct
     G.fold_vertex (fun v acc -> if G.Mark.get v = 0 then v::acc else acc) g []
 
   let color_vertex g v =
-    G.Mark.set v (pick_color (colors Iinterference g v) (colors Iaffinity g v))
+    let c = (pick_color (colors Iinterference g v) (colors Iaffinity g v)) in
+      G.Mark.set v c
 
   let rec color_vertices g vertices = match vertices with
     | [] -> ()
