@@ -380,12 +380,16 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
     | Evarpat x, Efby(_, w) -> (* x  = _ fby y *)
         (match w.w_desc with
           | Wconst _ -> ()
-          | _ -> add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
+          | _ ->
+              if World.is_optimized (Ivar x) then
+                add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
     | Evarpat x, Eextvalue w ->
       (* Add links between variables with the same value *)
         (match w.w_desc with
           | Wconst _ -> ()
-          | _ ->  add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
+          | _ ->
+              if World.is_optimized (Ivar x) then
+                add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
     | _ -> () (* do nothing *)
 
 (** Add the special init and return equations to the dependency graph
