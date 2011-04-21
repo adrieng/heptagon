@@ -281,7 +281,7 @@ let should_interfere (x, y) =
     let x_is_mem = World.is_memory x in
     let y_is_mem = World.is_memory y in
     let are_copies = have_same_value_from_name x y in
-    let disjoint_clocks = disjoint_clock (x_is_mem && y_is_mem) vdx.v_clock vdy.v_clock in
+    let disjoint_clocks = disjoint_clock (x_is_mem || y_is_mem) vdx.v_clock vdy.v_clock in
       not (disjoint_clocks or are_copies)
   )
 
