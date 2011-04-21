@@ -25,18 +25,7 @@ let rec find c = function
   | (c1, s1) :: h  ->
       if c = c1 then s1, h else let s, h = find c h in s, (c1, s1) :: h
 
-let is_deadcode = function
-    | Aassgn (lhs, e) ->
-        (match e.e_desc with
-           | Epattern l -> l = lhs
-           | _ -> false
-        )
-    | Acase (_, []) -> true
-    | Afor(_, _, _, { b_body = [] }) -> true
-    | _ -> false
-
 let rec joinlist l =
-  let l = List.filter (fun a -> not (is_deadcode a)) l in
     match l with
       | [] -> []
       | [s1] -> [s1]
