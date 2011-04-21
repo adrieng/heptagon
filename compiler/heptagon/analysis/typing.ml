@@ -1096,10 +1096,28 @@ let typing_const_dec cd =
   let se = expect_static_exp QualEnv.empty ty cd.c_value in
     { cd with c_value = se; c_type = ty }
 
+let typing_typedec td =
+  let tydesc = match td.t_desc with
+    | Type_abs -> Type_abs
+    | Type_enum(tag_list) -> Type_enum tag_list
+    | Type_alias t ->
+        let t = check_type QualEnv.empty t in
+          replace_type td.t_name (Talias t);
+          Type_alias t
+    | Type_struct(field_ty_list) ->
+        let typing_field { f_name = f; f_type = ty } =
+          { f_name = f; f_type = check_type QualEnv.empty ty }
+        in
+        let field_ty_list = List.map typing_field field_ty_list in
+          replace_type td.t_name (Tstruct field_ty_list);
+          Type_struct field_ty_list
+  in
+    { td with t_desc = tydesc }
+
 let program p =
   let program_desc pd = match pd with
     | Pnode n -> Pnode (node n)
     | Pconst c -> Pconst (typing_const_dec c)
-    | _ -> pd
+    | Ptype t -> Ptype (typing_typedec t)
   in
   { p with p_desc = List.map program_desc p.p_desc }
