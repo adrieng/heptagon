@@ -83,7 +83,7 @@ let lhs funs (env, mut) l = match l.pat_desc with
       (* replace with representative *)
       let iv = ivar_of_pat l in
         try
-          IvarEnv.find iv env, (env, mut)
+          { l with pat_desc = repr_from_ivar env iv }, (env, mut)
         with
           | Not_found -> l, (env, mut)
 

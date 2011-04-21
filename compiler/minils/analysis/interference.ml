@@ -6,8 +6,7 @@ open Minils
 open Interference_graph
 open Printf
 
-let memalloc_debug = true
-
+let print_interference_graphs = true
 let verbose_mode = true
 let print_debug0 s =
   if verbose_mode then
@@ -142,7 +141,7 @@ module World = struct
   let node_for_ivar iv =
     let rec _node_for_ivar igs iv =
       match igs with
-        | [] -> (*Format.printf "Var not in graph: %s@." (ivar_to_string iv);*) raise Not_found
+        | [] -> print_debug1 "Var not in graph: %s@." (ivar_to_string iv); raise Not_found
         | ig::igs ->
             (try
                 ig, node_for_value ig iv
@@ -182,12 +181,30 @@ let add_same_value_link_from_ivar = by_ivar () add_affinity_link
 let coalesce_from_name = by_name () coalesce
 let have_same_value_from_name = by_name false have_same_value
 
-let remove_from_name x =
+let remove_from_ivar iv =
   try
-    let ig, v = World.node_for_name x in
+    let ig, v = World.node_for_ivar iv in
       G.remove_vertex ig.g_graph v
   with
     | Not_found -> (* var not in graph, just ignore it *) ()
+
+
+(** Adds all the fields of a variable to the set [s] (when it corresponds to a record). *)
+let rec all_ivars s iv ty =
+  let s = if World.is_optimized_ty ty then IvarSet.add iv s else s in
+  match Modules.unalias_type ty with
+    | Tid n ->
+        (try
+            let fields = Modules.find_struct n in
+              List.fold_left (fun s { f_name = n; f_type = ty } ->
+                all_ivars s (Ifield(iv, n)) ty) s fields
+          with
+              Not_found -> s
+        )
+    | _ -> s
+
+let all_ivars_set ivs =
+  IvarSet.fold (fun iv s -> all_ivars s iv (World.ivar_type iv)) ivs IvarSet.empty
 
 
 (** Returns a map giving the number of uses of each ivar in the equations [eqs]. *)
@@ -199,7 +216,8 @@ let compute_uses eqs =
       else
         IvarEnv.add iv 1 env
     in
-      IvarSet.fold incr_uses (InterfRead.read eq) env
+    let ivars = all_ivars_set (InterfRead.read eq) in
+      IvarSet.fold incr_uses ivars env
   in
     List.fold_left aux IvarEnv.empty eqs
 
@@ -210,27 +228,24 @@ let number_uses iv uses =
     | Not_found -> 0
 
 let add_uses uses iv env =
-  if World.is_optimized iv then
-    IvarEnv.add iv (number_uses iv uses) env
-  else
-    env
+  let ivars = all_ivars IvarSet.empty iv (World.ivar_type iv) in
+    IvarSet.fold (fun iv env -> IvarEnv.add iv (number_uses iv uses) env) ivars env
 
 let compute_live_vars eqs =
   let uses = compute_uses eqs in
   print_debug_ivar_env "Uses" uses;
   let aux (env,res) eq =
     let decr_uses iv env =
-      if World.is_optimized iv then
-        try
-          IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
-        with
-          | Not_found ->(* Format.printf "var not found : %s@." (ivar_to_string iv);*) assert false
-      else
-        env
+      try
+        IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
+      with
+        | Not_found ->
+            print_debug1 "Cannot decrease; var not found : %s@." (ivar_to_string iv); assert false
     in
     let alive_vars = IvarEnv.fold (fun iv n acc -> if n > 0 then iv::acc else acc) env [] in
       print_debug1 "Alive vars : %s@." (String.concat " " (List.map ivar_to_string alive_vars));
-      let env = IvarSet.fold decr_uses (InterfRead.read eq) env in
+      let read_ivars = all_ivars_set (InterfRead.read eq) in
+      let env = IvarSet.fold decr_uses read_ivars env in
       let res = (eq, alive_vars)::res in
       let env = IvarSet.fold (add_uses uses) (InterfRead.def eq) env in
         print_debug_ivar_env "Remaining uses" env;
@@ -276,28 +291,10 @@ let should_interfere = Misc.memoize_couple should_interfere
     variable declaration list vds. It just creates one graph per type
     and one node per declaration. *)
 let init_interference_graph () =
-  (** Adds a node to the list of nodes for the given type. *)
-  let add_node env iv ty =
-    let ty = Modules.unalias_type ty in
-      if World.is_optimized_ty ty then
-        TyEnv.add_element ty (mk_node iv) env
-      else
-        env
-  in
   (** Adds a node for the variable and all fields of a variable. *)
   let rec add_ivar env iv ty =
-    let env = add_node env iv ty in
-    (match ty with
-       | Tid n ->
-         (try
-            let fields = Modules.find_struct n in
-              List.fold_left (fun env { f_name = f; f_type = ty } ->
-                add_ivar env (Ifield (iv, f)) ty) env fields
-          with
-              Not_found -> env
-         )
-       | _ -> env
-    )
+    let ivars = all_ivars IvarSet.empty iv ty in
+      IvarSet.fold (fun iv env -> TyEnv.add_element (World.ivar_type iv) (mk_node iv) env) ivars env
   in
   let env = Env.fold
     (fun _ vd env -> add_ivar env (Ivar vd.v_ident) vd.v_type) !World.vds TyEnv.empty in
@@ -326,7 +323,9 @@ let add_interferences live_vars =
 
 let spill_inputs f =
   let spilled_inp = (*List.filter is_linear*) f.n_input in
-    List.iter (fun vd -> remove_from_name vd.v_ident) spilled_inp
+  let spilled_inp = List.fold_left
+    (fun s vd -> IvarSet.add (Ivar vd.v_ident) s) IvarSet.empty spilled_inp in
+    IvarSet.iter remove_from_ivar (all_ivars_set spilled_inp)
 
 
 (** @return whether [ty] corresponds to a record type. *)
@@ -343,28 +342,6 @@ let rec filter_fields = function
   | [] -> []
   | (Ifield (id, _))::l -> id::(filter_fields l)
   | _::l -> filter_fields l
-
-(** Returns all the fields of a variable (when it corresponds to a record). *)
-let rec record_vars acc iv ty =
-  let acc = iv::acc in
-  match ty with
-    | Tid n ->
-        (try
-            let fields = Modules.find_struct n in
-              List.fold_left (fun acc { f_name = n; f_type = ty } ->
-                record_vars acc (Ifield(iv, n)) ty) acc fields
-          with
-              Not_found -> acc
-        )
-    | _ -> acc
-
-(** Adds all fields of a var in the list of live variables of
-    every equation. If x is live in eq, then so are all x.f. *)
-let fix_records_live_vars live_vars =
-  let fix_one_list vars =
-    List.fold_left (fun acc iv -> record_vars acc iv (World.ivar_type iv)) [] vars
-  in
-    List.map (fun (eq, vars) -> eq, fix_one_list vars) live_vars
 
 (** Adds the interference between records variables
     caused by interferences between their fields. *)
@@ -433,8 +410,6 @@ let build_interf_graph f =
     (*coalesce_linear_vars igs vds;*)
     (** Other cases*)
     List.iter process_eq f.n_equs;
-    (* Make sure the interference between records are coherent *)
-    let live_vars = fix_records_live_vars live_vars in
     (* Add interferences from live vars set*)
     add_interferences live_vars;
     (* Add interferences between records implied by IField values*)
@@ -494,7 +469,7 @@ let node _ acc f =
   let igs = build_interf_graph f in
     (** Color the graph *)
     color_interf_graphs igs;
-    if memalloc_debug then
+    if print_interference_graphs then
       print_graphs f igs;
     (** Remember the choice we made for code generation *)
       { f with n_mem_alloc = create_subst_lists igs }, acc
