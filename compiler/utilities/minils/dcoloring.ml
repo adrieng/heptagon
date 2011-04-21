@@ -19,7 +19,7 @@ module ColorSet =
 module Dsatur = struct
   let rec remove_colored l = match l with
     | [] -> []
-    | v::l -> if G.Mark.get v > 0 then l else remove_colored l
+    | v::l -> if G.Mark.get v > 0 then l else v::(remove_colored l)
 
   let colors i g v =
     let color e colors =
