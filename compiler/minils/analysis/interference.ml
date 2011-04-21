@@ -206,6 +206,9 @@ let compute_live_vars eqs =
     in
     let env = IvarSet.fold decr_uses (InterfRead.read eq) env in
     let alive_vars = IvarEnv.fold (fun iv n acc -> if n > 0 then iv::acc else acc) env [] in
+
+      Format.printf " Alive vars : %s@." (String.concat " " (List.map ivar_to_string alive_vars));
+
     let res = (eq, alive_vars)::res in
     let env = IvarSet.fold (add_uses uses) (InterfRead.def eq) env in
       env, res
@@ -432,17 +435,17 @@ let color_interf_graphs igs =
   let record_igs, igs =
     List.partition (fun ig -> is_record_type ig.g_type) igs in
     (* First color interference graphs of record types *)
-    List.iter color record_igs;
+    List.iter Dcoloring.color record_igs;
     (* Then update fields colors *)
     List.iter color_fields igs;
     (* and finish the coloring *)
-    List.iter color igs
+    List.iter Dcoloring.color igs
 
 let print_graphs f igs =
   let cpt = ref 0 in
   let print_graph ig =
     let s = (Names.shortname f.n_name)^ (string_of_int !cpt) in
-      print_graph (Names.fullname f.n_name) s ig;
+      Interference2dot.print_graph (Names.fullname f.n_name) s ig;
       cpt := !cpt + 1
   in
     List.iter print_graph igs
@@ -451,7 +454,7 @@ let print_graphs f igs =
     from the interference graph.*)
 let create_subst_lists igs =
   let create_one_ig ig =
-    List.map (fun x -> ig.g_type, x) (values_by_color ig)
+    List.map (fun x -> ig.g_type, x) (Dcoloring.values_by_color ig)
   in
     List.flatten (List.map create_one_ig igs)
 
@@ -466,6 +469,7 @@ let node _ acc f =
       { f with n_mem_alloc = create_subst_lists igs }, acc
 
 let program p =
+  Format.printf "is_directe %b@." (G.is_directed);
   let funs = { Mls_mapfold.defaults with Mls_mapfold.node_dec = node } in
   let p, _ = Mls_mapfold.program_it funs () p in
     p

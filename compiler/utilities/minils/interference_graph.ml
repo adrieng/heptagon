@@ -79,6 +79,12 @@ struct
         r := !(V.label n2) @ !r;
         remove_vertex g n2
     )
+
+  let vertices g =
+    fold_vertex (fun v acc -> v::acc) g []
+
+  let filter_vertices f g =
+    fold_vertex (fun v acc -> if f v then v::acc else acc) g []
 end
 
 type interference_graph = {
@@ -172,72 +178,3 @@ let iter_interf f g =
       f g (G.E.src e) (G.E.dst e)
   in
     G.iter_edges_e do_f g.g_graph
-
-(** Coloring*)
-module KColor = Coloring.Mark(G)
-module ColorEnv =
-  ListMap(struct
-      type t = int
-      let compare = compare
-    end)
-
-let color g =
-  KColor.coloring g.g_graph (Hashtbl.length g.g_hash)
-
-let values_by_color g =
-  let env = G.fold_vertex
-    (fun n env -> ColorEnv.add_elements (G.Mark.get n) !(G.V.label n) env)
-    g.g_graph ColorEnv.empty
-  in
-    ColorEnv.fold (fun _ v acc -> v::acc) env []
-
-(** Printing *)
-
-module DotG = struct
-  include G
-
-  let name = ref ""
-
-  let color_to_graphviz_color i =
-    (i * 8364263947 + 855784368)
-
-  (*Functions for printing the graph *)
-  let default_vertex_attributes _ = []
-  let default_edge_attributes _ = []
-  let get_subgraph _ = None
-
-  let graph_attributes _ =
-    [`Label !name]
-
-  let vertex_name v =
-    let rec ivar_name iv =
-      match iv with
-        | Ivar id -> Idents.name id
-        | Ifield(ivar, f) -> (ivar_name ivar)^"_"^(Names.shortname f)
-    in
-      Misc.sanitize_string (ivar_name (List.hd !(V.label v)))
-
-  let vertex_attributes v =
-    let s = String.concat ", " (List.map (fun iv -> ivar_to_string iv) !(V.label v)) in
-      [`Label s; `Color (color_to_graphviz_color (Mark.get v))]
-
-  let edge_attributes e =
-    let style =
-      match E.label e with
-        | Iinterference -> `Solid
-        | Iaffinity -> `Dashed
-        | Isame_value -> `Dotted
-    in
-      [`Style style]
-end
-
-module DotPrint = Graphviz.Dot(DotG)
-
-let print_graph label filename g =
-  Global_printer.print_type Format.str_formatter g.g_type;
-  let ty_str = Format.flush_str_formatter () in
-  DotG.name := label^" : "^ty_str;
-  let oc = open_out (filename ^ ".dot") in
-    Format.printf "Wrriting to %s.dot@." filename;
-    DotPrint.output_graph oc g.g_graph;
-    close_out oc
