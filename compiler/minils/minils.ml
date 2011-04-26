@@ -20,7 +20,7 @@ open Clocks
 
 (** Warning: Whenever Minils ast is modified,
     minils_format_version should be incremented. *)
-let minils_format_version = "2"
+let minils_format_version = "2lin1"
 
 type iterator_type =
   | Imap
