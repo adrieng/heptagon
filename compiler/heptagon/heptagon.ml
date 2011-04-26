@@ -14,6 +14,7 @@ open Idents
 open Static
 open Signature
 open Types
+open Linearity
 open Clocks
 open Initial
 
@@ -29,6 +30,7 @@ type iterator_type =
 type exp = {
   e_desc      : desc;
   e_ty        : ty;
+  mutable e_linearity : linearity;
   e_ct_annot  : ct;
   e_base_ck   : ck;
   e_loc       : location }
@@ -118,6 +120,7 @@ and present_handler = {
 and var_dec = {
   v_ident : var_ident;
   v_type  : ty;
+  v_linearity : linearity;
   v_clock : ck;
   v_last  : last;
   v_loc   : location }
@@ -190,8 +193,8 @@ and interface_desc =
   | Isignature of signature
 (*
 (* Helper functions to create AST. *)
-let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
-  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
+let mk_exp desc ?(linearity = Ltop) ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
+  { e_desc = desc; e_ty = ty; e_linearity = linearity; e_ct_annot = ct_annot;
     e_base_ck = Cbase; e_loc = loc; }
 
 let mk_app ?(params=[]) ?(unsafe=false) op =
@@ -206,8 +209,8 @@ let mk_type_dec name desc =
 let mk_equation stateful desc =
   { eq_desc = desc; eq_stateful = stateful; eq_loc = no_location; }
 
-let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty =
-  { v_ident = name; v_type = ty; v_clock = clock;
+let mk_var_dec ?(last = Var) ?(linearity = Ltop) ?(clock = fresh_clock()) name ty =
+  { v_ident = name; v_type = ty; v_linearity = linearity; v_clock = clock;
     v_last = last; v_loc = no_location }
 
 let mk_block stateful ?(defnames = Env.empty) ?(locals = []) eqs =

@@ -15,6 +15,7 @@ open Idents
 open Signature
 open Static
 open Types
+open Linearity
 open Clocks
 
 (** Warning: Whenever Minils ast is modified,
@@ -43,6 +44,7 @@ and extvalue = {
   w_desc      : extvalue_desc;
   mutable w_ck: ck;
   w_ty        : ty;
+  w_linearity : linearity;
   w_loc       : location }
 
 and extvalue_desc =
@@ -54,6 +56,7 @@ and extvalue_desc =
 and exp = {
   e_desc      : edesc;
   mutable e_ck: ck;
+  e_linearity : linearity;
   e_ty        : ty;
   e_loc       : location }
 
@@ -103,6 +106,7 @@ type eq = {
 type var_dec = {
   v_ident : var_ident;
   v_type : ty;
+  v_linearity : linearity;
   v_clock : ck;
   v_loc : location }
 
@@ -147,19 +151,20 @@ and program_desc =
 
 (*Helper functions to build the AST*)
 
-let mk_extvalue ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
-  { w_desc = desc; w_ty = ty;
+let mk_extvalue ~ty ?(linearity = Ltop) ?(clock = fresh_clock()) ?(loc = no_location) desc =
+  { w_desc = desc; w_ty = ty; w_linearity = linearity;
     w_ck = clock; w_loc = loc }
 
-let mk_exp ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
-  { e_desc = desc; e_ty = ty;
+let mk_exp ty ?(linearity = Ltop) ?(clock = fresh_clock()) ?(loc = no_location) desc =
+  { e_desc = desc; e_ty = ty; e_linearity = linearity;
     e_ck = clock; e_loc = loc }
 
-let mk_extvalue_exp ?(clock = fresh_clock()) ?(loc = no_location) ty desc =
-  mk_exp ~clock:clock ~loc:loc ty (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ~ty:ty desc))
+let mk_extvalue_exp ?(linearity = Ltop) ?(clock = fresh_clock()) ?(loc = no_location) ty desc =
+  mk_exp ~clock:clock ~loc:loc ty
+    (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ~linearity:linearity ~ty:ty desc))
 
-let mk_var_dec ?(loc = no_location) ?(clock = fresh_clock()) ident ty =
-  { v_ident = ident; v_type = ty; v_clock = clock; v_loc = loc }
+let mk_var_dec ?(loc = no_location) ?(linearity = Ltop) ?(clock = fresh_clock()) ident ty =
+  { v_ident = ident; v_type = ty; v_linearity = linearity; v_clock = clock; v_loc = loc }
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }

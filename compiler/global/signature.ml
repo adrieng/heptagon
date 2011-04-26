@@ -9,13 +9,14 @@
 (* global data in the symbol tables *)
 open Names
 open Types
+open Linearity
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
 let interface_format_version = "20"
 
 (** Node argument *)
-type arg = { a_name : name option; a_type : ty }
+type arg = { a_name : name option; a_type : ty; a_linearity : linearity }
 
 (** Node static parameters *)
 type param = { p_name : name; p_type : ty }
@@ -49,7 +50,7 @@ let names_of_arg_list l = List.map (fun ad -> ad.a_name) l
 
 let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
 
-let mk_arg name ty = { a_type = ty; a_name = name }
+let mk_arg ?(linearity = Ltop) name ty = { a_type = ty; a_linearity = linearity; a_name = name }
 
 let mk_param name ty = { p_name = name; p_type = ty }
 

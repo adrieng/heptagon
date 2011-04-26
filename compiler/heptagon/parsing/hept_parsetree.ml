@@ -141,6 +141,7 @@ and present_handler =
 and var_dec =
   { v_name : var_name;
     v_type : ty;
+    v_linearity : Linearity.linearity;
     v_last : last;
     v_loc  : location; }
 
@@ -193,6 +194,7 @@ and program_desc =
 
 type arg =
   { a_type : ty;
+    a_linearity : Linearity.linearity;
     a_name : var_name option }
 
 type signature =
@@ -250,8 +252,8 @@ let mk_equation desc loc =
 let mk_interface_decl desc loc =
   { interf_desc = desc; interf_loc = loc }
 
-let mk_var_dec name ty last loc =
-  { v_name = name; v_type = ty;
+let mk_var_dec ?(linearity=Linearity.Ltop) name ty last loc =
+  { v_name = name; v_type = ty; v_linearity = linearity;
     v_last = last; v_loc = loc }
 
 let mk_block locals eqs loc =
@@ -261,8 +263,8 @@ let mk_block locals eqs loc =
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
-let mk_arg name ty =
-  { a_type = ty; a_name = name }
+let mk_arg name (ty,lin) =
+  { a_type = ty; a_linearity = lin; a_name = name }
 
 let ptrue = Q Initial.ptrue
 let pfalse = Q Initial.pfalse

@@ -4,6 +4,7 @@ open Signature
 open Location
 open Names
 open Types
+open Linearity
 open Hept_parsetree
 
 
@@ -47,6 +48,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP MAPI FOLD FOLDI MAPFOLD
+%token AT
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -193,8 +195,9 @@ nonmt_params:
 ;
 
 param:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
+  | ident_list COLON located_ty_ident
+      { List.map (fun id -> mk_var_dec ~linearity:(snd $3)
+        id (fst $3) Var (Loc($startpos,$endpos))) $1 }
 ;
 
 out_params:
@@ -248,17 +251,25 @@ loc_params:
 
 
 var_last:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
-  | LAST IDENT COLON ty_ident EQUAL exp
-      { [ mk_var_dec $2 $4 (Last(Some($6))) (Loc($startpos,$endpos)) ] }
-  | LAST IDENT COLON ty_ident
-      { [ mk_var_dec $2 $4 (Last(None)) (Loc($startpos,$endpos)) ] }
+  | ident_list COLON located_ty_ident
+      { List.map (fun id -> mk_var_dec ~linearity:(snd $3)
+        id (fst $3) Var (Loc($startpos,$endpos))) $1 }
+  | LAST IDENT COLON located_ty_ident EQUAL exp
+      { [ mk_var_dec ~linearity:(snd $4) $2 (fst $4) (Last(Some($6))) (Loc($startpos,$endpos)) ] }
+  | LAST IDENT COLON located_ty_ident
+      { [ mk_var_dec ~linearity:(snd $4) $2 (fst $4) (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
 ident_list:
   | IDENT  { [$1] }
   | IDENT COMMA ident_list { $1 :: $3 }
+;
+
+located_ty_ident:
+  | ty_ident
+      { $1, Ltop }
+  | ty_ident AT ident
+      { $1, Lat $3 }
 ;
 
 ty_ident:
@@ -626,8 +637,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident { mk_arg (Some $1) $3 }
-  | ty_ident { mk_arg None $1 }
+  | IDENT COLON located_ty_ident { mk_arg (Some $1) $3 }
+  | located_ty_ident { mk_arg None $1 }
 ;
 
 %%

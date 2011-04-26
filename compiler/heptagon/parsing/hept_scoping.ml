@@ -237,6 +237,7 @@ let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
       Heptagon.e_ty = Types.invalid_type;
+      Heptagon.e_linearity = Linearity.Ltop;
       Heptagon.e_base_ck = Clocks.Cbase;
       Heptagon.e_ct_annot = e.e_ct_annot;
       Heptagon.e_loc = e.e_loc }
@@ -372,6 +373,7 @@ and translate_var_dec env vd =
   (* env is initialized with the declared vars before their translation *)
     { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
       Heptagon.v_type = translate_type vd.v_loc vd.v_type;
+      Heptagon.v_linearity = vd.v_linearity;
       Heptagon.v_last = translate_last vd.v_last;
       Heptagon.v_clock = Clocks.fresh_clock(); (* TODO add clock annotations *)
       Heptagon.v_loc = vd.v_loc }
@@ -397,7 +399,7 @@ let params_of_var_decs =
                         (translate_type vd.v_loc vd.v_type))
 
 let args_of_var_decs =
-  List.map (fun vd -> Signature.mk_arg
+  List.map (fun vd -> Signature.mk_arg ~linearity:vd.v_linearity
                         (Some vd.v_name)
                         (translate_type vd.v_loc vd.v_type))
 

@@ -2,6 +2,7 @@ open Misc
 open Names
 open Idents
 open Types
+open Linearity
 open Clocks
 open Static
 open Format
@@ -40,9 +41,9 @@ let rec print_clock ff = function
   | Cprod ct_list ->
       fprintf ff "@[<2>(%a)@]" (print_list_r print_clock """ *""") ct_list
 
-let print_vd ff { v_ident = n; v_type = ty; v_clock = ck } =
+let print_vd ff { v_ident = n; v_type = ty; v_linearity = lin; v_clock = ck } =
   if !Compiler_options.full_type_info then
-    fprintf ff "%a : %a :: %a" print_ident n print_type ty print_ck ck
+    fprintf ff "%a : %a%a :: %a" print_ident n print_type ty print_linearity lin print_ck ck
   else fprintf ff "%a : %a" print_ident n print_type ty
 
 let print_local_vars ff = function
@@ -85,8 +86,8 @@ and print_trunc_index ff idx =
 
 and print_exp ff e =
   if !Compiler_options.full_type_info then
-    fprintf ff "(%a : %a :: %a)"
-      print_exp_desc e.e_desc print_type e.e_ty print_ck e.e_ck
+    fprintf ff "(%a : %a%a :: %a)"
+      print_exp_desc e.e_desc print_type e.e_ty print_linearity e.e_linearity print_ck e.e_ck
   else fprintf ff "%a" print_exp_desc e.e_desc
 
 and print_every ff reset =
@@ -94,8 +95,8 @@ and print_every ff reset =
 
 and print_extvalue ff w =
   if !Compiler_options.full_type_info then
-    fprintf ff "(%a : %a :: %a)"
-      print_extvalue_desc w.w_desc print_type w.w_ty print_ck w.w_ck
+    fprintf ff "(%a : %a%a :: %a)"
+      print_extvalue_desc w.w_desc print_type w.w_ty print_linearity w.w_linearity print_ck w.w_ck
   else fprintf ff "%a" print_extvalue_desc w.w_desc
 
 

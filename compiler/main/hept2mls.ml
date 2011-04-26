@@ -52,8 +52,9 @@ let equation locals eqs e =
   (mk_equation (Evarpat n) e):: eqs
 
 let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty;
+                    Heptagon.v_linearity = linearity;
                     Heptagon.v_loc = loc } =
-  mk_var_dec ~loc:loc n ty
+  mk_var_dec ~loc:loc ~linearity:linearity n ty
 
 let translate_reset = function
   | Some { Heptagon.e_desc = Heptagon.Evar n } -> Some n
@@ -90,7 +91,9 @@ let translate_app app =
     ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
 
 let rec translate_extvalue e =
-  let mk_extvalue = mk_extvalue ~loc:e.Heptagon.e_loc ~ty:e.Heptagon.e_ty in
+  let mk_extvalue =
+    mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity ~ty:e.Heptagon.e_ty
+  in
   match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue (Wconst c)
     | Heptagon.Evar x -> mk_extvalue (Wvar x)
@@ -105,9 +108,9 @@ let rec translate_extvalue e =
     | _ -> Error.message e.Heptagon.e_loc Error.Enormalization
 
 let translate
-    ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
+    ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_linearity = linearity;
       Heptagon.e_loc = loc } as e) =
-  let mk_exp = mk_exp ~loc:loc in
+  let mk_exp = mk_exp ~loc:loc ~linearity:linearity in
   match desc with
     | Heptagon.Econst _
     | Heptagon.Evar _

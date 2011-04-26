@@ -18,6 +18,7 @@ open Format
 open Global_printer
 open Pp_tools
 open Types
+open Linearity
 open Signature
 open Heptagon
 
@@ -37,10 +38,10 @@ let rec print_pat ff = function
   | Etuplepat pat_list ->
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
 
-let rec print_vd ff { v_ident = n; v_type = ty; v_last = last } =
-  fprintf ff "%a%a : %a%a"
+let rec print_vd ff { v_ident = n; v_type = ty; v_linearity = lin; v_last = last } =
+  fprintf ff "%a%a : %a%a%a"
     print_last last  print_ident n
-    print_type ty  print_last_value last
+    print_type ty  print_linearity lin  print_last_value last
 
 and print_last ff = function
   | Last _ -> fprintf ff "last "
@@ -90,8 +91,8 @@ and print_exps ff e_list =
 
 and print_exp ff e =
  if !Compiler_options.full_type_info then
-    fprintf ff "(%a : %a)"
-      print_exp_desc e.e_desc print_type e.e_ty
+    fprintf ff "(%a : %a%a)"
+      print_exp_desc e.e_desc print_type e.e_ty  print_linearity e.e_linearity
   else fprintf ff "%a" print_exp_desc e.e_desc
 
 and print_exp_desc ff = function
