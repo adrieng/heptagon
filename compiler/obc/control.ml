@@ -45,15 +45,6 @@ let used_vars e =
   let _, vars = Obc_mapfold.exp_it funs [] e in
     vars
 
-
-let rec find_obj o j = match j with
-  | [] -> assert false
-  | obj::j ->
-    if o = obj.o_ident then
-      Modules.find_value obj.o_class
-    else
-      find_obj o j
-
 let rec is_modified_by_call x args e_list = match args, e_list with
   | [], [] -> false
   | a::args, e::e_list ->

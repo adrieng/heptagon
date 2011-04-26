@@ -101,6 +101,14 @@ let obj_ref_name o =
     | Oobj obj
     | Oarray (obj, _) -> obj
 
+let rec find_obj o j = match j with
+  | [] -> assert false
+  | obj::j ->
+    if o = obj.o_ident then
+      Modules.find_value obj.o_class
+    else
+      find_obj o j
+
 (** Input a block [b] and remove all calls to [Reset] method from it *)
 let remove_resets b =
   let block funs _ b =

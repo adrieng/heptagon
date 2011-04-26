@@ -107,6 +107,7 @@ let rec ctype_of_otype oty =
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =
     let ty = ctype_of_otype vd.v_type in
+    let ty = if Linearity.is_linear vd.v_linearity then pointer_to ty else ty in
     name vd.v_ident, ty
   in
   List.map cvar_of_ovar vl
@@ -362,6 +363,15 @@ let out_var_name_of_objn o =
     of the called node, [mem] represents the node context and [args] the
     argument list.*)
 let step_fun_call var_env sig_info objn out args =
+  let rec add_targeting l ads = match l, ads with
+    | [], [] -> []
+    | e::l, ad::ads ->
+        (*this arg is targeted, use a pointer*)
+        let e = if Linearity.is_linear ad.a_linearity then address_of e else e in
+          e::(add_targeting l ads)
+    | _, _ -> assert false
+  in
+  let args = (add_targeting args sig_info.node_inputs) in
   if sig_info.node_stateful then (
     let mem =
       (match objn with

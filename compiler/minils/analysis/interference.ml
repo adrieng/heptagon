@@ -240,6 +240,7 @@ let add_uses uses iv env =
   let ivars = all_ivars IvarSet.empty iv (World.ivar_type iv) in
     IvarSet.fold (fun iv env -> IvarEnv.add iv (number_uses iv uses) env) ivars env
 
+(** TODO: compute correct live range for variables wit no use ?*)
 let compute_live_vars eqs =
   let uses = compute_uses eqs in
   print_debug_ivar_env "Uses" uses;

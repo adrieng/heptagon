@@ -1,5 +1,6 @@
 open Types
 open Idents
+open Signature
 open Linearity
 open Obc
 open Obc_utils
@@ -83,24 +84,27 @@ let memalloc_subst_map inputs outputs mems subst_lists =
     map_from_subst_lists (env, mutables) other_lists
 
 
-let lhs funs (env, mut) l = match l.pat_desc with
-  | Lmem _ -> l, (env, mut)
-  | Larray _ -> Obc_mapfold.lhs funs (env, mut) l
+let lhs funs (env, mut, j) l = match l.pat_desc with
+  | Lmem _ -> l, (env, mut, j)
+  | Larray _ -> Obc_mapfold.lhs funs (env, mut, j) l
   | Lvar _ | Lfield _ ->
       (* replace with representative *)
       let iv = ivar_of_pat l in
         try
-          { l with pat_desc = repr_from_ivar env iv }, (env, mut)
+          { l with pat_desc = repr_from_ivar env iv }, (env, mut, j)
         with
-          | Not_found -> l, (env, mut)
+          | Not_found -> l, (env, mut, j)
 
-let act funs acc a = match a with
-  | Acall(_, _, Mstep, _) ->
-      let a, acc = Obc_mapfold.act funs acc a in
-      (* remove targeted outputs *) a, acc
+let act funs (env,mut,j) a = match a with
+  | Acall(pat, o, Mstep, e_list) ->
+      let desc = Obc_utils.find_obj (obj_ref_name o) j in
+      let e_list = List.map (fun e -> fst (Obc_mapfold.exp_it funs (env,mut,j) e)) e_list in
+      let fix_pat p a l = if Linearity.is_linear a.a_linearity then l else p::l in
+      let pat = List.fold_right2 fix_pat pat desc.node_outputs [] in
+        Acall(pat, o, Mstep, e_list), (env,mut,j)
   | _ -> raise Errors.Fallback
 
-let var_decs _ (env, mutables) vds =
+let var_decs _ (env, mutables,j) vds =
   let var_dec vd acc =
     try
       if (var_name (IvarEnv.find (Ivar vd.v_ident) env)) <> vd.v_ident then
@@ -113,7 +117,7 @@ let var_decs _ (env, mutables) vds =
     with
       | Not_found -> vd::acc
   in
-    List.fold_right var_dec vds [], (env, mutables)
+    List.fold_right var_dec vds [], (env, mutables,j)
 
 
 let add_other_vars md cd =
@@ -141,11 +145,11 @@ let class_def funs acc cd =
   (*add linear variables not taken into account by memory allocation*)
   let mem_alloc = (add_other_vars md cd) @ cd.cd_mem_alloc in
   let env, mutables = memalloc_subst_map inputs outputs mems mem_alloc in
-  let cd, _ = Obc_mapfold.class_def funs (env, mutables) cd in
+  let cd, _ = Obc_mapfold.class_def funs (env, mutables, cd.cd_objs) cd in
     cd, acc
 
 let program p =
   let funs = { Obc_mapfold.defaults with class_def = class_def; var_decs = var_decs;
     act = act; lhs = lhs } in
-  let p, _ = Obc_mapfold.program_it funs (IvarEnv.empty, IdentSet.empty) p in
+  let p, _ = Obc_mapfold.program_it funs (IvarEnv.empty, IdentSet.empty, []) p in
     p
