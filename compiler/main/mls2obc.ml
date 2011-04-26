@@ -166,8 +166,8 @@ let rec translate_pat map = function
         pat_list []
 
 let translate_var_dec l =
-  let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
-    mk_var_dec ~loc:loc x t
+  let one_var { Minils.v_ident = x; Minils.v_type = t; Minils.v_linearity = lin; v_loc = loc } =
+    mk_var_dec ~loc:loc ~linearity:lin x t
   in
   List.map one_var l
 

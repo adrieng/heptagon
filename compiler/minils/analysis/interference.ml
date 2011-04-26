@@ -3,7 +3,9 @@ open Types
 open Clocks
 open Signature
 open Minils
+open Linearity
 open Interference_graph
+open Containers
 open Printf
 
 let print_interference_graphs = true
@@ -80,6 +82,12 @@ module InterfRead = struct
   let def eq =
     vars_pat IvarSet.empty eq.eq_lhs
 
+  let rec nth_var_from_pat j pat =
+    match j, pat with
+      | 0, Evarpat x -> x
+      | n, Etuplepat l -> nth_var_from_pat 0 (List.nth l n)
+      | _, _ -> assert false
+
   let read_exp e =
     let funs = { Mls_mapfold.defaults with
       Mls_mapfold.exp = read_exp;
@@ -95,6 +103,7 @@ end
 module World = struct
   let vds = ref Env.empty
   let memories = ref IvarSet.empty
+  let igs = ref []
 
   let init f =
     (* build vds cache *)
@@ -104,6 +113,7 @@ module World = struct
     let env = build Env.empty f.n_input in
     let env = build env f.n_output in
     let env = build env f.n_local in
+      igs := [];
       vds := env;
     (* build the set of memories *)
       let mems = Mls_utils.node_memory_vars f in
@@ -135,8 +145,6 @@ module World = struct
 
   let is_memory x =
     IvarSet.mem (Ivar x) !memories
-
-  let igs = ref []
 
   let node_for_ivar iv =
     let rec _node_for_ivar igs iv =
@@ -179,6 +187,7 @@ let add_affinity_link_from_ivar = by_ivar () add_affinity_link
 let add_same_value_link_from_name = by_name () add_affinity_link
 let add_same_value_link_from_ivar = by_ivar () add_affinity_link
 let coalesce_from_name = by_name () coalesce
+let coalesce_from_ivar = by_ivar () coalesce
 let have_same_value_from_name = by_name false have_same_value
 
 let remove_from_ivar iv =
@@ -322,7 +331,7 @@ let add_interferences live_vars =
   List.iter (fun (_, vars) -> add_interferences_from_list false vars) live_vars
 
 let spill_inputs f =
-  let spilled_inp = (*List.filter is_linear*) f.n_input in
+  let spilled_inp = List.filter (fun vd -> not (is_linear vd.v_linearity)) f.n_input in
   let spilled_inp = List.fold_left
     (fun s vd -> IvarSet.add (Ivar vd.v_ident) s) IvarSet.empty spilled_inp in
     IvarSet.iter remove_from_ivar (all_ivars_set spilled_inp)
@@ -356,6 +365,53 @@ let add_records_field_interferences () =
 
 
 
+(** Coalesce the nodes corresponding to all semilinear variables
+    with the same location. *)
+let coalesce_linear_vars () =
+  let coalesce_one_var _ vd memlocs =
+    if World.is_optimized_ty vd.v_type then
+      (match vd.v_linearity with
+        | Ltop -> memlocs
+        | Lat r ->
+            if LocationEnv.mem r memlocs then (
+              coalesce_from_name vd.v_ident (LocationEnv.find r memlocs);
+              memlocs
+            ) else
+              LocationEnv.add r vd.v_ident memlocs
+        | _ -> assert false)
+    else
+      memlocs
+  in
+    ignore (Env.fold coalesce_one_var !World.vds LocationEnv.empty)
+
+let find_targeting f =
+  let find_output outputs_lins (acc,i) l =
+    let idx = Misc.index (fun l1 -> l = l1) outputs_lins in
+      if idx >= 0 then
+        (i, idx)::acc, i+1
+      else
+        acc, i+1
+  in
+  let desc = Modules.find_value f in
+  let inputs_lins = linearities_of_arg_list desc.node_inputs in
+  let outputs_lins = linearities_of_arg_list desc.node_outputs in
+  let acc, _ = List.fold_left (find_output outputs_lins) ([], 0) inputs_lins in
+    acc
+
+(** Coalesces the nodes corresponding to the inputs (given by e_list)
+    and the outputs (given by the pattern pat) of a node
+    with the given targeting. *)
+let apply_targeting targeting e_list pat =
+  let coalesce_targeting inputs i j =
+    let invar = InterfRead.ivar_of_extvalue (List.nth inputs i) in
+    let outvar = InterfRead.nth_var_from_pat j pat in
+      coalesce_from_ivar invar (Ivar outvar)
+  in
+     List.iter (fun (i,j) -> coalesce_targeting e_list i j) targeting
+
+
+
+
 (** [process_eq igs eq] adds to the interference graphs igs
     the links corresponding to the equation. Interferences
     corresponding to live vars sets are already added by build_interf_graph.
@@ -363,9 +419,9 @@ let add_records_field_interferences () =
 let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
   (** Other cases*)
   match pat, e.e_desc with
-  (*  | Eapp ({ a_op = (Efun f | Enode f) }, e_list, _) ->
-      let targeting = (find_value f).node_targeting in
-        apply_targeting igs targeting e_list pat eq *)
+    | _, Eapp ({ a_op = (Efun f | Enode f) }, e_list, _) ->
+      let targeting = find_targeting f in
+        apply_targeting targeting e_list pat
     | _, Eiterator(Imap, { a_op = Enode _ | Efun _ }, _, _, w_list, _) ->
       let invars = InterfRead.ivars_of_extvalues w_list in
       let outvars = IvarSet.elements (InterfRead.def eq) in
@@ -407,7 +463,7 @@ let build_interf_graph f =
   (** Build live vars sets for each equation *)
   let live_vars = compute_live_vars eqs in
     (* Coalesce linear variables *)
-    (*coalesce_linear_vars igs vds;*)
+    coalesce_linear_vars ();
     (** Other cases*)
     List.iter process_eq f.n_equs;
     (* Add interferences from live vars set*)

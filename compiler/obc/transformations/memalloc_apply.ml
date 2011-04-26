@@ -1,9 +1,16 @@
 open Types
 open Idents
+open Linearity
 open Obc
 open Obc_utils
 open Obc_mapfold
 open Interference_graph
+
+module LinListEnv =
+    Containers.ListMap(struct
+      type t = linearity_var
+      let compare = compare
+    end)
 
 let rec ivar_of_pat l = match l.pat_desc with
   | Lvar x -> Ivar x
@@ -108,6 +115,22 @@ let var_decs _ (env, mutables) vds =
   in
     List.fold_right var_dec vds [], (env, mutables)
 
+
+let add_other_vars md cd =
+  let add_one (env, ty_env) vd =
+    if is_linear vd.v_linearity && not (Interference.World.is_optimized_ty vd.v_type) then
+      let r = location_name vd.v_linearity in
+      let env = LinListEnv.add_element r (Ivar vd.v_ident) env in
+      let ty_env = LocationEnv.add r vd.v_type ty_env in
+        env, ty_env
+    else
+      env, ty_env
+  in
+  let envs = List.fold_left add_one (LinListEnv.empty, LocationEnv.empty) md.m_inputs in
+  let envs = List.fold_left add_one envs md.m_outputs in
+  let env, ty_env = List.fold_left add_one envs cd.cd_mems in
+    LinListEnv.fold (fun r x acc -> (LocationEnv.find r ty_env, x)::acc) env []
+
 let class_def funs acc cd =
   (* find the substitution and apply it to the body of the class *)
   let ivars_of_vds vds = List.map (fun vd -> Ivar vd.v_ident) vds in
@@ -115,7 +138,9 @@ let class_def funs acc cd =
   let inputs = ivars_of_vds md.m_inputs in
   let outputs = ivars_of_vds md.m_outputs in
   let mems = ivars_of_vds cd.cd_mems in
-  let env, mutables = memalloc_subst_map inputs outputs mems cd.cd_mem_alloc in
+  (*add linear variables not taken into account by memory allocation*)
+  let mem_alloc = (add_other_vars md cd) @ cd.cd_mem_alloc in
+  let env, mutables = memalloc_subst_map inputs outputs mems mem_alloc in
   let cd, _ = Obc_mapfold.class_def funs (env, mutables) cd in
     cd, acc
 

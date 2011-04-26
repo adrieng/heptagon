@@ -567,7 +567,6 @@ and expect_iterator env loc it expected_lin inputs_lins outputs_lins e_list = ma
     let inputs_lins = subst_lin m inputs_lins in
 
     (* Then guess linearities of other vars to get expected_lin *)
-      Format.eprintf "%d == %d@." (List.length inputs_lins) (List.length e_list);
     let _, coll_exp = extract_lin_exp inputs_lins e_list in
     let collect_list = List.map (collect_exp env) coll_exp in
     let names_list =

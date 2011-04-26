@@ -81,6 +81,9 @@ val fold_righti : (int -> 'a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 val iter_couple : ('a -> 'a -> unit) -> 'a list -> unit
 (** [iter_couple_2 f l1 l2] calls f for all x in [l1] and y in [l2].  *)
 val iter_couple_2 : ('a -> 'a -> unit) -> 'a list -> 'a list -> unit
+(** [index p l] returns the idx of the first element in l
+    that satisfies predicate p.*)
+val index : ('a -> bool) -> 'a list -> int
 
 (** Functions to decompose a list into a tuple *)
 val assert_empty : 'a list -> unit

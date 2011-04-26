@@ -15,6 +15,12 @@ module LinearitySet = Set.Make(struct
   let compare = compare
 end)
 
+module LocationEnv =
+    Map.Make(struct
+      type t = linearity_var
+      let compare = compare
+    end)
+
 (** Returns a linearity object from a linearity list. *)
 let prod = function
   | [l] -> l
@@ -40,6 +46,15 @@ let rec is_not_linear = function
   | Ltop -> true
   | Ltuple l -> List.for_all is_not_linear l
   | _ -> false
+
+let rec is_linear = function
+  | Lat _ | Lvar _ -> true
+  | Ltuple l -> List.exists is_linear l
+  | _ -> false
+
+let location_name = function
+  | Lat r | Lvar r -> r
+  | _ -> assert false
 
 exception UnifyFailed
 

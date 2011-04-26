@@ -15,6 +15,7 @@ open Misc
 open Names
 open Idents
 open Types
+open Linearity
 open Signature
 open Location
 
@@ -80,6 +81,7 @@ and block =
 and var_dec =
     { v_ident : var_ident;
       v_type : ty;
+      v_linearity : linearity;
       v_mutable : bool;
       v_loc : location }
 

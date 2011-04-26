@@ -257,3 +257,12 @@ let rec iter_couple f l = match l with
 (** [iter_couple_2 f l1 l2] calls f for all x in [l1] and y in [l2].  *)
 let iter_couple_2 f l1 l2 =
   List.iter (fun v1 -> List.iter (f v1) l2) l1
+
+(** [index p l] returns the idx of the first element in l
+    that satisfies predicate p.*)
+let index p l =
+  let rec aux i = function
+    | [] -> -1
+    | v::l -> if p v then i else aux (i+1) l
+  in
+    aux 0 l

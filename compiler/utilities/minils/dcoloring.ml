@@ -1,4 +1,5 @@
 open Interference_graph
+open Containers
 
 (** Coloring*)
 let no_color = 0
