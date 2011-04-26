@@ -18,6 +18,7 @@ let compile_program p =
   (* Typing *)
   let p = silent_pass "Statefulness check" true Stateful.program p in
   let p = pass "Typing" true Typing.program p pp in
+  let p = pass "Linear Typing" true Linear_typing.program p pp in
 
   if !print_types then print_interface Format.std_formatter;
 

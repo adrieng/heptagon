@@ -50,6 +50,8 @@ let names_of_arg_list l = List.map (fun ad -> ad.a_name) l
 
 let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
 
+let linearities_of_arg_list l = List.map (fun ad -> ad.a_linearity) l
+
 let mk_arg ?(linearity = Ltop) name ty = { a_type = ty; a_linearity = linearity; a_name = name }
 
 let mk_param name ty = { p_name = name; p_type = ty }
