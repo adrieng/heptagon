@@ -383,7 +383,7 @@ let typing_contract h contract =
 let typing_node { n_input = i_list; n_output = o_list;
                   n_contract = contract; n_block = b } =
   let h = build_initialized IEnv.empty i_list in
-  let h = build_initialized h o_list in
+  let h = build h o_list in
   let h = typing_contract h contract in
     ignore (typing_block h b)
 
