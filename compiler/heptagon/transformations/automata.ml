@@ -8,7 +8,7 @@
 (**************************************************************************)
 (* removing automata statements *)
 
-(* TODO deal correctly with [stateful] *)
+(* TODO deal correctly with [stateful] and [unsafe] *)
 
 open Misc
 open Types
