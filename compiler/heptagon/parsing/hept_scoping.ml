@@ -180,15 +180,18 @@ let static_app_from_app app args=
 
 let rec translate_static_exp se =
   try
-    let se_d = translate_static_exp_desc se.se_desc in
+    let se_d = translate_static_exp_desc se.se_loc se.se_desc in
     Types.mk_static_exp Tinvalid ~loc:se.se_loc se_d
   with
     | ScopingError err -> message se.se_loc err
 
-and translate_static_exp_desc ed =
+and translate_static_exp_desc loc ed =
   let t = translate_static_exp in
   match ed with
-    | Svar (Q q) -> Types.Svar q
+    | Svar (Q q) ->
+        let q = try qualify_const S.empty (Q q)
+                with Not_static -> message loc (Equal_notfound("constant", q))
+        in Types.Svar q
     | Svar (ToQ _) -> assert false
     | Sint i -> Types.Sint i
     | Sfloat f -> Types.Sfloat f
