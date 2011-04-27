@@ -96,6 +96,10 @@ let find_step_method cd =
 let find_reset_method cd =
   List.find (fun m -> m.m_name = Mreset) cd.cd_methods
 
+let replace_step_method st cd =
+  let f md = if md.m_name = Mstep then st else md in
+    { cd with cd_methods = List.map f cd.cd_methods }
+
 let obj_ref_name o =
   match o with
     | Oobj obj

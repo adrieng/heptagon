@@ -8,6 +8,8 @@ open Global_printer
 
 let print_vd ff vd =
   fprintf ff "@[<v>";
+  if vd.v_mutable then
+    fprintf ff "mutable ";
   print_ident ff vd.v_ident;
   fprintf ff ": ";
   print_type ff vd.v_type;

@@ -69,7 +69,7 @@ let memalloc_subst_map inputs outputs mems subst_lists =
       let repr = choose_representative env inputs outputs mems ty l in
       let env = List.fold_left (fun env iv -> IvarEnv.add iv repr env) env l in
       let mutables =
-        if (List.length l > 2) || (List.mem (Ivar (var_name repr)) mems) then
+        if (List.length l > 1) || (List.mem (Ivar (var_name repr)) mems) then
           IdentSet.add (var_name repr) mutables
         else
           mutables
@@ -111,7 +111,13 @@ let var_decs _ (env, mutables,j) vds =
         (* remove unnecessary outputs *)
         acc
       else (
-        let vd = if IdentSet.mem vd.v_ident mutables then { vd with v_mutable = true } else vd in
+        let vd =
+          if IdentSet.mem vd.v_ident mutables then (
+            Format.printf "%s is mutable@.";
+            { vd with v_mutable = true }
+          ) else
+            vd
+        in
           vd::acc
       )
     with
@@ -146,6 +152,11 @@ let class_def funs acc cd =
   let mem_alloc = (add_other_vars md cd) @ cd.cd_mem_alloc in
   let env, mutables = memalloc_subst_map inputs outputs mems mem_alloc in
   let cd, _ = Obc_mapfold.class_def funs (env, mutables, cd.cd_objs) cd in
+  (* remove unnecessary outputs*)
+  let m_outputs = List.filter (fun vd -> is_not_linear vd.v_linearity) md.m_outputs in
+  let md = find_step_method cd in
+  let md = { md with m_outputs = m_outputs } in
+  let cd = replace_step_method md cd in
     cd, acc
 
 let program p =
