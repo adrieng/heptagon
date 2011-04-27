@@ -240,8 +240,8 @@ let check_init loc init lin =
   | Lno_init -> lin
   | Linit_var r ->
       (match lin with
-        | Lat r1 when r = r1 -> Ltop
-        | Lvar r1 when r = r1 -> Ltop
+        | Lat r1 when r = r1 -> check_fresh_lin_var loc lin; Ltop
+        | Lvar r1 when r = r1 -> check_fresh_lin_var loc lin; Ltop
         | _ -> message loc (Ewrong_init (r, lin)))
   | Linit_tuple _ -> assert false
   in
