@@ -391,11 +391,14 @@ let coalesce_linear_vars () =
 
 let find_targeting f =
   let find_output outputs_lins (acc,i) l =
-    let idx = Misc.index (fun l1 -> l = l1) outputs_lins in
-      if idx >= 0 then
-        (i, idx)::acc, i+1
-      else
-        acc, i+1
+    match l with
+      | Lvar _ ->
+          let idx = Misc.index (fun l1 -> l = l1) outputs_lins in
+            if idx >= 0 then
+              (i, idx)::acc, i+1
+            else
+              acc, i+1
+      | _ -> acc, i+1
   in
   let desc = Modules.find_value f in
   let inputs_lins = linearities_of_arg_list desc.node_inputs in
