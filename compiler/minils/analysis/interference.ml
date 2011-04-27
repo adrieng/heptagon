@@ -47,6 +47,10 @@ module InterfRead = struct
     | Wwhen(w, _, _) -> ivar_of_extvalue w
     | Wconst _ -> assert false
 
+  let ivar_of_pat p = match p with
+    | Evarpat x -> Ivar x
+    | _ -> assert false
+
   let ivars_of_extvalues wl =
     let tr_one acc w = match w.w_desc with
       | Wconst _ -> acc
@@ -423,11 +427,31 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
     | _, Eapp ({ a_op = (Efun f | Enode f) }, e_list, _) ->
       let targeting = find_targeting f in
         apply_targeting targeting e_list pat
-    | _, Eiterator(Imap, { a_op = Enode _ | Efun _ }, _, _, w_list, _) ->
+    | _, Eiterator((Imap|Imapi), { a_op = Enode _ | Efun _ }, _, _, w_list, _) ->
       let invars = InterfRead.ivars_of_extvalues w_list in
       let outvars = IvarSet.elements (InterfRead.def eq) in
         List.iter (fun inv -> List.iter
           (add_affinity_link_from_ivar inv) outvars) invars
+    | Evarpat x, Eiterator((Ifold|Ifoldi), { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
+        (* because of the encoding of the fold, the output is written before
+           the inputs are read so they must interfere *)
+        let invars = InterfRead.ivars_of_extvalues w_list in
+        let pinvars = InterfRead.ivars_of_extvalues pw_list in
+          List.iter (add_interference_link_from_ivar (Ivar x)) invars;
+          List.iter (add_interference_link_from_ivar (Ivar x)) pinvars
+    | Etuplepat l, Eiterator(Imapfold, { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
+        let invars, _ = Misc.split_last (InterfRead.ivars_of_extvalues w_list) in
+        let pinvars = InterfRead.ivars_of_extvalues pw_list in
+        let outvars, acc_out = Misc.split_last (List.map InterfRead.ivar_of_pat l) in
+          (* because of the encoding of the fold, the output is written before
+             the inputs are read so they must interfere *)
+          List.iter (add_interference_link_from_ivar acc_out) invars;
+          List.iter (add_interference_link_from_ivar acc_out) pinvars;
+          (* it also interferes with outputs. We add it here because it will not hold
+             if it is not used. *)
+          List.iter (add_interference_link_from_ivar acc_out) outvars;
+          (*affinity between inouts and outputs*)
+          List.iter (fun inv -> List.iter (add_affinity_link_from_ivar inv) outvars) invars
     | Evarpat x, Efby(_, w) -> (* x  = _ fby y *)
         (match w.w_desc with
           | Wconst _ -> ()
