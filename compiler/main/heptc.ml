@@ -113,6 +113,7 @@ let main () =
         "-fti", Arg.Set full_type_info, doc_full_type_info;
         "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
+        "-java_queue_size", Arg.Set_int java_queue_size, doc_java_queue_size;
       ]
         compile errmsg;
   with

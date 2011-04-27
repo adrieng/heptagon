@@ -9,7 +9,8 @@
 
 type class_name = Names.qualname (** [qual] is the package name, [Name] is the class name *)
 type obj_ident = Idents.var_ident
-type constructor_name = Names.qualname (** [Qual] is the enum class name (type), [NAME] is the constructor name *)
+type constructor_name = Names.qualname (** [Qual] is the enum class name (type),
+                                           [NAME] is the constructor name *)
 type const_name = Names.qualname
 type method_name = Names.name
 type field_name = Names.name
@@ -68,7 +69,7 @@ and block = { b_locals : var_dec list;
 and act = Anewvar of var_dec * exp
         | Aassgn of pattern * exp
         | Amethod_call of exp * method_name * exp list
-        | Aasync_method_call of exp * method_name * exp list (* could be used for async logging etc *)
+        | Aasync_method_call of exp * method_name * exp list (** could be used for async logging *)
         | Aswitch of exp * (constructor_name * block) list
         | Aif of exp * block
         | Aifelse of exp * block * block
@@ -120,10 +121,14 @@ let the_java_pervasives = Names.qualname_of_string "jeptagon.Pervasives"
 let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
 
 let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
-                    Names.qualname_of_string "java.util.concurrent.ExecutionException"]
+                    Names.qualname_of_string "java.util.concurrent.ExecutionException";
+                    Names.qualname_of_string "jeptagon.AsyncNode"]
 
 let throws_async = [Names.qualname_of_string "InterruptedException";
                     Names.qualname_of_string "ExecutionException"]
+
+let async_node = Names.qualname_of_string "AsyncNode"
+
 
 
 let mk_var x = Eval (Pvar x)
@@ -143,20 +148,27 @@ let mk_methode ?(protection=Ppublic) ?(static=false) ?(args=[]) ?(returns=Tunit)
 let mk_classe ?(imports=[]) ?(protection=Ppublic) ?(static=false) ?(fields=[])
               ?(classes=[]) ?(constrs=[]) ?(methodes=[]) ?(implements=[])
               class_name =
-  { c_protection = protection; c_static = static; c_name = class_name; c_imports = imports; c_implements = implements;
-    c_kind = Cgeneric { cd_fields = fields; cd_classs = classes; cd_constructors = constrs; cd_methodes = methodes; } }
+  { c_protection = protection; c_static = static; c_name = class_name;
+    c_imports = imports; c_implements = implements;
+    c_kind = Cgeneric { cd_fields = fields; cd_classs = classes;
+                        cd_constructors = constrs; cd_methodes = methodes; } }
 
 let mk_enum ?(protection=Ppublic) ?(static=false) ?(imports=[]) ?(implements=[])
             constructor_names class_name =
-  { c_protection = protection; c_static = static; c_name = class_name; c_imports = imports; c_implements = implements;
+  { c_protection = protection; c_static = static; c_name = class_name;
+    c_imports = imports; c_implements = implements;
     c_kind = Cenum(constructor_names) }
 
 
 let mk_field ?(protection = Ppublic) ?(static = false) ?(final = false) ?(value = None)
              ty ident =
-  { f_protection = protection; f_static = static; f_final = final; f_type = ty; f_ident = ident; f_value = value }
+  { f_protection = protection; f_static = static; f_final = final; f_type = ty;
+    f_ident = ident; f_value = value }
 
 let vds_to_exps vd_l = List.map (fun { vd_ident = x } -> mk_var x) vd_l
 
 let vds_to_fields ?(protection=Ppublic) ?(final=false) vd_l =
-  List.map (fun { vd_ident = x; vd_type = t } -> mk_field ~protection:protection ~final:final t x) vd_l
+  let vd_to_field { vd_ident = x; vd_type = t } =
+    mk_field ~protection:protection ~final:final t x
+  in
+  List.map vd_to_field vd_l

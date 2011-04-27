@@ -13,7 +13,10 @@ let mk_var ty name =
 let program p =
   (*Scalarize*)
   let p = Compiler_utils.pass "Scalarize" true Scalarize.program p Obc_compiler.pp in
-  let p_java = Obc2java.program p in
+  let p_java = if !Compiler_options.java_queue_size = 0
+    then Obc2java.program p
+    else Obc2java_asyncnode.program p
+  in
   let dir = Compiler_utils.build_path "java" in
   Compiler_utils.ensure_dir dir;
 
