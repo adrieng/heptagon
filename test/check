@@ -130,12 +130,14 @@ launch_check () {
     if [[ ($echec == 0) && ($c == 1) ]]; then
         pushd ${base_f}_c >/dev/null
         for cf in *.c; do
-            if $CC -c $cf >/dev/null 2>&1; then
+            $CC -c $cf >/dev/null 2>&1
+            if [ $? = 0 -a $echec != 5 ]; then
                 echec=0
             else
                 echec=5
             fi
         done
+        #echo "Compilation $f vers C = $echec"
 
         if [ $echec != 5 ]; then
             if egrep "(node main\(\))|(CHECK)" ../${base_f}.ept >/dev/null 2>&1
@@ -210,8 +212,6 @@ activate_all () {
   activate_c
 }
 
-# -1, -2, -3, -v1, -v2, -v3 kept for backward compatibility
-# (to be suppressed)
 while [ $# -gt 0 ]; do
   case $1 in
     "-clean" )
