@@ -30,7 +30,12 @@ let eq _ (locals, eqs, outs) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
 
 let node funs acc nd =
   let nd, (v, eqs, o) = Mls_mapfold.node_dec funs (nd.n_local, [], nd.n_output) nd in
-    { nd with n_local = v; n_equs = List.rev eqs; n_output = o }, acc
+  (* update the signature of the node *)
+  let f = Modules.find_value nd.n_name in
+  let f = { f with Signature.node_outputs = Mls_utils.args_of_var_decs o } in
+  Modules.replace_value nd.n_name f;
+  (* return updated node *)
+  { nd with n_local = v; n_equs = List.rev eqs; n_output = o }, acc
 
 let program p =
   let funs = { Mls_mapfold.defaults with eq = eq; node_dec = node } in
