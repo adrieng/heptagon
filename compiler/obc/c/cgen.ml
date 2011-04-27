@@ -68,7 +68,7 @@ let int_of_static_exp se =
 
 let output_names_list sig_info =
   let remove_option ad = match ad.a_name with
-    | Some n -> n
+    | Some n -> "out_" ^ n
     | None -> Error.message no_location Error.Eno_unnamed_output
   in
   List.map remove_option sig_info.node_outputs
@@ -396,13 +396,13 @@ let generate_function_call var_env obj_env outvl objn args =
   in
 
   (** Act according to the length of our list. Step functions with
-      multiple return values will return a structure, and we care of
+      multiple return values will return a structure, and we take care of
       assigning each field to the corresponding local variable. *)
   match outvl with
     | [] -> [Csexpr fun_call]
     | [outv] when is_op classln ->
         let ty = assoc_type_lhs outv var_env in
-          create_affect_stm outv fun_call ty
+        create_affect_stm outv fun_call ty
     | _ ->
         (* Remove options *)
         let out_sig = output_names_list sig_info in
