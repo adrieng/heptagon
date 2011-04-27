@@ -311,8 +311,10 @@ and translate_pat loc env = function
   | Etuplepat l -> Heptagon.Etuplepat (List.map (translate_pat loc env) l)
 
 let rec translate_eq env eq =
+  let init = match eq.eq_desc with | Eeq(_, init, _) -> init | _ -> Linearity.Lno_init in
   { Heptagon.eq_desc = translate_eq_desc eq.eq_loc env eq.eq_desc ;
     Heptagon.eq_stateful = false;
+    Heptagon.eq_inits = init;
     Heptagon.eq_loc = eq.eq_loc; }
 
 and translate_eq_desc loc env = function
@@ -321,7 +323,7 @@ and translate_eq_desc loc env = function
         (translate_switch_handler loc env)
         switch_handlers in
       Heptagon.Eswitch (translate_exp env e, sh)
-  | Eeq(p, e) ->
+  | Eeq(p, _, e) ->
       Heptagon.Eeq (translate_pat loc env p, translate_exp env e)
   | Epresent (present_handlers, b) ->
       Heptagon.Epresent

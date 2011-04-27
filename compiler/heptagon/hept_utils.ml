@@ -36,6 +36,7 @@ let mk_equation ?(loc=no_location) desc =
   let _, s = Stateful.eqdesc Stateful.funs false desc in
   { eq_desc = desc;
     eq_stateful = s;
+    eq_inits = Lno_init;
     eq_loc = loc; }
 
 let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty =

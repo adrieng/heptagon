@@ -112,7 +112,7 @@ and eqdesc =
   | Epresent of present_handler list * block
   | Ereset of block * exp
   | Eblock of block
-  | Eeq of pat * exp
+  | Eeq of pat * Linearity.init * exp
 
 and block =
   { b_local : var_dec list;

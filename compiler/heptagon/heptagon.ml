@@ -81,6 +81,7 @@ and pat =
 type eq = {
   eq_desc      : eqdesc;
   eq_stateful : bool;
+  eq_inits    : init;
   eq_loc       : location; }
 
 and eqdesc =

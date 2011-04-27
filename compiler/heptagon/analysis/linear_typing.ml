@@ -17,6 +17,7 @@ type error =
   | Ewrong_linearity_for_iterator
   | Eoutput_linearity_not_declared of linearity_var
   | Emapi_bad_args of linearity
+  | Ewrong_init of linearity_var * linearity
 
 exception TypingError of error
 
@@ -64,6 +65,13 @@ let message loc kind =
           "%aThe function given to mapi should expect a non linear \
                variable as the last argument (found: %a).@."
           print_location loc
+          print_linearity lin
+    | Ewrong_init (r, lin) ->
+        Format.eprintf
+          "%aThe variable defined by init<<%s>> should correspond \
+                to the given location (found: %a).@."
+          print_location loc
+          r
           print_linearity lin
   end;
   raise Errors.Error
@@ -227,6 +235,21 @@ let subst_from_lin (s,m) expect_lin lin =
 let rec not_linear_for_exp e =
   lin_skeleton Ltop e.e_ty
 
+let check_init loc init lin =
+  let check_one init lin = match init with
+  | Lno_init -> lin
+  | Linit_var r ->
+      (match lin with
+        | Lat r1 when r = r1 -> Ltop
+        | Lvar r1 when r = r1 -> Ltop
+        | _ -> message loc (Ewrong_init (r, lin)))
+  | Linit_tuple _ -> assert false
+  in
+    match init, lin with
+      | Linit_tuple il, Ltuple ll ->
+          Ltuple (List.map2 check_one il ll)
+      | _, _ -> check_one init lin
+
 (** [unify_collect collect_list lin_list coll_exp] returns a list of linearities
     to use when a choice is possible (eg for a map). It collects the possible
     values for all args and then tries to map them to the expected values.
@@ -375,8 +398,8 @@ let rec typing_exp env e =
       safe_expect env (not_linear_for_exp e1) e1;
       safe_expect env (not_linear_for_exp e1) e2;
       not_linear_for_exp e1
-    | Eapp ({ a_op = Efield _ }, _, _) -> Ltop
-    | Eapp ({ a_op = Earray _ }, _, _) -> Ltop
+    | Eapp ({ a_op = Efield }, _, _) -> Ltop
+    | Eapp ({ a_op = Earray }, _, _) -> Ltop
     | Estruct _ -> Ltop
     | Emerge _ | Ewhen _ | Eapp _ | Eiterator _ -> assert false
   in
@@ -646,6 +669,7 @@ and typing_eq env eq =
         ignore (typing_block env b)
     | Eeq(pat, e) ->
         let lin_pat = typing_pat env pat in
+        let lin_pat = check_init eq.eq_loc eq.eq_inits lin_pat in
           safe_expect env lin_pat e
     | Eblock b ->
         ignore (typing_block env b)

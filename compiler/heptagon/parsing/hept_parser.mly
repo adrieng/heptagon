@@ -48,7 +48,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP MAPI FOLD FOLDI MAPFOLD
-%token AT
+%token AT INIT
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -98,6 +98,10 @@ slist(S, x) :
 /* Separated list with delimiter*/
 delim_slist(S, L, R, x) :
   |                        {[]}
+  | L l=slist(S, x) R      {l}
+/* Separated list with delimiter, even for empty list*/
+adelim_slist(S, L, R, x) :
+  | L R                    {[]}
   | L l=slist(S, x) R      {l}
 /*Separated Nonempty list */
 snlist(S, x) :
@@ -268,7 +272,7 @@ ident_list:
 located_ty_ident:
   | ty_ident
       { $1, Ltop }
-  | ty_ident AT ident
+  | ty_ident AT IDENT
       { $1, Lat $3 }
 ;
 
@@ -303,7 +307,7 @@ sblock(S) :
 equ:
   | eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
 _equ:
-  | pat EQUAL exp { Eeq($1, $3) }
+  | pat=pat EQUAL e=exp { Eeq(fst pat, snd pat, e) }
   | AUTOMATON automaton_handlers END
       { Eautomaton(List.rev $2) }
   | SWITCH exp opt_bar switch_handlers END
@@ -389,14 +393,12 @@ present_handlers:
 ;
 
 pat:
-  | IDENT             {Evarpat $1}
-  | LPAREN ids RPAREN {Etuplepat $2}
-;
-
-ids:
-  |               {[]}
-  | pat COMMA pat {[$1; $3]}
-  | pat COMMA ids {$1 :: $3}
+  | id=IDENT             { Evarpat id, Lno_init }
+  | INIT DOUBLE_LESS r=IDENT DOUBLE_GREATER id=IDENT { Evarpat id, Linit_var r }
+  | pat_init_list=adelim_slist(COMMA, LPAREN, RPAREN, pat)
+      { let pat_list, init_list = List.split pat_init_list in
+          Etuplepat pat_list, Linit_tuple init_list
+      }
 ;
 
 nonmtexps:

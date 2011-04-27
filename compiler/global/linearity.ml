@@ -4,6 +4,11 @@ open Misc
 
 type linearity_var = name
 
+type init =
+    | Lno_init
+    | Linit_var of linearity_var
+    | Linit_tuple of init list
+
 type linearity =
   | Ltop
   | Lat of linearity_var
