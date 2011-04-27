@@ -9,7 +9,7 @@ open Containers
 open Printf
 
 let print_interference_graphs = false
-let verbose_mode = false
+let verbose_mode = true
 let print_debug0 s =
   if verbose_mode then
     Format.printf s
@@ -169,20 +169,26 @@ end
 (** Helper functions to work with the multiple interference graphs *)
 
 let by_ivar def f x y =
-  let igx, nodex = World.node_for_ivar x in
-  let igy, nodey = World.node_for_ivar y in
-    if igx == igy then
-      f igx nodex nodey
-    else
-      def
+  if World.is_optimized x then (
+    let igx, nodex = World.node_for_ivar x in
+    let igy, nodey = World.node_for_ivar y in
+      if igx == igy then
+        f igx nodex nodey
+      else
+        def
+  ) else
+    def
 
 let by_name def f x y =
-  let igx, nodex = World.node_for_name x in
-  let igy, nodey = World.node_for_name y in
-    if igx == igy then
-      f igx nodex nodey
-    else
-      def
+  if World.is_optimized (Ivar x) then (
+    let igx, nodex = World.node_for_name x in
+    let igy, nodey = World.node_for_name y in
+      if igx == igy then
+        f igx nodex nodey
+      else
+        def
+  ) else
+    def
 
 let add_interference_link_from_name = by_name () add_interference_link
 let add_interference_link_from_ivar = by_ivar () add_interference_link
@@ -443,7 +449,8 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
           List.iter (add_interference_link_from_ivar (Ivar x)) invars;
           List.iter (add_interference_link_from_ivar (Ivar x)) pinvars
     | Etuplepat l, Eiterator(Imapfold, { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
-        let invars, _ = Misc.split_last (InterfRead.ivars_of_extvalues w_list) in
+        let w_list, _ = Misc.split_last w_list in
+        let invars = InterfRead.ivars_of_extvalues w_list in
         let pinvars = InterfRead.ivars_of_extvalues pw_list in
         let outvars, acc_out = Misc.split_last (List.map InterfRead.ivar_of_pat l) in
           (* because of the encoding of the fold, the output is written before
@@ -458,16 +465,12 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
     | Evarpat x, Efby(_, w) -> (* x  = _ fby y *)
         (match w.w_desc with
           | Wconst _ -> ()
-          | _ ->
-              if World.is_optimized (Ivar x) then
-                add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
+          | _ -> add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
     | Evarpat x, Eextvalue w ->
       (* Add links between variables with the same value *)
         (match w.w_desc with
           | Wconst _ -> ()
-          | _ ->
-              if World.is_optimized (Ivar x) then
-                add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
+          | _ -> add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
     | _ -> () (* do nothing *)
 
 (** Add the special init and return equations to the dependency graph
