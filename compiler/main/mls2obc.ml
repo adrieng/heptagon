@@ -92,6 +92,7 @@ let rec bound_check_expr idx_list bounds =
                                  [mk_exp_int (Econst (mk_static_int 0)); idx])) in
           mk_exp_bool (Eop (op_from_string "&", [e1;e2]))
   in
+    Format.printf "%d == %d@." (List.length idx_list) (List.length bounds);
   match (idx_list, bounds) with
     | [idx], n::_ -> mk_comp idx n
     | (idx :: idx_list, n :: bounds) ->
