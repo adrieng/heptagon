@@ -64,7 +64,8 @@ let program p =
                    , mk_block [Aassgn(pat_step, Eval (Pvar id_step_dnb))]);
             Obc2java.fresh_for (Eval pat_step)
               (fun i ->
-                [ Amethod_call(out, "printf", [ Sstring "%d => %s\\n"; Eval (Pvar i); print_ret]) ]
+                [Aexp (Emethod_call(out, "printf",
+                                    [Sstring "%d => %s\\n"; Eval (Pvar i); print_ret]))]
               )
           ]
         in

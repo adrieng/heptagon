@@ -78,8 +78,9 @@ let rec unify_ck ck1 ck2 =
 let rec unify t1 t2 =
   if t1 == t2 then () else
   match (t1, t2) with
-    | (Ck Cbase, Cprod [])
-    | (Cprod [], Ck Cbase) -> ()
+    | (Ck (Cbase | Cvar { contents = Cindex _; }), Cprod [])
+    | (Cprod [], Ck (Cbase | Cvar { contents = Cindex _; })) ->
+      ()
     | (Ck ck1, Ck ck2) -> unify_ck ck1 ck2
     | (Cprod t1_list, Cprod t2_list) -> unify_list t1_list t2_list
     | _ -> raise Unify

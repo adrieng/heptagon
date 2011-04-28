@@ -117,6 +117,9 @@ and op ff (f, e_l) =
         | "~-" ->
             let e = Misc.assert_1 e_l in
             fprintf ff "-%a" exp e
+        | "assert" ->
+            let e = Misc.assert_1 e_l in
+            fprintf ff "assert(%a)" exp e
         | s -> fprintf ff "jeptagon.Pervasives.%s%a" s args e_l)
            (* TODO java deal with this correctly
             bug when using Pervasives.ggg in the code but works when using ggg directly *)
@@ -146,7 +149,7 @@ and switch_hack ff c_b_l =
 and act ff = function
   | Anewvar (vd,e) -> fprintf ff "@[<4>%a =@ %a;@]" (var_dec false) vd exp e
   | Aassgn (p,e) -> fprintf ff "@[<4>%a =@ %a;@]" pattern p exp e
-  | Amethod_call (o,m,e_l) -> fprintf ff "@[%a.%a%a;@]" exp o method_name m args e_l
+  | Aexp e -> fprintf ff "@[%a@];" exp e
   | Aswitch (e, c_b_l) ->
       let pcb ff (c,b) =
         fprintf ff "@[<v4>case %a:@ %a@ break;@]" bare_constructor_name c block b in

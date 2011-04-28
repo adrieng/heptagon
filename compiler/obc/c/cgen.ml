@@ -487,6 +487,11 @@ let rec cstm_of_act var_env obj_env act =
         let ce = cexpr_of_exp var_env e in
         create_affect_stm vn ce ty
 
+    (** Our Aop marks an operator invocation that will perform side effects. Just
+        translate to a simple C statement. *)
+    | Aop (op_name, args) ->
+        [Csexpr (cop_of_op var_env op_name args)]
+
     (** Reinitialization of an object variable, extracting the reset
         function's name from our environment [obj_env]. *)
     | Acall (name_list, o, Mreset, args) ->
@@ -743,7 +748,7 @@ let cfile_list_of_oprog_ty_decls name oprog =
   let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
   let filename_types = name ^ "_types" in
   let types_h = (filename_types ^ ".h",
-                 Cheader (["stdbool"], List.concat cty_decls)) in
+                 Cheader (["stdbool"; "assert"], List.concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
   filename_types, [types_h; types_c]

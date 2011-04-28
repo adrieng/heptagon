@@ -67,6 +67,7 @@ type method_name =
 
 type act =
   | Aassgn of pattern * exp
+  | Aop of op_name * exp list
   | Acall of pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
   | Afor of var_dec * exp * exp * block

@@ -93,6 +93,8 @@ let rec print_act ff a =
           print_exp i1
           print_exp i2
           print_block act_list
+    | Aop (op, es) ->
+        print_op ff op es
     | Acall (var_list, o, meth, es) ->
         fprintf ff "@[<2>%a%a.%a(%a)@]"
           print_lhs_tuple var_list

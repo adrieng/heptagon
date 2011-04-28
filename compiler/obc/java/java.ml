@@ -66,7 +66,7 @@ and block = { b_locals : var_dec list;
 
 and act = Anewvar of var_dec * exp
         | Aassgn of pattern * exp
-        | Amethod_call of exp * method_name * exp list
+        | Aexp of exp
         | Aswitch of exp * (constructor_name * block) list
         | Aif of exp * block
         | Aifelse of exp * block * block
