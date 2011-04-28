@@ -166,6 +166,8 @@ let replace_value f v =
   g_env.values <- QualEnv.add f v g_env.values
 let replace_type f v =
   g_env.types <- QualEnv.add f v g_env.types
+let replace_const f v =
+  g_env.consts <- QualEnv.add f v g_env.consts
 
 (** { 3 Find functions look in the global environement, nothing more } *)
 

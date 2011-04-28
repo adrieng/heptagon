@@ -36,7 +36,7 @@ let print_full_qualname ff qn = _print_qualname ~full:true ff qn
 let print_shortname ff {name = n} = print_name ff n
 
 
-let rec print_static_exp ff se = match se.se_desc with
+let rec print_static_exp_desc ff sed = match sed with
   | Sint i -> fprintf ff "%d" i
   | Sbool b -> fprintf ff "%b" b
   | Sfloat f -> fprintf ff "%f" f
@@ -59,6 +59,13 @@ let rec print_static_exp ff se = match se.se_desc with
   | Srecord f_se_list ->
       print_record (print_couple print_qualname
                       print_static_exp """ = """) ff f_se_list
+
+and print_static_exp ff se =
+  if !Compiler_options.full_type_info then
+    fprintf ff "(%a : %a)"
+      print_static_exp_desc se.se_desc print_type se.se_ty
+  else
+    fprintf ff "%a" print_static_exp_desc se.se_desc
 
 and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l
