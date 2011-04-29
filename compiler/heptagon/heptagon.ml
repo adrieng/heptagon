@@ -43,7 +43,7 @@ and desc =
   | Estruct of (field_name * exp) list
   | Ewhen of exp * constructor_name * exp
     (** exp when Constructor(ident) *)
-  | Emerge of exp * (constructor_name * exp) list
+  | Emerge of var_ident * (constructor_name * exp) list
     (** merge ident (Constructor -> exp)+ *)
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp

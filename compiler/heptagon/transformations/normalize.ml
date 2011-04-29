@@ -222,7 +222,6 @@ and merge context e x c_e_list =
       let t_e_list = List.map2 (fun t e -> (t,e)) c_list e_list in
         mk_exp ~loc:e.e_loc (Emerge(x, t_e_list)) ty
     in
-    let context, x = translate ExtValue context x in
     let c_e_list, context = mapfold translate_tag context c_e_list in
       match c_e_list with
         | [] -> assert false

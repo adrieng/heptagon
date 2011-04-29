@@ -144,13 +144,8 @@ let translate
     | Heptagon.Efby _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
-    | Heptagon.Emerge (e, c_e_list) ->
-        (match e.Heptagon.e_desc with
-          | Heptagon.Evar x ->
-              mk_exp ty
-                (Emerge (x, List.map (fun (c,e)->c,
-                  translate_extvalue e) c_e_list))
-          | _ -> Error.message loc Error.Enormalization)
+    | Heptagon.Emerge (x, c_e_list) ->
+        mk_exp ty (Emerge (x, List.map (fun (c,e)-> c, translate_extvalue e) c_e_list))
 
 let rec translate_pat = function
   | Heptagon.Evarpat(n) -> Evarpat n

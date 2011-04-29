@@ -278,15 +278,15 @@ and translate_desc loc env = function
       let c = qualify_constrs c in
       let ce = translate_exp env (mk_exp (Evar ce) loc) in
       Heptagon.Ewhen (e, c, ce)
-  | Emerge (e, c_e_list) ->
-      let e = translate_exp env (mk_exp (Evar e) loc) in
+  | Emerge (x, c_e_list) ->
+      let x = Rename.var loc env x in
       let c_e_list =
         let fun_c_e (c, e) =
           let e = translate_exp env e in
           let c = qualify_constrs c in
           (c, e) in
         List.map fun_c_e c_e_list in
-      Heptagon.Emerge (e, c_e_list)
+      Heptagon.Emerge (x, c_e_list)
 
 
 and translate_op = function

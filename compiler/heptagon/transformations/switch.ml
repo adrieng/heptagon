@@ -170,7 +170,6 @@ let eqdesc funs (env,h) eqd = match eqd with
       (* create a clock var corresponding to the switch condition [e] *)
       let ck = fresh_clock_id () in
       let e, (env,h) = exp_it funs (env,h) e in
-      let ck_e = { e with e_desc = Evar ck } in
       let locals = [mk_var_dec ck e.e_ty] in
       let equs = [mk_equation (Eeq (Evarpat ck, e))] in
 
@@ -200,7 +199,7 @@ let eqdesc funs (env,h) eqd = match eqd with
         let c_h_to_c_e (constr,h) =
           constr, mk_exp (Evar (Rename.rename n h)) ty in
         let c_e_l = List.map c_h_to_c_e c_h_l in
-        let merge = mk_exp (Emerge (ck_e, c_e_l)) ty in
+        let merge = mk_exp (Emerge (ck, c_e_l)) ty in
         (mk_equation (Eeq (Evarpat n, merge))) :: equs in
       let equs =
         Idents.Env.fold (fun n _ equs -> new_merge n equs) defnames equs in

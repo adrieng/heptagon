@@ -253,11 +253,11 @@ let rec typing h e =
     | Ewhen (e, _, ce) ->
         let i = imax (itype (typing h ce)) (itype (typing h e)) in
         skeleton i e.e_ty
-    | Emerge (e, c_e_list) ->
+    | Emerge (x, c_e_list) ->
         let i =
           List.fold_left
             (fun acc (_, e) -> imax acc (itype (typing h e))) izero c_e_list in
-        let i = imax (itype (typing h e)) i in
+        let i = imax (IEnv.find_var x h) i in
         skeleton i e.e_ty
 
 

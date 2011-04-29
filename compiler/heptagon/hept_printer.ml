@@ -119,9 +119,9 @@ and print_exp_desc ff = function
   | Ewhen (e, c, ec) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"
         print_exp e print_qualname c print_exp ec
-  | Emerge (e, tag_e_list) ->
+  | Emerge (x, tag_e_list) ->
       fprintf ff "@[<2>merge %a@ %a@]"
-        print_exp e print_tag_e_list tag_e_list
+        print_ident x print_tag_e_list tag_e_list
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c

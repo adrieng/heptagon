@@ -112,8 +112,8 @@ let rec typing e =
         let t = typing e in
         let tc = typing ce in
         cseq tc t
-    | Emerge (e, c_e_list) ->
-        let t = typing e in
+    | Emerge (x, c_e_list) ->
+        let t = read x in
         let tl = List.map (fun (_,e) -> typing e) c_e_list in
         cseq t (candlist tl)
 
