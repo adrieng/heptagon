@@ -122,7 +122,7 @@ let rec assocd value = function
 
 (** { 3 Compiler iterators } *)
 
-(** Mapfold *) (* TODO optim : lot's of place we don't need the List.rev *)
+(** Mapfold *) (* TODO optim : in a lot of places we don't need the List.rev *)
 let mapfold f acc l =
   let l,acc = List.fold_left
                 (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)
@@ -170,23 +170,31 @@ let fold_righti f l acc =
 
 exception Assert_false
 let internal_error passe code =
-  Format.eprintf "@.---------\nInternal compiler error\nPasse : %s, Code : %d\n----------@." passe code;
+  Format.eprintf "@.---------\n
+                  Internal compiler error\n
+                  Passe : %s, Code : %d\n
+                  ----------@." passe code;
   raise Assert_false
 
 exception Unsupported
 let unsupported passe code =
-  Format.eprintf "@.---------\nUnsupported feature, please report it\nPasse : %s, Code : %d\n----------@." passe code;
+  Format.eprintf "@.---------\n
+                  Unsupported feature, please report it\n
+                  Passe : %s, Code : %d\n
+                  ----------@." passe code;
   raise Unsupported
 
 (* Functions to decompose a list into a tuple *)
 let _arity_error i l =
-  Format.eprintf "@.---------\nInternal compiler error: \
-     wrong list size (found %d, expected %d).\n----------@." (List.length l) i;
+  Format.eprintf "@.---------\n
+                  Internal compiler error: wrong list size (found %d, expected %d).\n
+                  ----------@." (List.length l) i;
   raise Assert_false
 
 let _arity_min_error i l =
-  Format.eprintf "@.---------\nInternal compiler error: \
-     wrong list size (found %d, expected %d at least).\n----------@." (List.length l) i;
+  Format.eprintf "@.---------\n
+                  Internal compiler error: wrong list size (found %d, expected %d at least).\n
+                  ----------@." (List.length l) i;
   raise Assert_false
 
 let assert_empty = function
