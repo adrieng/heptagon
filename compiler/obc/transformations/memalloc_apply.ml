@@ -101,6 +101,7 @@ let act funs (env,mut,j) a = match a with
       let e_list = List.map (fun e -> fst (Obc_mapfold.exp_it funs (env,mut,j) e)) e_list in
       let fix_pat p a l = if Linearity.is_linear a.a_linearity then l else p::l in
       let pat = List.fold_right2 fix_pat pat desc.node_outputs [] in
+      let pat = List.map (fun l -> fst (Obc_mapfold.lhs_it funs (env,mut,j) l)) pat in
         Acall(pat, o, Mstep, e_list), (env,mut,j)
   | _ -> raise Errors.Fallback
 
