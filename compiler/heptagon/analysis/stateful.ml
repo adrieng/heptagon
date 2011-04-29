@@ -21,8 +21,7 @@ type error =
 let message loc kind =
   begin match kind with
     | Eshould_be_a_node ->
-        Format.eprintf "%aThis node is stateful \
-                       but was declared stateless.@."
+        Format.eprintf "%aThis node is stateful but was declared stateless.@."
           print_location loc
     | Eexp_should_be_stateless ->
         Format.eprintf "%aThis expression should be stateless.@."
@@ -30,16 +29,7 @@ let message loc kind =
   end;
   raise Errors.Error
 
-
-let stateful_mapfold f acc l =
-  let map_or (l,acc) e =
-    let e,acc' = f false e in
-    e::l, acc or acc'
-  in
-  let l,acc = List.fold_left map_or ([],acc) l in
-  List.rev l, acc
-
-
+(* a last is stateful *)
 let last _ stateful l = match l with
   | Var -> l, stateful
   | Last _ -> l, true
