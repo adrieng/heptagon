@@ -200,10 +200,7 @@ let rec translate_static_exp se =
 and translate_static_exp_desc loc ed =
   let t = translate_static_exp in
   match ed with
-    | Svar (Q q) ->
-        let q = try qualify_const S.empty (Q q)
-                with Not_static -> message loc (Equal_notfound("constant", q))
-        in Types.Svar q
+    | Svar (Q q) -> Types.Svar q
     | Svar (ToQ _) -> assert false
     | Sint i -> Types.Sint i
     | Sfloat f -> Types.Sfloat f
