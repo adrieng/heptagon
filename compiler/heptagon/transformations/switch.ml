@@ -90,7 +90,7 @@ let rec sample_var e env = match env with
             then e (* the var is declared at this level, nothing to do *)
             else (*sample to lower level*)
               {e with e_desc =
-                Ewhen ((sample_var e env_d), constr, {e with e_desc = Evar ck})}
+                Ewhen ((sample_var e env_d), constr, ck)}
         | _ ->
           (Format.eprintf "'sample_var' called on full exp : %a@."
              Hept_printer.print_exp e;

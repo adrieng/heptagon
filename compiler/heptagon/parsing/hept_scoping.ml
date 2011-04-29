@@ -273,11 +273,11 @@ and translate_desc loc env = function
       let app = mk_app ~params:params (translate_op op) in
       Heptagon.Eiterator (translate_iterator_type it,
                           app, n, pe_list, e_list, None)
-  | Ewhen (e, c, ce) ->
+  | Ewhen (e, c, x) ->
+      let x = Rename.var loc env x in
       let e = translate_exp env e in
       let c = qualify_constrs c in
-      let ce = translate_exp env (mk_exp (Evar ce) loc) in
-      Heptagon.Ewhen (e, c, ce)
+      Heptagon.Ewhen (e, c, x)
   | Emerge (x, c_e_list) ->
       let x = Rename.var loc env x in
       let c_e_list =

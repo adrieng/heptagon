@@ -250,8 +250,8 @@ let rec typing h e =
         List.iter (fun e -> initialized_exp h e) pe_list;
         List.iter (fun e -> initialized_exp h e) e_list;
         skeleton izero e.e_ty
-    | Ewhen (e, _, ce) ->
-        let i = imax (itype (typing h ce)) (itype (typing h e)) in
+    | Ewhen (e, _, x) ->
+        let i = imax (IEnv.find_var x h) (itype (typing h e)) in
         skeleton i e.e_ty
     | Emerge (x, c_e_list) ->
         let i =

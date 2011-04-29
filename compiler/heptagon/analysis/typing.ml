@@ -555,12 +555,12 @@ let rec typing const_env h e =
                         , typed_n, typed_pe_list, typed_e_list, reset), ty
       | Eiterator _ -> assert false
 
-      | Ewhen (e, c, ce) ->
+      | Ewhen (e, c, x) ->
           let typed_e, t = typing const_env h e in
           let tn_expected = find_constrs c in
-          let typed_ce, tn_actual = typing const_env h ce in
+          let tn_actual = typ_of_name h x in
           unify tn_actual tn_expected;
-          Ewhen (typed_e, c, typed_ce), t
+          Ewhen (typed_e, c, x), t
 
       | Emerge (x, (c1,e1)::c_e_list) ->
           (* verify the constructors : they should be unique,

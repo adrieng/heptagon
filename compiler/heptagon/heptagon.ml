@@ -41,7 +41,7 @@ and desc =
   | Epre of static_exp option * exp
   | Efby of exp * exp
   | Estruct of (field_name * exp) list
-  | Ewhen of exp * constructor_name * exp
+  | Ewhen of exp * constructor_name * var_ident
     (** exp when Constructor(ident) *)
   | Emerge of var_ident * (constructor_name * exp) list
     (** merge ident (Constructor -> exp)+ *)
