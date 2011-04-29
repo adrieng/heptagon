@@ -111,6 +111,10 @@ and edesc funs acc ed = match ed with
   | Ewhen (e, c, x) ->
     let e, acc = exp_it funs acc e in
       Ewhen (e, c, x), acc
+  | Esplit (e1, e2) ->
+      let e1, acc = exp_it funs acc e1 in
+      let e2, acc = exp_it funs acc e2 in
+        Esplit(e1, e2), acc
   | Eapp (app, args) ->
       let app, acc = app_it funs acc app in
       let args, acc = mapfold (exp_it funs) acc args in

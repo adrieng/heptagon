@@ -141,7 +141,7 @@ let translate
                     List.map translate_extvalue pe_list,
                     List.map translate_extvalue e_list,
                     translate_reset reset))
-    | Heptagon.Efby _
+    | Heptagon.Efby _ | Heptagon.Esplit _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
     | Heptagon.Emerge (x, c_e_list) ->

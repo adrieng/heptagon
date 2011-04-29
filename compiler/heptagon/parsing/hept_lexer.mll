@@ -62,6 +62,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "mapfold", MAPFOLD;
  "at", AT;
  "init", INIT;
+ "split", SPLIT;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");

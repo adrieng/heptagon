@@ -121,6 +121,10 @@ let rec typing e =
         let t = read x in
         let tl = List.map (fun (_,e) -> typing e) c_e_list in
         cseq t (candlist tl)
+    | Esplit(c, e) ->
+        let t = typing c in
+        let te = typing e in
+          cseq t te
 
 
 (** Typing an application *)

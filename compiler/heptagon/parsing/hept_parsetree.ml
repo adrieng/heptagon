@@ -77,6 +77,7 @@ and edesc =
   | Eiterator of iterator_type * app * exp * exp list * exp list
   | Ewhen of exp * constructor_name * var_name
   | Emerge of var_name * (constructor_name * exp) list
+  | Esplit of exp * exp
 
 and app = { a_op: op; a_params: exp list; }
 

@@ -48,7 +48,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP MAPI FOLD FOLDI MAPFOLD
-%token AT INIT
+%token AT INIT SPLIT
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -442,6 +442,8 @@ _exp:
   /* node call*/
   | n=qualname p=call_params LPAREN args=exps RPAREN
       { Eapp(mk_app (Enode n) p , args) }
+  | SPLIT n=exp e=exp
+      { Esplit(n, e) }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp

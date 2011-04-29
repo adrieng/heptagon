@@ -125,7 +125,10 @@ and edesc funs acc ed = match ed with
         (c,e), acc in
       let c_e_list, acc = mapfold aux acc c_e_list in
       Emerge (n, c_e_list), acc
-
+  | Esplit (e1, e2) ->
+      let e1, acc = exp_it funs acc e1 in
+      let e2, acc = exp_it funs acc e2 in
+        Esplit(e1, e2), acc
 
 
 and app_it funs acc a = funs.app funs acc a

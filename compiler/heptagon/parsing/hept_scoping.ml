@@ -286,7 +286,10 @@ and translate_desc loc env = function
           (c, e) in
         List.map fun_c_e c_e_list in
       Heptagon.Emerge (x, c_e_list)
-
+  | Esplit (x, e1) ->
+     let x = translate_exp env x in
+     let e1 = translate_exp env e1 in
+       Heptagon.Esplit(x, e1)
 
 and translate_op = function
   | Eequal -> Heptagon.Eequal

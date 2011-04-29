@@ -9,7 +9,7 @@ open Containers
 open Printf
 
 let print_interference_graphs = false
-let verbose_mode = true
+let verbose_mode = false
 let print_debug0 s =
   if verbose_mode then
     Format.printf s

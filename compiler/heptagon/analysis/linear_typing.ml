@@ -401,7 +401,7 @@ let rec typing_exp env e =
     | Eapp ({ a_op = Efield }, _, _) -> Ltop
     | Eapp ({ a_op = Earray }, _, _) -> Ltop
     | Estruct _ -> Ltop
-    | Emerge _ | Ewhen _ | Eapp _ | Eiterator _ -> assert false
+    | Emerge _ | Ewhen _ | Esplit _ | Eapp _ | Eiterator _ -> assert false
   in
     e.e_linearity <- l;
     l
@@ -701,14 +701,18 @@ and expect env lin e =
         check_linearity_exp env e lin;
         unify_lin lin actual_lin
 
-    | Emerge (c, c_e_list) ->
-        safe_expect env Ltop c;
+    | Emerge (_, c_e_list) ->
         List.iter (fun (_, e) -> safe_expect env lin e) c_e_list;
         lin
 
-    | Ewhen (e, _, x) ->
-        safe_expect env Ltop x;
+    | Ewhen (e, _, _) ->
         expect env lin e
+
+    | Esplit (c, e) ->
+        safe_expect env Ltop c;
+        let l = linearity_list_of_linearity lin in
+        safe_expect env (List.hd l) e;
+        lin
 
     | Eapp ({ a_op = Etuple }, e_list, _) ->
       let lin_list = linearity_list_of_linearity lin in

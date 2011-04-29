@@ -52,6 +52,8 @@ type error =
   | Emerge_missing_constrs of QualSet.t
   | Emerge_uniq of qualname
   | Emerge_mix of qualname
+  | Esplit_enum of ty
+  | Esplit_tuple of ty
 
 exception Unify
 exception TypingError of error
@@ -166,6 +168,18 @@ let message loc kind =
         eprintf
           "%aThe function given to mapi should expect an integer \
                as the last argument (found: %a).@."
+          print_location loc
+          print_type ty
+    | Esplit_enum ty ->
+        eprintf
+          "%aThe first argument of split has to be an \
+               enumerated type (found: %a).@."
+          print_location loc
+          print_type ty
+    | Esplit_tuple ty ->
+        eprintf
+          "%aThe second argument of spit cannot \
+               be a tuple (found: %a).@."
           print_location loc
           print_type ty
   end;
@@ -595,6 +609,22 @@ let rec typing const_env h e =
             List.map (fun (c, e) -> (c, expect const_env h t e)) c_e_list in
           Emerge (x, (c1,typed_e1)::typed_c_e_list), t
       | Emerge (_, []) -> assert false
+
+      | Esplit(c, e2) ->
+          let typed_c, ty_c = typing const_env h c in
+          let typed_e2, ty = typing const_env h e2 in
+          let n =
+            match ty_c with
+              | Tid tc ->
+                  (match find_type tc with | Tenum cl-> List.length cl | _ -> -1)
+              | _ ->  -1 in
+            if n < 0 then
+              message e.e_loc (Esplit_enum ty_c);
+            (*the type of e should not be a tuple *)
+            (match ty with
+              | Tprod _ -> message e.e_loc (Esplit_tuple ty)
+              | _ -> ());
+            Esplit(typed_c, typed_e2), Tprod (repeat_list ty n)
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
   with
