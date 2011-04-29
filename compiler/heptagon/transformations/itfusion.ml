@@ -4,6 +4,7 @@ open Names
 open Static
 open Hept_mapfold
 open Heptagon
+open Hept_utils
 (* Iterator fusion *)
 
 let is_stateful app =
@@ -87,8 +88,7 @@ let mk_call app acc_eq_list =
     | 1 -> new_inp, e, acc_eq_list
     | _ ->
         (*more than one output, we need to create a new equation *)
-        let eq = mk_equation ~stateful:(is_stateful app)
-                               (Eeq(pat_of_vd_list new_outp, e)) in
+        let eq = mk_equation (Eeq(pat_of_vd_list new_outp, e)) in
         let e = tuple_of_vd_list new_outp in
           new_inp, e, eq::acc_eq_list
 
@@ -125,8 +125,7 @@ let edesc funs acc ed =
           let _, outp = get_node_inp_outp f in
           let f_out_type = Types.prod (List.map (fun v -> v.v_type) outp) in
           let call = mk_exp (Eapp(f, largs, None)) f_out_type in
-          let eq = mk_equation ~stateful:(is_stateful f)
-                             (Eeq(pat_of_vd_list outp, call)) in
+          let eq = mk_equation (Eeq(pat_of_vd_list outp, call)) in
           (* create the lambda *)
           let anon = mk_app
             (Enode (add_anon_node inp outp [] (eq::acc_eq_list))) in

@@ -143,7 +143,7 @@ type contract = {
 
 type node_dec = {
   n_name      : qualname;
-  n_stateful : bool;
+  n_stateful  : bool;
   n_input     : var_dec list;
   n_output    : var_dec list;
   n_contract  : contract option;
@@ -172,7 +172,7 @@ and program_desc =
 type signature = {
   sig_name      : qualname;
   sig_inputs    : arg list;
-  sig_stateful : bool;
+  sig_stateful  : bool;
   sig_outputs   : arg list;
   sig_params    : param list;
   sig_loc       : location }
@@ -188,7 +188,7 @@ and interface_desc =
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
-
+(*
 (* Helper functions to create AST. *)
 let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
@@ -203,14 +203,14 @@ let mk_op_app ?(params=[]) ?(unsafe=false) ?(reset=None) op args =
 let mk_type_dec name desc =
   { t_name = name; t_desc = desc; t_loc = no_location; }
 
-let mk_equation ?(stateful = true) desc =
+let mk_equation stateful desc =
   { eq_desc = desc; eq_stateful = stateful; eq_loc = no_location; }
 
 let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty =
   { v_ident = name; v_type = ty; v_clock = clock;
     v_last = last; v_loc = no_location }
 
-let mk_block ?(stateful = true) ?(defnames = Env.empty) ?(locals = []) eqs =
+let mk_block stateful ?(defnames = Env.empty) ?(locals = []) eqs =
   { b_local = locals; b_equs = eqs; b_defnames = defnames;
     b_stateful = stateful; b_loc = no_location; }
 
@@ -222,11 +222,12 @@ let dtrue =
 let mk_ifthenelse e1 e2 e3 =
   { e3 with e_desc = mk_op_app Eifthenelse [e1; e2; e3] }
 
-let mk_simple_equation pat e =
-  mk_equation ~stateful:false (Eeq(pat, e))
+let mk_simple_equation stateful pat e =
+  mk_equation stateful (Eeq(pat, e))
 
-let mk_switch_equation ?(stateful = true) e l =
-  mk_equation ~stateful:stateful (Eswitch (e, l))
+let mk_switch_equation stateful e l =
+  mk_equation stateful (Eswitch (e, l))
+
 
 let mk_signature name ins outs stateful params loc =
   { sig_name = name;
@@ -265,3 +266,4 @@ let vars_pat pat =
 let rec vd_mem n = function
   | [] -> false
   | vd::l -> vd.v_ident = n or (vd_mem n l)
+*)

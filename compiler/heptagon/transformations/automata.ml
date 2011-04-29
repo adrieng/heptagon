@@ -15,6 +15,7 @@ open Types
 open Names
 open Idents
 open Heptagon
+open Hept_utils
 open Hept_mapfold
 open Initial
 open Modules

@@ -13,6 +13,7 @@
 open Misc
 open Idents
 open Heptagon
+open Hept_utils
 open Types
 open Initial
 
@@ -51,15 +52,13 @@ let default e =
     | _ -> None
 
 
-(* Stop mapfold if not stateful *)
-let exp funs (res,s) e = if s then Hept_mapfold.exp funs (res,s) e else e, (res,s)
-
-let edesc funs (res,s) ed =
-  let ed, _ = Hept_mapfold.edesc funs (res,s) ed in
+let edesc funs res ed =
+  let ed, _ = Hept_mapfold.edesc funs res ed in
   let ed = match ed with
     | Efby (e1, e2) ->
         (match res, e1 with
-         | None, { e_desc = Econst c } -> (* no reset : [if res] useless, the initialization is suffisant *)
+         | None, { e_desc = Econst c } ->
+            (* no reset : [if res] useless, the initialization is sufficient *)
             Epre(Some c, e2)
          | _ -> ifres res e1 { e2 with e_desc = Epre(default e1, e2) })
     | Eapp({ a_op = Earrow }, [e1;e2], _) ->
@@ -70,26 +69,27 @@ let edesc funs (res,s) ed =
         Eiterator(it, op, n, pe_list, e_list, merge_resets res re)
     | _ -> ed
   in
-    ed, (res,s)
+    ed, res
 
 
+(* do nothing when not stateful *)
+let eq funs res eq =
+  if eq.eq_stateful then Hept_mapfold.eq funs res eq else eq, res
 
-let eq funs (res,_) eq = Hept_mapfold.eq funs (res,eq.eq_stateful) eq
+(* do nothing when not stateful *)
+let block funs res b =
+  if b.b_stateful then Hept_mapfold.block funs res b else b, res
 
-(* Transform reset blocks in blocks with reseted exps, create a var to store the reset condition evaluation. *)
-let eqdesc funs (res,stateful) = function
+(* Transform reset blocks in blocks with reseted exps,
+   create a var to store the reset condition evaluation. *)
+let eqdesc funs res = function
   | Ereset(b, e) ->
-      if stateful
-      then (
-        let e, _ = Hept_mapfold.exp_it funs (res,true) e in
+        let e, _ = Hept_mapfold.exp_it funs res e in
         let e, vd, eq = bool_var_from_exp e in
         let r = merge_resets res (Some e) in
-        let b, _ = Hept_mapfold.block_it funs (r,true) b in
+        let b, _ = Hept_mapfold.block_it funs r b in
         let b = { b with b_equs = eq::b.b_equs; b_local = vd::b.b_local; b_stateful = true } in
-        Eblock(b), (res,true))
-      else (
-        let b, _ = Hept_mapfold.block_it funs (res,false) b in
-        Eblock(b), (res,false))
+        Eblock(b), res
   | Eswitch _ | Eautomaton _ | Epresent _ ->
       Format.eprintf "[reset] should be done after [switch automaton present]";
       assert false
@@ -97,8 +97,10 @@ let eqdesc funs (res,stateful) = function
 
 
 let program p =
+  Printf.printf "program :\n";
+  Hept_printer.print stdout p;
   let funs = { Hept_mapfold.defaults with
                  Hept_mapfold.eq = eq; Hept_mapfold.eqdesc = eqdesc;
-                 Hept_mapfold.edesc = edesc; Hept_mapfold.exp = exp } in
-  let p, _ = Hept_mapfold.program_it funs (None,false) p in
+                 Hept_mapfold.edesc = edesc } in
+  let p, _ = Hept_mapfold.program_it funs None p in
     p
