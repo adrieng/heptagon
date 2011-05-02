@@ -1,0 +1,6 @@
+node f(a:int^10 at r) returns (o:int^10 at r)
+var u:int^10 at r;
+let
+  u = [a with [0] = 0];
+  o = map<<10>> (+)(u, a);
+tel

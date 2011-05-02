@@ -1,0 +1,35 @@
+const m:int = 3
+const n:int = 100
+
+node f(a:int^10 at r) returns (o:int^10 at r)
+let
+  o = [ a with [0]=0 ]
+tel
+
+node g(a:int^10 at r) returns (o:int^10 at r)
+let
+  o = f(a)
+tel
+
+node linplus (a:int at r) returns (u:int at r)
+let
+  u = a
+tel
+
+fun swap<<s:int>>(i,j:int; a:float^s at r) returns (o:float^s at r)
+var u,v:float; a1:float^s at r;
+let
+  u = a.[i] default 0.0;
+  v = a.[j] default 0.0;
+  a1 = [ a with [i] = v ];
+  o = [ a1 with [j] = v];
+tel
+
+node shuffle(i_arr, j_arr:int^m; q:int)
+  returns (v : float)
+var t,t_next:float^n at r;
+let
+  t_next = fold<<m>> (swap<<n>>)(i_arr, j_arr, t);
+  init<<r>> t = (0.0^n) fby t_next;
+  v = t_next.[q] default 0.0;
+tel

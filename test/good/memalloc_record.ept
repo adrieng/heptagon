@@ -1,0 +1,14 @@
+type array = { tab : int^100; size : int  }
+
+fun f(a:array) returns (o:array)
+let
+  o = { a with .size = 0 }
+tel
+
+node g(a:array) returns (o:array)
+var v, u : int^100;
+let
+  v = [ a.tab with [0] = 0 ];
+  u = [ v with [10] = 99 ];
+  o = { a with .tab = u }
+tel
