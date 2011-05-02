@@ -114,6 +114,7 @@ let _load_module modul =
                         of the compiler.@\nPlease recompile %s.ept first.@."
                        filename name;
         raise Errors.Error );
+      g_env.loaded_mod <- modul::g_env.loaded_mod;
       _append_module mo
     with
       | Compiler_utils.Cannot_find_file(f) ->
