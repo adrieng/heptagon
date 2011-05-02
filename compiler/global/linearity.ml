@@ -26,6 +26,12 @@ module LocationEnv =
       let compare = compare
     end)
 
+module LocationSet =
+    Set.Make(struct
+      type t = linearity_var
+      let compare = compare
+    end)
+
 (** Returns a linearity object from a linearity list. *)
 let prod = function
   | [l] -> l

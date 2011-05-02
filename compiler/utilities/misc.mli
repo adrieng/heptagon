@@ -65,6 +65,7 @@ val option_compare : ('a -> 'a -> int) -> 'a option -> 'a option -> int
 
 (** Mapfold *)
 val mapfold: ('acc -> 'b -> 'c * 'acc) -> 'acc -> 'b list -> 'c list * 'acc
+val mapfold2: ('acc -> 'b -> 'd -> 'c * 'acc) -> 'acc -> 'b list -> 'd list -> 'c list * 'acc
 
 (** Mapfold, right version. *)
 val mapfold_right

@@ -129,6 +129,12 @@ let mapfold f acc l =
                 ([],acc) l in
   List.rev l, acc
 
+let mapfold2 f acc l1 l2 =
+  let l,acc = List.fold_left2
+                (fun (l,acc) e1 e2 -> let e,acc = f acc e1 e2 in e::l, acc)
+                ([],acc) l1 l2 in
+  List.rev l, acc
+
 let mapfold_right f l acc =
   List.fold_right (fun e (acc, l) -> let acc, e = f e acc in (acc, e :: l))
     l (acc, [])
