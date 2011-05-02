@@ -93,7 +93,7 @@ let rec bound_check_expr idx_list bounds =
           mk_exp_bool (Eop (op_from_string "&", [e1;e2]))
   in
   match (idx_list, bounds) with
-    | [idx], [n] -> mk_comp idx n
+    | [idx], n::_ -> mk_comp idx n
     | (idx :: idx_list, n :: bounds) ->
         let e = mk_comp idx n in
           mk_exp_bool (Eop (op_from_string "&",
