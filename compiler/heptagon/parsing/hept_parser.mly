@@ -99,10 +99,6 @@ slist(S, x) :
 delim_slist(S, L, R, x) :
   |                        {[]}
   | L l=slist(S, x) R      {l}
-/* Separated list with delimiter, even for empty list*/
-adelim_slist(S, L, R, x) :
-  | L R                    {[]}
-  | L l=slist(S, x) R      {l}
 /*Separated Nonempty list */
 snlist(S, x) :
   | x=x                    {[x]}
@@ -112,6 +108,10 @@ optsnlist(S,x) :
   | x=x                    {[x]}
   | x=x S                  {[x]}
   | x=x S r=optsnlist(S,x) {x::r}
+/* Separated list with delimiter, even for empty list*/
+adelim_slist(S, L, R, x) :
+  | L R                    {[]}
+  | L l=snlist(S, x) R      {l}
 
 %inline tuple(x)           : LPAREN h=x COMMA t=snlist(COMMA,x) RPAREN { h::t }
 %inline soption(P,x):
@@ -442,7 +442,7 @@ _exp:
   /* node call*/
   | n=qualname p=call_params LPAREN args=exps RPAREN
       { Eapp(mk_app (Enode n) p , args) }
-  | SPLIT n=exp e=exp
+  | SPLIT n=ident LPAREN e=exp RPAREN
       { Esplit(n, e) }
   | NOT exp
       { mk_op_call "not" [$2] }
