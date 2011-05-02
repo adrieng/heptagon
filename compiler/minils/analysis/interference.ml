@@ -250,18 +250,18 @@ let add_uses uses iv env =
   let ivars = all_ivars IvarSet.empty iv (World.ivar_type iv) in
     IvarSet.fold (fun iv env -> IvarEnv.add iv (number_uses iv uses) env) ivars env
 
+let decr_uses iv env =
+  try
+    IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
+  with
+    | Not_found ->
+        print_debug1 "Cannot decrease; var not found : %s@." (ivar_to_string iv); assert false
+
 (** TODO: compute correct live range for variables wit no use ?*)
 let compute_live_vars eqs =
   let uses = compute_uses eqs in
   print_debug_ivar_env "Uses" uses;
   let aux (env,res) eq =
-    let decr_uses iv env =
-      try
-        IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
-      with
-        | Not_found ->
-            print_debug1 "Cannot decrease; var not found : %s@." (ivar_to_string iv); assert false
-    in
     let alive_vars = IvarEnv.fold (fun iv n acc -> if n > 0 then iv::acc else acc) env [] in
       print_debug1 "Alive vars : %s@." (String.concat " " (List.map ivar_to_string alive_vars));
       let read_ivars = all_ivars_set (InterfRead.read eq) in

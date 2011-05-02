@@ -17,6 +17,9 @@ let eq_clock eq =
 
 module Cost =
 struct
+  open Interference_graph
+  open Interference
+
   (** Returns the minimum of the values in the map.
       Picks an equation with the clock ck if possible. *)
   let min_map ck m =
@@ -39,77 +42,48 @@ struct
   (** Remove from the elements the elements whose value is zero or negative. *)
   let remove_null m =
     let check_not_null k d m =
-      if d > 0 then Env.add k d m else m
+      if d > 0 then IvarEnv.add k d m else m
     in
-      Env.fold check_not_null m Env.empty
-
-  (** [remove_uses l m] decrease by one the value in the map m of each element
-      in the list l. This corresponds to removing one use for each variable. *)
-  let remove_uses l m =
-    let remove_one_use k d m =
-      if (List.mem k l) & (d - 1 > 0) then
-        Env.add k (d-1) m
-      else
-        m
-    in
-      Env.fold remove_one_use m m
+      IvarEnv.fold check_not_null m IvarEnv.empty
 
   (** Returns the list of variables killed by an equation (ie vars
       used by the equation and with use count equal to 1). *)
-  let killed_vars eq var_uses =
-    let is_killed acc v =
-      begin try
-              if Env.find v var_uses = 1 then
-                acc + 1
-              else
-                acc
-        with Not_found ->
-          Format.printf "not found variable : %s" (name v); assert false
-      end
+  let killed_vars eq env =
+    let is_killed iv acc =
+      try
+        if IvarEnv.find iv env = 1 then acc + 1 else acc
+      with
+        | Not_found -> Format.printf "Var not found in kill_vars %s@." (ivar_to_string iv); assert false
     in
-      List.fold_left is_killed 0 (Vars.read false eq)
-
-  (** [uses x eq_list] returns the number of uses of the variable x
-      in the lits of equations eq_list. *)
-  let uses x eq_list =
-    let appears_in_eq x eq =
-      if List.mem x (Vars.read false eq) then
-        1
-      else
-        0
-  in
-    List.fold_left (fun v eq -> (appears_in_eq x eq) + v) 0 eq_list
-
-  (** Adds variables from the list l to the map m.
-      eq_list is used to compute the initial number of uses of this variable. *)
-  let add_vars l eq_list m =
-    List.fold_left (fun m v -> Env.add v (uses v eq_list) m) m l
+      IvarSet.fold is_killed (all_ivars_set (InterfRead.read eq)) 0
 
   (** Compute the cost of all the equations in rem_eqs using var_uses.
       So far, it uses only the number of killed and defined variables. *)
-  let compute_costs var_uses rem_eqs =
+  let compute_costs env rem_eqs =
     let cost eq =
-      let nb_killed_vars = killed_vars eq var_uses in
-      let nb_def_vars = List.length (Vars.def [] eq) in
+      let nb_killed_vars = killed_vars eq env in
+      let nb_def_vars = IvarSet.cardinal (all_ivars_set (InterfRead.def eq)) in
         nb_def_vars - nb_killed_vars
     in
       List.fold_left (fun m eq -> EqMap.add eq (cost eq) m) EqMap.empty rem_eqs
 
   (** Initialize the costs data structure. *)
-  let init_cost eq_list inputs =
-    add_vars inputs eq_list Env.empty
+  let init_cost uses inputs =
+    let env = IvarSet.fold (add_uses uses) !World.memories IvarEnv.empty in
+    let inputs = List.map (fun vd -> Ivar vd.v_ident) inputs in
+      List.fold_left (fun env iv -> add_uses uses iv env) env inputs
 
-  (** [update_cost eq eq_list var_uses] updates the costs data structure
+  (** [update_cost eq uses env] updates the costs data structure
       after eq has been chosen as the next equation to be scheduled.
       It updates uses and adds the new variables defined by this equation.
   *)
-  let update_cost eq eq_list var_uses =
-    let var_uses = remove_uses (Vars.read false eq) var_uses in
-      add_vars (Vars.def [] eq) eq_list var_uses
+  let update_cost eq uses env =
+    let env = IvarSet.fold decr_uses (all_ivars_set (InterfRead.read eq)) env in
+      IvarSet.fold (add_uses uses) (InterfRead.def eq) env
 
   (** Returns the next equation, chosen from the list of equations rem_eqs *)
-  let next_equation rem_eqs ck var_uses =
-    let eq_cost = compute_costs var_uses rem_eqs in
+  let next_equation rem_eqs ck env =
+    let eq_cost = compute_costs env rem_eqs in
       min_map ck eq_cost
 end
 
@@ -140,6 +114,7 @@ let remove_eq eq node_list =
 
 (** Main function to schedule a node. *)
 let schedule eq_list inputs node_list =
+  let uses = Interference.compute_uses eq_list in
   let rec schedule_aux rem_eqs sched_eqs node_list ck costs =
     match rem_eqs with
       | [] -> sched_eqs
@@ -151,10 +126,10 @@ let schedule eq_list inputs node_list =
         (* update the list of equations ready to be scheduled *)
         let rem_eqs = free_eqs node_list in
         (* compute new costs for the next step *)
-        let costs = Cost.update_cost eq eq_list costs in
+        let costs = Cost.update_cost eq uses costs in
           schedule_aux rem_eqs (eq::sched_eqs) node_list (eq_clock eq) costs
   in
-  let costs = Cost.init_cost eq_list inputs in
+  let costs = Cost.init_cost uses inputs in
   let rem_eqs = free_eqs node_list in
     List.rev (schedule_aux rem_eqs [] node_list Clocks.Cbase costs)
 
@@ -162,10 +137,10 @@ let schedule_contract c =
   c
 
 let node _ () f =
+  Interference.World.init f;
   let contract = optional schedule_contract f.n_contract in
-  let inputs = List.map (fun vd -> vd.v_ident) (f.n_input@f.n_local) in
   let node_list, _ = DataFlowDep.build f.n_equs in
-  let f = { f with n_equs = schedule f.n_equs inputs node_list; n_contract = contract } in
+  let f = { f with n_equs = schedule f.n_equs f.n_input node_list; n_contract = contract } in
     f, ()
 
 let program p =
