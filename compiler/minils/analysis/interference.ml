@@ -412,19 +412,6 @@ let find_targeting f =
   let acc, _ = List.fold_left (find_output outputs_lins) ([], 0) inputs_lins in
     acc
 
-(** Coalesces the nodes corresponding to the inputs (given by e_list)
-    and the outputs (given by the pattern pat) of a node
-    with the given targeting. *)
-let apply_targeting targeting e_list pat =
-  let coalesce_targeting inputs i j =
-    let invar = InterfRead.ivar_of_extvalue (List.nth inputs i) in
-    let outvar = InterfRead.nth_var_from_pat j pat in
-      coalesce_from_ivar invar (Ivar outvar)
-  in
-     List.iter (fun (i,j) -> coalesce_targeting e_list i j) targeting
-
-
-
 
 (** [process_eq igs eq] adds to the interference graphs igs
     the links corresponding to the equation. Interferences
@@ -433,9 +420,6 @@ let apply_targeting targeting e_list pat =
 let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
   (** Other cases*)
   match pat, e.e_desc with
-    | _, Eapp ({ a_op = (Efun f | Enode f) }, e_list, _) ->
-      let targeting = find_targeting f in
-        apply_targeting targeting e_list pat
     | _, Eiterator((Imap|Imapi), { a_op = Enode _ | Efun _ }, _, _, w_list, _) ->
       let invars = InterfRead.ivars_of_extvalues w_list in
       let outvars = IvarSet.elements (InterfRead.def eq) in
