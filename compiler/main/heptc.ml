@@ -115,6 +115,7 @@ let main () =
         "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
         "-memalloc", Arg.Set do_mem_alloc, doc_memalloc;
+        "-sch-interf", Arg.Set use_interf_scheduler, doc_interf_scheduler
       ]
         compile errmsg;
   with

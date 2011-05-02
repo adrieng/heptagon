@@ -100,6 +100,8 @@ let do_scalarize = ref false
 
 let do_mem_alloc = ref false
 
+let use_interf_scheduler = ref false
+
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
 and doc_print_types = "\t\t\tPrint types"
@@ -126,3 +128,4 @@ and doc_inline = "<node>\t\tInline node <node>"
 and doc_itfusion = "\t\tEnable iterator fusion."
 and doc_tomato = "\t\tEnable automata minimization."
 and doc_memalloc = "\t\tEnable memory allocation"
+and doc_interf_scheduler = "\t\tUse a scheduler that tries to minimise interferences"
