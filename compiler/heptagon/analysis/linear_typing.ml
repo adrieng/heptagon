@@ -390,7 +390,7 @@ let rec typing_pat env = function
     the expected linearity. *)
 let rec typing_exp env e =
   let l, env = match e.e_desc with
-    | Econst _ -> Ltop, env
+    | Econst _ -> lin_skeleton Ltop e.e_ty, env
     | Evar x -> lin_of_ident x env, env
     | Elast _ -> Ltop, env
     | Epre (_, e) ->
