@@ -444,6 +444,7 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
     | Evarpat x, Eiterator((Ifold|Ifoldi), { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
         (* because of the encoding of the fold, the output is written before
            the inputs are read so they must interfere *)
+        let w_list, _ = Misc.split_last w_list in
         let invars = InterfRead.ivars_of_extvalues w_list in
         let pinvars = InterfRead.ivars_of_extvalues pw_list in
           List.iter (add_interference_link_from_ivar (Ivar x)) invars;

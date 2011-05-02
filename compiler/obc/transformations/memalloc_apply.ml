@@ -114,7 +114,6 @@ let var_decs _ (env, mutables,j) vds =
       else (
         let vd =
           if IdentSet.mem vd.v_ident mutables then (
-            Format.printf "%s is mutable@.";
             { vd with v_mutable = true }
           ) else
             vd
