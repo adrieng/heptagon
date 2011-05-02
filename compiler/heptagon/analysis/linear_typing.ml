@@ -544,12 +544,16 @@ and expect_app env expected_lin op e_list = match op with
     | Eifthenelse ->
       let e1, e2, e3 = assert_3 e_list in
       let env = safe_expect env Ltop e1 in
-      let c2 = collect_exp env e2 in
-      let c3 = collect_exp env e3 in
-      let l2, l3 = assert_2 (unify_collect [c2;c3] [expected_lin] [e2;e3]) in
-      let env = safe_expect env l2 e2 in
-      let env = safe_expect env l3 e3 in
-        expected_lin, env
+        (try
+            let l, env = expect env expected_lin e2 in
+            let _, env = expect env (not_linear_for_exp e3) e3 in
+              l, env
+          with
+              UnifyFailed ->
+                let l, env = expect env expected_lin e3 in
+                let _, env = expect env (not_linear_for_exp e2) e2 in
+                  l, env
+        )
 
     | Efield_update ->
       let e1, e2 = assert_2 e_list in
