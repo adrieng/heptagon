@@ -661,7 +661,7 @@ and typing_eq env eq =
   match eq.eq_desc with
     | Eautomaton(state_handlers) ->
         let typing_state (u, i) h =
-          let env, u1, i1 = typing_state_handler env h in
+          let _, u1, i1 = typing_state_handler env h in
             IdentSet.union u u1, LocationSet.union i i1
         in
         let env, u, i = env in
@@ -669,7 +669,7 @@ and typing_eq env eq =
           env, u, i
     | Eswitch(e, switch_handlers) ->
         let typing_switch (u, i) h =
-          let env, u1, i1 = typing_switch_handler env h in
+          let _, u1, i1 = typing_switch_handler env h in
             IdentSet.union u u1, LocationSet.union i i1
         in
         let env, u, i = safe_expect env Ltop e in
@@ -777,17 +777,17 @@ and safe_expect env lin e =
 let check_outputs inputs outputs =
   let add_linearity env vd =
     match vd.v_linearity with
-      | Lat r -> S.add r env
+      | Lat r -> LocationSet.add r env
       | _ -> env
   in
   let check_out env vd =
     match vd.v_linearity with
       | Lat r ->
-        if not (S.mem r env) then
+        if not (LocationSet.mem r env) then
           message vd.v_loc (Eoutput_linearity_not_declared r)
       | _ -> ()
   in
-  let env = List.fold_left add_linearity S.empty inputs in
+  let env = List.fold_left add_linearity LocationSet.empty inputs in
     List.iter (check_out env) outputs
 
 let node f =
