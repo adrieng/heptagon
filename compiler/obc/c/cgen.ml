@@ -252,7 +252,7 @@ let rec cexpr_of_static_exp se =
         in
           Cstructlit (ty_name,
                      List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
-    | Sarray_power(n,c) ->
+    | Sarray_power(c,n) ->
         let cc = cexpr_of_static_exp c in
           Carraylit (repeat_list cc (int_of_static_exp n)) (* TODO should be recursive *)
     | Svar ln ->
@@ -425,8 +425,15 @@ let rec create_affect_const var_env dest c =
     | Sarray cl ->
         let create_affect_idx c (i, affl) =
           let dest = Carray (dest, Cconst (Ccint i)) in
-          (i - 1, create_affect_const var_env dest c @ affl) in
-        snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
+            (i - 1, create_affect_const var_env dest c @ affl)
+        in
+          snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
+    | Srecord f_se_list ->
+        let affect_field affl (f, se) =
+          let dest_f = Cfield (dest, f) in
+            (create_affect_const var_env dest_f se) @ affl
+        in
+          List.fold_left affect_field [] f_se_list
     | _ -> [Caffect (dest, cexpr_of_static_exp c)]
 
 (** [cstm_of_act obj_env mods act] translates the Obj action [act] to a list of
