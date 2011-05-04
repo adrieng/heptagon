@@ -95,11 +95,8 @@ let rec translate_extvalue e =
   match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue (Wconst c)
     | Heptagon.Evar x -> mk_extvalue (Wvar x)
-    | Heptagon.Ewhen (e, c, ce) ->
-        (match ce.Heptagon.e_desc with
-          | Heptagon.Evar x ->
-              mk_extvalue (Wwhen (translate_extvalue e, c, x))
-          | _ -> Error.message e.Heptagon.e_loc Error.Enormalization)
+    | Heptagon.Ewhen (e, c, x) ->
+        mk_extvalue (Wwhen (translate_extvalue e, c, x))
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield;
                       Heptagon.a_params = params }, e_list, reset) ->
         let e = assert_1 e_list in
@@ -145,13 +142,8 @@ let translate
     | Heptagon.Efby _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
-    | Heptagon.Emerge (e, c_e_list) ->
-        (match e.Heptagon.e_desc with
-          | Heptagon.Evar x ->
-              mk_exp ty
-                (Emerge (x, List.map (fun (c,e)->c,
-                  translate_extvalue e) c_e_list))
-          | _ -> Error.message loc Error.Enormalization)
+    | Heptagon.Emerge (x, c_e_list) ->
+        mk_exp ty (Emerge (x, List.map (fun (c,e)-> c, translate_extvalue e) c_e_list))
 
 let rec translate_pat = function
   | Heptagon.Evarpat(n) -> Evarpat n

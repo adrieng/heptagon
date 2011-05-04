@@ -8,13 +8,14 @@
 (**************************************************************************)
 (* removing automata statements *)
 
-(* TODO deal correctly with [stateful] *)
+(* TODO deal correctly with [stateful] and [unsafe] *)
 
 open Misc
 open Types
 open Names
 open Idents
 open Heptagon
+open Hept_utils
 open Hept_mapfold
 open Initial
 open Modules

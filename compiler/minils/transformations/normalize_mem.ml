@@ -1,3 +1,5 @@
+open Idents
+open Signature
 open Minils
 open Mls_mapfold
 
@@ -9,30 +11,40 @@ open Mls_mapfold
        o = mem_o
 *)
 
-let rec vd_replace vd by_vd vd_l = match vd_l with
-  | [] -> []
-  | h::t -> if h.v_ident = vd.v_ident then by_vd::t else h::(vd_replace vd by_vd t)
+let fix_vd_ad env vd ad =
+  if Env.mem vd.v_ident env then
+    let x_copy = Env.find vd.v_ident env in
+      { vd with v_ident = x_copy }, { ad with a_name = Some (Idents.name x_copy) }
+  else
+    vd, ad
 
-let eq _ (locals, eqs, outs) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
+let eq _ (outputs, eqs, env) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
   | Evarpat x, Efby _ ->
-      (try
-        let vd_out = Mls_utils.vd_find x outs in (* this memory is also an output *)
+      if Mls_utils.vd_mem x outputs then
         let ty = eq.eq_rhs.e_ty in
         let x_copy = Idents.gen_var "normalize_mem" ("out_"^(Idents.name x)) in
-        let vd_x_copy = mk_var_dec ~clock:eq.eq_rhs.e_ck x_copy ty in
         let exp_x = mk_exp ty (Eextvalue (mk_extvalue ~ty:ty (Wvar x))) in
         let eq_copy = { eq with eq_lhs = Evarpat x_copy; eq_rhs = exp_x } in
-        eq, (vd_out::locals, eq::eq_copy::eqs, vd_replace vd_out vd_x_copy outs)
-      with Not_found -> (* this memory is not an output *)
-        eq, (locals, eq::eqs, outs))
+        let env = Env.add x x_copy env in
+          eq, (outputs, eq::eq_copy::eqs, env)
+      else (* this memory is not an output *)
+        eq, (outputs, eq::eqs, env)
   | _, _ ->
-      eq, (locals, eq::eqs, outs)
+      eq, (outputs, eq::eqs, env)
 
 let node funs acc nd =
-  let nd, (v, eqs, o) = Mls_mapfold.node_dec funs (nd.n_local, [], nd.n_output) nd in
-    { nd with n_local = v; n_equs = List.rev eqs; n_output = o }, acc
+  let nd, (_, eqs, env) = Mls_mapfold.node_dec funs (nd.n_output, [], Env.empty) nd in
+  let v = Env.fold
+    (fun x _ acc -> (Mls_utils.vd_find x nd.n_output)::acc) env nd.n_local in
+  (* update the signature of the node *)
+  let f = Modules.find_value nd.n_name in
+  let o, sig_o = List.split (List.map2 (fix_vd_ad env) nd.n_output f.node_outputs) in
+  let f = { f with node_outputs = sig_o } in
+  Modules.replace_value nd.n_name f;
+  (* return updated node *)
+  { nd with n_local = v; n_equs = List.rev eqs; n_output = o }, acc
 
 let program p =
   let funs = { Mls_mapfold.defaults with eq = eq; node_dec = node } in
-  let p, _ = Mls_mapfold.program_it funs ([], [], []) p in
+  let p, _ = Mls_mapfold.program_it funs ([], [], Env.empty) p in
     p

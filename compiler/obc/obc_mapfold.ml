@@ -95,6 +95,9 @@ and act funs acc a = match a with
       let lhs, acc = lhs_it funs acc lhs in
       let e, acc = exp_it funs acc e in
         Aassgn(lhs, e), acc
+  | Aop(op_name, args) ->
+      let args, acc = mapfold (exp_it funs) acc args in
+        Aop(op_name, args), acc
   | Acall(lhs_list, obj, n, args) ->
       let lhs_list, acc = mapfold (lhs_it funs) acc lhs_list in
       let args, acc = mapfold (exp_it funs) acc args in

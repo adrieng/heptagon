@@ -387,6 +387,7 @@ pat:
 ;
 
 ids:
+  |               {[]}
   | pat COMMA pat {[$1; $3]}
   | pat COMMA ids {$1 :: $3}
 ;

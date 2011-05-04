@@ -150,6 +150,19 @@ struct
 end
 
 
+let mk_app ?(async = None) ?(params=[]) ?(unsafe=false) op =
+  { Heptagon.a_op = op; Heptagon.a_params = params;
+    Heptagon.a_unsafe = unsafe; Heptagon.a_async = async }
+
+let mk_signature name ins outs stateful params loc =
+  { Heptagon.sig_name = name;
+    Heptagon.sig_inputs = ins;
+    Heptagon.sig_stateful = stateful;
+    Heptagon.sig_outputs = outs;
+    Heptagon.sig_params = params;
+    Heptagon.sig_loc = loc }
+
+
 (** Function to build the defined static parameters set *)
 let build_const loc vd_list =
   let _add_const_var loc c local_const =
@@ -180,12 +193,12 @@ let static_app_from_app app args=
 
 let rec translate_static_exp se =
   try
-    let se_d = translate_static_exp_desc se.se_desc in
+    let se_d = translate_static_exp_desc se.se_loc se.se_desc in
     Types.mk_static_exp Tinvalid ~loc:se.se_loc se_d
   with
     | ScopingError err -> message se.se_loc err
 
-and translate_static_exp_desc ed =
+and translate_static_exp_desc loc ed =
   let t = translate_static_exp in
   match ed with
     | Svar (Q q) -> Types.Svar q
@@ -248,7 +261,7 @@ and translate_desc loc env = function
   | Eapp ({ a_op = op; a_params = params; a_async = async }, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
       let params = List.map (expect_static_exp) params in
-      let app = Heptagon.mk_app ~params:params ~async:async (translate_op op) in
+      let app = mk_app ~params:params ~async:async (translate_op op) in
       Heptagon.Eapp (app, e_list, None)
 
   | Eiterator (it, { a_op = op; a_params = params; a_async = async }, n, pe_list, e_list) ->
@@ -256,23 +269,23 @@ and translate_desc loc env = function
       let pe_list = List.map (translate_exp env) pe_list in
       let n = expect_static_exp n in
       let params = List.map (expect_static_exp) params in
-      let app = Heptagon.mk_app ~params:params ~async:async (translate_op op) in
+      let app = mk_app ~params:params ~async:async (translate_op op) in
       Heptagon.Eiterator (translate_iterator_type it,
                           app, n, pe_list, e_list, None)
-  | Ewhen (e, c, ce) ->
+  | Ewhen (e, c, x) ->
+      let x = Rename.var loc env x in
       let e = translate_exp env e in
       let c = qualify_constrs c in
-      let ce = translate_exp env (mk_exp (Evar ce) loc) in
-      Heptagon.Ewhen (e, c, ce)
-  | Emerge (e, c_e_list) ->
-      let e = translate_exp env (mk_exp (Evar e) loc) in
+      Heptagon.Ewhen (e, c, x)
+  | Emerge (x, c_e_list) ->
+      let x = Rename.var loc env x in
       let c_e_list =
         let fun_c_e (c, e) =
           let e = translate_exp env e in
           let c = qualify_constrs c in
           (c, e) in
         List.map fun_c_e c_e_list in
-      Heptagon.Emerge (e, c_e_list)
+      Heptagon.Emerge (x, c_e_list)
 
 
 and translate_op = function
@@ -477,7 +490,7 @@ let translate_signature s =
   let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
   add_value n (Signature.mk_node i o s.sig_stateful p);
-  Heptagon.mk_signature n i o s.sig_stateful p s.sig_loc
+  mk_signature n i o s.sig_stateful p s.sig_loc
 
 
 let translate_interface_desc = function

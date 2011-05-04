@@ -116,12 +116,12 @@ and print_exp_desc ff = function
         print_exp_tuple pargs
         print_exp_tuple args
         print_every reset
-  | Ewhen (e, c, ec) ->
+  | Ewhen (e, c, x) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"
-        print_exp e print_qualname c print_exp ec
-  | Emerge (e, tag_e_list) ->
+        print_exp e print_qualname c print_ident x
+  | Emerge (x, tag_e_list) ->
       fprintf ff "@[<2>merge %a@ %a@]"
-        print_exp e print_tag_e_list tag_e_list
+        print_ident x print_tag_e_list tag_e_list
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c

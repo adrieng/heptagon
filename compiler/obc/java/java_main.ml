@@ -72,9 +72,10 @@ let program p =
           in
           let main_for_loop i =
             if separate
-            then [ Amethod_call(e_main, "step", []);
-                   Amethod_call(out, "printf", [ Sstring "%d => _\\n"; Eval (Pvar i)]) ]
-            else [ Amethod_call(out, "printf", [ Sstring "%d => %s\\n"; Eval (Pvar i);print_ret]) ]
+            then [ Aexp(Emethod_call(e_main, "step", []));
+                   Aexp(Emethod_call(out, "printf", [ Sstring "%d => _\\n"; Eval (Pvar i)])) ]
+            else [ Aexp(Emethod_call(out, "printf", [ Sstring "%d => %s\\n"; Eval (Pvar i);
+                                                      print_ret])) ]
           in
           [ Anewvar(vd_main, Enew (Tclass q_main, []));
             Aifelse( Efun(Names.pervasives_qn ">", [Eval (Pfield (pat_args, "length")); Sint 1])
@@ -82,9 +83,9 @@ let program p =
                    , mk_block [Aassgn(pat_step, Eval (Pvar id_step_dnb))]);
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
             Obc2java.fresh_for (Eval pat_step) main_for_loop;
-            Amethod_call(out, "printf",
+            Aexp (Emethod_call(out, "printf",
               [ Sstring "time : %d\\n";
-                Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])])
+                Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]))
           ]
         in
         mk_block ~locals:[vd_step] acts

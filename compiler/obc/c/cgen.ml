@@ -253,7 +253,7 @@ let rec cexpr_of_static_exp se =
         in
           Cstructlit (ty_name,
                      List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
-    | Sarray_power(n,c) ->
+    | Sarray_power(c,n) ->
         let cc = cexpr_of_static_exp c in
           Carraylit (repeat_list cc (int_of_static_exp n)) (* TODO should be recursive *)
     | Svar ln ->
@@ -429,8 +429,15 @@ let rec create_affect_const var_env dest c =
     | Sarray cl ->
         let create_affect_idx c (i, affl) =
           let dest = Carray (dest, Cconst (Ccint i)) in
-          (i - 1, create_affect_const var_env dest c @ affl) in
-        snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
+            (i - 1, create_affect_const var_env dest c @ affl)
+        in
+          snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
+    | Srecord f_se_list ->
+        let affect_field affl (f, se) =
+          let dest_f = Cfield (dest, f) in
+            (create_affect_const var_env dest_f se) @ affl
+        in
+          List.fold_left affect_field [] f_se_list
     | _ -> [Caffect (dest, cexpr_of_static_exp c)]
 
 (** [cstm_of_act obj_env mods act] translates the Obj action [act] to a list of
@@ -490,6 +497,11 @@ let rec cstm_of_act var_env obj_env act =
         let ty = assoc_type_lhs vn var_env in
         let ce = cexpr_of_exp var_env e in
         create_affect_stm vn ce ty
+
+    (** Our Aop marks an operator invocation that will perform side effects. Just
+        translate to a simple C statement. *)
+    | Aop (op_name, args) ->
+        [Csexpr (cop_of_op var_env op_name args)]
 
     (** Reinitialization of an object variable, extracting the reset
         function's name from our environment [obj_env]. *)
@@ -749,7 +761,7 @@ let cfile_list_of_oprog_ty_decls name oprog =
   let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
   let filename_types = name ^ "_types" in
   let types_h = (filename_types ^ ".h",
-                 Cheader (["stdbool"], List.concat cty_decls)) in
+                 Cheader (["stdbool"; "assert"], List.concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
   filename_types, [types_h; types_c]

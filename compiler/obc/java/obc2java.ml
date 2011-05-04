@@ -180,10 +180,11 @@ let obj_ref param_env o = match o with
 let rec act_list param_env act_l acts =
   let _act act acts = match act with
     | Obc.Aassgn (p,e) -> (Aassgn (pattern param_env p, exp param_env e))::acts
+    | Obc.Aop (op,e_l) -> Aexp (Efun (op, exp_list param_env e_l)) :: acts
     | Obc.Acall ([], obj, Mstep, e_l)
     | Obc.Aasync_call (_,[], obj, Mstep, e_l) ->
-        let acall = Amethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
-        acall::acts
+        let acall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
+        Aexp acall::acts
     | Obc.Acall ([p], obj, Mstep, e_l)
     | Obc.Aasync_call (_,[p], obj, Mstep, e_l) ->
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
@@ -211,8 +212,8 @@ let rec act_list param_env act_l acts =
         assgn::(copies@acts)
     | Obc.Acall (_, obj, Mreset, _)
     | Obc.Aasync_call (_,_, obj, Mreset, _) ->
-        let acall = Amethod_call (obj_ref param_env obj, "reset", []) in
-        acall::acts
+        let acall = Emethod_call (obj_ref param_env obj, "reset", []) in
+        Aexp acall::acts
     | Obc.Acase (e, c_b_l) when e.e_ty = Types.Tid Initial.pbool ->
         (match c_b_l with
           | [] -> acts
@@ -337,7 +338,7 @@ let create_async_classe async base_classe =
     let body =
       let act_syncronize =
         Aif( Efun(Initial.mk_pervasives "<>", [Snull; var_result])
-           , mk_block [Amethod_call(var_result, "get", [])])
+           , mk_block [Aexp (Emethod_call(var_result, "get", []))])
       in
       let act_result =
         let exp_call =

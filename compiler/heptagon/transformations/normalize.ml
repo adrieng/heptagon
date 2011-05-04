@@ -11,6 +11,7 @@ open Names
 open Idents
 open Location
 open Heptagon
+open Hept_utils
 open Hept_mapfold
 open Types
 open Clocks
@@ -75,16 +76,14 @@ let equation (d_list, eq_list) e =
           let var_list, d_list =
             mapfold (fun d_list ty -> add_one_var ty d_list) d_list ty_list in
           let pat_list = List.map (fun n -> Evarpat n) var_list in
-          let eq_list = (mk_equation ~stateful:(is_stateful e)
-                            (Eeq (Etuplepat pat_list, e))) :: eq_list in
+          let eq_list = (mk_equation (Eeq (Etuplepat pat_list, e))) :: eq_list in
           let e_list = List.map2
             (fun n ty -> mk_exp (Evar n) ty) var_list ty_list in
           let e = Eapp(mk_app Etuple, e_list, None) in
             (d_list, eq_list), e
       | _ ->
           let n, d_list = add_one_var e.e_ty d_list in
-          let eq_list = (mk_equation ~stateful:(is_stateful e)
-                            (Eeq (Evarpat n, e))) :: eq_list in
+          let eq_list = (mk_equation (Eeq (Evarpat n, e))) :: eq_list in
             (d_list, eq_list), Evar n
 
 (* [(e1,...,ek) when C(n) = (e1 when C(n),...,ek when C(n))] *)
@@ -223,7 +222,6 @@ and merge context e x c_e_list =
       let t_e_list = List.map2 (fun t e -> (t,e)) c_list e_list in
         mk_exp ~loc:e.e_loc (Emerge(x, t_e_list)) ty
     in
-    let context, x = translate ExtValue context x in
     let c_e_list, context = mapfold translate_tag context c_e_list in
       match c_e_list with
         | [] -> assert false
@@ -243,7 +241,7 @@ and merge context e x c_e_list =
 and distribute ((d_list, eq_list) as context) eq pat e =
   let dist_e_list pat_list e_list =
     let mk_eq pat e =
-      mk_equation ~stateful:eq.eq_stateful (Eeq (pat, e))
+      mk_equation (Eeq (pat, e))
     in
     let dis context eq = match eq.eq_desc with
       | Eeq (pat, e) -> distribute context eq pat e
@@ -258,7 +256,7 @@ and distribute ((d_list, eq_list) as context) eq pat e =
       | Etuplepat(pat_list), Econst { se_desc = Stuple se_list } ->
           dist_e_list pat_list (exp_list_of_static_exp_list se_list)
       | _ ->
-          let eq = { eq with eq_desc = Eeq(pat, e) } in
+          let eq = mk_equation ~loc:eq.eq_loc (Eeq(pat, e)) in
             d_list,  eq :: eq_list
 
 and translate_eq ((d_list, eq_list) as context) eq = match eq.eq_desc with
@@ -267,8 +265,10 @@ and translate_eq ((d_list, eq_list) as context) eq = match eq.eq_desc with
         distribute context eq pat e
   | Eblock b ->
       let v, eqs = translate_eq_list [] b.b_equs in
-      let eq = { eq with eq_desc = Eblock { b with b_local = v @ b.b_local; b_equs = eqs} } in
-        d_list, eq :: eq_list
+      let eq =
+        mk_equation ~loc:eq.eq_loc (Eblock { b with b_local = v @ b.b_local; b_equs = eqs})
+      in
+      d_list, eq :: eq_list
   | _ -> Misc.internal_error "normalize" 0
 
 and translate_eq_list d_list eq_list =

@@ -46,6 +46,11 @@ let rec vd_mem n = function
   | [] -> false
   | vd::l -> vd.v_ident = n or (vd_mem n l)
 
+(** @return a signature arguments from the vardecs *)
+let args_of_var_decs vds =
+  List.map (fun vd -> Signature.mk_arg (Some (name vd.v_ident)) vd.v_type) vds
+
+
 (** @return whether [ty] corresponds to a record type. *)
 let is_record_type ty = match ty with
   | Tid n ->

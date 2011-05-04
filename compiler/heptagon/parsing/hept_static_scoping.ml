@@ -13,6 +13,14 @@ let assert_se e = match e.e_desc with
   | Econst se -> se
   | _ -> raise Not_static
 
+let static_exp funs local_const se =
+  (match se.se_desc with
+    | Svar (Q q) ->
+        if not (Modules.check_const q) then
+          Error.message se.se_loc (Error.Equal_notfound("constant", q))
+    | _ -> ());
+  Hept_parsetree_mapfold.static_exp funs local_const se
+
 (** convention : static params are set as the first static args,
     op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
 let static_app_from_app app args =
@@ -63,7 +71,7 @@ let const_dec funs local_const cd =
 
 let program p =
   let funs = { Hept_parsetree_mapfold.defaults
-               with node_dec = node; exp = exp; const_dec = const_dec } in
+               with node_dec = node; exp = exp; static_exp = static_exp; const_dec = const_dec } in
   let p, _ = Hept_parsetree_mapfold.program_it funs Names.S.empty p in
   p
 

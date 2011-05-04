@@ -9,14 +9,14 @@
 (* removing present statements *)
 
 open Heptagon
+open Hept_utils
 open Hept_mapfold
 
 let translate_present_handlers handlers cont =
   let translate_present_handler { p_cond = e; p_block = b } cont =
     let stateful = b.b_stateful or cont.b_stateful in
-      mk_block ~stateful:stateful ~defnames:b.b_defnames
-        [mk_switch_equation
-           ~stateful:stateful e
+      mk_block ~defnames:b.b_defnames
+        [mk_switch_equation e
            [{ w_name = Initial.ptrue; w_block = b };
             { w_name = Initial.pfalse; w_block = cont }]] in
   let b = List.fold_right translate_present_handler handlers cont in

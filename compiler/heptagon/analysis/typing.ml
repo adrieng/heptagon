@@ -584,14 +584,14 @@ let rec typing const_env h e =
           Eiterator(it, app, typed_n, [], typed_e_l, reset), ty
       | Eiterator _ -> assert false
 
-      | Ewhen (e, c, ce) ->
+      | Ewhen (e, c, x) ->
           let typed_e, t = typing const_env h e in
           let tn_expected = find_constrs c in
-          let typed_ce, tn_actual = typing const_env h ce in
+          let tn_actual = typ_of_name h x in
           unify tn_actual tn_expected;
-          Ewhen (typed_e, c, typed_ce), t
+          Ewhen (typed_e, c, x), t
 
-      | Emerge (e, (c1,e1)::c_e_list) ->
+      | Emerge (x, (c1,e1)::c_e_list) ->
           (* verify the constructors : they should be unique,
                all of the same type and cover all the possibilities *)
           let c_type = find_constrs c1 in
@@ -615,14 +615,13 @@ let rec typing const_env h e =
           let c_set_diff = QualSet.diff expected_c_set c_set in
           if not (QualSet.is_empty c_set_diff)
           then message e.e_loc (Emerge_missing_constrs c_set_diff);
-          (* verify [n] is of the right type *)
-          let typed_e, e_type = typing const_env h e in
-          unify e_type c_type;
+          (* verify [x] is of the right type *)
+          unify (typ_of_name h x) c_type;
           (* type *)
           let typed_e1, t = typing const_env h e1 in
           let typed_c_e_list =
             List.map (fun (c, e) -> (c, expect const_env h t e)) c_e_list in
-          Emerge (typed_e, (c1,typed_e1)::typed_c_e_list), t
+          Emerge (x, (c1,typed_e1)::typed_c_e_list), t
       | Emerge (_, []) -> assert false
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
@@ -1131,6 +1130,8 @@ let node ({ n_name = f; n_input = i_list; n_output = o_list;
 let typing_const_dec cd =
   let ty = check_type QualEnv.empty cd.c_type in
   let se = expect_static_exp QualEnv.empty ty cd.c_value in
+  let const_def = { Signature.c_type = ty; Signature.c_value = se } in
+    Modules.replace_const cd.c_name const_def;
     { cd with c_value = se; c_type = ty }
 
 let typing_typedec td =

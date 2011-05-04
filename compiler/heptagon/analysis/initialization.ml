@@ -95,16 +95,17 @@ struct
   let add_var x v h = add (Var x) v h
   let add_last x v h = add (Last x) v h
 
-  let add_var_dec h vd =
-    let x = vd.v_ident in
+  let _add_var_dec def h vd =
+    let h = add_var vd.v_ident def h in
     match vd.v_last with
-      | Heptagon.Var -> add_var x (new_var ()) h
+      | Heptagon.Var -> h
       | Heptagon.Last None ->
-        let h = add_var x (new_var ()) h in
-        add_last x (ione (RLast_none x)) h (* last is not initialized *)
+          add_last vd.v_ident (ione (RLast_none vd.v_ident)) h (* last is not initialized *)
       | Heptagon.Last (Some _) ->
-        let h = add_var x (new_var ()) h in
-        add_last x izero h (* last is initialized *)
+          add_last vd.v_ident izero h (* last is initialized *)
+
+  let add_initd_var_dec h vd = _add_var_dec izero h vd
+  let add_var_dec h vd = _add_var_dec (new_var ()) h vd
 end
 
 (** return the representent of a [typ] ( the max ) *)
@@ -250,14 +251,14 @@ let rec typing h e =
         List.iter (fun e -> initialized_exp h e) pe_list;
         List.iter (fun e -> initialized_exp h e) e_list;
         skeleton izero e.e_ty
-    | Ewhen (e, _, ce) ->
-        let i = imax (itype (typing h ce)) (itype (typing h e)) in
+    | Ewhen (e, _, x) ->
+        let i = imax (IEnv.find_var x h) (itype (typing h e)) in
         skeleton i e.e_ty
-    | Emerge (e, c_e_list) ->
+    | Emerge (x, c_e_list) ->
         let i =
           List.fold_left
             (fun acc (_, e) -> imax acc (itype (typing h e))) izero c_e_list in
-        let i = imax (itype (typing h e)) i in
+        let i = imax (IEnv.find_var x h) i in
         skeleton i e.e_ty
 
 
@@ -363,7 +364,7 @@ and build h vdecs =
 
 (* add var_decs as initialized to a typing environement *)
 let build_initialized h vdecs =
-  List.fold_left (fun h { v_ident = x } -> IEnv.add_var x izero h) h vdecs
+  List.fold_left IEnv.add_initd_var_dec h vdecs
 
 let typing_contract h contract =
   match contract with
@@ -383,7 +384,7 @@ let typing_contract h contract =
 let typing_node { n_input = i_list; n_output = o_list;
                   n_contract = contract; n_block = b } =
   let h = build_initialized IEnv.empty i_list in
-  let h = build h o_list in
+  let h = build_initialized h o_list in
   let h = typing_contract h contract in
     ignore (typing_block h b)
 

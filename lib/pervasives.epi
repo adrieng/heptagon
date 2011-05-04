@@ -29,3 +29,6 @@ val fun (~-)(int) returns (int)
 val fun (~-.)(float) returns (float)
 val fun do_stuff(int) returns (int)
 val fun between(int;int) returns (int)
+
+val fun exit(bool) returns ()
+val fun assert(bool) returns ()

@@ -13,7 +13,8 @@ val optional : ('a -> 'b) -> 'a option -> 'b option
 val optional_wacc : ('a -> 'b -> 'c*'a) -> 'a -> 'b option -> ('c option * 'a)
 val optunit : ('a -> unit) -> 'a option -> unit
 
-(** [split_string s c] splits the string [s] according to the separator [c] into a list of string without [c] *)
+(** [split_string s c] splits the string [s] according to the separator
+    [c] into a list of string without [c] *)
 val split_string : string -> string -> string list
 
 (* Generation of unique names. Mandatory call of reset_symbol between
@@ -63,7 +64,7 @@ val list_compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
 val option_compare : ('a -> 'a -> int) -> 'a option -> 'a option -> int
 
 (** Mapfold *)
-val mapfold: ('a -> 'b -> 'c * 'a) -> 'a -> 'b list -> 'c list * 'a
+val mapfold: ('acc -> 'b -> 'c * 'acc) -> 'acc -> 'b list -> 'c list * 'acc
 
 (** Mapfold, right version. *)
 val mapfold_right

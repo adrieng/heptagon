@@ -13,7 +13,8 @@ let rec _aux_print_modul ?(full=false) ff m = match m with
   | LocalModule -> ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a." print_name m
-  | QualModule { qual = m; name = n } -> fprintf ff "%a%a." (_aux_print_modul ~full:full) m print_name n
+  | QualModule { qual = m; name = n } ->
+      fprintf ff "%a%a." (_aux_print_modul ~full:full) m print_name n
 
 (** Prints a [modul] with a [.] at the end when not empty *)
 let _print_modul ?(full=false) ff m = match m with
@@ -21,7 +22,8 @@ let _print_modul ?(full=false) ff m = match m with
   | LocalModule -> ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a" print_name m
-  | QualModule { qual = m; name = n } -> fprintf ff "%a%a" (_aux_print_modul ~full:full) m print_name n
+  | QualModule { qual = m; name = n } ->
+      fprintf ff "%a%a" (_aux_print_modul ~full:full) m print_name n
 let print_full_modul ff m = _print_modul ~full:true ff m
 let print_modul ff m = _print_modul ~full:false ff m
 
@@ -39,7 +41,7 @@ let print_async ff async = match async with
   | None -> ()
   | Some () -> fprintf ff "async "
 
-let rec print_static_exp ff se = match se.se_desc with
+let rec print_static_exp_desc ff sed = match sed with
   | Sint i -> fprintf ff "%d" i
   | Sbool b -> fprintf ff "%b" b
   | Sfloat f -> fprintf ff "%f" f
@@ -63,6 +65,13 @@ let rec print_static_exp ff se = match se.se_desc with
       print_record (print_couple print_qualname
                       print_static_exp """ = """) ff f_se_list
   | Sasync se -> fprintf ff "@[<2>async %a@]" print_static_exp se
+
+and print_static_exp ff se =
+  if !Compiler_options.full_type_info then
+    fprintf ff "(%a : %a)"
+      print_static_exp_desc se.se_desc print_type se.se_ty
+  else
+    fprintf ff "%a" print_static_exp_desc se.se_desc
 
 and print_static_exp_tuple ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "("","")") l

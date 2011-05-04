@@ -41,6 +41,7 @@ with one defined var y ( defnames = {y} ) and used var x
 
 open Misc
 open Heptagon
+open Hept_utils
 open Hept_mapfold
 
 (** Give the var [name] and a [constructor], returns fresh [name_constr] *)
@@ -89,7 +90,7 @@ let rec sample_var e env = match env with
             then e (* the var is declared at this level, nothing to do *)
             else (*sample to lower level*)
               {e with e_desc =
-                Ewhen ((sample_var e env_d), constr, {e with e_desc = Evar ck})}
+                Ewhen ((sample_var e env_d), constr, ck)}
         | _ ->
           (Format.eprintf "'sample_var' called on full exp : %a@."
              Hept_printer.print_exp e;
@@ -127,7 +128,7 @@ let level_up defnames constr h =
   fold (fun n _ new_h -> ident_level_up n new_h) defnames empty
 
 let add_to_vds defnames h vds =
-  fold (fun n nn acc -> (Heptagon.mk_var_dec nn (find n defnames))::acc) vds h
+  fold (fun n nn acc -> (mk_var_dec nn (find n defnames))::acc) vds h
 
 end
 
@@ -169,9 +170,8 @@ let eqdesc funs (env,h) eqd = match eqd with
       (* create a clock var corresponding to the switch condition [e] *)
       let ck = fresh_clock_id () in
       let e, (env,h) = exp_it funs (env,h) e in
-      let ck_e = { e with e_desc = Evar ck } in
-      let locals = [Heptagon.mk_var_dec ck e.e_ty] in
-      let equs = [Heptagon.mk_equation (Eeq (Evarpat ck, e))] in
+      let locals = [mk_var_dec ck e.e_ty] in
+      let equs = [mk_equation (Eeq (Evarpat ck, e))] in
 
       (* typing have proved that defined variables are the same among states *)
       let defnames = (List.hd sw_h_l).w_block.b_defnames in
@@ -186,7 +186,7 @@ let eqdesc funs (env,h) eqd = match eqd with
         (* mapfold with updated envs *)
         let b_eq, (_,h) = block_it funs (env,h) sw_h.w_block in
         (* inline the handler as a block *)
-        let equs = (Heptagon.mk_equation (Eblock b_eq))::equs in
+        let equs = (mk_equation (Eblock b_eq))::equs in
         (* add to the locals the new vars from leveling_up *)
         let locals = Rename.add_to_vds defnames locals h  in
         ((constr,h)::c_h_l, locals, equs) in
@@ -197,15 +197,15 @@ let eqdesc funs (env,h) eqd = match eqd with
       let new_merge n equs =
         let ty = (Idents.Env.find n defnames) in
         let c_h_to_c_e (constr,h) =
-          constr, Heptagon.mk_exp (Evar (Rename.rename n h)) ty in
+          constr, mk_exp (Evar (Rename.rename n h)) ty in
         let c_e_l = List.map c_h_to_c_e c_h_l in
-        let merge = Heptagon.mk_exp (Emerge (ck_e, c_e_l)) ty in
-        (Heptagon.mk_equation (Eeq (Evarpat n, merge))) :: equs in
+        let merge = mk_exp (Emerge (ck, c_e_l)) ty in
+        (mk_equation (Eeq (Evarpat n, merge))) :: equs in
       let equs =
         Idents.Env.fold (fun n _ equs -> new_merge n equs) defnames equs in
 
       (* return the transformation in a block *)
-      let b = Heptagon.mk_block ~defnames:defnames ~locals:locals equs in
+      let b = mk_block ~defnames:defnames ~locals:locals equs in
       Eblock b, (env,h)
   | _ -> raise Errors.Fallback
 

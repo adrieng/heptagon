@@ -93,7 +93,7 @@ let rec bound_check_expr idx_list bounds =
           mk_exp_bool (Eop (op_from_string "&", [e1;e2]))
   in
   match (idx_list, bounds) with
-    | [idx], [n] -> mk_comp idx n
+    | [idx], n::_ -> mk_comp idx n
     | (idx :: idx_list, n :: bounds) ->
         let e = mk_comp idx n in
           mk_exp_bool (Eop (op_from_string "&",
@@ -435,8 +435,14 @@ and translate_eq_list map call_context act_list =
 and mk_node_call map call_context app loc name_list args ty =
   match app.Minils.a_op with
     | Minils.Efun f when Mls_utils.is_op f ->
-        let e = mk_exp ty (Eop(f, args)) in
-        [], [], [], [Aassgn(List.hd name_list, e)]
+        let act = match name_list with
+          | [] -> Aop (f, args)
+          | [name] ->
+              let e = mk_exp ty (Eop(f, args)) in
+              Aassgn (name, e)
+          | _ ->
+            Misc.unsupported "mls2obc: external function with multiple return values" 1 in
+        [], [], [], [act]
     | Minils.Ebang ->
         let arg = assert_1 args in
         let e = mk_exp ty (Ebang arg) in

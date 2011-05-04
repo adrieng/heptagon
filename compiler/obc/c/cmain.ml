@@ -47,14 +47,17 @@ let assert_node_res cd =
        (cname_of_qn cd.cd_name);
      exit 1);
   let name = cname_of_qn cd.cd_name in
-  let mem =
-    (fresh ("mem_for_" ^ name),
-      Cty_id (qn_append cd.cd_name "_mem"))
-  and out =
+  let out =
     (fresh ("out_for_" ^ name),
       Cty_id (qn_append cd.cd_name "_out")) in
-  let reset_i =
-    Cfun_call (name ^ "_reset", [Caddrof (Cvar (fst mem))]) in
+  let mem, reset_i =
+    if cd.cd_stateful
+    then ([], [])
+    else
+      let mem =
+        (fresh ("mem_for_" ^ name), Cty_id (qn_append cd.cd_name "_mem")) in
+      ([mem],
+       [Csexpr (Cfun_call (name ^ "_reset", [Caddrof (Cvar (fst mem))]))]) in
   let step_i =
     (*
       step(&out, &mem);
@@ -69,8 +72,10 @@ let assert_node_res cd =
         block_body =
           [
             Csexpr (Cfun_call (name ^ "_step",
-                               [Caddrof (Cvar (fst out));
-                                Caddrof (Cvar (fst mem))]));
+                               Caddrof (Cvar (fst out))
+                               :: (if cd.cd_stateful
+                                   then [Caddrof (Cvar (fst (List.hd mem)))]
+                                   else [])));
             Cif (Cuop ("!", Clhs (Cfield (Cvar (fst out), local_qn outn))),
                  [Csexpr (Cfun_call ("printf",
                                      [Cconst (Cstrlit ("Node \\\"" ^ name
@@ -81,7 +86,7 @@ let assert_node_res cd =
                  []);
           ];
       } in
-  ([out; mem], Csexpr reset_i, step_i);;
+  (out :: mem, reset_i, step_i);;
 
 (** [main_def_of_class_def cd] returns a [(var_list, rst_i, step_i)] where
     [var_list] (resp. [rst_i] and [step_i]) is a list of variables (resp. of
@@ -186,8 +191,10 @@ let main_def_of_class_def cd =
   let cout = ["res", (Cty_id (qn_append cd.cd_name "_out"))] in
 
   let varlist =
-    ("mem", Cty_id (qn_append cd.cd_name "_mem"))
-    :: cinp
+    (if cd.cd_stateful
+     then [("mem", Cty_id (qn_append cd.cd_name "_mem"))]
+     else [])
+    @ cinp
     @ cout
     @ concat scanf_decls
     @ concat printf_decls in
@@ -198,7 +205,8 @@ let main_def_of_class_def cd =
     let funcall =
       let args =
         map (fun vd -> Clhs (Cvar (name vd.v_ident))) stepm.m_inputs
-        @ [Caddrof (Cvar "res"); Caddrof (Cvar "mem")] in
+        @ (Caddrof (Cvar "res")
+           :: if cd.cd_stateful then [Caddrof (Cvar "mem")] else []) in
       Cfun_call ((cname_of_qn cd.cd_name) ^ "_step", args) in
     concat scanf_calls
     @ [Csexpr funcall]
@@ -206,10 +214,12 @@ let main_def_of_class_def cd =
     @ [Csexpr (Cfun_call ("puts", [Cconst (Cstrlit "")]));
        Csexpr (Cfun_call ("fflush", [Clhs (Cvar "stdout")]))] in
 
-  (** Do not forget to initialize memory via reset. *)
+  (** Do not forget to initialize memory via reset if needed. *)
   let rst_i =
-    Csexpr (Cfun_call ((cname_of_qn cd.cd_name) ^ "_reset",
-                       [Caddrof (Cvar "mem")])) in
+    if cd.cd_stateful
+    then [Csexpr (Cfun_call ((cname_of_qn cd.cd_name) ^ "_reset",
+                             [Caddrof (Cvar "mem")]))]
+    else [] in
 
   (varlist, rst_i, step_l)
 
@@ -273,13 +283,13 @@ let mk_main name p =
       let (var_l, res_l, step_l) =
         let add cd (var_l, res_l, step_l) =
           let (var, res, step) = assert_node_res cd in
-          (var @ var_l, res :: res_l, step :: step_l) in
+          (var @ var_l, res @ res_l, step :: step_l) in
         List.fold_right add a_classes ([], [], []) in
 
       let n = !Compiler_options.simulation_node in
       let (nvar_l, res, nstep_l) = main_def_of_class_def (find_class n) in
       let (var_l, res_l, step_l) =
-        (nvar_l @ var_l, res :: res_l, nstep_l @ step_l) in
+        (nvar_l @ var_l, res @ res_l, nstep_l @ step_l) in
 
       [("_main.c", Csource [main_skel var_l res_l step_l]);
        ("_main.h", Cheader ([name], []))];

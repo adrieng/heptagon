@@ -13,6 +13,7 @@ open Signature
 open Types
 open Names
 open Heptagon
+open Hept_utils
 open Hept_mapfold
 
 let to_be_inlined s = !Misc.flatten || (List.mem s !Misc.inline)
@@ -56,8 +57,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
   | Eapp ({ a_op = Enode nn; } as op, argl, rso) when to_be_inlined nn ->
       let add_reset eq = match rso with
         | None -> eq
-        | Some x -> mk_equation ~stateful:false
-            (Ereset (mk_block [eq], x)) in
+        | Some x -> mk_equation (Ereset (mk_block [eq], x)) in
 
       let ni = mk_unique_node (env nn) in
 
@@ -79,8 +79,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
 
         fst (Hept_mapfold.node_dec funs () ni) in
 
-      let mk_input_equ vd e =
-        mk_equation ~stateful:false (Eeq (Evarpat vd.v_ident, e)) in
+      let mk_input_equ vd e = mk_equation (Eeq (Evarpat vd.v_ident, e)) in
       let mk_output_exp vd = mk_exp (Evar vd.v_ident) vd.v_type in
 
       let newvars = ni.n_input @ ni.n_block.b_local @ ni.n_output @ newvars
