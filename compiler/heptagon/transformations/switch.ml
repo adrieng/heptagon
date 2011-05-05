@@ -127,49 +127,53 @@ let level_up defnames constr h =
     add n new_n new_h in
   fold (fun n _ new_h -> ident_level_up n new_h) defnames empty
 
-let add_to_vds defnames h vds =
-  fold (fun n nn acc -> (mk_var_dec nn (find n defnames))::acc) vds h
-
+let add_to_vds vd_env vds h =
+  let add_one n nn acc =
+    let orig_vd = Idents.Env.find n vd_env in
+      { orig_vd with v_ident = nn }::acc
+  in
+    fold add_one h vds
 end
 
 (** Mapfold *)
 
 
 (* apply the renaming for shared defined variables *)
-let pattern _ (env,h) pat = match pat with
-    | Evarpat x -> Evarpat (Rename.rename x h), (env,h)
+let pattern _ (vd_env,env,h) pat = match pat with
+    | Evarpat x -> Evarpat (Rename.rename x h), (vd_env,env,h)
     | _ -> raise Errors.Fallback
 
-let var_dec _ (env,h) vd =
+let var_dec _ (vd_env,env,h) vd =
   let env = Env.add_var vd.v_ident env in
-  vd, (env,h)
+  let vd_env = Idents.Env.add vd.v_ident vd vd_env in
+  vd, (vd_env,env,h)
 
 (* apply the renaming to the defnames *)
-let block funs (env,h) b =
+let block funs (vd_env,env,h) b =
   let b = { b with b_defnames = Rename.rename_defnames b.b_defnames h } in
-  Hept_mapfold.block funs (env,h) b
+  Hept_mapfold.block funs (vd_env,env,h) b
 
 (* apply the sampling on shared vars *)
-let exp funs (env,h) e =
+let exp funs (vd_env,env,h) e =
   let e = Env.annot_exp e env in
   match e.e_desc with
-  | Evar _ -> Env.sample_var e env, (env,h)
-  | _ -> Hept_mapfold.exp funs (env,h) e
+  | Evar _ -> Env.sample_var e env, (vd_env,env,h)
+  | _ -> Hept_mapfold.exp funs (vd_env,env,h) e
 
 (* update stateful and loc *)
-let eq funs (env,h) eq =
+let eq funs (vd_env,env,h) eq =
   let eqd = match eq.eq_desc with
     | Eblock b -> (* probably created by eqdesc, so update stateful and loc *)
         Eblock { b with b_stateful = eq.eq_stateful; b_loc = eq.eq_loc }
     | _ -> eq.eq_desc in
-  Hept_mapfold.eq funs (env,h) {eq with eq_desc = eqd}
+  Hept_mapfold.eq funs (vd_env,env,h) {eq with eq_desc = eqd}
 
 (* remove the Eswitch *)
-let eqdesc funs (env,h) eqd = match eqd with
+let eqdesc funs (vd_env,env,h) eqd = match eqd with
   | Eswitch (e, sw_h_l) ->
       (* create a clock var corresponding to the switch condition [e] *)
       let ck = fresh_clock_id () in
-      let e, (env,h) = exp_it funs (env,h) e in
+      let e, (vd_env,env,h) = exp_it funs (vd_env,env,h) e in
       let locals = [mk_var_dec ck e.e_ty] in
       let equs = [mk_equation (Eeq (Evarpat ck, e))] in
 
@@ -184,11 +188,11 @@ let eqdesc funs (env,h) eqd = match eqd with
         let h = Rename.level_up defnames constr h in
         let env = Env.level_up constr ck env in
         (* mapfold with updated envs *)
-        let b_eq, (_,h) = block_it funs (env,h) sw_h.w_block in
+        let b_eq, (_,_,h) = block_it funs (vd_env,env,h) sw_h.w_block in
         (* inline the handler as a block *)
         let equs = (mk_equation (Eblock b_eq))::equs in
         (* add to the locals the new vars from leveling_up *)
-        let locals = Rename.add_to_vds defnames locals h  in
+        let locals = Rename.add_to_vds vd_env locals h in
         ((constr,h)::c_h_l, locals, equs) in
       let (c_h_l, locals, equs) =
         List.fold_left switch_handler ([], locals, equs) sw_h_l in
@@ -206,14 +210,14 @@ let eqdesc funs (env,h) eqd = match eqd with
 
       (* return the transformation in a block *)
       let b = mk_block ~defnames:defnames ~locals:locals equs in
-      Eblock b, (env,h)
+      Eblock b, (vd_env,env,h)
   | _ -> raise Errors.Fallback
 
 let program p =
   let funs = { Hept_mapfold.defaults
                with pat = pattern; var_dec = var_dec; block = block;
                     exp = exp; eq = eq; eqdesc = eqdesc } in
-  let p, _ = program_it funs (Env.Base,Rename.empty) p in
+  let p, _ = program_it funs (Idents.Env.empty,Env.Base,Rename.empty) p in
     p
 
 
