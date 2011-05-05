@@ -2,7 +2,7 @@
 (*                                                  *)
 (*  Heptagon/BZR                                    *)
 (*                                                  *)
-(*  Author : GwenaÃ«l Delaval                        *)
+(*  Author : Gwenaël Delaval                        *)
 (*  Organization : INRIA Rennes, VerTeCs            *)
 (*                                                  *)
 (****************************************************)
@@ -31,4 +31,4 @@
 
 (* $Id: boolean.mli 74 2009-03-11 10:21:25Z delaval $ *)
 
-val program : Minils.program -> Minils.program
+val program : Heptagon.program -> Heptagon.program

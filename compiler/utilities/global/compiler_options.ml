@@ -61,10 +61,13 @@ let set_simulation_node s =
 
 let create_object_file = ref false
 
+let boolean = ref false
+
 (* Target languages list for code generation *)
 let target_languages : string list ref = ref []
 
 let add_target_language s =
+  if s = "z3z" then boolean := true;
   target_languages := s :: !target_languages
 
 (* Optional path for generated files (C or Java) *)
@@ -84,8 +87,6 @@ let inline : qualname list ref = ref []
 let add_inlined_node s = inline := s :: !inline
 
 let flatten = ref false
-
-let boolean = ref false
 
 let deadcode = ref false
 

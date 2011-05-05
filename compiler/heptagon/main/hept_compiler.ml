@@ -56,6 +56,9 @@ let compile_program p =
   (* Iterator fusion *)
   let p = pass "Iterator fusion" !do_iterator_fusion Itfusion.program  p pp in
 
+  (* Boolean pass *)
+  let p = pass "Boolean" !boolean Boolean.program p pp in
+
   (* Normalization *)
   let p = pass "Normalization" true Normalize.program p pp in
 
