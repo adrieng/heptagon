@@ -9,13 +9,18 @@
 (* global data in the symbol tables *)
 open Names
 open Types
+open Clocks
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
-let interface_format_version = "20"
+let interface_format_version = "30"
 
-(** Node argument *)
-type arg = { a_name : name option; a_type : ty }
+(** Node argument : inputs and outputs *)
+type arg = {
+  a_name  : name option;
+  a_type  : ty;
+  a_clock : ck; (** [a_clock] set to [Cbase] means at the node activation clock *)
+}
 
 (** Node static parameters *)
 type param = { p_name : name; p_type : ty }
@@ -28,10 +33,10 @@ type size_constraint =
 
 (** Node signature *)
 type node = {
-  node_inputs : arg list;
-  node_outputs : arg list;
-  node_stateful : bool;
-  node_params : param list;
+  node_inputs             : arg list;
+  node_outputs            : arg list;
+  node_stateful           : bool;
+  node_params             : param list;
   node_params_constraints : size_constraint list }
 
 type field = { f_name : field_name; f_type : ty }
@@ -49,7 +54,7 @@ let names_of_arg_list l = List.map (fun ad -> ad.a_name) l
 
 let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
 
-let mk_arg name ty = { a_type = ty; a_name = name }
+let mk_arg name ty ck = { a_type = ty; a_name = name; a_clock = ck }
 
 let mk_param name ty = { p_name = name; p_type = ty }
 

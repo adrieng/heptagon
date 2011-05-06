@@ -61,6 +61,11 @@ type ty =
   | Tid of qualname
   | Tarray of ty * exp
 
+and ck =
+  | Cbase
+  | Con of ck * constructor_name * var_name
+
+
 and exp =
   { e_desc : edesc;
     e_ct_annot : Clocks.ct;
@@ -192,8 +197,9 @@ and program_desc =
 
 
 type arg =
-  { a_type : ty;
-    a_name : var_name option }
+  { a_type  : ty;
+    a_clock : ck;
+    a_name  : var_name option }
 
 type signature =
   { sig_name      : dec_name;
@@ -261,8 +267,8 @@ let mk_block locals eqs loc =
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
-let mk_arg name ty =
-  { a_type = ty; a_name = name }
+let mk_arg name ty ck =
+  { a_type = ty; a_name = name; a_clock = ck}
 
 let ptrue = Q Initial.ptrue
 let pfalse = Q Initial.pfalse

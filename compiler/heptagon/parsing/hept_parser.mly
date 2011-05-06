@@ -39,7 +39,7 @@ open Hept_parsetree
 %token ASSUME
 %token ENFORCE
 %token WITH
-%token WHEN MERGE
+%token WHEN MERGE ON
 %token POWER
 %token LBRACKET LBRACKETGREATER
 %token RBRACKET LESSRBRACKET
@@ -267,6 +267,10 @@ ty_ident:
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
 ;
+
+on_ck:
+  | /*empty */                                              { Cbase }
+  | b=on_ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN  { Con (b,c,x) }
 
 equs:
   | /* empty */                      { [] }
@@ -626,8 +630,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident { mk_arg (Some $1) $3 }
-  | ty_ident { mk_arg None $1 }
+  | IDENT COLON ty_ident ck=on_ck { mk_arg (Some $1) $3 ck }
+  | ty_ident ck=on_ck { mk_arg None $1 ck }
 ;
 
 %%

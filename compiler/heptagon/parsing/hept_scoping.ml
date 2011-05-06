@@ -233,6 +233,7 @@ let rec translate_type loc ty =
   with
     | ScopingError err -> message loc err
 
+
 let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
@@ -399,7 +400,8 @@ let params_of_var_decs =
 let args_of_var_decs =
   List.map (fun vd -> Signature.mk_arg
                         (Some vd.v_name)
-                        (translate_type vd.v_loc vd.v_type))
+                        (translate_type vd.v_loc vd.v_type)
+                        Clocks.Cbase) (* before clocking and without annotations, default choice.*)
 
 let translate_node node =
   let n = current_qual node.n_name in
@@ -482,7 +484,10 @@ let translate_program p =
 
 let translate_signature s =
   let translate_arg a =
-    Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type) in
+    Signature.mk_arg a.a_name
+      (translate_type s.sig_loc a.a_type)
+      (translate_clock s.sig_loc a.a_clock))
+  in
   let n = current_qual s.sig_name in
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
