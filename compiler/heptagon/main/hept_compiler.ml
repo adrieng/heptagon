@@ -30,10 +30,10 @@ let compile_program p =
   (* Completion of partial definitions *)
   let p = pass "Completion" true Completion.program p pp in
 
-  (* Inlining *)(*
+  (* Inlining *)
   let p =
-    let call_inline_pass = (List.length !inline > 0) || !Misc.flatten in
-    pass "Inlining" call_inline_pass Inline.program p pp in *)
+    let call_inline_pass = (List.length !inline > 0) || !flatten in
+    pass "Inlining" call_inline_pass Inline.program p pp in
 
   (* Automata *)
   let p = pass "Automata" true Automata.program p pp in
