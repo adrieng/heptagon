@@ -138,6 +138,7 @@ let ident_of_name s =
   let id = { num = !num; source = s; is_generated = false } in
     UniqueNames.assign_name id; id
 
+let source_name id = id.source
 let name id = UniqueNames.name id
 let enter_node n = UniqueNames.enter_node n
 

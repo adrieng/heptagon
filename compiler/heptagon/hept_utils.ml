@@ -19,9 +19,10 @@ open Initial
 open Heptagon
 
 (* Helper functions to create AST. *)
-let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
+(* TODO : After switch, all mk_exp should take care of level_ck *)
+let mk_exp desc ?(level_ck = Cbase) ?(ct_annot = None) ?(loc = no_location) ty =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
-    e_base_ck = Cbase; e_loc = loc; }
+    e_level_ck = level_ck; e_loc = loc; }
 
 let mk_app ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }

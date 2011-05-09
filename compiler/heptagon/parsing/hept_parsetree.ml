@@ -65,11 +65,14 @@ and ck =
   | Cbase
   | Con of ck * constructor_name * var_name
 
+and ct =
+  | Ck of ck
+  | Cprod of ct list
 
 and exp =
-  { e_desc : edesc;
-    e_ct_annot : Clocks.ct;
-    e_loc  : location }
+  { e_desc     : edesc;
+    e_ct_annot : ct option ;
+    e_loc      : location }
 
 and edesc =
   | Econst of static_exp
@@ -144,10 +147,11 @@ and present_handler =
     p_block : block; }
 
 and var_dec =
-  { v_name : var_name;
-    v_type : ty;
-    v_last : last;
-    v_loc  : location; }
+  { v_name  : var_name;
+    v_type  : ty;
+    v_clock : ck option;
+    v_last  : last;
+    v_loc   : location; }
 
 and last = Var | Last of exp option
 
@@ -198,7 +202,7 @@ and program_desc =
 
 type arg =
   { a_type  : ty;
-    a_clock : ck;
+    a_clock : ck option;
     a_name  : var_name option }
 
 type signature =
@@ -223,7 +227,7 @@ and interface_desc =
 
 (* {3 Helper functions to create AST} *)
 
-let mk_exp desc ?(ct_annot = Clocks.invalid_clock) loc =
+let mk_exp desc ?(ct_annot = None) loc =
   { e_desc = desc; e_ct_annot = ct_annot; e_loc = loc }
 
 let mk_app op params =
@@ -256,8 +260,8 @@ let mk_equation desc loc =
 let mk_interface_decl desc loc =
   { interf_desc = desc; interf_loc = loc }
 
-let mk_var_dec name ty last loc =
-  { v_name = name; v_type = ty;
+let mk_var_dec name ty ck last loc =
+  { v_name = name; v_type = ty; v_clock = ck;
     v_last = last; v_loc = loc }
 
 let mk_block locals eqs loc =

@@ -233,13 +233,25 @@ let rec translate_type loc ty =
   with
     | ScopingError err -> message loc err
 
+let rec translate_some_clock loc env ck = match ck with
+  | None -> Clocks.fresh_clock()
+  | Some(ck) -> translate_clock loc env ck
+
+and translate_clock loc env ck = match ck with
+  | Cbase -> Clocks.Cbase
+  | Con(ck,c,x) -> Clocks.Con(translate_clock loc env ck, qualify_constrs c, Rename.var loc env x)
+
+let rec translate_ct loc env ct = match ct with
+  | Ck ck -> Clocks.Ck (translate_clock loc env ck)
+  | Cprod c_l -> Clocks.Cprod (List.map (translate_ct loc env) c_l)
+
 
 let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
       Heptagon.e_ty = Types.invalid_type;
-      Heptagon.e_base_ck = Clocks.Cbase;
-      Heptagon.e_ct_annot = e.e_ct_annot;
+      Heptagon.e_level_ck = Clocks.Cbase;
+      Heptagon.e_ct_annot = Misc.optional (translate_ct e.e_loc env) e.e_ct_annot;
       Heptagon.e_loc = e.e_loc }
   with ScopingError(error) -> message e.e_loc error
 
@@ -374,9 +386,10 @@ and translate_var_dec env vd =
     { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
       Heptagon.v_type = translate_type vd.v_loc vd.v_type;
       Heptagon.v_last = translate_last vd.v_last;
-      Heptagon.v_clock = Clocks.fresh_clock(); (* TODO add clock annotations *)
+      Heptagon.v_clock = translate_some_clock vd.v_loc env vd.v_clock;
       Heptagon.v_loc = vd.v_loc }
 
+(** [env] should contain the declared variables prior to this translation *)
 and translate_vd_list env =
   List.map (translate_var_dec env)
 
@@ -398,26 +411,27 @@ let params_of_var_decs =
                         (translate_type vd.v_loc vd.v_type))
 
 let args_of_var_decs =
-  List.map (fun vd -> Signature.mk_arg
-                        (Some vd.v_name)
-                        (translate_type vd.v_loc vd.v_type)
-                        Clocks.Cbase) (* before clocking and without annotations, default choice.*)
+  (* before the clocking the clock is wrong in the signature *)
+ List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.Heptagon.v_ident))
+                                      vd.Heptagon.v_type Signature.Cbase)
+
 
 let translate_node node =
   let n = current_qual node.n_name in
   Idents.enter_node n;
-  (* Inputs and outputs define the initial local env *)
-  let env0 = Rename.append Rename.empty (node.n_input @ node.n_output) in
   let params = params_of_var_decs node.n_params in
-  let inputs = translate_vd_list env0 node.n_input in
+  let input_env = Rename.append Rename.empty (node.n_input) in
+  (* inputs should refer only to inputs *)  
+  let inputs = translate_vd_list input_env node.n_input in
+  (* Inputs and outputs define the initial local env *)  
+  let env0 = Rename.append input_env node.n_output in
   let outputs = translate_vd_list env0 node.n_output in
   let b, env = translate_block env0 node.n_block in
-  let contract =
-    Misc.optional (translate_contract env) node.n_contract in
-  (* the env of the block is used in the contract translation *)
+  (* the env of the block is used in the contract translation *) 
+  let contract = Misc.optional (translate_contract env) node.n_contract in
   (* add the node signature to the environment *)
-  let i = args_of_var_decs node.n_input in
-  let o = args_of_var_decs node.n_output in
+  let i = args_of_var_decs inputs in
+  let o = args_of_var_decs outputs in
   let p = params_of_var_decs node.n_params in
   add_value n (Signature.mk_node i o node.n_stateful p);
   { Heptagon.n_name = n;
@@ -483,14 +497,30 @@ let translate_program p =
     Heptagon.p_desc = desc; }
 
 let translate_signature s =
-  let translate_arg a =
-    Signature.mk_arg a.a_name
-      (translate_type s.sig_loc a.a_type)
-      (translate_clock s.sig_loc a.a_clock))
+  (* helper functions, having [env] as being the list of existing var names *)
+  let rec append env sa_l = match sa_l with
+    | [] -> env
+    | sa::sa_l -> match sa.a_name with
+        | None -> append env sa_l
+        | Some x -> append (x::env) sa_l
+  and translate_some_clock loc env ck = match ck with
+    | None -> Signature.Cbase
+    | Some ck -> translate_clock loc env ck
+  and translate_clock loc env ck = match ck with
+    | Cbase -> Signature.Cbase
+    | Con(ck,c,x) ->
+        if not (List.mem x env)
+        then message loc (Evar_unbound x)
+        else Signature.Con(translate_clock loc env ck, qualify_constrs c, x)
+  and translate_arg env a =
+    Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
+                              (translate_some_clock s.sig_loc env a.a_clock)
   in
   let n = current_qual s.sig_name in
-  let i = List.map translate_arg s.sig_inputs in
-  let o = List.map translate_arg s.sig_outputs in
+  let env = append [] s.sig_inputs in
+  let i = List.map (translate_arg env) s.sig_inputs in
+  let env = append env s.sig_outputs in
+  let o = List.map (translate_arg env) s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
   add_value n (Signature.mk_node i o s.sig_stateful p);
   mk_signature n i o s.sig_stateful p s.sig_loc

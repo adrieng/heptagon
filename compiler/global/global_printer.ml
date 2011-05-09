@@ -149,8 +149,8 @@ let print_ident ff id = Format.fprintf ff "%s" (name id)
   | Cvar { contents = Cindex _ } -> fprintf ff "base"
   | Cvar { contents = Clink ck } -> print_ck ff ck
 
-let rec print_clock ff = function
+let rec print_ct ff = function
   | Ck ck -> print_ck ff ck
   | Cprod ct_list ->
-      fprintf ff "@[<2>(%a)@]" (print_list_r print_clock """ *""") ct_list
+      fprintf ff "@[<2>(%a)@]" (print_list_r print_ct """ *""") ct_list
 

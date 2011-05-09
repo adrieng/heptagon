@@ -105,7 +105,7 @@ let current_level env = match env with
 
 (** Set the base clock of an expression to the current level of the [env] *)
 let annot_exp e env =
-  { e with e_base_ck = current_level env }
+  { e with e_level_ck = current_level env }
 
 end
 

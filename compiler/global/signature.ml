@@ -9,11 +9,14 @@
 (* global data in the symbol tables *)
 open Names
 open Types
-open Clocks
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
 let interface_format_version = "30"
+
+type ck =
+  | Cbase
+  | Con of ck * constructor_name * name
 
 (** Node argument : inputs and outputs *)
 type arg = {
@@ -49,6 +52,14 @@ type type_def =
   | Tstruct of structure
 
 type const_def = { c_type : ty; c_value : static_exp }
+
+let rec ck_to_sck ck =
+  let ck = Clocks.ck_repr ck in
+  match ck with
+    | Clocks.Cbase -> Cbase
+    | Clocks.Con (ck,c,x) -> Con(ck_to_sck ck, c, Idents.source_name x)
+    | _ -> Misc.internal_error "Signature couldn't translate ck" 1
+
 
 let names_of_arg_list l = List.map (fun ad -> ad.a_name) l
 

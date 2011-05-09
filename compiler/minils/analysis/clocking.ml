@@ -8,9 +8,19 @@
 (**************************************************************************)
 (* clock checking *)
 
+(* v_clock is expected to contain correct clocks before entering here :
+     either explicit with Cbase representing the node activation clock
+     or fresh_clock() for unannoted variables.
+  Idem for e_ct : if explicit, it represents a clock annotation.
+  Unification is done on this mutable fields.
+  e_base_ck is set according to node signatures.
+  
+ *)
+
 open Misc
 open Idents
 open Minils
+open Global_printer
 open Mls_printer
 open Signature
 open Types
@@ -19,139 +29,152 @@ open Location
 open Format
 
 (** Error Kind *)
-type error_kind = | Etypeclash of ct * ct
+type error_kind = | Etypeclash of ct * ct | Eclockclash of ck * ck | Edefclock
 
 let error_message loc = function
   | Etypeclash (actual_ct, expected_ct) ->
       Format.eprintf "%aClock Clash: this expression has clock %a,@\n\
                         but is expected to have clock %a.@."
         print_location loc
-        print_clock actual_ct
-        print_clock expected_ct;
+        print_ct actual_ct
+        print_ct expected_ct;
+      raise Errors.Error
+  | Eclockclash (actual_ck, expected_ck) ->
+      Format.eprintf "%aClock Clash: this value has clock %a,@\n\
+                        but is exprected to have clock %a.@."
+        print_location loc
+        print_ck actual_ck
+        print_ck expected_ck;
+      raise Errors.Error
+  | Edefclock ->
+      Format.eprintf "%aArguments defining clocks should be given as names@."
+        print_location loc;
       raise Errors.Error
 
 
-let typ_of_name h x = Env.find x h
+let ck_of_name h x = Env.find x h
 
 let rec typing_extvalue h w =
-  let ct = match w.w_desc with
-    | Wconst se -> skeleton (fresh_clock ()) se.se_ty
-    | Wvar x -> Ck (typ_of_name h x)
+  let ck = match w.w_desc with
+    | Wconst se -> fresh_clock()
+    | Wvar x -> ck_of_name h x
     | Wwhen (w1, c, n) ->
-        let ck_n = typ_of_name h n in
-        (expect h (skeleton ck_n w1.w_ty) w1; skeleton (Con (ck_n, c, n)) w1.w_ty)
+        let ck_n = ck_of_name h n in
+        expect_extvalue h ck_n w1;
+        Con (ck_n, c, n)
     | Wfield (w1, f) ->
-        let ck = fresh_clock () in
-        let ct = skeleton ck w1.w_ty in (expect h (Ck ck) w1; ct)
-  in (w.w_ck <- ckofct ct; ct)
+        typing_extvalue h w1
+  in
+  w.w_ck <- ck;
+  ck
 
-and expect h expected_ty e =
-  let actual_ty = typing_extvalue h e in
-  try unify actual_ty expected_ty
+and expect_extvalue h expected_ck e =
+  let actual_ck = typing_extvalue h e in
+  try unify_ck actual_ck expected_ck
   with
   | Unify -> eprintf "%a : " print_extvalue e;
-      error_message e.w_loc (Etypeclash (actual_ty, expected_ty))
+      error_message e.w_loc (Eclockclash (actual_ck, expected_ck))
 
-let rec typing h e =
-  let ct = match e.e_desc with
-    | Eextvalue w -> typing_extvalue h w
-    | Efby (_, e) -> typing_extvalue h e
-    | Eapp({a_op = op}, args, r) ->
-        let ck = match r with
-          | None -> fresh_clock ()
-          | Some(reset) -> typ_of_name h reset in
-        typing_op op args h e ck
-    (* Typed exactly as a fun or a node... *)
-    | Eiterator (_, _, _, pargs, args, r) ->
-        let ck = match r with
-          | None -> fresh_clock()
-          | Some(reset) -> typ_of_name h reset
-        in
-          List.iter (expect h (Ck ck)) pargs;
-          List.iter (expect h (Ck ck)) args;
-          skeleton ck e.e_ty
-    | Emerge (n, c_e_list) ->
-        let ck_c = typ_of_name h n in
-        (typing_c_e_list h ck_c n c_e_list; skeleton ck_c e.e_ty)
+let rec typing_pat h = function
+  | Evarpat x -> Ck (ck_of_name h x)
+  | Etuplepat pat_list -> Cprod (List.map (typing_pat h) pat_list)
+
+
+let typing_app h base pat op w_list = match op with
+  | Earray_fill | Eselect | Eselect_dyn | Eselect_trunc | Eupdate | Eequal
+  | Eselect_slice | Econcat | Earray | Efield_update | Eifthenelse ->
+      List.iter (expect_extvalue h base) w_list;
+      Ck base
+  | ( Efun f | Enode f) ->
+      let node = Modules.find_value f in
+      let pat_id_list = Mls_utils.ident_list_of_pat pat in
+      let rec build_env a_l v_l env = match a_l, v_l with
+        | [],[] -> env
+        | a::a_l, v::v_l -> (match a.a_name with
+          | None -> build_env a_l v_l env
+          | Some n -> build_env a_l v_l ((n,v)::env))
+        | _ -> Misc.internal_error "Clocking, non matching signature" 2
+      in
+      let env_pat = build_env node.node_outputs pat_id_list [] in
+      let env_args = build_env node.node_inputs w_list [] in
+      (* implement with Cbase as base, replace name dep by ident dep *)
+      let rec sigck_to_ck sck = match sck with
+        | Signature.Cbase -> base
+        | Signature.Con (sck,c,x) ->
+            (* find x in the envs : *)
+            let id = try List.assoc x env_pat
+                     with Not_found ->
+                       try
+                         let w = List.assoc x env_args in
+                         (match w.w_desc with
+                           | Wvar id -> id
+                           | _ -> error_message w.w_loc Edefclock)
+                       with Not_found ->
+                         Misc.internal_error "Clocking, non matching signature" 3
+            in
+            Clocks.Con (sigck_to_ck sck, c, id)
+      in
+      List.iter2 (fun a w -> expect_extvalue h (sigck_to_ck a.a_clock) w) node.node_inputs w_list;
+      Clocks.prod (List.map (fun a -> sigck_to_ck a.a_clock) node.node_outputs)
+
+
+let typing_eq h { eq_lhs = pat; eq_rhs = e } =
+  (* typing the expression *)
+  let ct,base = match e.e_desc with
+    | Eextvalue w 
+    | Efby (_, w) ->
+        let ck = typing_extvalue h w in
+        Ck ck, ck
+    | Emerge (x, c_e_list) ->
+        let ck = ck_of_name h x in
+        List.iter (fun (c,e) -> expect_extvalue h (Con (ck,c,x)) e) c_e_list;
+        Ck ck, ck
     | Estruct l ->
         let ck = fresh_clock () in
-        (List.iter
-           (fun (_, e) -> let ct = skeleton ck e.w_ty in expect h ct e) l;
-         Ck ck)
-  in (e.e_ck <- ckofct ct; ct)
+        List.iter (fun (_, e) -> expect_extvalue h ck e) l;
+        Ck ck, ck
+    | Eapp({a_op = op}, args, r) ->
+        let ck_r = match r with
+          | None -> fresh_clock ()
+          | Some(reset) -> ck_of_name h reset in
+        let ct = typing_app h ck_r pat op args in
+        ct, ck_r    
+    | Eiterator (_, _, _, pargs, args, r) ->
+        (* Typed exactly as a fun or a node... *)
+        let ck_r = match r with
+          | None -> fresh_clock()
+          | Some(reset) -> ck_of_name h reset
+        in
+        List.iter (expect_extvalue h ck_r) pargs;
+        List.iter (expect_extvalue h ck_r) args;
+        (*TODO*)
+        Ck ck_r, ck_r
+  in
+  e.e_base_ck <- base;
+  begin
+    try unify ct e.e_ct
+    with Unify ->
+      eprintf "Incoherent clock annotation.@\n";
+      error_message e.e_loc (Etypeclash (ct,e.e_ct))
+  end;
+  e.e_ct <- ct;
+ (* typing the full equation *)
+  let pat_ct = typing_pat h pat in
+  begin
+    try unify ct pat_ct
+    with Unify ->
+      eprintf "Incoherent clock between right and left side of the equation@\n";
+      error_message e.e_loc (Etypeclash (ct, pat_ct))
+  end
 
-and typing_op op e_list h e ck = match op with
-  | (Eequal | Efun _ | Enode _) -> (*LA*)
-      List.iter (fun e -> expect h (skeleton ck e.w_ty) e) e_list;
-      skeleton ck e.e_ty
-  | Eifthenelse ->
-      let e1, e2, e3 = assert_3 e_list in
-      let ct = skeleton ck e.e_ty
-      in (expect h (Ck ck) e1; expect h ct e2; expect h ct e3; ct)
-  | Efield_update ->
-      let e1, e2 = assert_2 e_list in
-      let ct = skeleton ck e.e_ty
-      in (expect h (Ck ck) e1; expect h ct e2; ct)
-  | Earray ->
-      (List.iter (expect h (Ck ck)) e_list; skeleton ck e.e_ty)
-  | Earray_fill -> let e = assert_1 e_list in typing_extvalue h e
-  | Eselect -> let e = assert_1 e_list in typing_extvalue h e
-  | Eselect_dyn -> (* TODO defe not treated ? *)
-      let e1, defe, idx = assert_2min e_list in
-      let ct = skeleton ck e1.w_ty
-      in (List.iter (expect h ct) (e1::defe::idx); ct)
-  | Eselect_trunc ->
-      let e1, idx = assert_1min e_list in
-      let ct = skeleton ck e1.w_ty
-      in (List.iter (expect h ct) (e1::idx); ct)
-  | Eupdate ->
-      let e1, e2, idx = assert_2min e_list in
-      let ct = skeleton ck e.e_ty
-      in (expect h (Ck ck) e1; expect h ct e2; List.iter (expect h ct) idx; ct)
-  | Eselect_slice -> let e = assert_1 e_list in typing_extvalue h e
-  | Econcat ->
-      let e1, e2 = assert_2 e_list in
-      let ct = skeleton ck e.e_ty
-      in (expect h (Ck ck) e1; expect h ct e2; ct)
 
-and typing_c_e_list h ck_c n c_e_list =
-  let rec typrec =
-    function
-      | [] -> ()
-      | (c, e) :: c_e_list ->
-          (expect h (skeleton (Con (ck_c, c, n)) e.w_ty) e; typrec c_e_list)
-  in typrec c_e_list
+let typing_eqs h eq_list = List.iter (typing_eq h) eq_list
 
-let expect_exp h expected_ty e =
-  let actual_ty = typing h e in
-  try unify actual_ty expected_ty
-  with
-  | Unify -> eprintf "%a : " print_exp e;
-      error_message e.e_loc (Etypeclash (actual_ty, expected_ty))
+let append_env h vds =
+  List.fold_left (fun h { v_ident = n; v_clock = ck } -> Env.add n ck h) h vds
 
-let rec typing_pat h =
-  function
-    | Evarpat x -> Ck (typ_of_name h x)
-    | Etuplepat pat_list -> Cprod (List.map (typing_pat h) pat_list)
 
-let typing_eqs h eq_list = (*TODO FIXME*)
-  let typing_eq { eq_lhs = pat; eq_rhs = e } =
-    let ty_pat = typing_pat h pat in
-    (try expect_exp h ty_pat e with
-      | Errors.Error -> (* DEBUG *)
-          Format.eprintf "Complete expression: %a@\nClock pattern: %a@."
-            Mls_printer.print_exp e
-            Mls_printer.print_clock ty_pat;
-          raise Errors.Error)
-  in List.iter typing_eq eq_list
-
-let build h dec =
-  List.fold_left (fun h { v_ident = n } -> Env.add n (fresh_clock ()) h) h dec
-
-let sbuild h dec base =
-  List.fold_left (fun h { v_ident = n } -> Env.add n base h) h dec
-
-let typing_contract h contract base =
+let typing_contract h contract =
   match contract with
     | None -> h
     | Some { c_local = l_list;
@@ -159,32 +182,25 @@ let typing_contract h contract base =
              c_assume = e_a;
              c_enforce = e_g;
              c_controllables = c_list } ->
-        let h' = build h l_list in
+        let h' = append_env h l_list in
         (* assumption *)
         (* property *)
         typing_eqs h' eq_list;
-        expect_exp h' (Ck base) e_a;
-        expect_exp h' (Ck base) e_g;
-        sbuild h c_list base
+        expect_extvalue h' Cbase e_a;
+        expect_extvalue h' Cbase e_g;
+        append_env h c_list
 
-let typing_node ({ n_input = i_list;
-                   n_output = o_list;
-                   n_contract = contract;
-                   n_local = l_list;
-                   n_equs = eq_list
-                 } as node) =
-  let base = Cbase in
-  let h = sbuild Env.empty i_list base in
-  let h = sbuild h o_list base in
-  let h = typing_contract h contract base in
-  let h = build h l_list in
-  (typing_eqs h eq_list;
-   (*update clock info in variables descriptions *)
-   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
-   { (node) with
-       n_input = List.map set_clock i_list;
-       n_output = List.map set_clock o_list;
-       n_local = List.map set_clock l_list })
+let typing_node node =
+  let h = append_env Env.empty node.n_input in
+  let h = append_env h node.n_output in
+  let h = typing_contract h node.n_contract in
+  let h = append_env h node.n_local in
+  (typing_eqs h node.n_equs;
+  (*update clock info in variables descriptions *)
+  let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
+  { node with n_input = List.map set_clock node.n_input;
+              n_output = List.map set_clock node.n_output;
+              n_local = List.map set_clock node.n_local })
 
 let program p =
   let program_desc pd = match pd with

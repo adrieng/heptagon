@@ -38,6 +38,16 @@ let gen_index () = (incr index; !index)
 (** returns a new clock variable *)
 let fresh_clock () = Cvar { contents = Cindex (gen_index ()); }
 
+(** returns a new clock type corresponding to the data type [ty] *)
+let rec fresh_ct ty = match ty with
+  | Tprod ty_list ->
+      (match ty_list with
+        | [] -> Ck (fresh_clock())
+        | _ -> Cprod (List.map fresh_ct ty_list))
+  | Tarray (t, _) -> fresh_ct t
+  | Tid _ | Tinvalid -> Ck (fresh_clock())
+
+
 (** returns the canonic (short) representant of a [ck]
     and update it to this value. *)
 let rec ck_repr ck = match ck with
@@ -90,19 +100,26 @@ and unify_list t1_list t2_list =
   with _ -> raise Unify
 
 
-let rec skeleton ck = function
+let prod ck_l = match ck_l with
+  | [ck] -> Ck ck
+  | _ -> Cprod (List.map (fun ck -> Ck ck) ck_l)
+
+(*
+let rec tuple ck = function
   | Tprod ty_list ->
       (match ty_list with
         | [] -> Ck ck
-        | _ -> Cprod (List.map (skeleton ck) ty_list))
-  | Tarray (t, _) -> skeleton ck t
+        | _ -> Cprod (List.map (tuple ck) ty_list))
+  | Tarray (t, _) -> tuple ck t
   | Tid _ | Tinvalid -> Ck ck
+*)
+(*
+let max ck_1 ck_2 = match ck_repr ck_1, ck_reprck_2 with
+  | 
 
-(* TODO here it implicitely says that the base clock is Cbase
-    and that all tuple is on Cbase *)
-let ckofct = function | Ck ck -> ck_repr ck | Cprod _ -> Cbase
-
-
-
+let rec optim_base_ck base_ck ct = match ct with
+  | Ck ck -> 
+  | Cprod c_l -> 
+*)
 
 

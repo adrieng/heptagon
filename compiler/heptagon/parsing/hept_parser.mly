@@ -193,8 +193,8 @@ nonmt_params:
 ;
 
 param:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
+  | idl=ident_list COLON ty=ty_ident ck=ck
+      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
 ;
 
 out_params:
@@ -248,12 +248,12 @@ loc_params:
 
 
 var_last:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
-  | LAST IDENT COLON ty_ident EQUAL exp
-      { [ mk_var_dec $2 $4 (Last(Some($6))) (Loc($startpos,$endpos)) ] }
-  | LAST IDENT COLON ty_ident
-      { [ mk_var_dec $2 $4 (Last(None)) (Loc($startpos,$endpos)) ] }
+  | idl=ident_list COLON ty=ty_ident ck=ck
+      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
+  | LAST id=IDENT COLON ty=ty_ident ck=ck EQUAL e=exp
+      { [ mk_var_dec id ty ck (Last(Some(e))) (Loc($startpos,$endpos)) ] }
+  | LAST id=IDENT COLON ty=ty_ident ck=ck
+      { [ mk_var_dec id ty ck (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
 ident_list:
@@ -268,9 +268,13 @@ ty_ident:
       { Tarray ($1, $3) }
 ;
 
+ck:
+  | /*empty */  { None }
+  | ON ck=on_ck    { Some ck }
+
 on_ck:
-  | /*empty */                                              { Cbase }
-  | b=on_ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN  { Con (b,c,x) }
+  | c=constructor_or_bool LPAREN x=IDENT RPAREN             { Con(Cbase,c,x) }
+  | b=on_ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN  { Con(b,c,x) }
 
 equs:
   | /* empty */                      { [] }
@@ -630,8 +634,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident ck=on_ck { mk_arg (Some $1) $3 ck }
-  | ty_ident ck=on_ck { mk_arg None $1 ck }
+  | IDENT COLON ty_ident ck=ck { mk_arg (Some $1) $3 ck }
+  | ty_ident ck=ck { mk_arg None $1 ck }
 ;
 
 %%

@@ -11,12 +11,12 @@
 open Misc
 open Names
 open Idents
-open Clocks
 open Signature
 open Obc
 open Obc_utils
 open Obc_mapfold
 open Types
+open Clocks
 open Static
 open Initial
 
@@ -361,7 +361,7 @@ let empty_call_context = None
     [v] var decs *)
 let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
     (v, si, j, s) =
-  let { Minils.e_desc = desc; Minils.e_ck = ck; Minils.e_loc = loc } = e in
+  let { Minils.e_desc = desc; Minils.e_base_ck = ck; Minils.e_loc = loc } = e in
   match (pat, desc) with
     | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
         let x = var_from_name map n in
