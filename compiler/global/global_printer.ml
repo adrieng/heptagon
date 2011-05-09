@@ -13,7 +13,8 @@ let rec _aux_print_modul ?(full=false) ff m = match m with
   | LocalModule -> ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a." print_name m
-  | QualModule { qual = m; name = n } -> fprintf ff "%a%a." (_aux_print_modul ~full:full) m print_name n
+  | QualModule { qual = m; name = n } ->
+      fprintf ff "%a%a." (_aux_print_modul ~full:full) m print_name n
 
 (** Prints a [modul] with a [.] at the end when not empty *)
 let _print_modul ?(full=false) ff m = match m with
@@ -21,7 +22,8 @@ let _print_modul ?(full=false) ff m = match m with
   | LocalModule -> ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a" print_name m
-  | QualModule { qual = m; name = n } -> fprintf ff "%a%a" (_aux_print_modul ~full:full) m print_name n
+  | QualModule { qual = m; name = n } ->
+      fprintf ff "%a%a" (_aux_print_modul ~full:full) m print_name n
 let print_full_modul ff m = _print_modul ~full:true ff m
 let print_modul ff m = _print_modul ~full:false ff m
 
