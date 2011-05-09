@@ -762,7 +762,7 @@ let cfile_list_of_oprog_ty_decls name oprog =
 
 let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
-  let dependencies = List.map modul_to_string dependencies in
+  let dependencies = List.map (fun m -> String.uncapitalize (modul_to_string m)) dependencies in
 
   let classes = program_classes prog in
   let (decls, defs) =
