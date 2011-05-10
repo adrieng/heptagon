@@ -127,12 +127,13 @@ let level_up defnames constr h =
     add n new_n new_h in
   fold (fun n _ new_h -> ident_level_up n new_h) defnames empty
 
-let add_to_vds vd_env vds h =
-  let add_one n nn acc =
+let add_to_vds vd_env locals h =
+  let add_one n nn (locals,vd_env) =
     let orig_vd = Idents.Env.find n vd_env in
-      { orig_vd with v_ident = nn }::acc
+    let vd_nn = mk_var_dec nn orig_vd.v_type in
+    vd_nn::locals, Idents.Env.add vd_nn.v_ident vd_nn vd_env 
   in
-    fold add_one h vds
+    fold add_one h (locals, vd_env)
 end
 
 (** Mapfold *)
@@ -182,20 +183,23 @@ let eqdesc funs (vd_env,env,h) eqd = match eqd with
       let defnames = Rename.rename_defnames defnames h in
 
       (* deal with the handlers *)
-      let switch_handler (c_h_l, locals, equs) sw_h =
+      let switch_handler (c_h_l, locals, equs, vd_env) sw_h =
         let constr = sw_h.w_name in
         (* level up *)
         let h = Rename.level_up defnames constr h in
         let env = Env.level_up constr ck env in
+        (* add to the locals the new vars from leveling_up *)
+        let locals,vd_env = Rename.add_to_vds vd_env locals h in
         (* mapfold with updated envs *)
         let b_eq, (_,_,h) = block_it funs (vd_env,env,h) sw_h.w_block in
         (* inline the handler as a block *)
         let equs = (mk_equation (Eblock b_eq))::equs in
-        (* add to the locals the new vars from leveling_up *)
-        let locals = Rename.add_to_vds vd_env locals h in
-        ((constr,h)::c_h_l, locals, equs) in
-      let (c_h_l, locals, equs) =
-        List.fold_left switch_handler ([], locals, equs) sw_h_l in
+        ((constr,h)::c_h_l, locals, equs, vd_env)
+      in
+      
+      let (c_h_l, locals, equs, vd_env) =
+        List.fold_left switch_handler ([], locals, equs, vd_env) sw_h_l
+      in
 
       (* create a merge equation for each defnames *)
       let new_merge n equs =
@@ -204,11 +208,12 @@ let eqdesc funs (vd_env,env,h) eqd = match eqd with
           constr, mk_exp (Evar (Rename.rename n h)) ty in
         let c_e_l = List.map c_h_to_c_e c_h_l in
         let merge = mk_exp (Emerge (ck, c_e_l)) ty in
-        (mk_equation (Eeq (Evarpat n, merge))) :: equs in
+        (mk_equation (Eeq (Evarpat n, merge))) :: equs
+      in
       let equs =
         Idents.Env.fold (fun n _ equs -> new_merge n equs) defnames equs in
-
-      (* return the transformation in a block *)
+     
+        (* return the transformation in a block *)
       let b = mk_block ~defnames:defnames ~locals:locals equs in
       Eblock b, (vd_env,env,h)
   | _ -> raise Errors.Fallback
