@@ -8,7 +8,7 @@
 (**************************************************************************)
 (* removing reset statements *)
 
-(* REQUIRES automaton switch stateful present *)
+(* REQUIRES automaton stateful present *)
 
 open Misc
 open Idents
@@ -67,16 +67,18 @@ let edesc funs (res,stateful) ed =
         Eapp(op, e_list, merge_resets res re)
     | Eiterator(it, ({ a_op = Enode _ } as op), n, pe_list, e_list, re) ->
         Eiterator(it, op, n, pe_list, e_list, merge_resets res re)
+    | Eapp({ a_op = Efun _ } as op, e_list, re) ->
+        Eapp(op, e_list, None) (* funs don't need resets *)
+    | Eiterator(it, ({ a_op = Efun _ } as op), n, pe_list, e_list, re) ->
+        Eiterator(it, op, n, pe_list, e_list, None) (* funs don't need resets *)
     | _ -> ed
   in
     ed, (res,stateful)
 
 
-(* do nothing when not stateful *)
 let eq funs (res,_) eq =
   Hept_mapfold.eq funs (res,eq.eq_stateful) eq
 
-(* do nothing when not stateful *)
 let block funs (res,_) b =
   Hept_mapfold.block funs (res,b.b_stateful) b
 
