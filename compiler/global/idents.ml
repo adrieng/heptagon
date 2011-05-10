@@ -35,12 +35,12 @@ let name id =
     id.source
 
 (* used only for debuging *)
-let fprint_t ff id = Format.fprintf ff "%s" (name id)
+let print_ident ff id = Format.fprintf ff "%s" (name id)
 
 module M = struct
   type t = ident
   let compare = ident_compare
-  let fprint = fprint_t
+  let print_t = print_ident
 end
 
 module Env =
@@ -67,14 +67,20 @@ struct
          else (env1,(add key elt env2)))
       env
       (empty, empty)
+
+  (* Print Env *)
+  let print_t print_value ff m =
+    Format.fprintf ff "@[<hov>{@ ";
+    iter (fun k v -> Format.fprintf ff "%a => %a,@ " M.print_t k print_value v) m;
+    Format.fprintf ff "}@]";
 end
 
 module IdentSet = struct
   include (Set.Make(M))
 
-  let fprint_t ff s =
+  let print_t ff s =
     Format.fprintf ff "@[<hov>{@ ";
-    iter (fun e -> Format.fprintf ff "%a@ " M.fprint e) s;
+    iter (fun e -> Format.fprintf ff "%a,@ " M.print_t e) s;
     Format.fprintf ff "}@]";
 end
 

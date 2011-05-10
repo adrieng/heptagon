@@ -43,11 +43,12 @@ sig
   val union : 'a t -> 'a t -> 'a t
   val diff : 'a t -> 'b t -> 'a t
   val partition : (key -> bool) -> 'a t -> 'a t * 'a t
+  val print_t : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 end
 
 (** A set of identifiers. *)
 module IdentSet :
 sig
   include (Set.S with type elt = ident)
-  val fprint_t : Format.formatter -> t -> unit
+  val print_t : Format.formatter -> t -> unit
 end
