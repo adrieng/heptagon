@@ -46,6 +46,7 @@ let rec static_exp_compare se1 se2 =
       | Sint i1, Sint i2 -> c i1 i2
       | Sfloat f1, Sfloat f2 -> c f1 f2
       | Sbool b1, Sbool b2 -> c b1 b2
+      | Sstring s1, Sstring s2 -> c s1 s2
       | Sconstructor c1, Sconstructor c2 -> c c1 c2
       | Sfield f1, Sfield f2 -> c f1 f2
       | Stuple sel1, Stuple sel2 ->
@@ -75,10 +76,13 @@ let rec static_exp_compare se1 se2 =
       | Sbool _, (Svar _ | Sint _ | Sfloat _) -> -1
       | Sbool _, _ -> 1
 
-      | Sconstructor _, (Svar _ | Sint _ | Sfloat _ | Sbool _) -> -1
+      | Sstring _, (Svar _ | Sint _ | Sfloat _ | Sbool _) -> -1
+      | Sstring _, _ -> 1
+
+      | Sconstructor _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sstring _) -> -1
       | Sconstructor _, _ -> 1
 
-      | Sfield _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _) -> -1
+      | Sfield _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sstring _ | Sconstructor _) -> -1
       | Sfield _, _ -> 1
 
       | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _ ) -> 1

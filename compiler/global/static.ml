@@ -90,7 +90,7 @@ let apply_op partial loc op se_list =
       @raise Partial_evaluation when a static var cannot be evaluated, a local static parameter for example.
     Otherwise evaluate in a best effort manner. *)
 let rec eval_core partial env se = match se.se_desc with
-  | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _ -> se
+  | Sint _ | Sfloat _ | Sbool _ | Sstring _ | Sconstructor _ | Sfield _ -> se
   | Svar ln ->
       (try (* first try to find in global const env *)
          let cd = find_const ln in

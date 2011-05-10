@@ -399,6 +399,7 @@ and typing_static_exp const_env se =
     | Sint v -> Sint v, Tid Initial.pint
     | Sbool v-> Sbool v, Tid Initial.pbool
     | Sfloat v -> Sfloat v, Tid Initial.pfloat
+    | Sstring v -> Sstring v, Tid Initial.pstring
     | Svar ln ->
         (try (* this can be a global const*)
            let cd = Modules.find_const ln in

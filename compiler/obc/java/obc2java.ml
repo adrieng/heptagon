@@ -100,6 +100,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sint i -> Sint i
   | Types.Sfloat f -> Sfloat f
   | Types.Sbool b -> Sbool b
+  | Types.Sstring s -> Sstring s
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield f -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l

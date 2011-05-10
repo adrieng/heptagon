@@ -241,6 +241,7 @@ let rec cexpr_of_static_exp se =
     | Sint i -> Cconst (Ccint i)
     | Sfloat f -> Cconst (Ccfloat f)
     | Sbool b -> Cconst (Ctag (if b then "true" else "false"))
+    | Sstring s -> Cconst (Cstrlit s)
     | Sfield _ -> assert false
     | Sconstructor c -> Cconst (Ctag (cname_of_qn c))
     | Sarray sl -> Carraylit (List.map cexpr_of_static_exp sl)

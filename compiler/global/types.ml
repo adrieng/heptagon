@@ -19,6 +19,7 @@ and static_exp_desc =
   | Sint of int
   | Sfloat of float
   | Sbool of bool
+  | Sstring of string (** without enclosing quotes *)
   | Sconstructor of constructor_name
   | Sfield of field_name
   | Stuple of static_exp list

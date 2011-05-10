@@ -205,6 +205,7 @@ and translate_static_exp_desc loc ed =
     | Sint i -> Types.Sint i
     | Sfloat f -> Types.Sfloat f
     | Sbool b -> Types.Sbool b
+    | Sstring s -> Types.Sstring s
     | Sconstructor c -> Types.Sconstructor (qualify_constrs c)
     | Sfield c -> Types.Sfield (qualify_field c)
     | Stuple se_list -> Types.Stuple (List.map t se_list)
