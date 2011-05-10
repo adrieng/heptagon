@@ -71,7 +71,9 @@ let output_names_list sig_info =
     | Some n -> n
     | None -> Error.message no_location Error.Eno_unnamed_output
   in
-  List.map remove_option sig_info.node_outputs
+  let outputs = List.filter
+    (fun ad -> not (Linearity.is_linear ad.a_linearity)) sig_info.node_outputs in
+    List.map remove_option outputs
 
 let is_stateful n =
   try
