@@ -94,8 +94,8 @@ let eqdesc funs (res,stateful) = function
       else ( (* recursive call to remove useless resets *)
         let b, _ = Hept_mapfold.block_it funs (res,stateful) b in
         Eblock(b), (res,stateful))
-  | Eswitch _ | Eautomaton _ | Epresent _ ->
-      Format.eprintf "[reset] should be done after [switch automaton present]";
+  | Eautomaton _ | Epresent _ ->
+      Format.eprintf "[reset] should be done after [automaton present]";
       assert false
   | _ -> raise Errors.Fallback
 
