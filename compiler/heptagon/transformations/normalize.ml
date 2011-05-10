@@ -34,11 +34,6 @@ struct
     raise Errors.Error
 end
 
-let is_stateful e = match e.e_desc with
-  | Efby _ | Epre _ -> true
-  | Eapp({ a_op = Enode _ }, _, _) -> true
-  | _ -> false
-
 let exp_list_of_static_exp_list se_list =
   let mk_one_const se =
     mk_exp (Econst se) se.se_ty

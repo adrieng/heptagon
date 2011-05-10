@@ -9,7 +9,7 @@ open Hept_parsetree
 
 %}
 
-%token DOT LPAREN LPAREN_LESS RPAREN GREATER_RPAREN LBRACE RBRACE COLON SEMICOL
+%token DOT LPAREN LPAREN_LESS RPAREN GREATER_RPAREN LBRACE RBRACE COLON COLONCOLON SEMICOL
 %token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
@@ -39,7 +39,7 @@ open Hept_parsetree
 %token ASSUME
 %token ENFORCE
 %token WITH
-%token WHEN MERGE ON
+%token WHEN WHENOT MERGE ON
 %token POWER
 %token LBRACKET LBRACKETGREATER
 %token RBRACKET LESSRBRACKET
@@ -65,7 +65,7 @@ open Hept_parsetree
 %left AMPERSAND
 %left INFIX0 EQUAL LESS_GREATER
 %right INFIX1
-%right WHEN
+%right WHEN WHENOT
 %left INFIX2 SUBTRACTIVE
 %left STAR INFIX3
 %left INFIX4
@@ -193,7 +193,7 @@ nonmt_params:
 ;
 
 param:
-  | idl=ident_list COLON ty=ty_ident ck=ck
+  | idl=ident_list COLON ty=ty_ident ck=ck_annot
       { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
 ;
 
@@ -248,11 +248,11 @@ loc_params:
 
 
 var_last:
-  | idl=ident_list COLON ty=ty_ident ck=ck
+  | idl=ident_list COLON ty=ty_ident ck=ck_annot
       { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
-  | LAST id=IDENT COLON ty=ty_ident ck=ck EQUAL e=exp
+  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot EQUAL e=exp
       { [ mk_var_dec id ty ck (Last(Some(e))) (Loc($startpos,$endpos)) ] }
-  | LAST id=IDENT COLON ty=ty_ident ck=ck
+  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot
       { [ mk_var_dec id ty ck (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
@@ -268,13 +268,26 @@ ty_ident:
       { Tarray ($1, $3) }
 ;
 
-ck:
-  | /*empty */  { None }
-  | ON ck=on_ck    { Some ck }
+ct_annot:
+  | /*empty */        { None }
+  | COLONCOLON ck=ck
+  | ON ck=on_ck       { Some(Ck ck) }
+
+
+ck_annot:
+  | /*empty */        { None }
+  | COLONCOLON ck=ck
+  | ON ck=on_ck       { Some ck }
+
+ck:                                
+  | DOT                  { Cbase }
+  | ck=on_ck             { ck }
+
 
 on_ck:
   | c=constructor_or_bool LPAREN x=IDENT RPAREN             { Con(Cbase,c,x) }
-  | b=on_ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN  { Con(b,c,x) }
+  | b=ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN     { Con(b,c,x) }
+
 
 equs:
   | /* empty */                      { [] }
@@ -427,7 +440,7 @@ merge_handler:
   | LPAREN c=constructor_or_bool ARROW e=exp RPAREN { (c,e) }
 
 exp:
-  | e=simple_exp { e }
+  | e=simple_exp ct=ct_annot { { e with e_ct_annot = ct } }
   | e=_exp { mk_exp e (Loc($startpos,$endpos)) }
 _exp:
   | simple_exp FBY exp
@@ -447,6 +460,10 @@ _exp:
       { mk_op_call $2 [$1; $3] }
   | e=exp WHEN c=constructor_or_bool LPAREN ce=IDENT RPAREN
       { Ewhen (e, c, ce) }
+  | e=exp WHEN ce=IDENT
+      { Ewhen (e, Q Initial.ptrue, ce) }
+  | e=exp WHENOT ce=IDENT
+      { Ewhen (e, Q Initial.pfalse, ce) }
   | MERGE n=IDENT hs=merge_handlers
       { Emerge (n, hs) }
   | exp INFIX1 exp
@@ -634,8 +651,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident ck=ck { mk_arg (Some $1) $3 ck }
-  | ty_ident ck=ck { mk_arg None $1 ck }
+  | IDENT COLON ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
+  | ty_ident ck=ck_annot { mk_arg None $1 ck }
 ;
 
 %%

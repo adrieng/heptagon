@@ -44,16 +44,10 @@ struct
     raise Errors.Error
 end
 
-(* add an equation *)
-let equation locals eqs e =
-  let n = Idents.gen_var "hept2mls" "ck" in
-  n,
-  (mk_var_dec n e.e_ty) :: locals,
-  (mk_equation (Evarpat n) e):: eqs
 
 let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty;
-                    Heptagon.v_loc = loc } =
-  mk_var_dec ~loc:loc n ty
+                    Heptagon.v_loc = loc; Heptagon.v_clock = ck } =
+  mk_var_dec ~loc:loc n ty ck
 
 let translate_reset = function
   | Some { Heptagon.e_desc = Heptagon.Evar n } -> Some n

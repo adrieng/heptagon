@@ -153,8 +153,8 @@ let mk_extvalue ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
 let mk_exp level_ck ty ?(ck = Cbase) ?(ct = fresh_ct ty) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = ty; e_level_ck = level_ck; e_base_ck = ck; e_ct = ct; e_loc = loc }
 
-let mk_var_dec ?(loc = no_location) ?(clock = fresh_clock()) ident ty =
-  { v_ident = ident; v_type = ty; v_clock = clock; v_loc = loc }
+let mk_var_dec ?(loc = no_location) ident ty ck =
+  { v_ident = ident; v_type = ty; v_clock = ck; v_loc = loc }
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
