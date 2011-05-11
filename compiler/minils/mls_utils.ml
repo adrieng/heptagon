@@ -196,4 +196,17 @@ let ident_list_of_pat pat =
     | Etuplepat [] -> acc
     | Etuplepat (pat::pat_l) -> f (f acc pat) (Etuplepat pat_l)
   in
-  f [] pat 
+  f [] pat
+
+
+let args_of_var_decs =
+ List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
+                                      vd.v_type (Signature.ck_to_sck vd.v_clock))
+
+let signature_of_node n =
+    { node_inputs = args_of_var_decs n.n_input;
+      node_outputs  = args_of_var_decs n.n_output;
+      node_stateful = n.n_stateful;
+      node_params = n.n_params;
+      node_params_constraints = n.n_params_constraints;
+      node_loc = n.n_loc }

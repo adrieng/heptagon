@@ -272,10 +272,10 @@ let add_distinct_qualset n acc =
     QualSet.add n acc
 
 let add_distinct_S n acc =
-  if S.mem n acc then
+  if NamesSet.mem n acc then
     error (Ealready_defined n)
   else
-    S.add n acc
+    NamesSet.add n acc
 
 (** Add two sets of names provided they are distinct *)
 let add env1 env2 =
@@ -337,23 +337,23 @@ let last = function | Var -> false | Last _ -> true
     of field name, exp.*)
 let check_field_unicity l =
   let add_field acc (f,e) =
-    if S.mem (shortname f) acc then
+    if NamesSet.mem (shortname f) acc then
       message e.e_loc (Ealready_defined (fullname f))
     else
-      S.add (shortname f) acc
+      NamesSet.add (shortname f) acc
   in
-  ignore (List.fold_left add_field S.empty l)
+  ignore (List.fold_left add_field NamesSet.empty l)
 
 (** Checks that a field is not defined twice in a list
     of field name, exp.*)
 let check_static_field_unicity l =
   let add_field acc (f,se) =
-    if S.mem (shortname f) acc then
+    if NamesSet.mem (shortname f) acc then
       message se.se_loc (Ealready_defined (fullname f))
     else
-      S.add (shortname f) acc
+      NamesSet.add (shortname f) acc
   in
-  ignore (List.fold_left add_field S.empty l)
+  ignore (List.fold_left add_field NamesSet.empty l)
 
 (** @return the qualified name and list of fields of
     the type with name [n].
@@ -917,10 +917,10 @@ and typing_automaton_handlers const_env h acc state_handlers =
   (* checks unicity of states *)
   let addname acc { s_state = n } =
     add_distinct_S n acc in
-  let states =  List.fold_left addname S.empty state_handlers in
+  let states =  List.fold_left addname NamesSet.empty state_handlers in
 
   let escape h ({ e_cond = e; e_next_state = n } as esc) =
-    if not (S.mem n states) then error (Eundefined(n));
+    if not (NamesSet.mem n states) then error (Eundefined(n));
     let typed_e = expect const_env h (Tid Initial.pbool) e in
     { esc with e_cond = typed_e } in
 

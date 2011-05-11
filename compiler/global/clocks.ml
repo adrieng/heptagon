@@ -115,11 +115,11 @@ let rec tuple ck = function
 *)
 (*
 let max ck_1 ck_2 = match ck_repr ck_1, ck_reprck_2 with
-  | 
+  |
 
 let rec optim_base_ck base_ck ct = match ct with
-  | Ck ck -> 
-  | Cprod c_l -> 
+  | Ck ck ->
+  | Cprod c_l ->
 *)
 
 

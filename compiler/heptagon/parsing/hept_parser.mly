@@ -279,7 +279,7 @@ ck_annot:
   | COLONCOLON ck=ck
   | ON ck=on_ck       { Some ck }
 
-ck:                                
+ck:
   | DOT                  { Cbase }
   | ck=on_ck             { ck }
 

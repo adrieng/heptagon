@@ -117,11 +117,11 @@ let node_dec funs (env, newvars, newequs) nd =
 let program p =
   let env n =
     let d =
-      List.find 
-	(function 
-	   | Pnode nd -> nd.n_name = n
-	   | _ -> false) 
-	p.p_desc in
+      List.find
+  (function
+     | Pnode nd -> nd.n_name = n
+     | _ -> false)
+  p.p_desc in
     match d with
     | Pnode nd -> nd
     | _ -> assert false in

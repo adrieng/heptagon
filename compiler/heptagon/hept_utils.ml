@@ -98,3 +98,17 @@ let vars_pat pat =
 let rec vd_mem n = function
   | [] -> false
   | vd::l -> vd.v_ident = n or (vd_mem n l)
+
+let args_of_var_decs =
+  (* before the clocking the clock is wrong in the signature *)
+ List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
+                                      vd.v_type Signature.Cbase)
+
+let signature_of_node n =
+    { node_inputs = args_of_var_decs n.n_input;
+      node_outputs  = args_of_var_decs n.n_output;
+      node_stateful = n.n_stateful;
+      node_params = n.n_params;
+      node_params_constraints = n.n_params_constraints;
+      node_loc = n.n_loc }
+

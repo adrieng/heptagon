@@ -14,7 +14,7 @@
   Idem for e_ct : if explicit, it represents a clock annotation.
   Unification is done on this mutable fields.
   e_base_ck is set according to node signatures.
-  
+
  *)
 
 open Misc
@@ -121,7 +121,7 @@ let typing_app h base pat op w_list = match op with
 let typing_eq h { eq_lhs = pat; eq_rhs = e } =
   (* typing the expression *)
   let ct,base = match e.e_desc with
-    | Eextvalue w 
+    | Eextvalue w
     | Efby (_, w) ->
         let ck = typing_extvalue h w in
         Ck ck, ck
@@ -138,7 +138,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
           | None -> fresh_clock ()
           | Some(reset) -> ck_of_name h reset in
         let ct = typing_app h ck_r pat op args in
-        ct, ck_r    
+        ct, ck_r
     | Eiterator (_, _, _, pargs, args, r) ->
         (* Typed exactly as a fun or a node... *)
         let ck_r = match r with
@@ -195,12 +195,18 @@ let typing_node node =
   let h = append_env h node.n_output in
   let h = typing_contract h node.n_contract in
   let h = append_env h node.n_local in
-  (typing_eqs h node.n_equs;
+  typing_eqs h node.n_equs;
   (*update clock info in variables descriptions *)
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
-  { node with n_input = List.map set_clock node.n_input;
-              n_output = List.map set_clock node.n_output;
-              n_local = List.map set_clock node.n_local })
+  let node = { node with n_input = List.map set_clock node.n_input;
+                         n_output = List.map set_clock node.n_output;
+                         n_local = List.map set_clock node.n_local }
+  in
+  (* check signature causality and update it in the global env *)
+  let sign = Mls_utils.signature_of_node node in
+  Signature.check_signature sign;
+  Modules.replace_value node.n_name sign;
+  node
 
 let program p =
   let program_desc pd = match pd with

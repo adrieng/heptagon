@@ -42,9 +42,9 @@ module QualEnv = struct
   let append env' env = fold (fun key v env -> add key v env) env' env
 end
 
+module NamesSet = Set.Make (struct type t = string let compare = compare end)
 module QualSet = Set.Make (struct type t = qualname let compare = compare end)
 module ModulSet = Set.Make (struct type t = modul let compare = compare end)
-module S = Set.Make (struct type t = string let compare = compare end)
 
 
 let shortname { name = n; } = n

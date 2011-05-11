@@ -103,7 +103,7 @@ let qualify_field = _qualify_with_error "field" qualify_field check_field
 (** Qualify a var name as a constant variable,
     if not in local_const or global_const then raise Not_found *)
 let qualify_var_as_const local_const c =
-  if S.mem c local_const
+  if NamesSet.mem c local_const
   then local_qn c
   else qualify_const c
 
@@ -165,12 +165,12 @@ let mk_signature name ins outs stateful params loc =
 (** Function to build the defined static parameters set *)
 let build_const loc vd_list =
   let _add_const_var loc c local_const =
-    if S.mem c local_const
+    if NamesSet.mem c local_const
     then Error.message loc (Error.Econst_variable_already_defined c)
-    else S.add c local_const in
+    else NamesSet.add c local_const in
   let build local_const vd =
     _add_const_var loc vd.v_name local_const in
-  List.fold_left build S.empty vd_list
+  List.fold_left build NamesSet.empty vd_list
 
 
 (** { 3 Translate the AST into Heptagon. } *)
@@ -410,39 +410,34 @@ let params_of_var_decs =
                         vd.v_name
                         (translate_type vd.v_loc vd.v_type))
 
-let args_of_var_decs =
-  (* before the clocking the clock is wrong in the signature *)
- List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.Heptagon.v_ident))
-                                      vd.Heptagon.v_type Signature.Cbase)
-
 
 let translate_node node =
   let n = current_qual node.n_name in
   Idents.enter_node n;
   let params = params_of_var_decs node.n_params in
   let input_env = Rename.append Rename.empty (node.n_input) in
-  (* inputs should refer only to inputs *)  
+  (* inputs should refer only to inputs *)
   let inputs = translate_vd_list input_env node.n_input in
-  (* Inputs and outputs define the initial local env *)  
+  (* Inputs and outputs define the initial local env *)
   let env0 = Rename.append input_env node.n_output in
   let outputs = translate_vd_list env0 node.n_output in
   let b, env = translate_block env0 node.n_block in
-  (* the env of the block is used in the contract translation *) 
+  (* the env of the block is used in the contract translation *)
   let contract = Misc.optional (translate_contract env) node.n_contract in
   (* add the node signature to the environment *)
-  let i = args_of_var_decs inputs in
-  let o = args_of_var_decs outputs in
-  let p = params_of_var_decs node.n_params in
-  add_value n (Signature.mk_node i o node.n_stateful p);
-  { Heptagon.n_name = n;
-    Heptagon.n_stateful = node.n_stateful;
-    Heptagon.n_input = inputs;
-    Heptagon.n_output = outputs;
-    Heptagon.n_contract = contract;
-    Heptagon.n_block = b;
-    Heptagon.n_loc = node.n_loc;
-    Heptagon.n_params = params;
-    Heptagon.n_params_constraints = []; }
+  let node = { Heptagon.n_name = n;
+               Heptagon.n_stateful = node.n_stateful;
+               Heptagon.n_input = inputs;
+               Heptagon.n_output = outputs;
+               Heptagon.n_contract = contract;
+               Heptagon.n_block = b;
+               Heptagon.n_loc = node.n_loc;
+               Heptagon.n_params = params;
+               Heptagon.n_params_constraints = []; }
+  in
+  add_value n (Hept_utils.signature_of_node node);
+  node
+
 
 let translate_typedec ty =
     let n = current_qual ty.t_name in
@@ -496,33 +491,24 @@ let translate_program p =
     Heptagon.p_opened = p.p_opened;
     Heptagon.p_desc = desc; }
 
+
 let translate_signature s =
-  (* helper functions, having [env] as being the list of existing var names *)
-  let rec append env sa_l = match sa_l with
-    | [] -> env
-    | sa::sa_l -> match sa.a_name with
-        | None -> append env sa_l
-        | Some x -> append (x::env) sa_l
-  and translate_some_clock loc env ck = match ck with
+  let rec translate_some_clock ck = match ck with
     | None -> Signature.Cbase
-    | Some ck -> translate_clock loc env ck
-  and translate_clock loc env ck = match ck with
+    | Some ck -> translate_clock ck
+  and translate_clock ck = match ck with
     | Cbase -> Signature.Cbase
-    | Con(ck,c,x) ->
-        if not (List.mem x env)
-        then message loc (Evar_unbound x)
-        else Signature.Con(translate_clock loc env ck, qualify_constrs c, x)
-  and translate_arg env a =
-    Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
-                              (translate_some_clock s.sig_loc env a.a_clock)
+    | Con(ck,c,x) -> Signature.Con(translate_clock ck, qualify_constrs c, x)
+  and translate_arg a = Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
+                                                  (translate_some_clock a.a_clock)
   in
   let n = current_qual s.sig_name in
-  let env = append [] s.sig_inputs in
-  let i = List.map (translate_arg env) s.sig_inputs in
-  let env = append env s.sig_outputs in
-  let o = List.map (translate_arg env) s.sig_outputs in
+  let i = List.map translate_arg s.sig_inputs in
+  let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
-  add_value n (Signature.mk_node i o s.sig_stateful p);
+  let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful p in
+  Signature.check_signature sig_node;
+  add_value n sig_node;
   mk_signature n i o s.sig_stateful p s.sig_loc
 
 

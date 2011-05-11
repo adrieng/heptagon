@@ -93,14 +93,14 @@ module S = Set.Make (struct type t = string
 module UniqueNames =
 struct
   open Names
-  let used_names = ref (ref S.empty) (** Used strings in the current node *)
+  let used_names = ref (ref NamesSet.empty) (** Used strings in the current node *)
   let env = ref Env.empty (** Map idents to their string *)
-  let (node_env : S.t ref QualEnv.t ref) = ref QualEnv.empty
+  let (node_env : NamesSet.t ref QualEnv.t ref) = ref QualEnv.empty
 
   (** This function should be called every time we enter a node *)
   let enter_node n =
     (if not (QualEnv.mem n !node_env)
-    then node_env := QualEnv.add n (ref S.empty) !node_env);
+    then node_env := QualEnv.add n (ref NamesSet.empty) !node_env);
     used_names := QualEnv.find n !node_env
 
   (** @return a unique string for each identifier. Idents corresponding
@@ -113,11 +113,11 @@ struct
       s ^ "_" ^ (string_of_int !num) in
     let rec fresh_string base =
       let fs = fresh base in
-      if S.mem fs !(!used_names) then fresh_string base else fs in
+      if NamesSet.mem fs !(!used_names) then fresh_string base else fs in
     if not (Env.mem n !env) then
       (let s = n.source in
-       let s = if S.mem s !(!used_names) then fresh_string s else s in
-       !used_names := S.add s !(!used_names);
+       let s = if NamesSet.mem s !(!used_names) then fresh_string s else s in
+       !used_names := NamesSet.add s !(!used_names);
        env := Env.add n s !env)
 
   let name id =

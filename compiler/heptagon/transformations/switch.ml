@@ -133,7 +133,7 @@ let add_to_locals vd_env locals h =
   let add_one n nn (locals,vd_env) =
     let orig_vd = Idents.Env.find n vd_env in
     let vd_nn = mk_var_dec nn orig_vd.v_type in
-    vd_nn::locals, Idents.Env.add vd_nn.v_ident vd_nn vd_env 
+    vd_nn::locals, Idents.Env.add vd_nn.v_ident vd_nn vd_env
   in
     fold add_one h (locals, vd_env)
 end
@@ -197,7 +197,7 @@ let eqdesc funs (vd_env,env,h) eqd = match eqd with
         let equs = (mk_equation (Eblock b_eq))::equs in
         ((constr,h)::c_h_l, locals, equs, vd_env)
       in
-      
+
       let (c_h_l, locals, equs, vd_env) =
         List.fold_left switch_handler ([], locals, equs, vd_env) sw_h_l
       in
@@ -212,7 +212,7 @@ let eqdesc funs (vd_env,env,h) eqd = match eqd with
       let equs =
         Idents.Env.fold (fun n ty equs -> new_merge n ty equs) defnames equs
       in
-     
+
         (* return the transformation in a block *)
       let b = mk_block ~defnames:defnames ~locals:locals equs in
       Eblock b, (vd_env,env,h)
