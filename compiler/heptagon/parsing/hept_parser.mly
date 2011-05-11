@@ -39,7 +39,7 @@ open Hept_parsetree
 %token ASSUME
 %token ENFORCE
 %token WITH
-%token WHEN WHENOT MERGE ON
+%token WHEN WHENOT MERGE ON ONOT
 %token POWER
 %token LBRACKET LBRACKETGREATER
 %token RBRACKET LESSRBRACKET
@@ -285,8 +285,11 @@ ck:
 
 
 on_ck:
-  | c=constructor_or_bool LPAREN x=IDENT RPAREN             { Con(Cbase,c,x) }
-  | b=ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN     { Con(b,c,x) }
+  | x=IDENT                                                { Con(Cbase,Q Initial.ptrue,x) }
+  | c=constructor_or_bool LPAREN x=IDENT RPAREN            { Con(Cbase,c,x) }
+  | b=ck ON x=IDENT                                        { Con(b,Q Initial.ptrue,x) }
+  | b=ck ONOT x=IDENT                                      { Con(b,Q Initial.pfalse,x) }
+  | b=ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN    { Con(b,c,x) }
 
 
 equs:

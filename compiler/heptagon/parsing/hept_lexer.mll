@@ -57,6 +57,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "whenot", WHENOT;
  "merge", MERGE;
  "on", ON;
+ "onot", ONOT;
  "map", MAP;
  "mapi", MAPI;
  "fold", FOLD;
