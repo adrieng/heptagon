@@ -1,0 +1,21 @@
+node count() returns (o : int)
+let
+  o = 0 fby (o + 1);
+tel
+
+node f() returns(x,y : bool)
+let
+  (x,y) = (true,false)
+tel
+
+node main() returns (c,c1 : bool)
+let
+  automaton
+    state One
+      do (c,c1) = f()
+      until count() = 5 then Two
+    state Two
+      do (c,c1) = f()
+      until count() = 3 then One
+  end
+tel
