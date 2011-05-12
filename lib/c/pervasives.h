@@ -4,7 +4,7 @@
 #define DECADES_PERVASIVES_H
 
 /* between(i, n) returns idx between 0 and n-1. */
-inline int between(int idx, int n)
+static inline int between(int idx, int n)
 {
   int o = (idx >= n) ? n-1 : (idx < 0 ? 0 : idx);
   return o;
