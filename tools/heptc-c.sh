@@ -30,4 +30,4 @@ if [ $compile -eq 1 ]; then
 fi
 
 # Compile it with GCC
-cc -std=c99 $REP/*.c -o `basename $F .ept` || exit 1
+cc -I `$HEPTC -where`/c -std=c99 $REP/*.c -o `basename $F .ept` || exit 1
