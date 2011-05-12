@@ -104,6 +104,10 @@ let prod ck_l = match ck_l with
   | [ck] -> Ck ck
   | _ -> Cprod (List.map (fun ck -> Ck ck) ck_l)
 
+let rec root_ck_of ck = match ck_repr ck with
+  | Cbase | Cvar _ -> ck
+  | Con(ck,_,_) -> root_ck_of ck
+
 (*
 let rec tuple ck = function
   | Tprod ty_list ->

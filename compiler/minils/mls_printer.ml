@@ -27,19 +27,7 @@ let rec print_pat ff = function
   | Evarpat n -> print_ident ff n
   | Etuplepat pat_list ->
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
-(*
-let rec print_ck ff = function
-  | Cbase -> fprintf ff "base"
-  | Con (ck, c, n) ->
-      fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
-  | Cvar { contents = Cindex _ } -> fprintf ff "base"
-  | Cvar { contents = Clink ck } -> print_ck ff ck
 
-let rec print_ct ff = function
-  | Ck ck -> print_ck ff ck
-  | Cprod ct_list ->
-      fprintf ff "@[<2>(%a)@]" (print_list_r print_clock """ *""") ct_list
-*)
 let print_vd ff { v_ident = n; v_type = ty; v_clock = ck } =
   if !Compiler_options.full_type_info then
     fprintf ff "%a : %a :: %a" print_ident n print_type ty print_ck ck

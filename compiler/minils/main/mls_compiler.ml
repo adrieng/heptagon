@@ -17,6 +17,9 @@ let compile_program p =
   (* Clocking *)
   let p = pass "Clocking" true Clocking.program p pp in
 
+  (* Level clocks *)
+  let p = pass "Level clock" true Level_clock.program p pp in
+
   (* Check that the dataflow code is well initialized *)
   (*let p = silent_pass "Initialization check" !init Init.program p in *)
 

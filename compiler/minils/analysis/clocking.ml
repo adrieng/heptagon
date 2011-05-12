@@ -139,7 +139,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
           | Some(reset) -> ck_of_name h reset in
         let ct = typing_app h ck_r pat op args in
         ct, ck_r
-    | Eiterator (_, _, _, pargs, args, r) ->
+    | Eiterator (_, _, _, pargs, args, r) ->        (*TODO*)
         (* Typed exactly as a fun or a node... *)
         let ck_r = match r with
           | None -> fresh_clock()
@@ -147,7 +147,6 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
         in
         List.iter (expect_extvalue h ck_r) pargs;
         List.iter (expect_extvalue h ck_r) args;
-        (*TODO*)
         Ck ck_r, ck_r
   in
   e.e_base_ck <- base;
@@ -191,11 +190,13 @@ let typing_contract h contract =
         append_env h c_list
 
 let typing_node node =
-  let h = append_env Env.empty node.n_input in
-  let h = append_env h node.n_output in
-  let h = typing_contract h node.n_contract in
+  let h0 = append_env Env.empty node.n_input in
+  let h0 = append_env h0 node.n_output in
+  let h = typing_contract h0 node.n_contract in
   let h = append_env h node.n_local in
   typing_eqs h node.n_equs;
+  (* synchronize input and output on base : find the free vars and set them to base *)
+  Env.iter (fun id ck -> unify_ck (root_ck_of ck) Cbase) h0;
   (*update clock info in variables descriptions *)
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
   let node = { node with n_input = List.map set_clock node.n_input;

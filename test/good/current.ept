@@ -11,9 +11,11 @@ let
   y = x_cur when c
 tel
 
-node use_current (c : bool; x : int) returns (y : int on c)
-var x_cur :int;
+node use_current (c : bool; x : int) returns (b : bool on c; y : int on c)
+var x_cur, y2 :int;
 let
   x_cur = current(c,x);
   y = x_cur when c;
+  y2 = internal_current(c,x);
+  b = y = y2;
 tel

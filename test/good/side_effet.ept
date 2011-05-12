@@ -1,0 +1,10 @@
+node hello() returns (b:bool)
+var tmp : bool;
+let
+  tmp = (*printf("hello")*) true;
+  automaton
+  state A var ttmp :bool; do
+    b = true;
+    ttmp = (*printf("hello")*) true;
+  end;
+tel
