@@ -99,6 +99,7 @@ let main () =
         "-stdlib", Arg.String set_stdlib, doc_stdlib;
         "-c", Arg.Set create_object_file, doc_object_file;
         "-s", Arg.String set_simulation_node, doc_sim;
+        "-hepts", Arg.Set hepts_simulation, doc_hepts;
         "-tomato", Arg.Set tomato, doc_tomato;
         "-tomanode", read_qualname add_tomato_node, doc_tomato;
         "-tomacheck", read_qualname add_tomato_check, "";
