@@ -184,7 +184,7 @@ let build ac =
 
     let rec add_dependence g = function
       | Aread(n) -> attach g n; attach_lin g n
-      | Alinread(n) -> let g = Env.find n lin_map in attach g n
+      | Alinread(n) -> attach g n; attach_lin g n
       | _ -> ()
     in
 
@@ -232,12 +232,12 @@ let build ac =
                 | Aand _ | Atuple _ -> make_graph ac
                 | _ -> [], []
             in
-            let g = node_for_ac ac in
+            let g = make ac in
             List.iter (add_dependence g) l;
-            let top_l, bot_l = List.split (List.map make_graph_tuple l) in
+           (* let top_l, bot_l = List.split (List.map make_graph_tuple l) in
             let top_l = List.flatten top_l in
             let bot_l = List.flatten bot_l in
-            g::top_l, g::bot_l
+              g::top_l, g::bot_l *) [g], [g]
         | _ -> [], []
 
     in
