@@ -15,13 +15,19 @@ let pp p = if !verbose then Mls_printer.print stdout p
 
 let compile_program p =
   (* Clocking *)
-  let p = pass "Clocking" true Clocking.program p pp in
+  let p =
+    try pass "Clocking" true Clocking.program p pp
+    with Errors.Error ->
+      pp p;
+      comment ~sep:"*** " ("Clocking failed.");
+      if !print_types then Global_printer.print_interface Format.std_formatter;
+      raise Errors.Error
+  in
+
+  if !print_types then Global_printer.print_interface Format.std_formatter;
 
   (* Level clocks *)
   let p = pass "Level clock" true Level_clock.program p pp in
-
-  (* Check that the dataflow code is well initialized *)
-  (*let p = silent_pass "Initialization check" !init Init.program p in *)
 
   (* Automata minimization *)
 (*

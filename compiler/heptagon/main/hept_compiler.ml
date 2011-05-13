@@ -19,8 +19,6 @@ let compile_program p =
   let p = silent_pass "Statefulness check" true Stateful.program p in
   let p = pass "Typing" true Typing.program p pp in
 
-  if !print_types then print_interface Format.std_formatter;
-
   (* Causality check *)
   let p = silent_pass "Causality check" !causality Causality.program p in
 

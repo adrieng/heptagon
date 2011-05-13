@@ -56,7 +56,7 @@ let ck_of_name h x = Env.find x h
 
 let rec typing_extvalue h w =
   let ck = match w.w_desc with
-    | Wconst se -> fresh_clock()
+    | Wconst _ -> fresh_clock()
     | Wvar x -> ck_of_name h x
     | Wwhen (w1, c, n) ->
         let ck_n = ck_of_name h n in
@@ -196,7 +196,7 @@ let typing_node node =
   let h = append_env h node.n_local in
   typing_eqs h node.n_equs;
   (* synchronize input and output on base : find the free vars and set them to base *)
-  Env.iter (fun id ck -> unify_ck (root_ck_of ck) Cbase) h0;
+  Env.iter (fun _ ck -> unify_ck (root_ck_of ck) Cbase) h0;
   (*update clock info in variables descriptions *)
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
   let node = { node with n_input = List.map set_clock node.n_input;

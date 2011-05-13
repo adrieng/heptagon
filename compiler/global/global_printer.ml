@@ -24,6 +24,7 @@ let _print_modul ?(full=false) ff m = match m with
   | Module m -> fprintf ff "%a" print_name m
   | QualModule { qual = m; name = n } ->
       fprintf ff "%a%a" (_aux_print_modul ~full:full) m print_name n
+
 let print_full_modul ff m = _print_modul ~full:true ff m
 let print_modul ff m = _print_modul ~full:false ff m
 
@@ -32,10 +33,29 @@ let _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
   | LocalModule -> print_name ff n
   | _ when q = g_env.current_mod && not full -> print_name ff n
   | _ -> fprintf ff "%a%a" (_aux_print_modul ~full:full) q print_name n
+
+
 let print_qualname ff qn = _print_qualname ~full:false ff qn
 let print_full_qualname ff qn = _print_qualname ~full:true ff qn
 
 let print_shortname ff {name = n} = print_name ff n
+
+let print_ident ff id = Format.fprintf ff "%s" (name id)
+
+ let rec print_ck ff = function
+  | Cbase -> fprintf ff "."
+  | Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
+  | Cvar { contents = Cindex i } -> fprintf ff "'a%i" i
+  | Cvar { contents = Clink ck } -> print_ck ff ck
+
+let rec print_ct ff = function
+  | Ck ck -> print_ck ff ck
+  | Cprod ct_list ->
+      fprintf ff "@[<2>(%a)@]" (print_list_r print_ct """ *""") ct_list
+
+ let rec print_sck ff = function
+  | Signature.Cbase -> fprintf ff "."
+  | Signature.Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_sck ck print_qualname c print_name n
 
 
 let rec print_static_exp_desc ff sed = match sed with
@@ -115,9 +135,14 @@ let print_interface_const ff name c =
 
 let print_interface_value ff name node =
   let print_arg ff arg = match arg.a_name with
-      | None -> print_type ff arg.a_type
+      | None ->
+          fprintf ff "@[%a :: %a@]" print_type arg.a_type print_sck arg.a_clock
       | Some(name) ->
-        fprintf ff "@[%a : %a@]" print_name name print_type arg.a_type in
+          fprintf ff "@[%a : %a :: %a@]"
+            print_name name
+            print_type arg.a_type
+            print_sck arg.a_clock
+  in
   let print_node_params ff p_list =
     print_list_r (fun ff p -> print_name ff p.p_name) "<<" "," ">>" ff p_list
   in
@@ -140,17 +165,4 @@ let print_interface ff =
     (fun key sigtype -> print_interface_value ff key sigtype) m.m_values;
   Format.fprintf ff "@."
 
-let print_ident ff id = Format.fprintf ff "%s" (name id)
-
- let rec print_ck ff = function
-  | Cbase -> fprintf ff "base"
-  | Con (ck, c, n) ->
-      fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
-  | Cvar { contents = Cindex i } -> fprintf ff "'a%i" i
-  | Cvar { contents = Clink ck } -> print_ck ff ck
-
-let rec print_ct ff = function
-  | Ck ck -> print_ck ff ck
-  | Cprod ct_list ->
-      fprintf ff "@[<2>(%a)@]" (print_list_r print_ct """ *""") ct_list
 

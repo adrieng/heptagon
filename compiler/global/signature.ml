@@ -67,17 +67,15 @@ exception SignatureError of error
 
 let message loc e = begin match e with
   | Eckvar_unbound_input(var_name,ck_name) ->
-      let a,name = match var_name with None -> "a","" | Some n -> "the"," "^n in
-      Format.eprintf "%aThe variable %s is unbound.@\n
-               Note that %s sampled input%s should come together with its clock.@."
+      let a,name = match var_name with None -> "A","" | Some n -> "The"," "^n in
+      Format.eprintf "%a%s sampled input%s should come together with its sampling variable %s.@."
         print_location loc
-        ck_name a name
+        a name ck_name
   | Eckvar_unbound_ouput (var_name,ck_name) ->
-      let a,name = match var_name with None -> "a","" | Some n -> "the"," "^n in
-      Format.eprintf "%aThe variable %s is unbound.@\n
-               Note that %s sampled ouput%s should be returned with its clock.@."
+      let a,name = match var_name with None -> "A","" | Some n -> "The"," "^n in
+      Format.eprintf "%a%s sampled ouput%s should be returned with its sampling value %s.@."
         print_location loc
-        ck_name a name
+        a name ck_name
   | Eckvar_unbound(var_name,ck_name) ->
       Format.eprintf "%aThe variable %s is unbound.@." print_location loc ck_name
   end;
