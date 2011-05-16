@@ -93,7 +93,7 @@ let lhs funs (env, mut, j) l = match l.pat_desc with
         try
           { l with pat_desc = repr_from_ivar env iv }, (env, mut, j)
         with
-          | Not_found -> l, (env, mut, j)
+          | Not_found -> Obc_mapfold.lhs funs (env, mut, j) l
 
 let act funs (env,mut,j) a = match a with
   | Acall(pat, o, Mstep, e_list) ->
