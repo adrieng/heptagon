@@ -99,12 +99,13 @@ and act funs acc a = match a with
       let lhs_list, acc = mapfold (lhs_it funs) acc lhs_list in
       let args, acc = mapfold (exp_it funs) acc args in
         Acall(lhs_list, obj, n, args), acc
-  | Acase(x, c_b_list) ->
+  | Acase(e, c_b_list) ->
       let aux acc (c,b) =
         let b, acc = block_it funs acc b in
           (c,b), acc in
+      let e, acc = exp_it funs acc e in
       let c_b_list, acc = mapfold aux acc c_b_list in
-        Acase(x, c_b_list), acc
+        Acase(e, c_b_list), acc
   | Afor(x, idx1, idx2, b) ->
       let idx1, acc = exp_it funs acc idx1 in
       let idx2, acc = exp_it funs acc idx2 in
