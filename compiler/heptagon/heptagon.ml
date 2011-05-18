@@ -30,7 +30,7 @@ type exp = {
   e_desc      : desc;
   e_ty        : ty;
   e_ct_annot  : ct option; (* exists when a source annotation exists *)
-  e_level_ck  : ck; (* set by the switch pass, represents the base activation of the expression *)
+  e_level_ck  : ck; (* set by the switch pass, represents the activation base of the expression *)
   e_loc       : location }
 
 and desc =

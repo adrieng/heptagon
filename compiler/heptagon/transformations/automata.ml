@@ -94,8 +94,7 @@ let translate_automaton v eq_list handlers =
   let pre_next_resetname = fresh PNR in
 
   let name n = NamesEnv.find n state_env in
-  let state n =
-    mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype in
+  let state n = mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype in
   let statevar n = mk_var_exp n tstatetype in
   let boolvar n = mk_var_exp n (Tid Initial.pbool) in
 

@@ -18,6 +18,7 @@ let compile_program p =
   let p =
     try pass "Clocking" true Clocking.program p pp
     with Errors.Error ->
+      comment ~sep:"" "\nInfered clocks :\n";
       pp p;
       comment ~sep:"*** " ("Clocking failed.");
       if !print_types then Global_printer.print_interface Format.std_formatter;
