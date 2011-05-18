@@ -99,6 +99,19 @@ and unify_list t1_list t2_list =
   try List.iter2 unify t1_list t2_list
   with _ -> raise Unify
 
+let rec skeleton ck = function
+  | Tprod ty_list ->
+      (match ty_list with
+        | [x] -> Ck ck
+        | l -> Cprod (List.map (skeleton ck) l))
+  | Tarray _ | Tid _ | Tinvalid -> Ck ck
+
+let unprod ct =
+  let rec f acc ct = match ct with
+    | Ck ck -> ck::acc
+    | Cprod ct_l -> List.fold_left f acc ct_l
+  in
+  f [] ct
 
 let prod ck_l = match ck_l with
   | [ck] -> Ck ck
@@ -107,6 +120,10 @@ let prod ck_l = match ck_l with
 let rec root_ck_of ck = match ck_repr ck with
   | Cbase | Cvar _ -> ck
   | Con(ck,_,_) -> root_ck_of ck
+
+let rec last_clock ct = match ct with
+  | Ck ck -> ck
+  | Cprod l -> last_clock (Misc.last_element l)
 
 (*
 let rec tuple ck = function

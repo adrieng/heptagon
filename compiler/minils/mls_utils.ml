@@ -193,10 +193,9 @@ let eq_find id = List.find (fun eq -> List.mem id (Vars.def [] eq))
 let ident_list_of_pat pat =
   let rec f acc pat = match pat with
     | Evarpat id -> id::acc
-    | Etuplepat [] -> acc
-    | Etuplepat (pat::pat_l) -> f (f acc pat) (Etuplepat pat_l)
+    | Etuplepat pat_l -> List.fold_left f acc pat_l
   in
-  f [] pat
+  List.rev (f [] pat)
 
 
 let args_of_var_decs =

@@ -97,7 +97,7 @@ let typing_app h base pat op w_list = match op with
       in
       let env_pat = build_env node.node_outputs pat_id_list [] in
       let env_args = build_env node.node_inputs w_list [] in
-      (* implement with Cbase as base, replace name dep by ident dep *)
+(* implement with Cbase as base, replace name dep by ident dep *)
       let rec sigck_to_ck sck = match sck with
         | Signature.Cbase -> base
         | Signature.Con (sck,c,x) ->
@@ -118,54 +118,88 @@ let typing_app h base pat op w_list = match op with
       Clocks.prod (List.map (fun a -> sigck_to_ck a.a_clock) node.node_outputs)
 
 
-let typing_eq h { eq_lhs = pat; eq_rhs = e } =
-  (* typing the expression *)
-  let ct,base = match e.e_desc with
-    | Eextvalue w
-    | Efby (_, w) ->
-        let ck = typing_extvalue h w in
-        Ck ck, ck
-    | Emerge (x, c_e_list) ->
-        let ck = ck_of_name h x in
-        List.iter (fun (c,e) -> expect_extvalue h (Con (ck,c,x)) e) c_e_list;
-        Ck ck, ck
-    | Estruct l ->
-        let ck = fresh_clock () in
-        List.iter (fun (_, e) -> expect_extvalue h ck e) l;
-        Ck ck, ck
-    | Eapp({a_op = op}, args, r) ->
-        let ck_r = match r with
-          | None -> fresh_clock ()
-          | Some(reset) -> ck_of_name h reset in
-        let ct = typing_app h ck_r pat op args in
-        ct, ck_r
-    | Eiterator (_, _, _, pargs, args, r) ->        (*TODO*)
-        (* Typed exactly as a fun or a node... *)
-        let ck_r = match r with
-          | None -> fresh_clock()
-          | Some(reset) -> ck_of_name h reset
-        in
-        List.iter (expect_extvalue h ck_r) pargs;
-        List.iter (expect_extvalue h ck_r) args;
-        Ck ck_r, ck_r
-  in
-  e.e_base_ck <- base;
-  begin
-    try unify ct e.e_ct
-    with Unify ->
-      eprintf "Incoherent clock annotation.@\n";
-      error_message e.e_loc (Etypeclash (ct,e.e_ct))
-  end;
-  e.e_ct <- ct;
- (* typing the full equation *)
-  let pat_ct = typing_pat h pat in
-  begin
-    try unify ct pat_ct
-    with Unify ->
-      eprintf "Incoherent clock between right and left side of the equation@\n";
-      error_message e.e_loc (Etypeclash (ct, pat_ct))
-  end
 
+
+let typing_eq h { eq_lhs = pat; eq_rhs = e } =
+  (* typing the expression, returns ct, ck_base *)
+  let rec typing e =
+    let ct,base = match e.e_desc with
+      | Eextvalue w
+      | Efby (_, w) ->
+          let ck = typing_extvalue h w in
+          Ck ck, ck
+      | Ewhen (e,c,n) ->
+          let ck_n = ck_of_name h n in
+          let base = expect (skeleton ck_n e.e_ty) e in
+          skeleton (Con (ck_n, c, n)) e.e_ty, base
+      | Emerge (x, c_e_list) ->
+          let ck = ck_of_name h x in
+          List.iter (fun (c,e) -> expect_extvalue h (Con (ck,c,x)) e) c_e_list;
+          Ck ck, ck
+      | Estruct l ->
+          let ck = fresh_clock () in
+          List.iter (fun (_, e) -> expect_extvalue h ck e) l;
+          Ck ck, ck
+      | Eapp({a_op = op}, args, r) ->
+          (* base clock of the node *)
+          let ck_r = match r with
+            | None -> fresh_clock ()
+            | Some(reset) -> ck_of_name h reset in
+          let ct = typing_app h ck_r pat op args in
+          ct, ck_r
+      | Eiterator (it, {a_op = op}, _, pargs, args, r) ->
+          (* base clock of the node *)
+          let ck_r = match r with
+            | None -> fresh_clock()
+            | Some(reset) -> ck_of_name h reset
+          in
+          let ct = match it with
+            | Imap -> (* exactly as if clocking the node *)
+                typing_app h ck_r pat op args
+            | Imapi -> (* clocking the node with the extra [i] input on [ck_r] *)
+                let i (* stubs [i] as 0 *) =
+                  mk_extvalue ~ty:Initial.tint ~clock:ck_r (Wconst (Initial.mk_static_int 0))
+                in
+                typing_app h ck_r pat op (args@[i])
+            | Ifold | Imapfold ->
+                (* clocking node with equality constaint on last input and last output *)
+                let ct = typing_app h ck_r pat op args in
+                unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
+                ct
+            | Ifoldi -> (* clocking the node with the extra [i] and last in/out constraints *)
+                let i (* stubs [i] as 0 *) =
+                  mk_extvalue ~ty:Initial.tint ~clock:ck_r (Wconst (Initial.mk_static_int 0))
+                in
+                let rec insert_i args = match args with
+                  | [] -> [i]
+                  | [l] -> i::[l]
+                  | h::l -> h::(insert_i l)
+                in
+                let ct = typing_app h ck_r pat op (insert_i args) in
+                unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
+                ct
+          in
+          ct, ck_r
+    in
+    e.e_base_ck <- base;
+    (try unify ct e.e_ct
+     with Unify ->
+       eprintf "Incoherent clock annotation.@\n";
+       error_message e.e_loc (Etypeclash (ct,e.e_ct)));
+    e.e_ct <- ct;
+    ct, base
+  and expect expected_ct e =
+    let actual_ct,base = typing e in
+    (try unify actual_ct expected_ct
+     with Unify -> error_message e.e_loc (Etypeclash (actual_ct, expected_ct)));
+    base
+  in
+  let ct,base = typing e in
+  let pat_ct = typing_pat h pat in
+  (try unify ct pat_ct
+    with Unify ->
+      eprintf "Incoherent clock between right and left side of the equation.@\n";
+      error_message e.e_loc (Etypeclash (ct, pat_ct)))
 
 let typing_eqs h eq_list = List.iter (typing_eq h) eq_list
 

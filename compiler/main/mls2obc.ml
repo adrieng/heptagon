@@ -209,6 +209,9 @@ let rec translate map e =
         let e = translate_extvalue map (assert_1 e_list) in
         let idx_list = List.map (fun idx -> mk_exp tint (Econst idx)) idx in
           Epattern (pattern_of_idx_list (pattern_of_exp e) idx_list)
+    | Minils.Ewhen(e,_,_) ->
+        let e = translate map e in
+        e.e_desc
   (* Already treated cases when translating the [eq] *)
     | Minils.Eiterator _ | Minils.Emerge _ | Minils.Efby _
     | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat
@@ -231,6 +234,7 @@ and translate_act map pat
     ({ Minils.e_desc = desc } as act) =
     match pat, desc with
    (* When Merge *)
+    | pat, Minils.Ewhen (e,_,_) -> translate_act map pat e
     | Minils.Evarpat x, Minils.Emerge (y, c_act_list) ->
         let x = var_from_name map x in
         let translate_c_extvalue (c, w) =

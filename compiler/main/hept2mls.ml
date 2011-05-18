@@ -98,15 +98,15 @@ let rec translate_extvalue e =
           mk_extvalue (Wfield (translate_extvalue e, fn))
     | _ -> Error.message e.Heptagon.e_loc Error.Enormalization
 
-let translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_level_ck = b_ck;
+let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_level_ck = b_ck;
                  Heptagon.e_ct_annot = a_ct; Heptagon.e_loc = loc } as e) =
   let desc = match desc with
     | Heptagon.Econst _
     | Heptagon.Evar _
-    | Heptagon.Ewhen _
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield }, _, _) ->
         let w = translate_extvalue e in
         Eextvalue w
+    | Heptagon.Ewhen (e,c,x) -> Ewhen (translate e, c, x)
     | Heptagon.Epre(None, e) ->
         Efby(None, translate_extvalue e)
     | Heptagon.Epre(Some c, e) ->

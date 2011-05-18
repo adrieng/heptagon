@@ -53,7 +53,7 @@ and extvalue_desc =
 
 and exp = {
   e_desc            : edesc;
-  e_level_ck        : ck; (* when no data dep, execute the exp on this clock (set by [switch] *)
+  e_level_ck        : ck; (*when no data dep, execute the exp on this clock (set by [switch] *)
   mutable e_base_ck : ck;
   mutable e_ct      : ct;
   e_ty              : ty;
@@ -65,13 +65,14 @@ and edesc =
                        (** static_exp fby extvalue *)
   | Eapp of app * extvalue list * var_ident option
                        (** app ~args=(extvalue,extvalue...) reset ~r=ident *)
+  | Ewhen of exp * constructor_name * var_ident  (** e when C(c) *)
   | Emerge of var_ident * (constructor_name * extvalue) list
                        (** merge ident (Constructor -> extvalue)+ *)
   | Estruct of (field_name * extvalue) list
                        (** { field=extvalue; ... } *)
   | Eiterator of iterator_type * app * static_exp
                  * extvalue list * extvalue list * var_ident option
-                       (** map f <<n>> (extvalue, extvalue...) reset ident *)
+                       (** map f <<n>> <(extvalue)> (extvalue) reset ident *)
 
 and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
     (** Unsafe applications could have side effects

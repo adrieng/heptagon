@@ -59,11 +59,10 @@ type const_def = { c_type : ty; c_value : static_exp }
 (** { 3 Signature helper functions } *)
 
 type error =
-  | Eckvar_unbound of name option * name
   | Eckvar_unbound_input of name option * name
   | Eckvar_unbound_ouput of name option * name
 
-exception SignatureError of error
+exception SignatureError of name option * name
 
 let message loc e = begin match e with
   | Eckvar_unbound_input(var_name,ck_name) ->
@@ -76,8 +75,6 @@ let message loc e = begin match e with
       Format.eprintf "%a%s sampled ouput%s should be returned with its sampling value %s.@."
         print_location loc
         a name ck_name
-  | Eckvar_unbound(var_name,ck_name) ->
-      Format.eprintf "%aThe variable %s is unbound.@." print_location loc ck_name
   end;
   raise Errors.Error
 
@@ -98,7 +95,7 @@ let check_signature s =
       | Cbase -> ()
       | Con(ck,_,x) ->
           if not (NamesSet.mem x env)
-          then raise (SignatureError (Eckvar_unbound (n,x)));
+          then raise (SignatureError (n,x));
           f ck
     in
     f arg.a_clock
@@ -106,11 +103,11 @@ let check_signature s =
   (*initial env with only the inputs*)
   let env = append NamesSet.empty s.node_inputs in
   (try List.iter (check env) s.node_inputs
-  with SignatureError (Eckvar_unbound (x,c)) ->
+  with SignatureError (x,c) ->
     message s.node_loc (Eckvar_unbound_input (x,c)));
   let env = append env s.node_outputs in
   try List.iter (check env) s.node_outputs
-  with SignatureError (Eckvar_unbound (x,c)) ->
+  with SignatureError (x,c) ->
     message s.node_loc (Eckvar_unbound_ouput (x,c))
 
 

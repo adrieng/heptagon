@@ -102,6 +102,8 @@ and print_exp_desc ff = function
       fprintf ff "@[<2>%a@,%a@]" print_app (app, args) print_every reset
   | Emerge (x, tag_w_list) ->
       fprintf ff "@[<2>merge %a@ %a@]" print_ident x print_tag_w_list tag_w_list
+  | Ewhen (e,c,x) ->
+      fprintf ff "@[<2>(%a@ when %a(%a))@]" print_exp e print_qualname c print_ident x
   | Estruct f_w_list ->
       print_record (print_couple print_qualname print_extvalue """ = """) ff f_w_list
   | Eiterator (it, f, param, pargs, args, reset) ->
