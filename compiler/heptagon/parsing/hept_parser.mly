@@ -9,7 +9,7 @@ open Hept_parsetree
 
 %}
 
-%token DOT LPAREN LPAREN_LESS RPAREN GREATER_RPAREN LBRACE RBRACE COLON COLONCOLON SEMICOL
+%token DOT LPAREN LESS_LPAREN RPAREN RPAREN_GREATER LBRACE RBRACE COLON COLONCOLON SEMICOL
 %token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
@@ -513,12 +513,12 @@ _exp:
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
   | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER q=qualname
-      pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
+      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it q [] n pargs args }
   | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
       LPAREN q=qualname DOUBLE_LESS sa=array_exp_list DOUBLE_GREATER RPAREN
-      pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
+      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it q sa n pargs args }
 /*Records operators */

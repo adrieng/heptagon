@@ -125,9 +125,9 @@ rule token = parse
   | [' ' '\t'] +    { token lexbuf }
   | "."             {DOT}
   | "("             {LPAREN}
-  | "(<"            {LPAREN_LESS}
+  | "<("            {LESS_LPAREN}
   | ")"             {RPAREN}
-  | ">)"            {GREATER_RPAREN}
+  | ")>"            {RPAREN_GREATER}
   | "*"             { STAR }
   | "{"             {LBRACE}
   | "}"             {RBRACE}
