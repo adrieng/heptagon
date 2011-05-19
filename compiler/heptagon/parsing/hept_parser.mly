@@ -424,7 +424,7 @@ exps:
 
 simple_exp:
   | e=_simple_exp { mk_exp e (Loc($startpos,$endpos)) }
-  | LPAREN exp RPAREN { $2 }
+  | LPAREN e=exp ct=ct_annot RPAREN { { e with e_ct_annot = ct} }
 _simple_exp:
   | IDENT                            { Evar $1 }
   | const                            { Econst $1 }
@@ -443,7 +443,7 @@ merge_handler:
   | LPAREN c=constructor_or_bool ARROW e=exp RPAREN { (c,e) }
 
 exp:
-  | e=simple_exp ct=ct_annot { { e with e_ct_annot = ct } }
+  | e=simple_exp { e }
   | e=_exp { mk_exp e (Loc($startpos,$endpos)) }
 _exp:
   | simple_exp FBY exp

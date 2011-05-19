@@ -97,7 +97,7 @@ let typing_app h base pat op w_list = match op with
       in
       let env_pat = build_env node.node_outputs pat_id_list [] in
       let env_args = build_env node.node_inputs w_list [] in
-(* implement with Cbase as base, replace name dep by ident dep *)
+      (* implement with Cbase as base, replace name dep by ident dep *)
       let rec sigck_to_ck sck = match sck with
         | Signature.Cbase -> base
         | Signature.Con (sck,c,x) ->
@@ -120,7 +120,7 @@ let typing_app h base pat op w_list = match op with
 
 
 
-let typing_eq h { eq_lhs = pat; eq_rhs = e } =
+let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
   (* typing the expression, returns ct, ck_base *)
   let rec typing e =
     let ct,base = match e.e_desc with
@@ -197,12 +197,12 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
      with Unify -> error_message e.e_loc (Etypeclash (actual_ct, expected_ct)));
     base
   in
-  let ct,base = typing e in
+  let ct,_ = typing e in
   let pat_ct = typing_pat h pat in
   (try unify ct pat_ct
     with Unify ->
       eprintf "Incoherent clock between right and left side of the equation.@\n";
-      error_message e.e_loc (Etypeclash (ct, pat_ct)))
+      error_message loc (Etypeclash (ct, pat_ct)))
 
 let typing_eqs h eq_list = List.iter (typing_eq h) eq_list
 

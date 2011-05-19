@@ -29,9 +29,9 @@ let rec print_pat ff = function
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
 
 let print_vd ff { v_ident = n; v_type = ty; v_clock = ck } =
-  if !Compiler_options.full_type_info then
+ (* if !Compiler_options.full_type_info then*)
     fprintf ff "%a : %a :: %a" print_ident n print_type ty print_ck ck
-  else fprintf ff "%a : %a" print_ident n print_type ty
+  (*else fprintf ff "%a : %a" print_ident n print_type ty*)
 
 let print_local_vars ff = function
   | [] -> ()
