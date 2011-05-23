@@ -7,7 +7,7 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* ASSUMES no automaton, no present, no last *)
+(* ASSUMES no automaton, no present, no last, no reset *)
 
 (* Removing switch statements *)
 

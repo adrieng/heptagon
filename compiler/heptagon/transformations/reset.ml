@@ -45,36 +45,57 @@ let ifres res e2 e3 =
     | None -> mk_op_app Eifthenelse [init e3.e_loc; e2; e3]
     | Some re -> mk_op_app Eifthenelse [re; e2; e3]
 
-(** Keep when ever possible the initialization value *)
+(** Keep whenever possible the initialization value *)
 let default e =
   match e.e_desc with
     | Econst c -> Some c
     | _ -> None
 
 
-let edesc funs (res,stateful) ed =
-  let ed, _ = Hept_mapfold.edesc funs (res,stateful) ed in
-  let ed = match ed with
+let edesc funs ((res,stateful) as acc) ed = match ed with
     | Efby (e1, e2) ->
+        let e1,_ = Hept_mapfold.exp_it funs acc e1 in
+        let e2,_ = Hept_mapfold.exp_it funs acc e2 in
         (match res, e1 with
          | None, { e_desc = Econst c } ->
             (* no reset : [if res] useless, the initialization is sufficient *)
             Epre(Some c, e2)
-         | _ -> ifres res e1 { e2 with e_desc = Epre(default e1, e2) })
+         | _ -> ifres res e1 { e2 with e_desc = Epre(default e1, e2) }), acc
     | Eapp({ a_op = Earrow }, [e1;e2], _) ->
-        ifres res e1 e2
+        let e1,_ = Hept_mapfold.exp_it funs acc e1 in
+        let e2,_ = Hept_mapfold.exp_it funs acc e2 in
+        ifres res e1 e2, acc
     | Eapp({ a_op = Enode _ } as op, e_list, re) ->
-        Eapp(op, e_list, merge_resets res re)
+        let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
+        let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
+        Eapp(op, e_list, merge_resets res re), acc
     | Eiterator(it, ({ a_op = Enode _ } as op), n, pe_list, e_list, re) ->
-        Eiterator(it, op, n, pe_list, e_list, merge_resets res re)
+        let pargs,_ = mapfold (Hept_mapfold.exp_it funs) acc pe_list in
+        let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
+        let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
+        Eiterator(it, op, n, pargs, args, merge_resets res re), acc
     | Eapp({ a_op = Efun _ } as op, e_list, re) ->
-        Eapp(op, e_list, None) (* funs don't need resets *)
+        let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
+        let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
+        Eapp(op, args, None), acc (* funs don't need resets *)
     | Eiterator(it, ({ a_op = Efun _ } as op), n, pe_list, e_list, re) ->
-        Eiterator(it, op, n, pe_list, e_list, None) (* funs don't need resets *)
-    | _ -> ed
-  in
-    ed, (res,stateful)
+        let pargs,_ = mapfold (Hept_mapfold.exp_it funs) acc pe_list in
+        let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
+        let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
+        Eiterator(it, op, n, pargs, args, None), acc (* funs don't need resets *)
+    | Emerge(x, c_e_l) ->
+        let aux acc (c,e) =
+          let res = match res with
+            | None -> None
+            | Some r -> Some (mk_exp (Ewhen (r,c,x)) Initial.tbool) in
+          let e,_ = Hept_mapfold.exp_it funs (res,stateful) e in
+          (c,e), acc
+        in
+        let c_e_l, acc = mapfold aux acc c_e_l in
+        Emerge(x, c_e_l), acc
 
+
+    | _ -> raise Errors.Fallback
 
 let eq funs (res,_) eq =
   Hept_mapfold.eq funs (res,eq.eq_stateful) eq

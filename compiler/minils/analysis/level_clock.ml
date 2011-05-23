@@ -19,14 +19,15 @@ open Minils
    The other ones are coming from one like this one,
    indeed if it was Con (Cvar,c,x) x would have to be defined with an expression of clock Cvar.*)
 
-let exp _ acc e =
+let eq _ acc eq =
+  let e = eq.eq_rhs in
   let _ = match ck_repr e.e_base_ck with
     | Cvar {contents = Cindex _} -> unify_ck e.e_base_ck e.e_level_ck
     | _ -> ()
   in
-  e,acc (* no recursion since in minils exps are not recursive *)
+  eq,acc (* no recursion since in minils exps are not recursive *)
 
 let program p =
-  let funs = { Mls_mapfold.defaults with Mls_mapfold.exp = exp } in
+  let funs = { Mls_mapfold.defaults with Mls_mapfold.eq = eq } in
   let p, _ = Mls_mapfold.program_it funs [] p in
   p
