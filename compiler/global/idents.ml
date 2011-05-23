@@ -19,7 +19,10 @@ type ident = {
   num : int;        (* a unique index *)
   source : string;  (* the original name in the source *)
   is_generated : bool;
+  is_reset : bool;
 }
+
+let is_reset id = id.is_reset
 
 type var_ident = ident
 
@@ -124,18 +127,19 @@ struct
     Env.find id !env
 end
 
-let gen_fresh pass_name kind_to_string kind =
+let gen_fresh pass_name kind_to_string ?(reset=false) kind =
   let s = kind_to_string kind in
   let s = if !Compiler_options.full_name then "__"^pass_name ^ "_" ^ s else s in
   num := !num + 1;
-  let id = { num = !num; source = s; is_generated = true } in
+  let id = { num = !num; source = s; is_generated = true; is_reset = reset } in
     UniqueNames.assign_name id; id
 
-let gen_var pass_name name = gen_fresh pass_name (fun () -> name) ()
+let gen_var pass_name ?(reset=false) name =
+  gen_fresh pass_name (fun () -> name) ~reset:reset ()
 
-let ident_of_name s =
+let ident_of_name ?(reset=false) s =
   num := !num + 1;
-  let id = { num = !num; source = s; is_generated = false } in
+  let id = { num = !num; source = s; is_generated = false; is_reset = reset } in
     UniqueNames.assign_name id; id
 
 let source_name id = id.source

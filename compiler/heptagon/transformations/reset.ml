@@ -22,10 +22,10 @@ open Initial
 
 
 
-let fresh = Idents.gen_fresh "reset" (fun () -> "r")
+let fresh = Idents.gen_fresh "reset" ~reset:true (fun () -> "r")
 
 (* get e and return r, var_dec_r, r = e *)
-let bool_var_from_exp e =
+let reset_var_from_exp e =
   let r = fresh() in
   { e with e_desc = Evar r }, mk_var_dec r (Tid Initial.pbool), mk_equation (Eeq(Evarpat r, e))
 
@@ -83,18 +83,6 @@ let edesc funs ((res,stateful) as acc) ed = match ed with
         let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
         let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
         Eiterator(it, op, n, pargs, args, None), acc (* funs don't need resets *)
-    | Emerge(x, c_e_l) ->
-        let aux acc (c,e) =
-          let res = match res with
-            | None -> None
-            | Some r -> Some (mk_exp (Ewhen (r,c,x)) Initial.tbool) in
-          let e,_ = Hept_mapfold.exp_it funs (res,stateful) e in
-          (c,e), acc
-        in
-        let c_e_l, acc = mapfold aux acc c_e_l in
-        Emerge(x, c_e_l), acc
-
-
     | _ -> raise Errors.Fallback
 
 let eq funs (res,_) eq =
@@ -109,7 +97,7 @@ let eqdesc funs (res,stateful) = function
   | Ereset(b, e) ->
       if stateful then (
         let e, _ = Hept_mapfold.exp_it funs (res,stateful) e in
-        let e, vd, eq = bool_var_from_exp e in
+        let e, vd, eq = reset_var_from_exp e in
         let r = merge_resets res (Some e) in
         let b, _ = Hept_mapfold.block_it funs (r,stateful) b in
         let b = { b with b_equs = eq::b.b_equs; b_local = vd::b.b_local; b_stateful = true } in

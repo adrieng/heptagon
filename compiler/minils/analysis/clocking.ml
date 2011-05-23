@@ -52,7 +52,10 @@ let error_message loc = function
       raise Errors.Error
 
 
-let ck_of_name h x = Env.find x h
+let ck_of_name h x =
+  if is_reset x
+  then fresh_clock()
+  else Env.find x h
 
 let rec typing_extvalue h w =
   let ck = match w.w_desc with
