@@ -1,0 +1,21 @@
+
+node current (c : bool; x : int on c) returns ( y : int )
+let
+  y = merge c (true -> x) (false -> 0 fby y whenot c)
+tel
+
+node internal_current (c : bool; x : int on c) returns ( y : int on c)
+var x_cur : int;
+let
+  x_cur = merge c (true -> x) (false -> 0 fby x_cur whenot c);
+  y = x_cur when c
+tel
+
+node use_current (c : bool; x : int) returns (b : bool on c; y : int on c)
+var x_cur, y2 :int;
+let
+  x_cur = current(c,x);
+  y = x_cur when c;
+  y2 = internal_current(c,x);
+  b = y = y2;
+tel

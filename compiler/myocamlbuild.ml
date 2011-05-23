@@ -29,6 +29,7 @@ let df = function
 
       (* LablGTK use for graphical simulator *)
       ocaml_lib ~extern:true ~dir:"+lablgtk2" "lablgtk";
+      ocaml_lib ~extern:true "lablgtkthread";
 
       flag ["ocaml"; "parser" ; "menhir" ; "use_menhir"] (S[A"--explain";
                                                             A"--table"]);

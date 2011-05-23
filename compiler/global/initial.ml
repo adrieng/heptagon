@@ -23,7 +23,8 @@ let pint = { qual = Pervasives; name = "int" }
 let tint = Types.Tid pint
 let pfloat = { qual = Pervasives; name = "float" }
 let tfloat = Types.Tid pfloat
-
+let pstring = { qual = Pervasives; name = "string" }
+let tstring = Types.Tid pstring
 
 let mk_pervasives s = { qual = Pervasives; name = s }
 
@@ -36,6 +37,8 @@ let mk_static_int i =
 let mk_static_bool b =
   mk_static_exp tbool (Sbool b)
 
+let mk_static_string s =
+  mk_static_exp  tstring (Sstring s)
 
 
 (* build the initial environment *)

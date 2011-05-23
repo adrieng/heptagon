@@ -9,4 +9,4 @@ let
   t = async 0 fby async counter(false,true);
   b = counter(false,true) -1 = !t;
 tel
-  
+

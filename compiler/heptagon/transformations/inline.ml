@@ -16,11 +16,13 @@ open Heptagon
 open Hept_utils
 open Hept_mapfold
 
-let to_be_inlined s = !Misc.flatten || (List.mem s !Misc.inline)
+let to_be_inlined s = !Compiler_options.flatten || (List.mem s !Compiler_options.inline)
+
+let fresh = Idents.gen_fresh "automata" (fun s -> s)
 
 let mk_unique_node nd =
   let mk_bind vd =
-    let id = Idents.fresh (Idents.sourcename vd.v_ident) in
+    let id = fresh (Idents.name vd.v_ident) in
     (vd.v_ident, { vd with v_ident = id; }) in
   let subst = List.map mk_bind (nd.n_block.b_local
                                 @ nd.n_input @ nd.n_output) in
@@ -29,7 +31,7 @@ let mk_unique_node nd =
     ({ vd with v_ident = (List.assoc vd.v_ident subst).v_ident; }, ()) in
   let subst_edesc funs () ed = match ed with
       | Evar vn -> (Evar (List.assoc vn subst).v_ident, ())
-      | _ -> raise Fallback in
+      | _ -> raise Errors.Fallback in
   let subst_eqdesc funs () eqd =
     let (eqd, ()) = Hept_mapfold.eqdesc funs () eqd in
     match eqd with
@@ -39,7 +41,7 @@ let mk_unique_node nd =
                                    with Not_found -> vn)
           | Etuplepat patl -> Etuplepat (List.map subst_pat patl) in
         (Eeq (subst_pat pat, e), ())
-    | _ -> raise Fallback in
+    | _ -> raise Errors.Fallback in
 
   let funs = { defaults with
                  var_dec = subst_var_dec;
@@ -48,7 +50,7 @@ let mk_unique_node nd =
   fst (Hept_mapfold.node_dec funs () nd)
 
 let exp funs (env, newvars, newequs) exp = match exp.e_desc with
-  | Eiterator (it, { a_op = Enode nn; }, _, _, _) when to_be_inlined nn ->
+  | Eiterator (it, { a_op = Enode nn; }, _, _, _, _) when to_be_inlined nn ->
       Format.eprintf
         "WARN: inlining iterators (\"%s %s\" here) is unsupported.@."
         (Hept_printer.iterator_to_string it) (fullname nn);
@@ -62,7 +64,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
       let ni = mk_unique_node (env nn) in
 
       let static_subst =
-        List.combine (List.map (fun p -> Name p.p_name) ni.n_params)
+        List.combine (List.map (fun p -> (local_qn p.p_name)) ni.n_params)
           op.a_params in
 
       (* Perform [static_exp] substitution. *)
@@ -114,8 +116,15 @@ let node_dec funs (env, newvars, newequs) nd =
 
 let program p =
   let env n =
-    let mk_ln s = Modname { qual = p.p_modname; id = s; } in
-    List.find (fun nd -> mk_ln nd.n_name = n) p.p_nodes in
+    let d =
+      List.find
+  (function
+     | Pnode nd -> nd.n_name = n
+     | _ -> false)
+  p.p_desc in
+    match d with
+    | Pnode nd -> nd
+    | _ -> assert false in
   let funs =
     { defaults with exp = exp; block = block; node_dec = node_dec; eq = eq; } in
   let (p, (_, newvars, newequs)) = Hept_mapfold.program funs (env, [], []) p in

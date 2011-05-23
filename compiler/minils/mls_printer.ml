@@ -1,11 +1,11 @@
 open Misc
 open Names
+open Signature
 open Idents
 open Types
 open Clocks
 open Static
 open Format
-open Signature
 open Global_printer
 open Pp_tools
 open Minils
@@ -27,18 +27,6 @@ let rec print_pat ff = function
   | Evarpat n -> print_ident ff n
   | Etuplepat pat_list ->
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
-
-let rec print_ck ff = function
-  | Cbase -> fprintf ff "base"
-  | Con (ck, c, n) ->
-      fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
-  | Cvar { contents = Cindex _ } -> fprintf ff "base"
-  | Cvar { contents = Clink ck } -> print_ck ff ck
-
-let rec print_clock ff = function
-  | Ck ck -> print_ck ff ck
-  | Cprod ct_list ->
-      fprintf ff "@[<2>(%a)@]" (print_list_r print_clock """ *""") ct_list
 
 let print_vd ff { v_ident = n; v_type = ty; v_clock = ck } =
   if !Compiler_options.full_type_info then
@@ -86,7 +74,7 @@ and print_trunc_index ff idx =
 and print_exp ff e =
   if !Compiler_options.full_type_info then
     fprintf ff "(%a : %a :: %a)"
-      print_exp_desc e.e_desc print_type e.e_ty print_ck e.e_ck
+      print_exp_desc e.e_desc print_type e.e_ty print_ct e.e_ct
   else fprintf ff "%a" print_exp_desc e.e_desc
 
 and print_every ff reset =
@@ -114,6 +102,8 @@ and print_exp_desc ff = function
       fprintf ff "@[<2>%a@,%a@]" print_app (app, args) print_every reset
   | Emerge (x, tag_w_list) ->
       fprintf ff "@[<2>merge %a@ %a@]" print_ident x print_tag_w_list tag_w_list
+  | Ewhen (e,c,x) ->
+      fprintf ff "@[<2>(%a@ when %a(%a))@]" print_exp e print_qualname c print_ident x
   | Estruct f_w_list ->
       print_record (print_couple print_qualname print_extvalue """ = """) ff f_w_list
   | Eiterator (it, f, param, pargs, args, reset) ->
@@ -185,7 +175,7 @@ and print_tag_w_list ff tag_w_list =
 and print_eq ff { eq_lhs = p; eq_rhs = e } =
   if !Compiler_options.full_type_info
   then fprintf ff "@[<2>%a :: %a =@ %a@]"
-    print_pat p  print_ck e.e_ck  print_exp e
+    print_pat p  print_ck e.e_base_ck  print_exp e
   else fprintf ff "@[<2>%a =@ %a@]" print_pat p  print_exp e
 
 
@@ -212,8 +202,8 @@ let print_contract ff { c_local = l; c_eq = eqs;
   fprintf ff "@[<v2>contract@\n%a%a@ assume %a@ enforce %a@ with (%a)@]"
     print_local_vars l
     print_eqs eqs
-    print_exp e_a
-    print_exp e_g
+    print_extvalue e_a
+    print_extvalue e_g
     print_vd_tuple c
 
 

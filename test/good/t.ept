@@ -1,0 +1,16 @@
+node count() returns (o : int)
+let
+  o = 0 fby 1;
+tel
+
+node main() returns (c : int)
+let
+  automaton
+    state One
+      do c = count ()
+      until count() = 5 then Two
+    state Two
+      do c = count ()
+      until count() = 3 then One
+  end
+tel

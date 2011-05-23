@@ -46,16 +46,18 @@ and extvalue = {
   w_loc       : location }
 
 and extvalue_desc =
-  | Wconst of static_exp
+  | Wconst of static_exp (*no tuple*)
   | Wvar of var_ident
   | Wfield of extvalue * field_name
   | Wwhen of extvalue * constructor_name * var_ident (** extvalue when Constructor(ident) *)
 
 and exp = {
-  e_desc      : edesc;
-  mutable e_ck: ck;
-  e_ty        : ty;
-  e_loc       : location }
+  e_desc            : edesc;
+  e_level_ck        : ck; (*when no data dep, execute the exp on this clock (set by [switch] *)
+  mutable e_base_ck : ck;
+  mutable e_ct      : ct;
+  e_ty              : ty;
+  e_loc             : location }
 
 and edesc =
   | Eextvalue of extvalue
@@ -63,13 +65,14 @@ and edesc =
                        (** static_exp fby extvalue *)
   | Eapp of app * extvalue list * var_ident option
                        (** app ~args=(extvalue,extvalue...) reset ~r=ident *)
+  | Ewhen of exp * constructor_name * var_ident  (** e when C(c) *)
   | Emerge of var_ident * (constructor_name * extvalue) list
                        (** merge ident (Constructor -> extvalue)+ *)
   | Estruct of (field_name * extvalue) list
                        (** { field=extvalue; ... } *)
   | Eiterator of iterator_type * app * static_exp
                  * extvalue list * extvalue list * var_ident option
-                       (** map f <<n>> (extvalue, extvalue...) reset ident *)
+                       (** map f <<n>> <(extvalue)> (extvalue) reset ident *)
 
 and app = { a_op: op; a_params: static_exp list; a_async  : async_t option; a_unsafe: bool }
     (** Unsafe applications could have side effects
@@ -108,8 +111,8 @@ type var_dec = {
   v_loc : location }
 
 type contract = {
-  c_assume : exp;
-  c_enforce : exp;
+  c_assume : extvalue;
+  c_enforce : extvalue;
   c_controllables : var_dec list;
   c_local : var_dec list;
   c_eq : eq list }
@@ -120,8 +123,6 @@ type node_dec = {
   n_input  : var_dec list;
   n_output : var_dec list;
   n_contract : contract option;
-  (* GD: inglorious hack for controller call
-  mutable n_controller_call : var_ident list * var_ident list; *)
   n_local  : var_dec list;
   n_equs   : eq list;
   n_loc    : location;
@@ -151,12 +152,11 @@ let mk_extvalue ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
   { w_desc = desc; w_ty = ty;
     w_ck = clock; w_loc = loc }
 
-let mk_exp ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
-  { e_desc = desc; e_ty = ty;
-    e_ck = clock; e_loc = loc }
+let mk_exp level_ck ty ?(ck = Cbase) ?(ct = fresh_ct ty) ?(loc = no_location) desc =
+  { e_desc = desc; e_ty = ty; e_level_ck = level_ck; e_base_ck = ck; e_ct = ct; e_loc = loc }
 
-let mk_var_dec ?(loc = no_location) ?(clock = fresh_clock()) ident ty =
-  { v_ident = ident; v_type = ty; v_clock = clock; v_loc = loc }
+let mk_var_dec ?(loc = no_location) ident ty ck =
+  { v_ident = ident; v_type = ty; v_clock = ck; v_loc = loc }
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }

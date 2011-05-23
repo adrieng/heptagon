@@ -169,19 +169,19 @@ let fold_righti f l acc =
   aux 0 l acc
 
 exception Assert_false
-let internal_error passe code =
+let internal_error passe =
   Format.eprintf "@.---------\n
                   Internal compiler error\n
-                  Passe : %s, Code : %d\n
-                  ----------@." passe code;
+                  Passe : %s\n
+                  ----------@." passe;
   raise Assert_false
 
 exception Unsupported
-let unsupported passe code =
+let unsupported passe =
   Format.eprintf "@.---------\n
                   Unsupported feature, please report it\n
-                  Passe : %s, Code : %d\n
-                  ----------@." passe code;
+                  Passe : %s\n
+                  ----------@." passe;
   raise Unsupported
 
 (* Functions to decompose a list into a tuple *)

@@ -1,0 +1,13 @@
+node cross<<l:int>>(x:int) returns (y:int; c:bool)
+let
+  c = (0 fby y) = l;
+  y = merge c (true -> x) (false -> 0);
+tel
+
+node main(x:int) returns (z:int)
+var y,t : int; c : bool;
+let
+  y = 0 fby (y+1);
+  (t,c) = cross<<4>>(y);
+  z = merge c (true -> y + t) (false -> 0)
+tel

@@ -65,14 +65,14 @@ node i(x, y: int) returns (o: int)
 node j(x, y: int) returns (o: int)
   let
     automaton
-      state I 
+      state I
          var z: int;
          do o = 1; z = 2
          until (o = 2) then J
       state J
          do o = 2
          until (o = 1) then I
-    end     
+    end
   tel
 
 node (++)(up, down: int) returns (o: int)
@@ -83,13 +83,13 @@ node (++)(up, down: int) returns (o: int)
       state Init
          var k : int;
          do k = 0 -> pre k + 2;
-            cpt = 0 
-         until 
+            cpt = 0
+         until
            (up = 1) then Up
       state Up
          do cpt = last cpt + 1
          until (down = 1) then Down
-             | (down = 0) then Up 
+             | (down = 0) then Up
       state Down
          do cpt = (last cpt) + 1
          until (up = 1) then Up
@@ -98,7 +98,7 @@ node (++)(up, down: int) returns (o: int)
 
 node f(x: bool) returns (y: bool)
   var z: bool;
-  let 
+  let
     y = x or x & x;
     z = true -> if y then not (pre z) else pre z;
  tel
@@ -117,7 +117,7 @@ modes(v0) =
   end
 
 val gain : int >
-  modes last o : int when up: int -> int when down: int -> int 
+  modes last o : int when up: int -> int when down: int -> int
   end with { up # down }
 
 let node gain(v0)(up, down) returns (o)

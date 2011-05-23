@@ -1,0 +1,28 @@
+node count() returns (o : int)
+let
+  o = 0 fby (o + 1);
+tel
+
+node main(x : bool) returns (d : bool)
+var last c : bool = false;
+let
+  d = c;
+  automaton
+    state One
+      var last xone : bool = false;
+      do
+        automaton
+          state A
+            do c = xone & x;
+               xone = true;
+            until count() = 2 then B
+          state B
+            do
+            until count() = 3 then A
+        end
+      until count() = 5 then Two
+    state Two
+      do c = x;
+      until count() = 3 then One
+  end
+tel

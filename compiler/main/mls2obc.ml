@@ -11,12 +11,12 @@
 open Misc
 open Names
 open Idents
-open Clocks
 open Signature
 open Obc
 open Obc_utils
 open Obc_mapfold
 open Types
+open Clocks
 open Static
 open Initial
 
@@ -57,7 +57,7 @@ let rec pattern_of_idx_list p l =
   let rec aux p l = match p.pat_ty, l with
     | _, [] -> p
     | Tarray (ty',_), idx :: l -> aux (mk_pattern ty' (Larray (p, idx))) l
-    | _ -> internal_error "mls2obc" 1
+    | _ -> internal_error "mls2obc"
   in
   aux p l
 
@@ -68,7 +68,7 @@ let rec pattern_of_trunc_idx_list p l =
   let rec aux p l = match p.pat_ty, l with
     | _, [] -> p
     | Tarray (ty', se), idx :: l -> aux (mk_pattern ty' (Larray (p, mk_between idx se))) l
-    | _ -> internal_error "mls2obc" 1
+    | _ -> internal_error "mls2obc"
   in
   aux p l
 
@@ -78,7 +78,7 @@ let array_elt_of_exp idx e =
         mk_exp ty (Econst c)
     | _, Tarray (ty,_) ->
         mk_pattern_exp ty (Larray(pattern_of_exp e, idx))
-    | _ -> internal_error "mls2obc" 2
+    | _ -> internal_error "mls2obc"
 
 (** Creates the expression that checks that the indices
     in idx_list are in the bounds. If idx_list=[e1;..;ep]
@@ -98,7 +98,7 @@ let rec bound_check_expr idx_list bounds =
         let e = mk_comp idx n in
           mk_exp_bool (Eop (op_from_string "&",
                            [e; bound_check_expr idx_list bounds]))
-    | (_, _) -> internal_error "mls2obc" 3
+    | (_, _) -> internal_error "mls2obc"
 
 let mk_plus_one e = match e.e_desc with
   | Econst idx ->
@@ -144,7 +144,7 @@ let update_record dest src f v =
   in
   let fields = match dest.pat_ty with
     | Tid n -> Modules.find_struct n
-    | _ -> Misc.internal_error "mls2obc field of nonstruct" 1
+    | _ -> Misc.internal_error "mls2obc field of nonstruct"
   in
   List.map assgn_act fields
 
@@ -213,6 +213,9 @@ let rec translate map e =
         let e = translate_extvalue map (assert_1 e_list) in
         let idx_list = List.map (fun idx -> mk_exp tint (Econst idx)) idx in
           Epattern (pattern_of_idx_list (pattern_of_exp e) idx_list)
+    | Minils.Ewhen(e,_,_) ->
+        let e = translate map e in
+        e.e_desc
   (* Already treated cases when translating the [eq] *)
     | Minils.Eiterator _ | Minils.Emerge _ | Minils.Efby _
     | Minils.Eapp ({Minils.a_op=(Minils.Enode _|Minils.Efun _|Minils.Econcat
@@ -220,7 +223,7 @@ let rec translate map e =
                                 |Minils.Eselect_trunc|Minils.Eselect_slice
                                 |Minils.Earray_fill|Minils.Efield_update
                                 |Minils.Eifthenelse)}, _, _) ->
-        internal_error "mls2obc" 5
+        internal_error "mls2obc"
   in
     mk_exp e.Minils.e_ty desc
 
@@ -235,6 +238,7 @@ and translate_act map pat
     ({ Minils.e_desc = desc } as act) =
     match pat, desc with
    (* When Merge *)
+    | pat, Minils.Ewhen (e,_,_) -> translate_act map pat e
     | Minils.Evarpat x, Minils.Emerge (y, c_act_list) ->
         let x = var_from_name map x in
         let translate_c_extvalue (c, w) =
@@ -274,7 +278,7 @@ and translate_act map pat
         let x = var_from_name map x in
         let t = match x.pat_ty with
           | Tarray (t,_) -> t
-          | _ -> Misc.internal_error "mls2obc select slice type" 5
+          | _ -> Misc.internal_error "mls2obc select slice type"
         in
         let b =  mk_block [Aassgn (mk_pattern t (Larray (x, mk_evar_int cpt)), e) ] in
           [ Afor (cptd, mk_exp_const_int 0, mk_exp_static_int n, b) ]
@@ -287,7 +291,7 @@ and translate_act map pat
         let x = var_from_name map x in
         let t = match x.pat_ty with
           | Tarray (t,_) -> t
-          | _ -> Misc.internal_error "mls2obc select slice type" 5
+          | _ -> Misc.internal_error "mls2obc select slice type"
         in
         let idx = mk_exp_int (Eop (op_from_string "+",
                                   [mk_evar_int cpt; mk_exp_int (Econst idx1) ])) in
@@ -365,7 +369,7 @@ let empty_call_context = None
     [v] var decs *)
 let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
     (v, si, j, s) =
-  let { Minils.e_desc = desc; Minils.e_ck = ck; Minils.e_loc = loc } = e in
+  let { Minils.e_desc = desc; Minils.e_base_ck = ck; Minils.e_loc = loc } = e in
   match (pat, desc) with
     | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
         let x = var_from_name map n in
@@ -496,7 +500,7 @@ and translate_iterator map call_context it name_list
     | Tarray (t,_) -> t
     | _ ->
         Format.eprintf "%a" Global_printer.print_type ty;
-        internal_error "mls2obc" 6
+        internal_error "mls2obc"
   in
   let array_of_output name_list ty_list =
     List.map2 (fun l ty -> mk_pattern ty (Larray (l, mk_evar_int x))) name_list ty_list

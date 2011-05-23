@@ -49,7 +49,7 @@ node hh(x,z,m:int) returns (o:int)
     automaton
       state S1
         var r:int;
-        do 
+        do
          k = m + 2;
          r = k + 3;
          w = 1 + 2;
@@ -59,7 +59,7 @@ node hh(x,z,m:int) returns (o:int)
       state S2
         do
          k = 2;
-        until (1 = 0) then S2 
+        until (1 = 0) then S2
     end;(*
     present
       | (x = 0) do o = pre o + 2

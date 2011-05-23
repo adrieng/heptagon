@@ -55,7 +55,10 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "enforce", ENFORCE;
  "with", WITH;
  "when", WHEN;
+ "whenot", WHENOT;
  "merge", MERGE;
+ "on", ON;
+ "onot", ONOT;
  "map", MAP;
  "mapi", MAPI;
  "fold", FOLD;
@@ -123,13 +126,14 @@ rule token = parse
   | [' ' '\t'] +    { token lexbuf }
   | "."             {DOT}
   | "("             {LPAREN}
-  | "(<"            {LPAREN_LESS}
+  | "<("            {LESS_LPAREN}
   | ")"             {RPAREN}
-  | ">)"            {GREATER_RPAREN}
+  | ")>"            {RPAREN_GREATER}
   | "*"             { STAR }
   | "{"             {LBRACE}
   | "}"             {RBRACE}
   | ":"             {COLON}
+  | "::"            {COLONCOLON}
   | ";"             {SEMICOL}
   | "="             {EQUAL}
   | "=="            {EQUALEQUAL}

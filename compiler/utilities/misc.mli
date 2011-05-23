@@ -98,7 +98,7 @@ val (|>) : 'a -> ('a -> 'b) -> 'b
 val file_extension : string -> string
 
 (** Internal error : Is used when an assertion wrong *)
-val internal_error : string -> int -> 'a
+val internal_error : string -> 'a
 
 (** Unsupported : Is used when something should work but is not currently supported *)
-val unsupported : string -> int -> 'a
+val unsupported : string -> 'a

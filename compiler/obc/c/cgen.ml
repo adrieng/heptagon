@@ -242,6 +242,7 @@ let rec cexpr_of_static_exp se =
     | Sint i -> Cconst (Ccint i)
     | Sfloat f -> Cconst (Ccfloat f)
     | Sbool b -> Cconst (Ctag (if b then "true" else "false"))
+    | Sstring s -> Cconst (Cstrlit s)
     | Sfield _ -> assert false
     | Sconstructor c -> Cconst (Ctag (cname_of_qn c))
     | Sarray sl -> Carraylit (List.map cexpr_of_static_exp sl)
@@ -761,14 +762,15 @@ let cfile_list_of_oprog_ty_decls name oprog =
   let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
   let filename_types = name ^ "_types" in
   let types_h = (filename_types ^ ".h",
-                 Cheader (["stdbool"; "assert"], List.concat cty_decls)) in
+                 Cheader (["stdbool"; "assert"; "pervasives"],
+                          List.concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
   filename_types, [types_h; types_c]
 
 let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
-  let dependencies = List.map modul_to_string dependencies in
+  let dependencies = List.map (fun m -> String.uncapitalize (modul_to_string m)) dependencies in
 
   let classes = program_classes prog in
   let (decls, defs) =

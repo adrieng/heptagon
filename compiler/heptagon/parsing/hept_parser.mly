@@ -9,7 +9,7 @@ open Hept_parsetree
 
 %}
 
-%token DOT LPAREN LPAREN_LESS RPAREN GREATER_RPAREN LBRACE RBRACE COLON SEMICOL
+%token DOT LPAREN LESS_LPAREN RPAREN RPAREN_GREATER LBRACE RBRACE COLON COLONCOLON SEMICOL
 %token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
@@ -39,7 +39,7 @@ open Hept_parsetree
 %token ASSUME
 %token ENFORCE
 %token WITH
-%token WHEN MERGE
+%token WHEN WHENOT MERGE ON ONOT
 %token POWER
 %token LBRACKET LBRACKETGREATER
 %token RBRACKET LESSRBRACKET
@@ -66,7 +66,7 @@ open Hept_parsetree
 %left AMPERSAND
 %left INFIX0 EQUAL LESS_GREATER ASYNC BANG
 %right INFIX1
-%right WHEN
+%right WHEN WHENOT
 %left INFIX2 SUBTRACTIVE
 %left STAR INFIX3
 %left INFIX4
@@ -193,8 +193,8 @@ nonmt_params:
 ;
 
 param:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
+  | idl=ident_list COLON ty=ty_ident ck=ck_annot
+      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
 ;
 
 out_params:
@@ -248,12 +248,12 @@ loc_params:
 
 
 var_last:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
-  | LAST IDENT COLON ty_ident EQUAL exp
-      { [ mk_var_dec $2 $4 (Last(Some($6))) (Loc($startpos,$endpos)) ] }
-  | LAST IDENT COLON ty_ident
-      { [ mk_var_dec $2 $4 (Last(None)) (Loc($startpos,$endpos)) ] }
+  | idl=ident_list COLON ty=ty_ident ck=ck_annot
+      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
+  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot EQUAL e=exp
+      { [ mk_var_dec id ty ck (Last(Some(e))) (Loc($startpos,$endpos)) ] }
+  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot
+      { [ mk_var_dec id ty ck (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
 ident_list:
@@ -271,6 +271,30 @@ ty_ident:
   | ASYNC t=ty_ident
       { Tasync ((), t) }
 ;
+
+ct_annot:
+  | /*empty */        { None }
+  | COLONCOLON ck=ck
+  | ON ck=on_ck       { Some(Ck ck) }
+
+
+ck_annot:
+  | /*empty */        { None }
+  | COLONCOLON ck=ck
+  | ON ck=on_ck       { Some ck }
+
+ck:
+  | DOT                  { Cbase }
+  | ck=on_ck             { ck }
+
+
+on_ck:
+  | x=IDENT                                                { Con(Cbase,Q Initial.ptrue,x) }
+  | c=constructor_or_bool LPAREN x=IDENT RPAREN            { Con(Cbase,c,x) }
+  | b=ck ON x=IDENT                                        { Con(b,Q Initial.ptrue,x) }
+  | b=ck ONOT x=IDENT                                      { Con(b,Q Initial.pfalse,x) }
+  | b=ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN    { Con(b,c,x) }
+
 
 equs:
   | /* empty */                      { [] }
@@ -424,7 +448,7 @@ merge_handler:
   | LPAREN c=constructor_or_bool ARROW e=exp RPAREN { (c,e) }
 
 exp:
-  | e=simple_exp { e }
+  | e=simple_exp ct=ct_annot { { e with e_ct_annot = ct } }
   | e=_exp { mk_exp e (Loc($startpos,$endpos)) }
 _exp:
   | simple_exp FBY exp
@@ -446,6 +470,10 @@ _exp:
       { mk_op_call $2 [$1; $3] }
   | e=exp WHEN c=constructor_or_bool LPAREN ce=IDENT RPAREN
       { Ewhen (e, c, ce) }
+  | e=exp WHEN ce=IDENT
+      { Ewhen (e, Q Initial.ptrue, ce) }
+  | e=exp WHENOT ce=IDENT
+      { Ewhen (e, Q Initial.pfalse, ce) }
   | MERGE n=IDENT hs=merge_handlers
       { Emerge (n, hs) }
   | exp INFIX1 exp
@@ -492,12 +520,12 @@ _exp:
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
 /*  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER a=async q=qualname
-      pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
+      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it q ~async:a [] n pargs args }
 */  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
       app=app
-      pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
+      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it app n pargs args }
 /*Records operators */
@@ -645,8 +673,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident { mk_arg (Some $1) $3 }
-  | ty_ident { mk_arg None $1 }
+  | IDENT COLON ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
+  | ty_ident ck=ck_annot { mk_arg None $1 ck }
 ;
 
 %%

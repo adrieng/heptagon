@@ -1,0 +1,11 @@
+(* pour debugger ../../compiler/hec.byte -i -v -I ../../lib t1.ept *)
+(* pour debugger
+   directory parsing global analysis dataflow sequential sigali simulation translation main
+   set arguments -v ../test/good/t1.ept *)
+
+type t = A | B
+
+node fusion(x1:int on B(c); x2:int; c:t) returns (y :int)
+  let
+    y = merge c (A -> x1) (B -> x2)
+  tel

@@ -19,8 +19,6 @@ let compile_program p =
   let p = silent_pass "Statefulness check" true Stateful.program p in
   let p = pass "Typing" true Typing.program p pp in
 
-  if !print_types then print_interface Format.std_formatter;
-
   (* Causality check *)
   let p = silent_pass "Causality check" !causality Causality.program p in
 
@@ -30,10 +28,10 @@ let compile_program p =
   (* Completion of partial definitions *)
   let p = pass "Completion" true Completion.program p pp in
 
-  (* Inlining *)(*
+  (* Inlining *)
   let p =
-    let call_inline_pass = (List.length !inline > 0) || !Misc.flatten in
-    pass "Inlining" call_inline_pass Inline.program p pp in *)
+    let call_inline_pass = (List.length !inline > 0) || !flatten in
+    pass "Inlining" call_inline_pass Inline.program p pp in
 
   (* Automata *)
   let p = pass "Automata" true Automata.program p pp in
@@ -44,11 +42,11 @@ let compile_program p =
   (* Shared variables (last) *)
   let p = pass "Last" true Last.program p pp in
 
-  (* Remove switch statements *)
-  let p = pass "switch" true Switch.program p pp in
-
   (* Reset *)
   let p = pass "Reset" true Reset.program p pp in
+
+  (* Remove switch statements *)
+  let p = pass "switch" true Switch.program p pp in
 
   (* Every *)
   let p = pass "Every" true Every.program p pp in

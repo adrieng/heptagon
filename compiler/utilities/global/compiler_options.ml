@@ -34,11 +34,8 @@ and add_include d =
 
 (* where is the standard library *)
 let locate_stdlib () =
-  let stdlib = try
-    Sys.getenv "HEPTLIB"
-  with
-      Not_found -> standard_lib in
-  Format.printf "Standard library in %s@." stdlib
+  print_string (try Sys.getenv "HEPTLIB" with Not_found -> standard_lib);
+  print_newline ()
 
 let show_version () =
   Format.printf "The Heptagon compiler, version %s (%s)@."
@@ -58,6 +55,8 @@ let simulation_node : name ref = ref ""
 let set_simulation_node s =
   simulation := true;
   simulation_node := s
+
+let hepts_simulation = ref false
 
 let create_object_file = ref false
 
@@ -108,6 +107,7 @@ and doc_include = "<dir>\t\tAdd <dir> to the list of include directories"
 and doc_stdlib = "<dir>\t\tDirectory for the standard library"
 and doc_object_file = "\t\tOnly generate a .epo object file"
 and doc_sim = "<node>\t\tCreate simulation for node <node>"
+and doc_hepts = "\t\tSimulation for hepts (graphical simulator)"
 and doc_locate_stdlib = "\t\tLocate standard libray"
 and doc_no_pervasives = "\tDo not load the pervasives module"
 and doc_flatten = "\t\tInline everything."

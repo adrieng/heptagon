@@ -98,6 +98,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sint i -> Sint i
   | Types.Sfloat f -> Sfloat f
   | Types.Sbool b -> Sbool b
+  | Types.Sstring s -> Sstring s
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield f -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
@@ -130,7 +131,7 @@ and boxed_ty param_env t = match t with
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
   | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
 
 and tuple_ty param_env ty_l =
@@ -145,7 +146,7 @@ and ty param_env t :Java.ty = match t with
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
   | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }

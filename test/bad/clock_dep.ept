@@ -1,0 +1,5 @@
+node cross<<l:int>>(x:int; x2:int;  c:bool) returns (y:int; c2:bool)
+let
+  c2 = c;
+  y = x + (x2 when c2) ;
+tel

@@ -8,12 +8,12 @@ tel
 
 node sumdup (a, acc_in:int) returns (o:int; acc_out:int)
 let
-  acc_out = acc_in + a; 
-  o = acc_out;	
+  acc_out = acc_in + a;
+  o = acc_out;
 tel
 
 node p(a:int^n) returns (o:int^n)
 var acc:int;
 let
-  (o, acc) = mapfold<<n>> sumdup (a, 0); 
+  (o, acc) = mapfold<<n>> sumdup (a, 0);
 tel

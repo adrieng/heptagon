@@ -2,7 +2,7 @@
 
 node foo() returns (tmt1:int)
   var v_1:int; tmt2:int;
-  let 
+  let
      tmt1 = (1 + tmt2);
      tmt2 = 0 fby v_1;
      v_1 = tmt1;

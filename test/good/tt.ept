@@ -1,0 +1,28 @@
+node f(x:bool;c:bool) returns (o:bool)
+let
+  automaton
+  state A
+    var l:bool; do
+    l = x when c;
+    o = merge c (true -> l) (false -> false)
+  until true then B
+  state B
+    do o = false
+  end
+tel
+
+
+(*
+node clock_on<<pref, per : int>>(w1, w2 : bool) returns (o : bool)
+let
+  automaton
+  state FirstPeriod
+  var w2' : bool; do
+    w2' = w1 when w2;
+    o = false;
+    until true then Cruise
+  state Cruise do
+    o = true; 
+  end
+tel
+*)
