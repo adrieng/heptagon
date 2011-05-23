@@ -13,7 +13,7 @@ let
   cpt = size fby (if big_step then size else cpt - 1);
   y = merge big_step
         (true  -> 0 -> !(pre (async lent(size))))
-	(false -> 0 fby y when false(big_step));
+  (false -> 0 fby y when false(big_step));
   z = do_stuff(1) - y;
 tel
 

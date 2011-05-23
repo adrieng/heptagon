@@ -5,12 +5,12 @@ node f(x,z:int) returns (o1,o2:int)
     switch (x = z)
       | true do
           o1 = 0 -> pre o1 + 2;
-	  o2 = o4 + 1;
-	  o4 = 3
+    o2 = o4 + 1;
+    o4 = 3
       | false do
           o1 = 4;
-	  o2 = 5;
-	  o4 = 5
+    o2 = 5;
+    o4 = 5
     end;
   tel
 

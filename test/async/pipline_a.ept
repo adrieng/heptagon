@@ -27,4 +27,4 @@ let
   nf = normalized_movie<<100>>(f);
   r = mean<<100>>(nf)
 tel
-  
+

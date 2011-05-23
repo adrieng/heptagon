@@ -1,20 +1,20 @@
 node f(x:int) returns (y,z:int)
 let
   automaton
-    state A 
+    state A
       do y = x;
-	z = 4;
+  z = 4;
       until y = 2 then B
-    state B 
+    state B
       do y = x;
-	  automaton
-	    state C 
-	      do z = y 
-	      until z = 3 then D
-	    state D 
-	      do z = x 
-	      until z = 4 then A
-	  end
+    automaton
+      state C
+        do z = y
+        until z = 3 then D
+      state D
+        do z = x
+        until z = 4 then A
+    end
       until y = 2 then A
   end;
 tel

@@ -1,15 +1,28 @@
-
-
-node g() returns (o :int)
+node f(x:bool;c:bool) returns (o:bool)
 let
-  o = 0 fby 1
+  automaton
+  state A
+    var l:bool; do
+    l = x when c;
+    o = merge c (true -> l) (false -> false)
+  until true then B
+  state B
+    do o = false
+  end
 tel
 
-node f (i:int) returns (o1,o2,o3:int)
+
+(*
+node clock_on<<pref, per : int>>(w1, w2 : bool) returns (o : bool)
 let
-  reset 
-    o1 = o2 + g();
-  every true;
-  o2 = if true then g() else 0;
-  o3 = o2 + 4;
+  automaton
+  state FirstPeriod
+  var w2' : bool; do
+    w2' = w1 when w2;
+    o = false;
+    until true then Cruise
+  state Cruise do
+    o = true; 
+  end
 tel
+*)

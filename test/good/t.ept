@@ -7,7 +7,7 @@ node main() returns (c : int)
 let
   automaton
     state One
-      do c = count () 
+      do c = count ()
       until count() = 5 then Two
     state Two
       do c = count ()

@@ -18,7 +18,7 @@ node h(x,z,m:int) returns (o:int)
     automaton
       state S1
         var r:int;
-        do 
+        do
          k = m + 2;
          r = k + 3;
          w = 1 + 2;
