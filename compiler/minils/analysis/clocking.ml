@@ -93,7 +93,7 @@ let typing_app h base pat op w_list = match op with
         | a::a_l, v::v_l -> (match a.a_name with
           | None -> build_env a_l v_l env
           | Some n -> build_env a_l v_l ((n,v)::env))
-        | _ -> Misc.internal_error "Clocking, non matching signature" 2
+        | _ -> Misc.internal_error "Clocking, non matching signature"
       in
       let env_pat = build_env node.node_outputs pat_id_list [] in
       let env_args = build_env node.node_inputs w_list [] in
@@ -110,7 +110,7 @@ let typing_app h base pat op w_list = match op with
                            | Wvar id -> id
                            | _ -> error_message w.w_loc Edefclock)
                        with Not_found ->
-                         Misc.internal_error "Clocking, non matching signature" 3
+                         Misc.internal_error "Clocking, non matching signature"
             in
             Clocks.Con (sigck_to_ck sck, c, id)
       in
@@ -141,45 +141,48 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
           List.iter (fun (_, e) -> expect_extvalue h ck e) l;
           Ck ck, ck
       | Eapp({a_op = op}, args, r) ->
-          (* base clock of the node *)
-          let ck_r = match r with
+         (* (* base clock of the node have to be a sub-clock of the reset clock *)
+          let base_ck = match r with
             | None -> fresh_clock ()
-            | Some(reset) -> ck_of_name h reset in
-          let ct = typing_app h ck_r pat op args in
-          ct, ck_r
-      | Eiterator (it, {a_op = op}, _, pargs, args, r) ->
-          (* base clock of the node *)
-          let ck_r = match r with
-            | None -> fresh_clock()
             | Some(reset) -> ck_of_name h reset
-          in
+          in *)
+          let base_ck = fresh_clock () in
+          let ct = typing_app h base_ck pat op args in
+          ct, base_ck
+      | Eiterator (it, {a_op = op}, _, pargs, args, r) ->
+        (*  (* base clock of the node *)
+          let base_ck = match r with
+            | None -> fresh_clock ()
+            | Some(reset) -> ck_of_name h reset
+          in *)
+          let base_ck = fresh_clock() in
           let ct = match it with
             | Imap -> (* exactly as if clocking the node *)
-                typing_app h ck_r pat op args
+                typing_app h base_ck pat op args
             | Imapi -> (* clocking the node with the extra [i] input on [ck_r] *)
                 let i (* stubs [i] as 0 *) =
-                  mk_extvalue ~ty:Initial.tint ~clock:ck_r (Wconst (Initial.mk_static_int 0))
+                  mk_extvalue ~ty:Initial.tint ~clock:base_ck (Wconst (Initial.mk_static_int 0))
                 in
-                typing_app h ck_r pat op (args@[i])
+                typing_app h base_ck pat op (args@[i])
             | Ifold | Imapfold ->
                 (* clocking node with equality constaint on last input and last output *)
-                let ct = typing_app h ck_r pat op args in
+                let ct = typing_app h base_ck pat op args in
                 unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
                 ct
             | Ifoldi -> (* clocking the node with the extra [i] and last in/out constraints *)
                 let i (* stubs [i] as 0 *) =
-                  mk_extvalue ~ty:Initial.tint ~clock:ck_r (Wconst (Initial.mk_static_int 0))
+                  mk_extvalue ~ty:Initial.tint ~clock:base_ck (Wconst (Initial.mk_static_int 0))
                 in
                 let rec insert_i args = match args with
                   | [] -> [i]
                   | [l] -> i::[l]
                   | h::l -> h::(insert_i l)
                 in
-                let ct = typing_app h ck_r pat op (insert_i args) in
+                let ct = typing_app h base_ck pat op (insert_i args) in
                 unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
                 ct
           in
-          ct, ck_r
+          ct, base_ck
     in
     e.e_base_ck <- base;
     (try unify ct e.e_ct
@@ -230,7 +233,7 @@ let typing_node node =
   let h = append_env h node.n_local in
   typing_eqs h node.n_equs;
   (* synchronize input and output on base : find the free vars and set them to base *)
-  Env.iter (fun _ ck -> unify_ck (root_ck_of ck) Cbase) h0;
+  Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;
   (*update clock info in variables descriptions *)
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
   let node = { node with n_input = List.map set_clock node.n_input;

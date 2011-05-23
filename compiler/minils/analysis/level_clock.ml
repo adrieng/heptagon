@@ -12,7 +12,7 @@ open Minils
 
 (* Any clock variable left after clocking is free and should be set to level_ck.
    Since inputs and outputs are grounded to Cbase, this append when
-   no data dependance exists between an expression and the inputs/outputs.*)
+   no data dependence exists between an expression and the inputs/outputs.*)
 
 (* We are confident that it is sufficient to unify level_ck with base_ck
    for expressions having a base_ck == Cvar.
@@ -21,7 +21,7 @@ open Minils
 
 let exp _ acc e =
   let _ = match ck_repr e.e_base_ck with
-    | Cvar ({contents = Cindex _}) -> unify_ck e.e_base_ck e.e_level_ck
+    | Cvar {contents = Cindex _} -> unify_ck e.e_base_ck e.e_level_ck
     | _ -> ()
   in
   e,acc (* no recursion since in minils exps are not recursive *)

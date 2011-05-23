@@ -1,0 +1,15 @@
+node m(x:int) returns (y:int)
+let
+  y = 0 fby x
+tel
+
+
+node f(x,y:int;c1,c2:bool) returns (o1,o2:int)
+var r:bool;
+let
+  r = true;
+  reset
+    o1 = m(x when c1);
+    o2 = y
+  every (true when c2)
+tel

@@ -140,7 +140,7 @@ struct
             (match q.qual with
               | LocalModule -> (* This var is a static parameter, it has to be instanciated *)
                 (try QualEnv.find q m
-                 with Not_found -> Misc.internal_error "callgraph" 0)
+                 with Not_found -> Misc.internal_error "callgraph")
               | _ -> se)
         | _ -> se in
       se, m
@@ -222,8 +222,8 @@ let load_object_file modul =
   let modname = match modul with
       | Names.Pervasives -> "Pervasives"
       | Names.Module n -> n
-      | Names.LocalModule -> Misc.internal_error "modules" 0
-      | Names.QualModule _ -> Misc.unsupported "modules" 0
+      | Names.LocalModule -> Misc.internal_error "modules"
+      | Names.QualModule _ -> Misc.unsupported "modules"
   in
   let name = String.uncapitalize modname in
     try
@@ -318,7 +318,7 @@ let program p =
   (* Find the nodes without static parameters *)
   let main_nodes = List.filter (function Pnode n -> is_empty n.n_params | _ -> false) p.p_desc in
   let main_nodes = List.map (function Pnode n -> n.n_name, []
-                              | _ -> Misc.internal_error "callgraph" 0) main_nodes in
+                              | _ -> Misc.internal_error "callgraph") main_nodes in
   info.opened <- ModulEnv.add p.p_modname p ModulEnv.empty;
   (* Creates the list of instances starting from these nodes *)
   List.iter call_node main_nodes;

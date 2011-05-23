@@ -58,7 +58,7 @@ let message exn =
 
 
 (** When not [partial],
-      @raise Partial_evaluation when the application of the operator can't be evaluated (only Unknown_op).
+      @raise Partial_evaluation when the application of the operator can't be evaluated.
     Otherwise keep as it is unknown operators. *)
 let apply_op partial loc op se_list =
   match se_list with
@@ -87,7 +87,8 @@ let apply_op partial loc op se_list =
 
 
 (** When not [partial],
-      @raise Partial_evaluation when a static var cannot be evaluated, a local static parameter for example.
+      @raise Partial_evaluation when a static var cannot be evaluated,
+      a local static parameter for example.
     Otherwise evaluate in a best effort manner. *)
 let rec eval_core partial env se = match se.se_desc with
   | Sint _ | Sfloat _ | Sbool _ | Sstring _ | Sconstructor _ | Sfield _ -> se
@@ -143,7 +144,7 @@ let eval env se =
     @raise [Errors.Error] if it cannot be computed.*)
 let int_of_static_exp env se = match (eval env se).se_desc with
   | Sint i -> i
-  | _ -> Misc.internal_error "static int_of_static_exp" 1
+  | _ -> Misc.internal_error "static int_of_static_exp"
 
 (** [is_true env constr] returns whether the constraint is satisfied
     in the environment (or None if this can be decided)

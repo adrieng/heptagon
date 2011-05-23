@@ -72,7 +72,7 @@ struct
     | Con(_, _, n) -> add n acc
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
-
+    
   let rec vars_ct acc = function
     | Ck ck -> vars_ck acc ck
     | Cprod c_l -> List.fold_left vars_ct acc c_l
@@ -141,7 +141,8 @@ struct
   let head ck =
     let rec headrec ck l =
       match ck with
-        | Cbase | Cvar { contents = Cindex _ } -> l
+        | Cbase
+        | Cvar { contents = Cindex _ } -> l
         | Con(ck, _, n) -> headrec ck (n :: l)
         | Cvar { contents = Clink ck } -> headrec ck l
     in

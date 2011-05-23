@@ -128,7 +128,7 @@ and boxed_ty param_env t = match t with
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
 and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
@@ -142,7 +142,7 @@ and ty param_env t :Java.ty = match t with
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
 

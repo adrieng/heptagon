@@ -264,7 +264,7 @@ and translate_eq ((d_list, eq_list) as context) eq = match eq.eq_desc with
         mk_equation ~loc:eq.eq_loc (Eblock { b with b_local = v @ b.b_local; b_equs = eqs})
       in
       d_list, eq :: eq_list
-  | _ -> Misc.internal_error "normalize" 0
+  | _ -> Misc.internal_error "normalize"
 
 and translate_eq_list d_list eq_list =
   List.fold_left

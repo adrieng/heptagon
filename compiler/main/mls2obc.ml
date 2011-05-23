@@ -57,7 +57,7 @@ let rec pattern_of_idx_list p l =
   let rec aux p l = match p.pat_ty, l with
     | _, [] -> p
     | Tarray (ty',_), idx :: l -> aux (mk_pattern ty' (Larray (p, idx))) l
-    | _ -> internal_error "mls2obc" 1
+    | _ -> internal_error "mls2obc"
   in
   aux p l
 
@@ -68,7 +68,7 @@ let rec pattern_of_trunc_idx_list p l =
   let rec aux p l = match p.pat_ty, l with
     | _, [] -> p
     | Tarray (ty', se), idx :: l -> aux (mk_pattern ty' (Larray (p, mk_between idx se))) l
-    | _ -> internal_error "mls2obc" 1
+    | _ -> internal_error "mls2obc"
   in
   aux p l
 
@@ -78,7 +78,7 @@ let array_elt_of_exp idx e =
         mk_exp ty (Econst c)
     | _, Tarray (ty,_) ->
         mk_pattern_exp ty (Larray(pattern_of_exp e, idx))
-    | _ -> internal_error "mls2obc" 2
+    | _ -> internal_error "mls2obc"
 
 (** Creates the expression that checks that the indices
     in idx_list are in the bounds. If idx_list=[e1;..;ep]
@@ -98,7 +98,7 @@ let rec bound_check_expr idx_list bounds =
         let e = mk_comp idx n in
           mk_exp_bool (Eop (op_from_string "&",
                            [e; bound_check_expr idx_list bounds]))
-    | (_, _) -> internal_error "mls2obc" 3
+    | (_, _) -> internal_error "mls2obc"
 
 let mk_plus_one e = match e.e_desc with
   | Econst idx ->
@@ -144,7 +144,7 @@ let update_record dest src f v =
   in
   let fields = match dest.pat_ty with
     | Tid n -> Modules.find_struct n
-    | _ -> Misc.internal_error "mls2obc field of nonstruct" 1
+    | _ -> Misc.internal_error "mls2obc field of nonstruct"
   in
   List.map assgn_act fields
 
@@ -219,7 +219,7 @@ let rec translate map e =
                                 |Minils.Eselect_trunc|Minils.Eselect_slice
                                 |Minils.Earray_fill|Minils.Efield_update
                                 |Minils.Eifthenelse)}, _, _) ->
-        internal_error "mls2obc" 5
+        internal_error "mls2obc"
   in
     mk_exp e.Minils.e_ty desc
 
@@ -274,7 +274,7 @@ and translate_act map pat
         let x = var_from_name map x in
         let t = match x.pat_ty with
           | Tarray (t,_) -> t
-          | _ -> Misc.internal_error "mls2obc select slice type" 5
+          | _ -> Misc.internal_error "mls2obc select slice type"
         in
         let b =  mk_block [Aassgn (mk_pattern t (Larray (x, mk_evar_int cpt)), e) ] in
           [ Afor (cptd, mk_exp_const_int 0, mk_exp_static_int n, b) ]
@@ -287,7 +287,7 @@ and translate_act map pat
         let x = var_from_name map x in
         let t = match x.pat_ty with
           | Tarray (t,_) -> t
-          | _ -> Misc.internal_error "mls2obc select slice type" 5
+          | _ -> Misc.internal_error "mls2obc select slice type"
         in
         let idx = mk_exp_int (Eop (op_from_string "+",
                                   [mk_evar_int cpt; mk_exp_int (Econst idx1) ])) in
@@ -490,7 +490,7 @@ and translate_iterator map call_context it name_list
     | Tarray (t,_) -> t
     | _ ->
         Format.eprintf "%a" Global_printer.print_type ty;
-        internal_error "mls2obc" 6
+        internal_error "mls2obc"
   in
   let array_of_output name_list ty_list =
     List.map2 (fun l ty -> mk_pattern ty (Larray (l, mk_evar_int x))) name_list ty_list

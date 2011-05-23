@@ -1,0 +1,15 @@
+
+
+node g() returns (o :int)
+let
+  o = 0 fby 1
+tel
+
+node f (i:int) returns (o1,o2,o3:int)
+let
+  reset 
+    o1 = o2 + g();
+  every true;
+  o2 = if true then g() else 0;
+  o3 = o2 + 4;
+tel

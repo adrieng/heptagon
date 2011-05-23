@@ -17,7 +17,7 @@ coption=
 CAMLC=ocamlc
 JAVAC=javac
 LUSTREC=lustre
-CC="gcc -std=c99"
+CC="gcc -std=c99 -I../../../lib/c"
 
 # par defaut : pas de test de generation de code
 

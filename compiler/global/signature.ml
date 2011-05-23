@@ -116,7 +116,7 @@ let rec ck_to_sck ck =
   match ck with
     | Clocks.Cbase -> Cbase
     | Clocks.Con (ck,c,x) -> Con(ck_to_sck ck, c, Idents.source_name x)
-    | _ -> Misc.internal_error "Signature couldn't translate ck" 1
+    | _ -> Misc.internal_error "Signature couldn't translate ck"
 
 
 let names_of_arg_list l = List.map (fun ad -> ad.a_name) l
