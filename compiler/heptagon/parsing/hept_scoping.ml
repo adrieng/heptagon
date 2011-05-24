@@ -45,6 +45,7 @@ struct
     | Evariable_already_defined of name
     | Econst_variable_already_defined of name
     | Estatic_exp_expected
+    | Elinear_type_no_memalloc
 
   let message loc kind =
     begin match kind with
@@ -74,6 +75,9 @@ struct
             name
       | Estatic_exp_expected ->
           eprintf "%aA static expression was expected.@."
+            print_location loc
+      | Elinear_type_no_memalloc ->
+          eprintf "%aLinearity annotations cannot be used without memory allocation.@."
             print_location loc
     end;
     raise Errors.Error
@@ -404,9 +408,15 @@ let params_of_var_decs =
                         (translate_type vd.v_loc vd.v_type))
 
 let args_of_var_decs =
-  List.map (fun vd -> Signature.mk_arg ~linearity:vd.v_linearity
-                        (Some vd.v_name)
-                        (translate_type vd.v_loc vd.v_type))
+  let arg_of_vd vd =
+    if Linearity.is_linear vd.v_linearity && not !Compiler_options.do_mem_alloc then
+      message vd.v_loc Elinear_type_no_memalloc
+    else
+      Signature.mk_arg ~linearity:vd.v_linearity
+        (Some vd.v_name)
+        (translate_type vd.v_loc vd.v_type)
+  in
+    List.map arg_of_vd
 
 let translate_node node =
   let n = current_qual node.n_name in
