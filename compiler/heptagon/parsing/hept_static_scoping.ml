@@ -64,9 +64,9 @@ let node funs _ n =
 let const_dec funs local_const cd =
   let cd, _ = Hept_parsetree_mapfold.const_dec funs local_const cd in
   let c_name = current_qual cd.c_name in
-  let c_type = Hept_scoping.translate_type cd.c_loc cd.c_type in
-  let c_value = Hept_scoping.expect_static_exp cd.c_value in
-  add_const c_name (Signature.mk_const_def c_type c_value);
+  (* /!\ we need to add the consts to detect all the static_exps,*)
+  (* /!\ but we can't qualify their types, scoping will correct this *)
+  add_const c_name (Signature.mk_const_def Types.Tinvalid (Initial.mk_static_string "invalid"));
   cd, local_const
 
 let program p =

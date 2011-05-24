@@ -476,6 +476,7 @@ let translate_const_dec cd =
   let c_name = current_qual cd.c_name in
   let c_type = translate_type cd.c_loc cd.c_type in
   let c_value = expect_static_exp cd.c_value in
+  replace_const c_name (Signature.mk_const_def c_type c_value);
   { Heptagon.c_name = c_name;
     Heptagon.c_type = c_type;
     Heptagon.c_value = c_value;
