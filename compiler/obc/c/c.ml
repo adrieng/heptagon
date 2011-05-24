@@ -182,7 +182,7 @@ let rec pp_array_decl cty =
   match cty with
     | Cty_arr(n, cty') ->
         let ty, s = pp_array_decl cty' in
-        ty, sprintf "%s[%d]" s n
+        ty, sprintf "[%d]%s" n s
     | _ -> cty, ""
 
 let rec pp_param_cty fmt = function
