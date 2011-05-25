@@ -113,7 +113,7 @@ let typing_app h base pat op w_list = match op with
                            | Wvar id -> id
                            | _ -> error_message w.w_loc Edefclock)
                        with Not_found ->
-                         Misc.internal_error "Clocking, non matching signature"
+                         Misc.internal_error "Clocking, non matching signature 2"
             in
             Clocks.Con (sigck_to_ck sck, c, id)
       in
@@ -161,15 +161,15 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
           let base_ck = fresh_clock() in
           let ct = match it with
             | Imap -> (* exactly as if clocking the node *)
-                typing_app h base_ck pat op args
+                typing_app h base_ck pat op (pargs@args)
             | Imapi -> (* clocking the node with the extra [i] input on [ck_r] *)
                 let i (* stubs [i] as 0 *) =
                   mk_extvalue ~ty:Initial.tint ~clock:base_ck (Wconst (Initial.mk_static_int 0))
                 in
-                typing_app h base_ck pat op (args@[i])
+                typing_app h base_ck pat op (pargs@args@[i])
             | Ifold | Imapfold ->
                 (* clocking node with equality constaint on last input and last output *)
-                let ct = typing_app h base_ck pat op args in
+                let ct = typing_app h base_ck pat op (pargs@args) in
                 unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
                 ct
             | Ifoldi -> (* clocking the node with the extra [i] and last in/out constraints *)
@@ -181,7 +181,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
                   | [l] -> i::[l]
                   | h::l -> h::(insert_i l)
                 in
-                let ct = typing_app h base_ck pat op (insert_i args) in
+                let ct = typing_app h base_ck pat op (pargs@(insert_i args)) in
                 unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
                 ct
           in
