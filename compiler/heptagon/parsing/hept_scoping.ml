@@ -45,6 +45,7 @@ struct
     | Evariable_already_defined of name
     | Econst_variable_already_defined of name
     | Estatic_exp_expected
+    | Eredefinition of qualname
 
   let message loc kind =
     begin match kind with
@@ -75,6 +76,10 @@ struct
       | Estatic_exp_expected ->
           eprintf "%aA static expression was expected.@."
             print_location loc
+      | Eredefinition qualname ->
+          eprintf "%aName %a was already defined.@."
+            print_location loc
+            print_qualname qualname
     end;
     raise Errors.Error
 
@@ -85,6 +90,9 @@ end
 
 open Error
 
+let safe_add loc add n x =
+  try ((add n x) : unit)
+  with Modules.Already_defined -> message loc (Eredefinition n)
 
 (** {3 Qualify when ToQ and check when Q according to the global env } *)
 
@@ -417,7 +425,7 @@ let translate_node node =
   let i = args_of_var_decs node.n_input in
   let o = args_of_var_decs node.n_output in
   let p = params_of_var_decs node.n_params in
-  add_value n (Signature.mk_node i o node.n_stateful p);
+  safe_add node.n_loc add_value n (Signature.mk_node i o node.n_stateful p);
   { Heptagon.n_name = n;
     Heptagon.n_stateful = node.n_stateful;
     Heptagon.n_input = inputs;
@@ -432,16 +440,16 @@ let translate_typedec ty =
     let n = current_qual ty.t_name in
     let tydesc = match ty.t_desc with
       | Type_abs ->
-          add_type n Signature.Tabstract;
+          safe_add ty.t_loc add_type n Signature.Tabstract;
           Heptagon.Type_abs
       | Type_alias t ->
           let t = translate_type ty.t_loc t in
-          add_type n (Signature.Talias t);
+          safe_add ty.t_loc add_type n (Signature.Talias t);
           Heptagon.Type_alias t
       | Type_enum(tag_list) ->
           let tag_list = List.map current_qual tag_list in
           List.iter (fun tag -> add_constrs tag n) tag_list;
-          add_type n (Signature.Tenum tag_list);
+          safe_add ty.t_loc add_type n (Signature.Tenum tag_list);
           Heptagon.Type_enum tag_list
       | Type_struct(field_ty_list) ->
           let translate_field_type (f,t) =
@@ -450,7 +458,7 @@ let translate_typedec ty =
             add_field f n;
             Signature.mk_field f t in
           let field_list = List.map translate_field_type field_ty_list in
-          add_type n (Signature.Tstruct field_list);
+          safe_add ty.t_loc add_type n (Signature.Tstruct field_list);
           Heptagon.Type_struct field_list in
     { Heptagon.t_name = n;
       Heptagon.t_desc = tydesc;
@@ -487,7 +495,7 @@ let translate_signature s =
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
-  add_value n (Signature.mk_node i o s.sig_stateful p);
+  safe_add s.sig_loc add_value n (Signature.mk_node i o s.sig_stateful p);
   mk_signature n i o s.sig_stateful p s.sig_loc
 
 
