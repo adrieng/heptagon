@@ -1,0 +1,76 @@
+node int_buffer<<n : int>>(w : bool; i : int on w; r : bool)
+                  returns (o : int on r)
+var buff, next_buff : int^n; i_w, i_r : int;
+let
+  buff = (42^n) fby next_buff;
+
+  next_buff = merge w ( true -> [(buff when true(w)) with [ i_w ] = i])
+                      (false -> (buff when false(w)));
+
+  i_r = 0 fby (i_r + 1) % (n when true(r));
+  i_w = 0 fby (i_w + 1) % (n when true(w));
+
+  o = (next_buff when true(r))[> i_r <];
+tel
+
+node bool_buffer<<n : int>>(w : bool; i : bool on w; r : bool)
+                   returns (o : bool on r)
+var buff, next_buff : bool^n; i_w, i_r : int;
+let
+  buff = (false^n) fby next_buff;
+
+  next_buff = merge w ( true -> [(buff when true(w)) with [ i_w ] = i])
+                      (false -> (buff when false(w)));
+
+  i_r = 0 fby (i_r + 1) % (n when true(r));
+  i_w = 0 fby (i_w + 1) % (n when true(w));
+
+  o = (next_buff when true(r))[> i_r <];
+tel
+
+
+
+
+
+(********************************************************************)
+
+
+
+
+
+
+
+node clock_on<<pref, per : int>>(w1, w2 : bool) returns (o : bool)
+var last onw : bool^per = false^per; cpt : int; nw1 :bool;
+let
+  nw1 = not w1;
+  automaton
+    state FirstPeriod
+      var w2' : bool;
+      do
+         w2' = bool_buffer<<per>>(nw1, w2 when nw1, w1);
+         onw = [ (last onw)
+                 with [ cpt ] = merge w1 (true -> w2') (false -> false) ];
+         cpt = 0 fby (cpt + 1);
+         o = onw[> cpt <];
+      until cpt = per - 1 then Cruise
+
+    state Cruise
+      do reset cpt = pref fby (cpt + 1) every (true fby (cpt = per));
+         o = onw[> cpt <];
+  end
+tel
+
+(* node main() returns (r : bool; o : int on r) *)
+(* var w : bool; i : int; *)
+(* let *)
+(*   r = true fby false fby true fby false fby true fby true fby false; *)
+(*   w = true fby  true fby true fby  true fby false; *)
+(*   i = 42 fby 27 fby 110 fby 666; *)
+(*   o = int_buffer<<0, 4>>(w, i when w, r); *)
+(* tel *)
+
+node p() returns (o : int)
+let
+  o = (0 fby o) + 1;
+tel
