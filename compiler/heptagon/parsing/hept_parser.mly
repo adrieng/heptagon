@@ -428,7 +428,7 @@ exps:
 
 simple_exp:
   | e=_simple_exp { mk_exp e (Loc($startpos,$endpos)) }
-  | LPAREN exp RPAREN { $2 }
+  | LPAREN e=exp ct=ct_annot RPAREN { { e with e_ct_annot = ct} }
 _simple_exp:
   | IDENT                            { Evar $1 }
   | const                            { Econst $1 }

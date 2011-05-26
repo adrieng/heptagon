@@ -73,6 +73,14 @@ and ct =
   | Ck of ck
   | Cprod of ct list
 
+and ck =
+  | Cbase
+  | Con of ck * constructor_name * var_name
+
+and ct =
+  | Ck of ck
+  | Cprod of ct list
+
 and exp =
   { e_desc     : edesc;
     e_ct_annot : ct option ;

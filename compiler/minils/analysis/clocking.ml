@@ -100,7 +100,7 @@ let typing_app h base pat op w_list = match op with
       in
       let env_pat = build_env node.node_outputs pat_id_list [] in
       let env_args = build_env node.node_inputs w_list [] in
-(* implement with Cbase as base, replace name dep by ident dep *)
+      (* implement with Cbase as base, replace name dep by ident dep *)
       let rec sigck_to_ck sck = match sck with
         | Signature.Cbase -> base
         | Signature.Con (sck,c,x) ->
@@ -113,7 +113,7 @@ let typing_app h base pat op w_list = match op with
                            | Wvar id -> id
                            | _ -> error_message w.w_loc Edefclock)
                        with Not_found ->
-                         Misc.internal_error "Clocking, non matching signature"
+                         Misc.internal_error "Clocking, non matching signature 2"
             in
             Clocks.Con (sigck_to_ck sck, c, id)
       in
@@ -127,7 +127,7 @@ let typing_app h base pat op w_list = match op with
 
 
 
-let typing_eq h { eq_lhs = pat; eq_rhs = e } =
+let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
   (* typing the expression, returns ct, ck_base *)
   let rec typing e =
     let ct,base = match e.e_desc with
@@ -165,15 +165,15 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
           let base_ck = fresh_clock() in
           let ct = match it with
             | Imap -> (* exactly as if clocking the node *)
-                typing_app h base_ck pat op args
+                typing_app h base_ck pat op (pargs@args)
             | Imapi -> (* clocking the node with the extra [i] input on [ck_r] *)
                 let i (* stubs [i] as 0 *) =
                   mk_extvalue ~ty:Initial.tint ~clock:base_ck (Wconst (Initial.mk_static_int 0))
                 in
-                typing_app h base_ck pat op (args@[i])
+                typing_app h base_ck pat op (pargs@args@[i])
             | Ifold | Imapfold ->
                 (* clocking node with equality constaint on last input and last output *)
-                let ct = typing_app h base_ck pat op args in
+                let ct = typing_app h base_ck pat op (pargs@args) in
                 unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
                 ct
             | Ifoldi -> (* clocking the node with the extra [i] and last in/out constraints *)
@@ -185,7 +185,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
                   | [l] -> i::[l]
                   | h::l -> h::(insert_i l)
                 in
-                let ct = typing_app h base_ck pat op (insert_i args) in
+                let ct = typing_app h base_ck pat op (pargs@(insert_i args)) in
                 unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
                 ct
           in
@@ -204,12 +204,12 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e } =
      with Unify -> error_message e.e_loc (Etypeclash (actual_ct, expected_ct)));
     base
   in
-  let ct,base = typing e in
+  let ct,_ = typing e in
   let pat_ct = typing_pat h pat in
   (try unify ct pat_ct
     with Unify ->
       eprintf "Incoherent clock between right and left side of the equation.@\n";
-      error_message e.e_loc (Etypeclash (ct, pat_ct)))
+      error_message loc (Etypeclash (ct, pat_ct)))
 
 let typing_eqs h eq_list = List.iter (typing_eq h) eq_list
 
