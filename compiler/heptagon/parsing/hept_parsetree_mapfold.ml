@@ -64,10 +64,10 @@ and static_exp_desc funs acc sd = match sd with
   | Sop (n, se_l) ->
       let se_l, acc = mapfold (static_exp_it funs) acc se_l in
       Sop (n, se_l), acc
-  | Sarray_power (se1, se2) ->
+  | Sarray_power (se1, se_l) ->
       let se1, acc = static_exp_it funs acc se1 in
-      let se2, acc = static_exp_it funs acc se2 in
-      Sarray_power(se1, se2), acc
+      let se_l, acc = mapfold (static_exp_it funs) acc se_l in
+      Sarray_power(se1, se_l), acc
   | Srecord f_se_l ->
       let aux acc (f,se) = let se,acc = static_exp_it funs acc se in
         (f, se), acc in

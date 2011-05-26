@@ -469,8 +469,8 @@ _exp:
   | LAST IDENT
       { Elast $2 }
 /*Array operations*/
-  | exp POWER simple_exp
-      { mk_call ~params:[$3] Earray_fill [$1] }
+  | exp POWER separated_nonempty_list(POWER, simple_exp)
+      { mk_call ~params:$3 Earray_fill [$1] }
   | simple_exp indexes
       { mk_call ~params:$2 Eselect [$1] }
   | simple_exp DOT indexes DEFAULT exp

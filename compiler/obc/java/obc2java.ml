@@ -104,17 +104,45 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield f -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
-  | Types.Sarray_power (see,pow) ->
-      let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
-                 with Errors.Error ->
-                   eprintf "%aStatic power of array should have integer power. \
-                            Please use callgraph or non-static exp in %a.@."
-                           Location.print_location se.Types.se_loc
-                           Global_printer.print_static_exp se;
-                   raise Errors.Error)
+  | Types.Sarray_power (see,pow_list) ->
+      let pow_list = List.rev pow_list in
+      let rec make_array tyl pow_list = match tyl, pow_list with
+        | Tarray(t, _), pow::pow_list -> 
+            let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+                       with  Errors.Error ->
+               										eprintf "%aStatic power of array should have integer power. \
+                        									 Please use callgraph or non-static exp in %a.@."
+                         		 Location.print_location se.Types.se_loc
+                         		 Global_printer.print_static_exp se;
+               						   raise Errors.Error)
+            in
+            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow) 
+        | _ -> static_exp param_env see
       in
-      let se_l = Misc.repeat_list (static_exp param_env see) pow in
-      Enew_array (ty param_env se.Types.se_ty, se_l)
+      make_array (ty param_env se.Types.se_ty) pow_list
+        (*let t = match x.pat_ty with
+          | Tarray (t,_) -> t
+          | _ -> Misc.internal_error "mls2obc select slice type" 5
+        in
+      let eval_int pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+                 				 with  Errors.Error ->
+                   										eprintf "%aStatic power of array should have integer power. \
+                            									 Please use callgraph or non-static exp in %a.@."
+                           		 Location.print_location se.Types.se_loc
+                           		 Global_printer.print_static_exp se;
+                   						 raise Errors.Error)
+      in
+      let rec make_matrix acc = match pow_list with
+        | [] -> acc
+        | pow :: pow_list -> 
+							let pow = eval_int pow in
+              make_matrix (Misc.repeat_list acc pow) pow_list
+      in
+      let se_l = match pow_list with 
+        | [] -> Misc.internal_error "Empty power list" 0
+        | pow :: pow_list -> make_matrix (Misc.repeat_list (static_exp param_env see)) pow_list
+      in
+      Enew_array (ty param_env se.Types.se_ty, se_l)*)
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)

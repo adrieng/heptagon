@@ -264,16 +264,27 @@ and translate_act map pat
            | _ -> assert false)
 
     | Minils.Evarpat x,
-          Minils.Eapp ({ Minils.a_op = Minils.Earray_fill; Minils.a_params = [n] }, [e], _) ->
-        let cpt, cptd = fresh_it () in
+          Minils.Eapp ({ Minils.a_op = Minils.Earray_fill; Minils.a_params = n_list }, [e], _) ->
         let e = translate_extvalue map e in
         let x = var_from_name map x in
         let t = match x.pat_ty with
           | Tarray (t,_) -> t
           | _ -> Misc.internal_error "mls2obc select slice type" 5
         in
-        let b =  mk_block [Aassgn (mk_pattern t (Larray (x, mk_evar_int cpt)), e) ] in
-          [ Afor (cptd, mk_exp_const_int 0, mk_exp_static_int n, b) ]
+        
+        let rec make_loop power_list replace = match power_list with
+          | [] -> x, replace
+          | p :: power_list ->
+            let cpt, cptd = fresh_it () in
+            let e, replace = 
+              make_loop power_list 
+                        (fun y -> [Afor (cptd, mk_exp_const_int 0, 
+                                         mk_exp_static_int p, mk_block (replace y))]) in
+            let e = Larray (e, mk_evar_int cpt) in
+            (mk_pattern t e, replace)
+        in
+        let e, b = make_loop n_list (fun y -> [Aassgn (y, e)]) in
+        b e
 
     | Minils.Evarpat x,
             Minils.Eapp ({ Minils.a_op = Minils.Eselect_slice;

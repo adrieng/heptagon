@@ -40,8 +40,8 @@ let exp funs local_const e =
                  Svar (Q (qualify_const local_const (ToQ n)))
             with
               | Error.ScopingError _ -> raise Not_static)
-          | Eapp({ a_op = Earray_fill; a_params = [n] }, [e]) ->
-            Sarray_power (assert_se e, assert_se n)
+          | Eapp({ a_op = Earray_fill; a_params = n_list }, [e]) ->
+            Sarray_power (assert_se e, List.map assert_se n_list)
           | Eapp({ a_op = Earray }, e_list) ->
             Sarray (List.map assert_se e_list)
           | Eapp({ a_op = Etuple }, e_list) ->

@@ -217,7 +217,7 @@ and translate_static_exp_desc loc ed =
     | Sconstructor c -> Types.Sconstructor (qualify_constrs c)
     | Sfield c -> Types.Sfield (qualify_field c)
     | Stuple se_list -> Types.Stuple (List.map t se_list)
-    | Sarray_power (se,sn) -> Types.Sarray_power (t se, t sn)
+    | Sarray_power (se,sn) -> Types.Sarray_power (t se, List.map t sn)
     | Sarray se_list -> Types.Sarray (List.map t se_list)
     | Srecord se_f_list ->
         let qualf (f, se) = (qualify_field f, t se) in

@@ -414,10 +414,11 @@ and typing_static_exp const_env se =
           (types_of_arg_list ty_desc.node_inputs) se_list in
           Sop (op, typed_se_list),
         prod (types_of_arg_list ty_desc.node_outputs)
-    | Sarray_power (se, n) ->
-        let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
+    | Sarray_power (se, n_list) ->
+        let typed_n_list = List.map (expect_static_exp const_env Initial.tint) n_list in
         let typed_se, ty = typing_static_exp const_env se in
-          Sarray_power (typed_se, typed_n), Tarray(ty, typed_n)
+        let tarray = List.fold_left (fun ty typed_n -> Tarray(ty, typed_n)) ty typed_n_list in
+          Sarray_power (typed_se, typed_n_list), tarray
     | Sarray [] ->
         message se.se_loc Eempty_array
     | Sarray (se::se_list) ->
@@ -691,12 +692,12 @@ and typing_app const_env h app e_list =
         t1, app, [typed_e1; typed_e2]
 
     | Earray_fill ->
-        let n = assert_1 app.a_params in
+        let _, _ = assert_1min app.a_params in
         let e1 = assert_1 e_list in
-        let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
+        let typed_n_list = List.map (expect_static_exp const_env Initial.tint) app.a_params in
         let typed_e1, t1 = typing const_env h e1 in
-          add_size_constraint (Clequal (mk_static_int 1, typed_n));
-          Tarray (t1, typed_n), { app with a_params = [typed_n] }, [typed_e1]
+          List.map (fun typed_n -> add_size_constraint (Clequal (mk_static_int 1, typed_n))) typed_n_list;
+          (List.fold_left (fun t1 typed_n -> Tarray (t1, typed_n)) t1 typed_n_list), { app with a_params = typed_n_list }, [typed_e1]
 
     | Eselect ->
         let e1 = assert_1 e_list in

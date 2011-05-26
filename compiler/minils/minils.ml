@@ -82,7 +82,7 @@ and op =
   | Eifthenelse        (** if arg1 then arg2 else arg3 *)
   | Efield_update      (** { arg1 with a_param1 = arg2 } *)
   | Earray             (** [ args ] *)
-  | Earray_fill        (** [arg1^a_param1] *)
+  | Earray_fill        (** [arg1^a_param1^..^a_paramn] *)
   | Eselect            (** arg1[a_params] *)
   | Eselect_slice      (** arg1[a_param1..a_param2] *)
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)

@@ -114,8 +114,8 @@ let rec eval_core partial env se = match se.se_desc with
       { se with se_desc = se_desc }
   | Sarray se_list ->
       { se with se_desc = Sarray (List.map (eval_core partial env) se_list) }
-  | Sarray_power (se, n) ->
-       { se with se_desc = Sarray_power (eval_core partial env se, eval_core partial env n) }
+  | Sarray_power (se, n_list) ->
+       { se with se_desc = Sarray_power (eval_core partial env se, List.map (eval_core partial env) n_list) }
   | Stuple se_list ->
        { se with se_desc = Stuple (List.map (eval_core partial env) se_list) }
   | Srecord f_se_list ->
@@ -188,9 +188,9 @@ let rec static_exp_subst m se =
     | Svar qn -> (try QualEnv.find qn m with | Not_found -> se)
     | Sop (op, se_list) ->
         { se with se_desc = Sop (op, List.map (static_exp_subst m) se_list) }
-    | Sarray_power (se, n) ->
+    | Sarray_power (se, n_list) ->
         { se with se_desc = Sarray_power (static_exp_subst m se,
-                                          static_exp_subst m n) }
+                                          List.map (static_exp_subst m) n_list) }
     | Sarray se_list ->
         { se with se_desc = Sarray (List.map (static_exp_subst m) se_list) }
     | Stuple se_list ->

@@ -51,9 +51,9 @@ let rec static_exp_compare se1 se2 =
       | Sfield f1, Sfield f2 -> c f1 f2
       | Stuple sel1, Stuple sel2 ->
           list_compare static_exp_compare sel1 sel2
-      | Sarray_power (se11, se21), Sarray_power (se12, se22) ->
+      | Sarray_power (se11, sel1), Sarray_power (se12, sel2) ->
           let cr = static_exp_compare se11 se12 in
-          if cr <> 0 then cr else static_exp_compare se21 se22
+          if cr <> 0 then cr else list_compare static_exp_compare sel1 sel2
       | Sarray sel1, Sarray sel2 ->
           list_compare static_exp_compare sel1 sel2
       | Srecord fnsel1, Srecord fnsel2 ->

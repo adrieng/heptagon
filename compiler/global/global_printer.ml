@@ -54,8 +54,8 @@ let rec print_static_exp_desc ff sed = match sed with
       else
         fprintf ff "@[<2>%a@,%a@]"
           print_qualname op  print_static_exp_tuple se_list
-  | Sarray_power (se, n) ->
-      fprintf ff "%a^%a" print_static_exp se  print_static_exp n
+  | Sarray_power (se, n_list) ->
+			fprintf ff "%a^%a" print_static_exp se (print_list print_static_exp """^""") n_list
   | Sarray se_list ->
       fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "["";""]") se_list
   | Stuple se_list -> print_static_exp_tuple ff se_list

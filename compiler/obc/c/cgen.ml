@@ -253,9 +253,9 @@ let rec cexpr_of_static_exp se =
         in
           Cstructlit (ty_name,
                      List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
-    | Sarray_power(c,n) ->
-        let cc = cexpr_of_static_exp c in
-          Carraylit (repeat_list cc (int_of_static_exp n)) (* TODO should be recursive *)
+    | Sarray_power(c,n_list) ->
+          (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n))) 
+                     (cexpr_of_static_exp c) n_list)
     | Svar ln ->
         (try
           let cd = find_const ln in
@@ -419,10 +419,20 @@ let rec create_affect_const var_env dest c =
     | Svar ln ->
         let se = Static.simplify QualEnv.empty (find_const ln).c_value in
         create_affect_const var_env dest se
-    | Sarray_power(c, n) ->
-        let x = gen_symbol () in
-        [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp n,
-              create_affect_const var_env (Carray (dest, Clhs (Cvar x))) c)]
+    | Sarray_power(c, n_list) ->
+      
+        let rec make_loop power_list replace = match power_list with
+          | [] -> dest, replace
+          | p :: power_list ->
+            let x = gen_symbol () in
+            let e, replace = 
+              make_loop power_list 
+                        (fun y -> [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp p, replace y)]) in
+            let e =  (Carray (e, Clhs (Cvar x))) in
+            e, replace
+        in
+        let e, b = make_loop n_list (fun y -> y) in
+        b (create_affect_const var_env e c)
     | Sarray cl ->
         let create_affect_idx c (i, affl) =
           let dest = Carray (dest, Cconst (Ccint i)) in
