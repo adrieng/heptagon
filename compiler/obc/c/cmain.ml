@@ -29,6 +29,9 @@ let _ = Idents.enter_node (Modules.fresh_value "cmain" "main")
 
 let fresh n = Idents.name (Idents.gen_var "cmain" n)
 
+let mk_int i = Cconst (Ccint i)
+let mk_float f = Cconst (Ccfloat f)
+
 (* Unique names for C variables handling step counts. *)
 let step_counter = fresh "step_c"
 and max_step = fresh"step_max"
@@ -76,14 +79,14 @@ let assert_node_res cd =
                                :: (if cd.cd_stateful
                                    then [Caddrof (Cvar (fst (List.hd mem)))]
                                    else [])));
-            Cif (Cuop ("!", Clhs (Cfield (Cvar (fst out), local_qn outn))),
+            Cif (Cuop ("!", Cfield (Cvar (fst out), local_qn outn)),
                  [Csexpr (Cfun_call ("fprintf",
-                                     [Clhs(Cvar "stderr");
-				      Cconst (Cstrlit ("Node \\\"" ^ name
-                                                       ^ "\\\" failed at step" ^
-                                                       " %d.\\n"));
-                                      Clhs (Cvar step_counter)]));
-                  Creturn (Cconst (Ccint 1))],
+                                     [Cvar "stderr";
+				                              Cconst (Cstrlit ("Node \\\"" ^ name
+                                                            ^ "\\\" failed at step" ^
+                                                              " %d.\\n"));
+                                      Cvar step_counter]));
+                  Creturn (mk_int 1)],
                  []);
           ];
       } in
@@ -116,9 +119,9 @@ let main_def_of_class_def cd =
   let rec read_lhs_of_ty lhs ty = match ty with
     | Tarray (ty, n) ->
         let iter_var = fresh "i" in
-        let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
+        let lhs = Carray (lhs, Cvar iter_var) in
         let (reads, bufs) = read_lhs_of_ty lhs ty in
-        ([Cfor (iter_var, Cconst (Ccint 0), cexpr_of_static_exp n, reads)], bufs)
+        ([Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, reads)], bufs)
     | _ ->
         let rec mk_prompt lhs = match lhs with
           | Cvar vn -> (vn, [])
@@ -136,8 +139,8 @@ let main_def_of_class_def cd =
 	  let body =
 	    if !Compiler_options.hepts_simulation
 	    then (* hepts: systematically test and quit when EOF *)
-	      [Cif(Cbop("==",exp_scanf,Clhs(Cvar("EOF"))),
-		   [Creturn(Cconst(Ccint(0)))],[])]
+	      [Cif(Cbop("==",exp_scanf,Cvar("EOF")),
+		   [Creturn(mk_int 0)],[])]
 	    else
 	      [Csexpr (exp_scanf);] in
 	  let body =
@@ -156,7 +159,7 @@ let main_def_of_class_def cd =
               let varn = fresh "buf" in
               ([scan_exp;
                 Csexpr (Cfun_call (tyn ^ "_of_string",
-                                   [Clhs (Cvar varn)]))],
+                                   [Cvar varn]))],
                [(varn, Cty_arr (20, Cty_char))]) in
 
   (** Generates printf statements and buffer declarations needed for printing
@@ -164,10 +167,10 @@ let main_def_of_class_def cd =
   let rec write_lhs_of_ty lhs ty = match ty with
     | Tarray (ty, n) ->
         let iter_var = fresh "i" in
-        let lhs = Carray (lhs, Clhs (Cvar iter_var)) in
+        let lhs = Carray (lhs, Cvar iter_var) in
         let (writes, bufs) = write_lhs_of_ty lhs ty in
-	let writes_loop = 
-	  Cfor (iter_var, Cconst (Ccint 0), cexpr_of_static_exp n, writes) in
+	let writes_loop =
+	  Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, writes) in
 	if !Compiler_options.hepts_simulation then
 	  ([writes_loop], bufs)
 	else
@@ -183,10 +186,10 @@ let main_def_of_class_def cd =
 	  else format_s ^ " " in
         let nbuf_opt = need_buf_for_ty ty in
         let ep = match nbuf_opt with
-          | None -> [Clhs lhs]
+          | None -> [lhs]
           | Some sid -> [Cfun_call ("string_of_" ^ sid,
-                                    [Clhs lhs;
-                                     Clhs (Cvar varn)])] in
+                                    [lhs;
+                                     Cvar varn])] in
         ([Csexpr (Cfun_call ("printf",
                              Cconst (Cstrlit (format_s))
                              :: ep))],
@@ -230,7 +233,7 @@ let main_def_of_class_def cd =
   let step_l =
     let funcall =
       let args =
-        map (fun vd -> Clhs (Cvar (name vd.v_ident))) stepm.m_inputs
+        map (fun vd -> Cvar (name vd.v_ident)) stepm.m_inputs
         @ (Caddrof (Cvar "res")
            :: if cd.cd_stateful then [Caddrof (Cvar "mem")] else []) in
       Cfun_call ((cname_of_qn cd.cd_name) ^ "_step", args) in
@@ -241,7 +244,7 @@ let main_def_of_class_def cd =
       (if !Compiler_options.hepts_simulation
        then []
        else [Csexpr (Cfun_call ("puts", [Cconst (Cstrlit "")]))])
-    @ [Csexpr (Cfun_call ("fflush", [Clhs (Cvar "stdout")]))] in
+    @ [Csexpr (Cfun_call ("fflush", [Cvar "stdout"]))] in
 
   (** Do not forget to initialize memory via reset if needed. *)
   let rst_i =
@@ -270,29 +273,29 @@ let main_skel var_list prologue body =
             if (argc == 2)
               max_step = atoi(argv[1]);
           *)
-          Caffect (Cvar step_counter, Cconst (Ccint 0));
-          Caffect (Cvar max_step, Cconst (Ccint 0));
-          Cif (Cbop ("==", Clhs (Cvar "argc"), Cconst (Ccint 2)),
-               [Caffect (Cvar max_step,
+          Caffect (CLvar step_counter, mk_int 0);
+          Caffect (CLvar max_step, mk_int 0);
+          Cif (Cbop ("==", Cvar "argc", mk_int 2),
+               [Caffect (CLvar max_step,
                          Cfun_call ("atoi",
-                                    [Clhs (Carray (Cvar "argv",
-                                                   Cconst (Ccint 1)))]))], []);
+                                    [Carray (Cvar "argv",
+                                             mk_int 1)]))], []);
         ]
         @ prologue
           (* while (!max_step || step_c < max_step) *)
         @ [
           Cwhile (Cbop ("||",
-                        Cuop ("!", Clhs (Cvar max_step)),
+                        Cuop ("!", Cvar max_step),
                         Cbop ("<",
-                              Clhs (Cvar step_counter),
-                              Clhs (Cvar max_step))),
+                              Cvar step_counter,
+                              Cvar max_step)),
                   (* step_counter = step_counter + 1; *)
-                  Caffect (Cvar step_counter,
+                  Caffect (CLvar step_counter,
                            Cbop ("+",
-                                 Clhs (Cvar step_counter),
-                                 Cconst (Ccint 1)))
+                                 Cvar step_counter,
+                                 mk_int 1))
                   :: body);
-          Creturn (Cconst (Ccint 0));
+          Creturn (mk_int 0);
         ];
     }
   }

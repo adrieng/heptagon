@@ -1,20 +1,19 @@
 #!/bin/bash
 #Small wrapper to deal with compilation of the compiler and the stdlib.
 
+RUN_DIR="`pwd`"
 
-RUN_DIR=`pwd`
 
+SCRIPT_DIR="$RUN_DIR/`dirname $0`"
 
-SCRIPT_DIR=$RUN_DIR/`dirname $0`
-
-COMPILER_DIR=$SCRIPT_DIR/compiler
+COMPILER_DIR="$SCRIPT_DIR/compiler"
 COMPILER=heptc.byte
 COMPILER_DEBUG=heptc.d.byte
-LIB_DIR=$SCRIPT_DIR/lib
+LIB_DIR="$SCRIPT_DIR/lib"
 
 #the symlink
-HEPTC=$COMPILER_DIR/$COMPILER
-HEPTC_DEBUG=$COMPILER_DIR/$COMPILER_DEBUG
+HEPTC="$COMPILER_DIR/$COMPILER"
+HEPTC_DEBUG="$COMPILER_DIR/$COMPILER_DEBUG"
 
 #compile the compiler
 if [ ! -x "$HEPTC" ]

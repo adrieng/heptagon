@@ -48,11 +48,19 @@ and pat_desc =
   | Lfield of pattern * field_name
   | Larray of pattern * exp
 
+and ext_value = { w_desc : ext_value_desc; w_ty : ty; w_loc : location; }
+
+and ext_value_desc =
+  | Wvar of var_ident
+  | Wconst of static_exp
+  | Wmem of var_ident
+  | Wfield of ext_value * field_name
+  | Warray of ext_value * exp
+
 and exp = { e_desc : exp_desc; e_ty : ty; e_loc : location }
 
 and exp_desc =
-  | Epattern of pattern
-  | Econst of static_exp
+  | Eextvalue of ext_value
   | Eop of op_name * exp list
   | Estruct of type_name * (field_name * exp) list
   | Earray of exp list
