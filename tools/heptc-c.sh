@@ -26,8 +26,8 @@ shift
 
 # Compile source file to VHDL, flattening node calls
 if [ $compile -eq 1 ]; then
-  $HEPTC $@ -s main -target c $F $@ || exit 1
+  "$HEPTC" $@ -s main -target c $F $@ || exit 1
 fi
 
 # Compile it with GCC
-cc -I `$HEPTC -where`/c -std=c99 $REP/*.c -o `basename $F .ept` || exit 1
+cc -I "`$HEPTC -where`/c" -std=c99 $REP/*.c -o "`basename $F .ept`" || exit 1

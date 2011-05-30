@@ -17,28 +17,28 @@ HEPTC=$COMPILER_DIR/$COMPILER
 HEPTC_DEBUG=$COMPILER_DIR/$COMPILER_DEBUG
 
 #compile the compiler
-if [ ! -x $HEPTC ]
+if [ ! -x "$HEPTC" ]
 then
-	if [ -x $HEPTC_DEBUG ]
+	if [ -x "$HEPTC_DEBUG" ]
 	then
 		#use the debug
 		HEPTC=$HEPTC_DEBUG
 	else
-		cd $COMPILER_DIR
-		ocamlbuild -j 0 $COMPILER
+		cd "$COMPILER_DIR"
+		ocamlbuild -j 0 "$COMPILER"
 		cd -
 	fi
 fi
 
 #compile the stdlib
-if [ ! -e $LIB_DIR/pervasives.epci ] || [ $HEPTC -nt $LIB_DIR/pervasives.epci ]
+if [ ! -e "$LIB_DIR/pervasives.epci" ] || [ "$HEPTC" -nt "$LIB_DIR/pervasives.epci" ]
 then
-	cd $LIB_DIR
+	cd "$LIB_DIR"
 	echo "Recompile pervasives.epci"
-	$HEPTC -nopervasives pervasives.epi
+	"$HEPTC" -nopervasives pervasives.epi
 	cd -
 fi
 
 #call the compiler with the passed arguments.
-cd $RUN_DIR
-$HEPTC -stdlib $LIB_DIR "$@"
+cd "$RUN_DIR"
+"$HEPTC" -stdlib "$LIB_DIR" "$@"
