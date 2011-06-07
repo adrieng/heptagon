@@ -420,11 +420,16 @@ let find_targeting f =
 let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
   (** Other cases*)
   match pat, e.e_desc with
-    | _, Eiterator((Imap|Imapi), { a_op = Enode _ | Efun _ }, _, _, w_list, _) ->
+    | _, Eiterator((Imap|Imapi), { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
       let invars = InterfRead.ivars_of_extvalues w_list in
+      let pinvars = InterfRead.ivars_of_extvalues pw_list in
       let outvars = IvarSet.elements (InterfRead.def eq) in
+        (* because of the encoding of the fold, the outputs are written before
+           the partially applied inputs are read so they must interfere *)
+         List.iter (fun inv -> List.iter (add_interference_link_from_ivar inv) outvars) pinvars;
+        (* affinities between inputs and outputs *)
         List.iter (fun inv -> List.iter
-          (add_affinity_link_from_ivar inv) outvars) invars
+          (add_affinity_link_from_ivar inv) outvars) invars;
     | Evarpat x, Eiterator((Ifold|Ifoldi), { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
         (* because of the encoding of the fold, the output is written before
            the inputs are read so they must interfere *)
@@ -442,10 +447,13 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
              the inputs are read so they must interfere *)
           List.iter (add_interference_link_from_ivar acc_out) invars;
           List.iter (add_interference_link_from_ivar acc_out) pinvars;
+          (* because of the encoding of the fold, the outputs are written before
+           the partially applied inputs are read so they must interfere *)
+         List.iter (fun inv -> List.iter (add_interference_link_from_ivar inv) outvars) pinvars;
           (* it also interferes with outputs. We add it here because it will not hold
              if it is not used. *)
           List.iter (add_interference_link_from_ivar acc_out) outvars;
-          (*affinity between inouts and outputs*)
+          (*affinity between inputs and outputs*)
           List.iter (fun inv -> List.iter (add_affinity_link_from_ivar inv) outvars) invars
     | Evarpat x, Efby(_, w) -> (* x  = _ fby y *)
         (match w.w_desc with
