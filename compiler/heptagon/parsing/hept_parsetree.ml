@@ -89,7 +89,6 @@ and edesc =
 and app = { a_op: op; a_params: exp list; }
 
 and op =
-  | Eequal
   | Etuple
   | Enode of qualname
   | Efun of qualname
@@ -173,14 +172,15 @@ type contract =
     c_block   : block }
 
 type node_dec =
-  { n_name      : dec_name;
-    n_stateful : bool;
-    n_input     : var_dec list;
-    n_output    : var_dec list;
-    n_contract  : contract option;
-    n_block     : block;
-    n_loc       : location;
-    n_params    : var_dec list; }
+  { n_name        : dec_name;
+    n_stateful    : bool;
+    n_input       : var_dec list;
+    n_output      : var_dec list;
+    n_contract    : contract option;
+    n_block       : block;
+    n_loc         : location;
+    n_params      : var_dec list;
+    n_constraints : exp list; }
 
 type const_dec =
   { c_name  : dec_name;
@@ -206,12 +206,13 @@ type arg =
     a_name  : var_name option }
 
 type signature =
-  { sig_name      : dec_name;
-    sig_inputs    : arg list;
-    sig_stateful : bool;
-    sig_outputs   : arg list;
-    sig_params    : var_dec list;
-    sig_loc       : location }
+  { sig_name        : dec_name;
+    sig_inputs      : arg list;
+    sig_stateful    : bool;
+    sig_outputs     : arg list;
+    sig_params      : var_dec list;
+    sig_param_constraints : exp list;
+    sig_loc         : location }
 
 type interface = interface_decl list
 

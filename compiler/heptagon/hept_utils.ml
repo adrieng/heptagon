@@ -61,16 +61,17 @@ let mk_simple_equation pat e =
 let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
 
-let mk_signature name ins outs stateful params loc =
+let mk_signature name ins outs stateful params constraints loc =
   { sig_name = name;
     sig_inputs = ins;
     sig_stateful = stateful;
     sig_outputs = outs;
     sig_params = params;
+    sig_param_constraints = constraints;
     sig_loc = loc }
 
 let mk_node
-    ?(input = []) ?(output = []) ?(contract = None) ?(local = [])
+    ?(input = []) ?(output = []) ?(contract = None)
     ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
     name block =
   { n_name = name;
@@ -81,7 +82,7 @@ let mk_node
     n_block = block;
     n_loc = loc;
     n_params = param;
-    n_params_constraints = constraints }
+    n_param_constraints = constraints }
 
 (** @return the set of variables defined in [pat]. *)
 let vars_pat pat =
@@ -109,6 +110,6 @@ let signature_of_node n =
       node_outputs  = args_of_var_decs n.n_output;
       node_stateful = n.n_stateful;
       node_params = n.n_params;
-      node_params_constraints = n.n_params_constraints;
+      node_param_constraints = n.n_param_constraints;
       node_loc = n.n_loc }
 

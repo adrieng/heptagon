@@ -72,7 +72,7 @@ struct
     | Con(_, _, n) -> add n acc
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
-    
+
   let rec vars_ct acc = function
     | Ck ck -> vars_ck acc ck
     | Cprod c_l -> List.fold_left vars_ct acc c_l
@@ -208,5 +208,5 @@ let signature_of_node n =
       node_outputs  = args_of_var_decs n.n_output;
       node_stateful = n.n_stateful;
       node_params = n.n_params;
-      node_params_constraints = n.n_params_constraints;
+      node_param_constraints = n.n_param_constraints;
       node_loc = n.n_loc }

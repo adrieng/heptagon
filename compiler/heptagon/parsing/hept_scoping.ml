@@ -153,12 +153,13 @@ end
 let mk_app ?(params=[]) ?(unsafe=false) op =
   { Heptagon.a_op = op; Heptagon.a_params = params; Heptagon.a_unsafe = unsafe }
 
-let mk_signature name ins outs stateful params loc =
+let mk_signature name ins outs stateful params constraints loc =
   { Heptagon.sig_name = name;
     Heptagon.sig_inputs = ins;
     Heptagon.sig_stateful = stateful;
     Heptagon.sig_outputs = outs;
     Heptagon.sig_params = params;
+    Heptagon.sig_param_constraints = constraints;
     Heptagon.sig_loc = loc }
 
 
@@ -301,7 +302,6 @@ and translate_desc loc env = function
 
 
 and translate_op = function
-  | Eequal -> Heptagon.Eequal
   | Earrow -> Heptagon.Earrow
   | Eifthenelse -> Heptagon.Eifthenelse
   | Efield -> Heptagon.Efield
@@ -405,16 +405,18 @@ let translate_contract env ct =
     Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
     Heptagon.c_block = b }
 
-let params_of_var_decs =
-  List.map (fun vd -> Signature.mk_param
-                        vd.v_name
-                        (translate_type vd.v_loc vd.v_type))
+let params_of_var_decs p_l =
+  let pofvd vd = Signature.mk_param vd.v_name (translate_type vd.v_loc vd.v_type) in
+  List.map pofvd p_l
 
+
+let translate_constrnt e = expect_static_exp e
 
 let translate_node node =
   let n = current_qual node.n_name in
   Idents.enter_node n;
   let params = params_of_var_decs node.n_params in
+  let constraints = List.map translate_constrnt node.n_constraints in
   let input_env = Rename.append Rename.empty (node.n_input) in
   (* inputs should refer only to inputs *)
   let inputs = translate_vd_list input_env node.n_input in
@@ -433,7 +435,7 @@ let translate_node node =
                Heptagon.n_block = b;
                Heptagon.n_loc = node.n_loc;
                Heptagon.n_params = params;
-               Heptagon.n_params_constraints = []; }
+               Heptagon.n_param_constraints = constraints; }
   in
   add_value n (Hept_utils.signature_of_node node);
   node
@@ -480,7 +482,7 @@ let translate_const_dec cd =
 
 let translate_program p =
   let translate_program_desc pd = match pd with
-    | Ppragma _ -> Misc.unsupported "pragma in scoping" 1
+    | Ppragma _ -> Misc.unsupported "pragma in scoping"
     | Pconst c -> Heptagon.Pconst (translate_const_dec c)
     | Ptype t -> Heptagon.Ptype (translate_typedec t)
     | Pnode n -> Heptagon.Pnode (translate_node n)
@@ -506,10 +508,11 @@ let translate_signature s =
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
+  let c = List.map translate_constrnt s.sig_param_constraints in
   let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful p in
   Signature.check_signature sig_node;
   add_value n sig_node;
-  mk_signature n i o s.sig_stateful p s.sig_loc
+  mk_signature n i o s.sig_stateful p c s.sig_loc
 
 
 let translate_interface_desc = function

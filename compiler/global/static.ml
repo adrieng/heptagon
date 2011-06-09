@@ -61,29 +61,45 @@ let message exn =
       @raise Partial_evaluation when the application of the operator can't be evaluated.
     Otherwise keep as it is unknown operators. *)
 let apply_op partial loc op se_list =
-  match se_list with
-    | [{ se_desc = Sint n1 }; { se_desc = Sint n2 }] ->
-        (match op with
-           | { qual = Pervasives; name = "+" } ->
-               Sint (n1 + n2)
-           | { qual = Pervasives; name = "-" } ->
-               Sint (n1 - n2)
-           | { qual = Pervasives; name = "*" } ->
-               Sint (n1 * n2)
-           | { qual = Pervasives; name = "/" } ->
-               if n2 = 0 then raise (Evaluation_failed (Division_by_zero, loc));
-               Sint (n1 / n2)
-           | { qual = Pervasives; name = "=" } ->
-               Sbool (n1 = n2)
-           | _ -> assert false (*TODO: add missing operators*)
-        )
-    | [{ se_desc = Sint n }] ->
-        (match op with
-           | { qual = Pervasives; name = "~-" } -> Sint (-n)
-           | _ -> assert false (*TODO: add missing operators*)
-        )
-    | _ -> if partial then Sop(op, se_list) (* partial evaluation *)
-           else raise (Partial_evaluation (Unknown_op op, loc))
+  let has_var_desc acc se =
+    let has_var _ _ sed = match sed with
+      | Svar _ -> sed,true
+      | _ -> raise Errors.Fallback
+    in
+    let se, acc =
+      Global_mapfold.static_exp_it
+        {Global_mapfold.defaults with Global_mapfold.static_exp_desc = has_var}
+        acc se
+    in
+    se.se_desc, acc
+  in
+  let sed_l, has_var = Misc.mapfold has_var_desc false se_list in
+  if (op.qual = Pervasives) && not has_var
+  then (
+    match op.name, sed_l with
+      | "+", [Sint n1; Sint n2] -> Sint (n1 + n2)
+      | "-", [Sint n1; Sint n2] -> Sint (n1 - n2)
+      | "*", [Sint n1; Sint n2] -> Sint (n1 * n2)
+      | "/", [Sint n1; Sint n2] ->
+          if n2 = 0 then raise (Evaluation_failed (Division_by_zero, loc));
+          Sint (n1 / n2)
+      | "=", [Sint n1; Sint n2] -> Sbool (n1 = n2)
+      | "<=", [Sint n1; Sint n2] -> Sbool (n1 <= n2)
+      | ">=", [Sint n1; Sint n2] -> Sbool (n1 >= n2)
+      | "<", [Sint n1; Sint n2] -> Sbool (n1 < n2)
+      | ">", [Sint n1; Sint n2] -> Sbool (n1 > n2)
+      | "&", [Sbool b1; Sbool b2] -> Sbool (b1 && b2)
+      | "or", [Sbool b1; Sbool b2] -> Sbool (b1 || b2)
+      | "not", [Sbool b] -> Sbool (not b)
+      | "~-", [Sint n] -> Sint (-n)
+      | f,_ -> Misc.internal_error ("Static evaluation failed of the pervasive operator "^f)
+  )
+  else
+    if partial
+    then Sop(op, se_list) (* partial evaluation *)
+    else raise (Partial_evaluation (Unknown_op op, loc))
+
+
 
 
 (** When not [partial],
@@ -149,25 +165,13 @@ let int_of_static_exp env se = match (eval env se).se_desc with
 (** [is_true env constr] returns whether the constraint is satisfied
     in the environment (or None if this can be decided)
     and a simplified constraint. *)
-let is_true env =
-  function
-    | Cequal (e1, e2) when e1 = e2 ->
-        Some true, Cequal (simplify env e1, simplify env e2)
-    | Cequal (e1, e2) ->
-        let e1 = simplify env e1 in
-       let e2 = simplify env e2 in
-        (match e1.se_desc, e2.se_desc with
-           | Sint n1, Sint n2 -> Some (n1 = n2), Cequal (e1, e2)
-           | (_, _) -> None, Cequal (e1, e2))
-    | Clequal (e1, e2) ->
-        let e1 = simplify env e1 in
-        let e2 = simplify env e2 in
-        (match e1.se_desc, e2.se_desc with
-           | Sint n1, Sint n2 -> Some (n1 <= n2), Clequal (e1, e2)
-           | _, _ -> None, Clequal (e1, e2))
-    | Cfalse -> None, Cfalse
+let is_true env c =
+  let c = simplify env c in
+  match c.se_desc with
+    | Sbool b -> Some b, c
+    | _ -> None, c
 
-exception Solve_failed of size_constraint
+exception Solve_failed of constrnt
 
 (** [solve env constr_list solves a list of constraints. It
     removes equations that can be decided and simplify others.
@@ -181,7 +185,7 @@ let rec solve const_env =
         (match res with
            | None -> c :: l
            | Some v -> if not v then raise (Solve_failed c) else l)
-
+(*
 (** Substitutes variables in the size exp with their value
     in the map (mapping vars to size exps). *)
 let rec static_exp_subst m se =
@@ -210,5 +214,5 @@ let instanciate_constr m constr =
     | Clequal (e1, e2) -> Clequal (static_exp_subst m e1, static_exp_subst m e2)
     | Cfalse -> Cfalse in
   List.map (replace_one m) constr
-
+*)
 

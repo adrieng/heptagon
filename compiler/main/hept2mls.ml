@@ -62,7 +62,6 @@ let translate_iterator_type = function
   | Heptagon.Imapfold -> Imapfold
 
 let rec translate_op = function
-  | Heptagon.Eequal -> Eequal
   | Heptagon.Eifthenelse -> Eifthenelse
   | Heptagon.Efun f -> Efun f
   | Heptagon.Enode f -> Enode f
@@ -176,7 +175,7 @@ let node n =
     n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
-    n_params_constraints = n.Heptagon.n_params_constraints }
+    n_param_constraints = n.Heptagon.n_param_constraints }
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =

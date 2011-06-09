@@ -106,12 +106,10 @@ let print_field ff field =
 
 let print_struct ff field_list = print_record print_field ff field_list
 
-let print_size_constraint ff = function
-  | Cequal (e1, e2) ->
-      fprintf ff "@[%a = %a@]" print_static_exp e1 print_static_exp e2
-  | Clequal (e1, e2) ->
-      fprintf ff "@[%a <= %a@]" print_static_exp e1 print_static_exp e2
-  | Cfalse -> fprintf ff "Cfalse"
+let print_constrnt ff c = print_static_exp ff c
+
+let print_constraints ff c_l =
+  fprintf ff "@[%a@]" (print_list_r print_constrnt "|"";"";") c_l
 
 let print_param ff p =
   fprintf ff "%a:%a"  Names.print_name p.p_name  print_type p.p_type
@@ -143,16 +141,16 @@ let print_sarg ff arg = match arg.a_name with
           print_sck arg.a_clock
 
 let print_interface_value ff (name,node) =
-  let print_node_params ff p_list =
-    print_list_r (fun ff p -> print_name ff p.p_name) "<<" "," ">>" ff p_list
+  let print_node_params ff (p_list, constraints) =
+    fprintf ff "@[<2><<@[%a@]%a>>@]"
+      (print_list_r (fun ff p -> print_name ff p.p_name) "" "," "") p_list
+      print_constraints constraints
   in
-  fprintf ff "@[<v 2>val %a%a@[%a@] returns @[%a@]@,@[%a@]@]"
+  fprintf ff "@[<v 2>val %a%a@[%a@] returns @[%a@]@]"
     print_name name
-    print_node_params node.node_params
+    print_node_params (node.node_params, node.node_param_constraints)
     (print_list_r print_sarg "(" ";" ")") node.node_inputs
     (print_list_r print_sarg "(" ";" ")") node.node_outputs
-    (print_list_r print_size_constraint " with: " "," "") node.node_params_constraints
-
 
 let print_interface ff =
   let m = Modules.current_module () in

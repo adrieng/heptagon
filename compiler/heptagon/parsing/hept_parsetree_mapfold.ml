@@ -10,39 +10,38 @@
 
 open Misc
 open Errors
-open Global_mapfold
+(*open Global_mapfold*)
 open Hept_parsetree
 
 type 'a hept_it_funs = {
-  ty : 'a hept_it_funs -> 'a -> Hept_parsetree.ty -> Hept_parsetree.ty * 'a;
-  static_exp : 'a hept_it_funs -> 'a -> Hept_parsetree.static_exp -> static_exp * 'a;
-  static_exp_desc : 'a hept_it_funs -> 'a -> Hept_parsetree.static_exp_desc
-                                          -> Hept_parsetree.static_exp_desc * 'a;
-  app: 'a hept_it_funs -> 'a -> Hept_parsetree.app -> Hept_parsetree.app * 'a;
-  block: 'a hept_it_funs -> 'a -> Hept_parsetree.block -> Hept_parsetree.block * 'a;
-  edesc: 'a hept_it_funs -> 'a -> Hept_parsetree.edesc -> Hept_parsetree.edesc * 'a;
-  eq: 'a hept_it_funs -> 'a -> Hept_parsetree.eq -> Hept_parsetree.eq * 'a;
-  eqdesc: 'a hept_it_funs -> 'a -> Hept_parsetree.eqdesc -> Hept_parsetree.eqdesc * 'a;
-  escape_unless : 'a hept_it_funs -> 'a -> Hept_parsetree.escape -> Hept_parsetree.escape * 'a;
-  escape_until: 'a hept_it_funs -> 'a -> Hept_parsetree.escape -> Hept_parsetree.escape * 'a;
-  exp: 'a hept_it_funs -> 'a -> Hept_parsetree.exp -> Hept_parsetree.exp * 'a;
-  pat: 'a hept_it_funs -> 'a -> pat -> Hept_parsetree.pat * 'a;
-  present_handler: 'a hept_it_funs -> 'a -> Hept_parsetree.present_handler
-                                         -> Hept_parsetree.present_handler * 'a;
-  state_handler: 'a hept_it_funs -> 'a -> Hept_parsetree.state_handler
-                                       -> Hept_parsetree.state_handler * 'a;
-  switch_handler: 'a hept_it_funs -> 'a -> Hept_parsetree.switch_handler
-                                        -> Hept_parsetree.switch_handler * 'a;
-  var_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.var_dec -> Hept_parsetree.var_dec * 'a;
-  last: 'a hept_it_funs -> 'a -> Hept_parsetree.last -> Hept_parsetree.last * 'a;
-  contract: 'a hept_it_funs -> 'a -> Hept_parsetree.contract -> Hept_parsetree.contract * 'a;
-  node_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.node_dec -> Hept_parsetree.node_dec * 'a;
-  const_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.const_dec -> Hept_parsetree.const_dec * 'a;
-  type_dec: 'a hept_it_funs -> 'a -> Hept_parsetree.type_dec -> Hept_parsetree.type_dec * 'a;
-  type_desc: 'a hept_it_funs -> 'a -> Hept_parsetree.type_desc -> Hept_parsetree.type_desc * 'a;
-  program: 'a hept_it_funs -> 'a -> Hept_parsetree.program -> Hept_parsetree.program * 'a;
-  program_desc: 'a hept_it_funs -> 'a -> Hept_parsetree.program_desc
-                                      -> Hept_parsetree.program_desc * 'a; }
+  ty              : 'a hept_it_funs -> 'a -> ty -> ty * 'a;
+  static_exp      : 'a hept_it_funs -> 'a -> static_exp -> static_exp * 'a;
+  static_exp_desc : 'a hept_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
+  app             : 'a hept_it_funs -> 'a -> app -> app * 'a;
+  block           : 'a hept_it_funs -> 'a -> block -> block * 'a;
+  edesc           : 'a hept_it_funs -> 'a -> edesc -> edesc * 'a;
+  eq              : 'a hept_it_funs -> 'a -> eq -> eq * 'a;
+  eqdesc          : 'a hept_it_funs -> 'a -> eqdesc -> eqdesc * 'a;
+  escape_unless   : 'a hept_it_funs -> 'a -> escape -> escape * 'a;
+  escape_until    : 'a hept_it_funs -> 'a -> escape -> escape * 'a;
+  exp             : 'a hept_it_funs -> 'a -> exp -> exp * 'a;
+  pat             : 'a hept_it_funs -> 'a -> pat -> pat * 'a;
+  present_handler : 'a hept_it_funs -> 'a -> present_handler -> present_handler * 'a;
+  state_handler   : 'a hept_it_funs -> 'a -> state_handler -> state_handler * 'a;
+  switch_handler  : 'a hept_it_funs -> 'a -> switch_handler -> switch_handler * 'a;
+  var_dec         : 'a hept_it_funs -> 'a -> var_dec -> var_dec * 'a;
+  arg             : 'a hept_it_funs -> 'a -> arg -> arg * 'a;
+  last            : 'a hept_it_funs -> 'a -> last -> last * 'a;
+  contract        : 'a hept_it_funs -> 'a -> contract -> contract * 'a;
+  node_dec        : 'a hept_it_funs -> 'a -> node_dec -> node_dec * 'a;
+  const_dec       : 'a hept_it_funs -> 'a -> const_dec -> const_dec * 'a;
+  type_dec        : 'a hept_it_funs -> 'a -> type_dec -> type_dec * 'a;
+  type_desc       : 'a hept_it_funs -> 'a -> type_desc -> type_desc * 'a;
+  program         : 'a hept_it_funs -> 'a -> program -> program * 'a;
+  program_desc    : 'a hept_it_funs -> 'a -> program_desc -> program_desc * 'a;
+  interface       : 'a hept_it_funs -> 'a -> interface -> interface * 'a;
+  interface_desc  : 'a hept_it_funs -> 'a -> interface_desc -> interface_desc * 'a;
+  signature       : 'a hept_it_funs -> 'a -> signature -> signature * 'a; }
 
 let rec static_exp_it funs acc se = funs.static_exp funs acc se
 and static_exp funs acc se =
@@ -217,6 +216,10 @@ and var_dec funs acc vd =
   let v_last, acc = last_it funs acc vd.v_last in
   { vd with v_last = v_last; v_type = v_type }, acc
 
+and arg_it funs acc a = funs.arg funs acc a
+and arg funs acc a =
+  let a_type, acc = ty_it funs acc a.a_type in
+  { a with a_type = a_type }, acc
 
 and last_it funs acc l =
   try funs.last funs acc l
@@ -237,12 +240,6 @@ and contract funs acc c =
     c_assume = c_assume; c_enforce = c_enforce; c_block = c_block }
   , acc
 
-(*
-and param_it funs acc vd = funs.param funs acc vd
-and param funs acc vd =
-  let v_last, acc = last_it funs acc vd.v_last in
-    { vd with v_last = v_last }, acc
-      *)
 
 and node_dec_it funs acc nd = funs.node_dec funs acc nd
 and node_dec funs acc nd =
@@ -250,12 +247,14 @@ and node_dec funs acc nd =
   let n_output, acc = mapfold (var_dec_it funs) acc nd.n_output in
   let n_params, acc = mapfold (var_dec_it funs) acc nd.n_params in
   let n_contract, acc =  optional_wacc (contract_it funs) acc nd.n_contract in
+  let n_constraints, acc = mapfold (exp_it funs) acc nd.n_constraints in
   let n_block, acc = block_it funs acc nd.n_block in
   { nd with
       n_input = n_input;
       n_output = n_output;
       n_block = n_block;
       n_params = n_params;
+      n_constraints = n_constraints;
       n_contract = n_contract }
   , acc
 
@@ -298,7 +297,7 @@ and type_desc funs acc td = match td with
 
 and program_it funs acc p = funs.program funs acc p
 and program funs acc p =
-  let p_desc, acc = mapfold (program_desc funs) acc p.p_desc in
+  let p_desc, acc = mapfold (program_desc_it funs) acc p.p_desc in
   { p with p_desc = p_desc }, acc
 
 and program_desc_it funs acc pd =
@@ -309,6 +308,36 @@ and program_desc funs acc pd = match pd with
   | Ptype t -> let t, acc = type_dec_it funs acc t in Ptype t, acc
   | Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
   | Ppragma _ -> pd, acc
+
+and interface_desc_it funs acc id =
+  try funs.interface_desc funs acc id
+  with Fallback -> interface_desc funs acc id
+and interface_desc funs acc id = match id with
+  | Iopen _ -> id, acc
+  | Itypedef t -> let t, acc = type_dec_it funs acc t in Itypedef t, acc
+  | Iconstdef c -> let c, acc = const_dec_it funs acc c in Iconstdef c, acc
+  | Isignature s -> let s, acc = signature_it funs acc s in Isignature s, acc
+
+and interface_it funs acc i = funs.interface funs acc i
+and interface funs acc i =
+  let decl acc id =
+    let idc, acc = interface_desc_it funs acc id.interf_desc in
+    { id with interf_desc = idc }, acc
+  in
+  mapfold decl acc i
+
+and signature_it funs acc s = funs.signature funs acc s
+and signature funs acc s =
+  let sig_inputs, acc = mapfold (arg_it funs) acc s.sig_inputs in
+  let sig_outputs, acc = mapfold (arg_it funs) acc s.sig_outputs in
+  let sig_params, acc = mapfold (var_dec_it funs) acc s.sig_params in
+  let sig_param_constraints, acc = mapfold (exp_it funs) acc s.sig_param_constraints in
+  { s with sig_inputs = sig_inputs;
+           sig_outputs = sig_outputs;
+           sig_params = sig_params;
+           sig_param_constraints = sig_param_constraints; }
+  , acc
+
 
 let defaults = {
   ty = ty;
@@ -334,33 +363,41 @@ let defaults = {
   type_dec = type_dec;
   type_desc = type_desc;
   program = program;
-  program_desc = program_desc }
+  program_desc = program_desc;
+  interface = interface;
+  interface_desc = interface_desc;
+  signature = signature;
+  arg = arg; }
 
 
 
 let defaults_stop = {
-  ty = stop;
-  static_exp = stop;
-  static_exp_desc = stop;
-  app = stop;
-  block = stop;
-  edesc = stop;
-  eq = stop;
-  eqdesc = stop;
-  escape_unless = stop;
-  escape_until = stop;
-  exp = stop;
-  pat = stop;
-  present_handler = stop;
-  state_handler = stop;
-  switch_handler = stop;
-  var_dec = stop;
-  last = stop;
-  contract = stop;
-  node_dec = stop;
-  const_dec = stop;
-  type_dec = stop;
-  type_desc = stop;
-  program = stop;
-  program_desc = stop }
+  ty = Global_mapfold.stop;
+  static_exp = Global_mapfold.stop;
+  static_exp_desc = Global_mapfold.stop;
+  app = Global_mapfold.stop;
+  block = Global_mapfold.stop;
+  edesc = Global_mapfold.stop;
+  eq = Global_mapfold.stop;
+  eqdesc = Global_mapfold.stop;
+  escape_unless = Global_mapfold.stop;
+  escape_until = Global_mapfold.stop;
+  exp = Global_mapfold.stop;
+  pat = Global_mapfold.stop;
+  present_handler = Global_mapfold.stop;
+  state_handler = Global_mapfold.stop;
+  switch_handler = Global_mapfold.stop;
+  var_dec = Global_mapfold.stop;
+  last = Global_mapfold.stop;
+  contract = Global_mapfold.stop;
+  node_dec = Global_mapfold.stop;
+  const_dec = Global_mapfold.stop;
+  type_dec = Global_mapfold.stop;
+  type_desc = Global_mapfold.stop;
+  program = Global_mapfold.stop;
+  program_desc = Global_mapfold.stop;
+  interface = Global_mapfold.stop;
+  interface_desc = Global_mapfold.stop;
+  signature = Global_mapfold.stop;
+  arg = Global_mapfold.stop; }
 

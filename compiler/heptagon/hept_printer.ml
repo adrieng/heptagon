@@ -137,9 +137,6 @@ and print_every ff reset =
 
 and print_app ff (app, args) =
   match app.a_op with
-    | Eequal ->
-      let e1, e2 = assert_2 args in
-        fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
     | Etuple -> print_exp_tuple ff args
     | Efun f | Enode f ->
         fprintf ff "@[%a@,%a@,%a@]"

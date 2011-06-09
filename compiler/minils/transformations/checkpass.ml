@@ -48,7 +48,7 @@ let add_check prefix pass nd nd_list =
         node_outputs = [{ a_name = None; a_type = Tid Initial.pbool; }];
         node_stateful = true;
         node_params = [];
-        node_params_constraints = [] };
+        node_param_constraints = [] };
 
     Compiler_options.add_assert nd_check.n_name.name;
     nd :: nd' :: nd_check :: nd_list

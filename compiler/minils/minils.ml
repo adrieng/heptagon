@@ -126,7 +126,7 @@ type node_dec = {
   n_equs   : eq list;
   n_loc    : location;
   n_params : param list;
-  n_params_constraints : size_constraint list }
+  n_param_constraints : constrnt list }
 
 type const_dec = {
   c_name : qualname;
@@ -173,7 +173,7 @@ let mk_node
     n_equs = eq;
     n_loc = loc;
     n_params = param;
-    n_params_constraints = constraints }
+    n_param_constraints = constraints }
 
 let mk_type_dec type_desc name loc =
   { t_name = name; t_desc = type_desc; t_loc = loc }
