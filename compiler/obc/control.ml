@@ -59,7 +59,7 @@ and joinhandlers h1 h2 =
           with Not_found -> s1, h2 in
         (c1, join_block s1') :: joinhandlers h1' h2'
 
-let block funs acc b =
+let block _ acc b =
   { b with b_body = joinlist b.b_body }, acc
 
 let program p =

@@ -52,7 +52,7 @@ let default e =
     | _ -> None
 
 
-let edesc funs ((res,stateful) as acc) ed = match ed with
+let edesc funs ((res,_) as acc) ed = match ed with
     | Efby (e1, e2) ->
         let e1,_ = Hept_mapfold.exp_it funs acc e1 in
         let e2,_ = Hept_mapfold.exp_it funs acc e2 in
@@ -68,20 +68,18 @@ let edesc funs ((res,stateful) as acc) ed = match ed with
     | Eapp({ a_op = Enode _ } as op, e_list, re) ->
         let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
         let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
-        Eapp(op, e_list, merge_resets res re), acc
+        Eapp(op, args, merge_resets res re), acc
     | Eiterator(it, ({ a_op = Enode _ } as op), n, pe_list, e_list, re) ->
         let pargs,_ = mapfold (Hept_mapfold.exp_it funs) acc pe_list in
         let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
         let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
         Eiterator(it, op, n, pargs, args, merge_resets res re), acc
-    | Eapp({ a_op = Efun _ } as op, e_list, re) ->
+    | Eapp({ a_op = Efun _ } as op, e_list, _) ->
         let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
-        let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
         Eapp(op, args, None), acc (* funs don't need resets *)
-    | Eiterator(it, ({ a_op = Efun _ } as op), n, pe_list, e_list, re) ->
+    | Eiterator(it, ({ a_op = Efun _ } as op), n, pe_list, e_list, _) ->
         let pargs,_ = mapfold (Hept_mapfold.exp_it funs) acc pe_list in
         let args,_ = mapfold (Hept_mapfold.exp_it funs) acc e_list in
-        let re,_ = optional_wacc (Hept_mapfold.exp_it funs) acc re in
         Eiterator(it, op, n, pargs, args, None), acc (* funs don't need resets *)
     | _ -> raise Errors.Fallback
 

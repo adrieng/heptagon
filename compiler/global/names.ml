@@ -53,7 +53,7 @@ let modul { qual = m; } = m
 
 let rec modul_to_string m = match m with
   | Pervasives -> "Pervasives"
-  | LocalModule -> "\#$%@#_LOCAL_MODULE"
+  | LocalModule -> "#$%@#_LOCAL_MODULE"
   | Module n -> n
   | QualModule {qual = q; name = n} -> (modul_to_string q) ^"."^ n
 

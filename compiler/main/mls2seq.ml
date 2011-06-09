@@ -47,10 +47,10 @@ let targets = [ "c",(Obc_no_params Cmain.program, no_conf);
                 "epo", (Minils write_object_file, no_conf) ]
 
 let generate_target p s =
-  let print_unfolded p_list =
+(*  let print_unfolded p_list =
     comment "Unfolding";
     if !Compiler_options.verbose
-    then List.iter (Mls_printer.print stderr) p_list in
+    then List.iter (Mls_printer.print stderr) p_list in*)
   let target =
     (try fst (List.assoc s targets)
      with Not_found -> language_error s; raise Errors.Error) in

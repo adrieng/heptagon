@@ -108,7 +108,7 @@ let rec typing e =
         candlist l
     | Eiterator (_, _, _, pe_list, e_list, _) ->
         ctuplelist (List.map typing (pe_list@e_list))
-    | Ewhen (e, c, x) ->
+    | Ewhen (e, _, x) ->
         let t = typing e in
         let tc = read x in
         cseq tc t

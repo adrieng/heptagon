@@ -65,7 +65,7 @@ let rec typing_extvalue h w =
         let ck_n = ck_of_name h n in
         expect_extvalue h ck_n w1;
         Con (ck_n, c, n)
-    | Wfield (w1, f) ->
+    | Wfield (w1, _) ->
         typing_extvalue h w1
   in
   w.w_ck <- ck;
@@ -143,21 +143,11 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
           let ck = fresh_clock () in
           List.iter (fun (_, e) -> expect_extvalue h ck e) l;
           Ck ck, ck
-      | Eapp({a_op = op}, args, r) ->
-         (* (* base clock of the node have to be a sub-clock of the reset clock *)
-          let base_ck = match r with
-            | None -> fresh_clock ()
-            | Some(reset) -> ck_of_name h reset
-          in *)
+      | Eapp({a_op = op}, args, _) -> (* hyperchronous reset *)
           let base_ck = fresh_clock () in
           let ct = typing_app h base_ck pat op args in
           ct, base_ck
-      | Eiterator (it, {a_op = op}, _, pargs, args, r) ->
-        (*  (* base clock of the node *)
-          let base_ck = match r with
-            | None -> fresh_clock ()
-            | Some(reset) -> ck_of_name h reset
-          in *)
+      | Eiterator (it, {a_op = op}, _, pargs, args, _) -> (* hyperchronous reset *)
           let base_ck = fresh_clock() in
           let ct = match it with
             | Imap -> (* exactly as if clocking the node *)

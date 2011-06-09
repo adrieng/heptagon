@@ -178,7 +178,7 @@ let rec translate_extvalue map w =
     | Minils.Wfield (w1, f) ->
         let e = translate_extvalue map w1 in
         Epattern (mk_pattern w.Minils.w_ty (Lfield (pattern_of_exp e, f)))
-    | Minils.Wwhen (w1, c, x) ->
+    | Minils.Wwhen (w1, c, _) ->
         let e1 = translate_extvalue map w1 in
         e1.e_desc
   in
@@ -441,7 +441,7 @@ and mk_node_call map call_context app loc name_list args ty =
               let e = mk_exp ty (Eop(f, args)) in
               Aassgn (name, e)
           | _ ->
-            Misc.unsupported "mls2obc: external function with multiple return values" 1 in
+            Misc.unsupported "mls2obc: external function with multiple return values" in
         [], [], [], [act]
 
     | Minils.Enode f when Itfusion.is_anon_node f ->

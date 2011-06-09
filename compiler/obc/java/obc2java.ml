@@ -102,7 +102,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sbool b -> Sbool b
   | Types.Sstring s -> Sstring s
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
-  | Types.Sfield f -> eprintf "ojSfield @."; assert false;
+  | Types.Sfield _ -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
   | Types.Sarray_power (see,pow) ->
       let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
@@ -376,8 +376,8 @@ let type_dec_list classes td_l =
     let classe_name = qualname_to_package_classe td.t_name in
     Idents.enter_node classe_name;
     match td.t_desc with
-      | Type_abs -> Misc.unsupported "obc2java, abstract type." 1
-      | Type_alias _ -> Misc.unsupported "obc2java, type alias." 2
+      | Type_abs -> Misc.unsupported "obc2java, abstract type."
+      | Type_alias _ -> Misc.unsupported "obc2java, type alias."
       | Type_enum c_l ->
           let mk_constr_enum c = translate_constructor_name_2 c td.t_name in
           (mk_enum (List.map mk_constr_enum c_l) classe_name) :: classes

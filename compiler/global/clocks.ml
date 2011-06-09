@@ -105,7 +105,7 @@ and unify_list t1_list t2_list =
 let rec skeleton ck = function
   | Tprod ty_list ->
       (match ty_list with
-        | [x] -> Ck ck
+        | [_] -> Ck ck
         | l -> Cprod (List.map (skeleton ck) l))
   | Tarray _ | Tid _ | Tinvalid -> Ck ck
 

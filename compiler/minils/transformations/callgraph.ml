@@ -261,7 +261,7 @@ let node_by_longname node =
     let n = List.find (function Pnode n -> n.n_name = node | _ -> false) p.p_desc in
     (match n with
       | Pnode n -> n
-      | _ -> Misc.internal_error "callgraph" 0)
+      | _ -> Misc.internal_error "callgraph")
   with
     Not_found -> Error.message no_location (Error.Enode_unbound node)
 
