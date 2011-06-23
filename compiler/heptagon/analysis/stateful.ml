@@ -45,6 +45,11 @@ let edesc funs stateful ed =
           let ty_desc = find_value f in
           let op = if ty_desc.node_stateful then Enode f else Efun f in
           Eapp({ app with a_op = op }, e_list, r), ty_desc.node_stateful or stateful
+      | Eiterator(it, ({ a_op = (Enode f | Efun f) } as app), n, pe_list, e_list, r) ->
+          let ty_desc = find_value f in
+          let op = if ty_desc.node_stateful then Enode f else Efun f in
+          Eiterator(it, { app with a_op = op }, n, pe_list, e_list, r),
+          ty_desc.node_stateful or stateful
       | _ -> ed, stateful
 
 (* Automatons have an hidden state whatever *)
