@@ -796,7 +796,7 @@ and typing_iterator const_env h
   in
   let mk_array_type ty_list = List.map (array_of_idx_list n_list) ty_list in
   let n_size = List.length n_list in
-  let mk_array_type_butnlast ty_list = 
+  let mk_array_type_butnlast ty_list =
     map_butnlast n_size (array_of_idx_list n_list) ty_list in
   match it with
   | Imap ->
@@ -811,10 +811,10 @@ and typing_iterator const_env h
       let args_ty_list = mk_array_type args_ty_list in
       let result_ty_list = mk_array_type result_ty_list in
       (* Last but one arg of the function should be integer *)
-        List.iter 
+        List.iter
           (fun idx_ty ->
-		        ( try unify cenv idx_ty (Tid Initial.pint)
-		          with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
+            ( try unify cenv idx_ty (Tid Initial.pint)
+              with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
            idx_ty_list;
       let typed_e_list = typing_args const_env h
         args_ty_list e_list in
@@ -836,8 +836,8 @@ and typing_iterator const_env h
         (* Last but one arg of the function should be integer *)
         List.iter
           (fun idx_ty ->
-		        ( try unify cenv idx_ty (Tid Initial.pint)
-		          with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
+            ( try unify cenv idx_ty (Tid Initial.pint)
+              with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
            idx_ty_list;
         let args_ty_list = mk_array_type_butnlast (args_ty_list@[acc_ty]) in
       let typed_e_list =

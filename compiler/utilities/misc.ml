@@ -52,9 +52,9 @@ let rec map_butlast f l =
 let map_butnlast n f l =
   let rec aux l = match l with
     | [] -> [], 0
-    | a::l -> 
+    | a::l ->
         let (res, k) = aux l in
-        if k < n then 
+        if k < n then
           a::res, (k + 1)
         else
           (f a)::res, (k+1)
@@ -82,9 +82,9 @@ let rec split_last = function
 let rec split_nlast n l =
   let rec aux l = match l with
     | [] -> [], [], 0
-    | a::l -> 
+    | a::l ->
         let (l1, l2, k) = aux l in
-        if k < n then 
+        if k < n then
           l1, a::l2, (k + 1)
         else
           a::l1, l2, (k+1)

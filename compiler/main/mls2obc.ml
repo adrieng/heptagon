@@ -91,7 +91,7 @@ let array_elt_of_exp idx e =
         mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
     | _ -> internal_error "mls2obc"
 
-let rec array_elt_of_exp_list idx_list e = 
+let rec array_elt_of_exp_list idx_list e =
   match e.e_desc, Modules.unalias_type e.e_ty with
     | Econst ({ se_desc = Sarray_power (c, _) }), Tarray (ty,_) ->
         mk_exp ty (Econst c)
@@ -440,7 +440,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
         let p_list = List.map (translate_extvalue_to_exp map) pe_list in
         let c_list = List.map (translate_extvalue_to_exp map) e_list in
         let xl, xdl = List.split (List.map (fun _ -> fresh_it ()) n_list) in
-        let call_context = 
+        let call_context =
           Some { oa_index = List.map (fun x -> mk_pattern_int (Lvar x)) xl;
                  oa_size = n_list} in
         let n_list = List.map mk_exp_static_int n_list in
@@ -536,7 +536,7 @@ and translate_iterator map call_context it name_list
     List.map2 (fun l ty -> aux l ty xl) name_list ty_list
   in
   let array_of_input c_list =
-    List.map (array_elt_of_exp_list (List.map mk_evar_int xl)) c_list 
+    List.map (array_elt_of_exp_list (List.map mk_evar_int xl)) c_list
   in
   let mk_loop b xdl nl =
     let rec mk_loop b xdl nl = match xdl, nl with
@@ -544,7 +544,7 @@ and translate_iterator map call_context it name_list
       | xd::xdl, n::nl -> mk_loop (mk_block [Afor (xd, mk_exp_const_int 0, n, b)]) xdl nl
       | _, _ -> assert false
     in
-    mk_loop b (List.rev xdl) nl 
+    mk_loop b (List.rev xdl) nl
   in
   match it with
     | Minils.Imap ->

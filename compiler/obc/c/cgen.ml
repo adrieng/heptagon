@@ -406,7 +406,7 @@ let step_fun_call out_env var_env sig_info objn out args =
          | Oobj o -> Cfield (Cderef (Cvar "self"), local_qn (name o))
          | Oarray (o, l) ->
              let f = Cfield (Cderef (Cvar "self"), local_qn (name o)) in
-             let rec mk_idx pl = match pl with 
+             let rec mk_idx pl = match pl with
               | [] -> f
               | p::pl -> Carray (mk_idx pl, Clhs (clhs_of_lhs var_env p))
              in
@@ -568,7 +568,7 @@ let rec cstm_of_act out_env var_env obj_env act =
                let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
                let rec mk_loop nl elt = match nl with
                 | [] -> [Csexpr (Cfun_call (classn ^ "_reset", [Caddrof elt] ))]
-                | n::nl -> 
+                | n::nl ->
                   let x = gen_symbol () in
                   let elt = Carray(elt, Clhs (Cvar x)) in
                    [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp n, mk_loop nl elt)]
@@ -667,7 +667,7 @@ let mem_decl_of_class_def cd =
       let ty = Cty_id (qn_append od.o_class "_mem") in
       let ty = match od.o_size with
         | Some nl ->
-          let rec mk_idx nl = match nl with 
+          let rec mk_idx nl = match nl with
             | [] -> ty
             | n::nl -> Cty_arr (int_of_static_exp n, mk_idx nl)
           in
