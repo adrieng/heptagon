@@ -94,12 +94,12 @@ and edesc funs acc ed = match ed with
           (n,w), acc in
       let n_w_list, acc = mapfold aux acc n_w_list in
         Estruct n_w_list, acc
-  | Eiterator (i, app, param, pargs, args, reset) ->
+  | Eiterator (i, app, params, pargs, args, reset) ->
       let app, acc = app_it funs acc app in
-      let param, acc = static_exp_it funs.global_funs acc param in
+      let params, acc = mapfold (static_exp_it funs.global_funs) acc params in
       let pargs, acc = mapfold (extvalue_it funs) acc pargs in
       let args, acc = mapfold (extvalue_it funs) acc args in
-        Eiterator (i, app, param, pargs, args, reset), acc
+        Eiterator (i, app, params, pargs, args, reset), acc
 
 
 and app_it funs acc a = funs.app funs acc a

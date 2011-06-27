@@ -46,7 +46,7 @@ and desc =
   | Emerge of var_ident * (constructor_name * exp) list
     (** merge ident (Constructor -> exp)+ *)
   | Eapp of app * exp list * exp option
-  | Eiterator of iterator_type * app * static_exp
+  | Eiterator of iterator_type * app * static_exp list
                   * exp list * exp list * exp option
 
 and app = {

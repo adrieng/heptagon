@@ -114,12 +114,12 @@ and edesc funs acc ed = match ed with
       let app, acc = app_it funs acc app in
       let args, acc = mapfold (exp_it funs) acc args in
       Eapp (app, args), acc
-  | Eiterator (i, app, param, pargs, args) ->
+  | Eiterator (i, app, params, pargs, args) ->
       let app, acc = app_it funs acc app in
-      let param, acc = exp_it funs acc param in
+      let params, acc = mapfold (exp_it funs) acc params in
       let pargs, acc = mapfold (exp_it funs) acc pargs in
       let args, acc = mapfold (exp_it funs) acc args in
-      Eiterator (i, app, param, pargs, args), acc
+      Eiterator (i, app, params, pargs, args), acc
 
 
 and app_it funs acc a = funs.app funs acc a

@@ -285,14 +285,14 @@ and translate_desc loc env = function
       let app = mk_app ~params:params (translate_op op) in
       Heptagon.Eapp (app, e_list, None)
 
-  | Eiterator (it, { a_op = op; a_params = params }, n, pe_list, e_list) ->
+  | Eiterator (it, { a_op = op; a_params = params }, n_list, pe_list, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
       let pe_list = List.map (translate_exp env) pe_list in
-      let n = expect_static_exp n in
+      let n_list = List.map expect_static_exp n_list in
       let params = List.map (expect_static_exp) params in
       let app = mk_app ~params:params (translate_op op) in
       Heptagon.Eiterator (translate_iterator_type it,
-                          app, n, pe_list, e_list, None)
+                          app, n_list, pe_list, e_list, None)
   | Ewhen (e, c, x) ->
       let x = Rename.var loc env x in
       let e = translate_exp env e in

@@ -67,7 +67,7 @@ and exp_desc =
 
 type obj_ref =
   | Oobj of obj_ident
-  | Oarray of obj_ident * pattern
+  | Oarray of obj_ident * pattern list
 
 type method_name =
   | Mreset
@@ -96,7 +96,7 @@ type obj_dec =
       o_class : class_name;
       o_params : static_exp list;
       (** size of the array if the declaration is an array of obj *)
-      o_size : static_exp option;
+      o_size : static_exp list option;
       o_loc : location }
 
 type method_def =
