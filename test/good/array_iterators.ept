@@ -1,8 +1,14 @@
 const n:int = 42
 
+
 node plusone(a:int) returns (o:int)
 let
   o = a+1;
+tel
+
+fun f() returns (o:int^n)
+let
+  o = mapi<<n>> plusone ();
 tel
 
 node g(a:int^n) returns (o:int^n)
