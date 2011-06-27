@@ -31,7 +31,7 @@ let program p =
     let main_methode =
       let vd_step, pat_step, exp_step = mk_var Tint "step" in
       let vd_args, _, exp_args =
-        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
+        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0])) "args" in
       let body =
         let vd_main, e_main, q_main, ty_main =
           let q_main = !Compiler_options.simulation_node |> Modules.qualify_value in (*qual*)
@@ -43,7 +43,7 @@ let program p =
         in
         let acts =
           let integer = Eclass(Names.pervasives_qn "Integer") in
-          let args1 = Earray_elem(exp_args, Sint 1) in
+          let args1 = Earray_elem(exp_args, [Sint 1]) in
           let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
           let jarrays = Eclass(Names.qualname_of_string "java.util.Arrays") in
           let jint = Eclass(Names.qualname_of_string "Integer") in

@@ -67,6 +67,12 @@ let rec pattern_of_idx_list p l =
   in
   aux p l
 
+let rec exp_of_idx_list e l = match e.w_ty, l with
+  | _, [] -> e
+  | Tarray (ty',_), idx :: l ->
+    exp_of_idx_list (mk_ext_value ty' (Warray (e, idx))) l
+  | _ -> internal_error "mls2obc"
+
 let rec extvalue_of_idx_list w l = match w.w_ty, l with
   | _, [] -> w
   | Tarray (ty',_), idx :: l ->
@@ -86,18 +92,24 @@ let rec ext_value_of_trunc_idx_list p l =
 
 let array_elt_of_exp idx e =
   match e.e_desc, Modules.unalias_type e.e_ty with
-  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) }; }, Tarray (ty,_) -> mk_ext_value_exp ty (Wconst c)
-    | _, Tarray (ty,_) ->
-        mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
-    | _ -> internal_error "mls2obc"
+  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) }; }, Tarray (ty,_) ->
+      mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+  | _, Tarray (ty,_) ->
+      mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
+  | _ -> internal_error "mls2obc"
 
 let rec array_elt_of_exp_list idx_list e =
   match e.e_desc, Modules.unalias_type e.e_ty with
-    | Econst ({ se_desc = Sarray_power (c, _) }), Tarray (ty,_) ->
-        mk_exp ty (Econst c)
-    | _, Tarray (ty,_) ->
-        mk_exp ty (Epattern (pattern_of_idx_list (pattern_of_exp e) idx_list))
-    | _ -> internal_error "mls2obc" 2
+    | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) } }, Tarray (ty,_) ->
+        mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+    | _ , t ->
+        let rec ty id_l t = match id_l, t with
+          | [] , t -> t
+          | _::id_l , Tarray (t,_) -> ty id_l t
+          | _, _ -> internal_error "mls2obc"
+        in
+        mk_exp (ty idx_list t) (Eextvalue (extvalue_of_idx_list (ext_value_of_exp e) idx_list))
+
 
 (** Creates the expression that checks that the indices
     in idx_list are in the bounds. If idx_list=[e1;..;ep]
@@ -435,7 +447,7 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                    | _, _ -> action @ s) in
         v' @ v, si'@si, j'@j, s
 
-    | pat, Minils.Eiterator (it, app, n, pe_list, e_list, reset) ->
+    | pat, Minils.Eiterator (it, app, n_list, pe_list, e_list, reset) ->
         let name_list = translate_pat map e.Minils.e_ty pat in
         let p_list = List.map (translate_extvalue_to_exp map) pe_list in
         let c_list = List.map (translate_extvalue_to_exp map) e_list in
@@ -609,7 +621,7 @@ and translate_iterator map call_context it name_list
         let c_list = array_of_input c_list in
         let acc_out = last_element name_list in
         let v, si, j, action = mk_node_call map call_context app loc name_list
-          (p_list @ c_list @ (List.map mk_evar_int xl) @ [ mk_exp acc_out.pat_ty (Epattern acc_out) ]) ty
+          (p_list @ c_list @ (List.map mk_evar_int xl) @ [ exp_of_pattern acc_out ]) ty
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in

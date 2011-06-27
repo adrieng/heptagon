@@ -408,7 +408,7 @@ let step_fun_call out_env var_env sig_info objn out args =
              let f = Cfield (Cderef (Cvar "self"), local_qn (name o)) in
              let rec mk_idx pl = match pl with
               | [] -> f
-              | p::pl -> Carray (mk_idx pl, Clhs (clhs_of_lhs var_env p))
+              | p::pl -> Carray (mk_idx pl, cexpr_of_pattern out_env var_env p)
              in
              mk_idx l
       ) in
@@ -570,7 +570,7 @@ let rec cstm_of_act out_env var_env obj_env act =
                 | [] -> [Csexpr (Cfun_call (classn ^ "_reset", [Caddrof elt] ))]
                 | n::nl ->
                   let x = gen_symbol () in
-                  let elt = Carray(elt, Clhs (Cvar x)) in
+                  let elt = Carray(elt, Cvar x) in
                    [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp n, mk_loop nl elt)]
                in
                  mk_loop size field

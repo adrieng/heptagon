@@ -1,0 +1,11 @@
+
+node sum_acc (a, acc_in:int) returns (acc_out:int)
+let
+  acc_out = acc_in + a;
+tel
+
+node h(a:int^n^n2) returns (m:int)
+let
+  m = fold<<n,n2>> sum_acc (a, 0);
+tel
+

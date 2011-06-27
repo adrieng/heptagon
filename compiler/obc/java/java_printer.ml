@@ -44,7 +44,10 @@ let rec _ty news ff t = match t with
       if news
       then fprintf ff "%a" class_name n
       else fprintf ff "%a<@[%a@]>" class_name n (print_list_r ty """,""") ty_l
-  | Tarray (t,s) -> if news then fprintf ff "%a[%a]" new_ty t exp s else fprintf ff "%a[]" ty t
+  | Tarray (t,s_l) ->
+      if news
+      then fprintf ff "%a@[%a@]" new_ty t (print_list exp "[""][""]") s_l
+      else fprintf ff "%a@[%a@]" ty t (print_list (fun ff e -> ()) "[""][""]") s_l
   | Tunit -> pp_print_string ff "void"
 
 and new_ty ff t = _ty true ff t
@@ -91,7 +94,7 @@ and exp ff = function
   | Efield (p,f) -> fprintf ff "%a.%a" exp p field_name f
   | Evar v -> var_ident ff v
   | Eclass c -> class_name ff c
-  | Earray_elem (p,e) -> fprintf ff "%a[%a]" exp p exp e
+  | Earray_elem (p,e_l) -> fprintf ff "%a@[%a@]" exp p (print_list exp "[""][""]") e_l
 
 and op ff (f, e_l) =
   let javaop = function
@@ -134,7 +137,7 @@ and pattern ff = function
   | Pfield (p, f) -> fprintf ff "%a.%a" pattern p field_name f
   | Pvar v -> var_ident ff v
   | Pclass c -> class_name ff c
-  | Parray_elem (p,e) -> fprintf ff "%a[%a]" pattern p exp e
+  | Parray_elem (p,e_l) -> fprintf ff "%a%a" pattern p (print_list exp "[""][""]") e_l
   | Pthis f -> fprintf ff "this.%a" field_ident f
 
 let rec block ff b =

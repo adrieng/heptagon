@@ -134,7 +134,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
       | Ewhen (e,c,n) ->
           let ck_n = ck_of_name h n in
           let base = expect (skeleton ck_n e.e_ty) e in
-          skeleton (Con (ck_n, c, n)) e.e_ty, base
+          skeleton (Con (ck_n, c, n)) e.e_ty, Con (ck_n, c, n)
       | Emerge (x, c_e_list) ->
           let ck = ck_of_name h x in
           List.iter (fun (c,e) -> expect_extvalue h (Con (ck,c,x)) e) c_e_list;
