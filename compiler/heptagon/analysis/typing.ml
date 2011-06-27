@@ -568,23 +568,23 @@ let rec typing cenv h e =
           let expected_ty_list =
             List.map (subst_type_vars m) expected_ty_list in
           let result_ty_list = List.map (subst_type_vars m) result_ty_list in
-          let typed_n_list = List.map (expect_static_exp const_env (Tid Initial.pint)) n_list in
+          let typed_n_list = List.map (expect_static_exp cenv (Tid Initial.pint)) n_list in
           (*typing of partial application*)
           let p_ty_list, expected_ty_list =
             Misc.split_at (List.length pe_list) expected_ty_list in
           let typed_pe_list = typing_args cenv h p_ty_list pe_list in
           (*typing of other arguments*)
-          let ty, typed_e_list = typing_iterator const_env h it n_list
+          let ty, typed_e_list = typing_iterator cenv h it n_list
             expected_ty_list result_ty_list e_list in
           let typed_params = typing_node_params cenv
             ty_desc.node_params params in
           (* add size constraints *)
           let constrs = List.map (simplify m) ty_desc.node_param_constraints in
-          List.iter (fun n -> add_size_constraint (Clequal (mk_static_int 1, n))) typed_n_list;
+          List.iter (fun n -> add_constraint_leq cenv (mk_static_int 1) n) typed_n_list;
           List.iter (add_constraint cenv) constrs;
           (* return the type *)
           Eiterator(it, { app with a_op = op; a_params = typed_params }
-                      , typed_n, typed_pe_list, typed_e_list, reset), ty
+                      , typed_n_list, typed_pe_list, typed_e_list, reset), ty
       | Eiterator _ -> assert false
 
       | Ewhen (e, c, x) ->
@@ -788,7 +788,7 @@ and typing_app cenv h app e_list =
 
 
 
-and typing_iterator const_env h
+and typing_iterator cenv h
     it n_list args_ty_list result_ty_list e_list =
   let rec array_of_idx_list l ty = match l with
     | [] -> ty
@@ -802,7 +802,7 @@ and typing_iterator const_env h
   | Imap ->
       let args_ty_list = mk_array_type args_ty_list in
       let result_ty_list = mk_array_type result_ty_list in
-      let typed_e_list = typing_args const_env h
+      let typed_e_list = typing_args cenv h
         args_ty_list e_list in
       prod result_ty_list, typed_e_list
 
@@ -816,7 +816,7 @@ and typing_iterator const_env h
             ( try unify cenv idx_ty (Tid Initial.pint)
               with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
            idx_ty_list;
-      let typed_e_list = typing_args const_env h
+      let typed_e_list = typing_args cenv h
         args_ty_list e_list in
       prod result_ty_list, typed_e_list
 
@@ -851,7 +851,7 @@ and typing_iterator const_env h
     | Imapfold ->
       let args_ty_list = mk_array_type_butnlast args_ty_list in
       let result_ty_list = mk_array_type_butnlast result_ty_list in
-      let typed_e_list = typing_args const_env h
+      let typed_e_list = typing_args cenv h
         args_ty_list e_list in
       (*check accumulator type matches in input and output*)
       ( try unify cenv (last_element args_ty_list) (last_element result_ty_list)

@@ -518,7 +518,7 @@ _exp:
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
   | it=iterator DOUBLE_LESS n=separated_nonempty_list(COMMA, simple_exp) DOUBLE_GREATER q=qualname
-      pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
+      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it q [] n pargs args }
   | it=iterator DOUBLE_LESS n=separated_nonempty_list(COMMA, simple_exp) DOUBLE_GREATER
