@@ -1,6 +1,5 @@
-(* the core module *)
-(* $Id: pervasives.epi 77 2009-03-11 16:07:00Z delaval $ *)
-(* pour debugger set arguments -nopervasives -i lib/pervasives.epi *)
+(* The core module *)
+(* To compile : heptc -nopervasives pervasives.epi *)
 type bool = true | false
 type int
 type float
@@ -15,6 +14,7 @@ val fun (-)(int;int) returns (int)
 val fun (-.)(float;float) returns (float)
 val fun (/)(int;int) returns (int)
 val fun (/.)(float;float) returns (float)
+val fun ( = )(int;int) returns (bool)
 val fun ( <= )(int;int) returns (bool)
 val fun ( <=. )(float;float) returns (bool)
 val fun ( < )(int;int) returns (bool)

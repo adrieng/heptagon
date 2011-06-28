@@ -33,12 +33,23 @@ let rec print_lhs ff e =
         print_exp ff idx;
         fprintf ff "]"
 
+and print_ext_value ff w = match w.w_desc with
+  | Wvar x -> print_ident ff x
+  | Wconst c -> print_static_exp ff c
+  | Wmem x -> fprintf ff "mem("; print_ident ff x; fprintf ff ")"
+  | Wfield (l, f) -> print_ext_value ff l; fprintf ff ".%s" (shortname f)
+  | Warray(x, idx) ->
+    print_ext_value ff x;
+    fprintf ff "[";
+    print_exp ff idx;
+    fprintf ff "]"
+
+
 and print_exps ff e_list = print_list_r print_exp "" "," "" ff e_list
 
 and print_exp ff e =
   match e.e_desc with
-    | Epattern lhs -> print_lhs ff lhs
-    | Econst c -> print_static_exp ff c
+    | Eextvalue lhs -> print_ext_value ff lhs
     | Eop(op, e_list) -> print_op ff op e_list
     | Estruct(_,f_e_list) ->
         fprintf ff "@[<v 1>";

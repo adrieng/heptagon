@@ -35,7 +35,7 @@ let act funs () a = match a with
           let pat_array_ref = mk_pattern ~loc:e.e_loc p.pat_ty (Lvar array_ref) in
           let init_array_ref = Aassgn (pat_array_ref, e) in
           (* the copy loop *)
-          let array_ref_i i = mk_pattern_exp t (Larray (pat_array_ref, i)) in
+          let array_ref_i i = mk_ext_value_exp t (Warray (ext_value_of_pattern pat_array_ref, i)) in
           let p_i i = mk_pattern t (Larray (p, i)) in
           let copy_i i =
             (* recursive call to deal with multidimensional arrays (go deeper) *)

@@ -138,9 +138,6 @@ and print_every ff reset =
 and print_app ff (app, args) =
   print_async ff app.a_async;
   match app.a_op with
-    | Eequal ->
-      let e1, e2 = assert_2 args in
-        fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
     | Etuple -> print_exp_tuple ff args
     | Efun f | Enode f ->
         fprintf ff "@[%a@,%a@,%a@]"
@@ -161,8 +158,7 @@ and print_app ff (app, args) =
     | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") args
     | Earray_fill ->
       let e = assert_1 args in
-      let n = assert_1 app.a_params in
-        fprintf ff "%a^%a" print_exp e print_static_exp n
+        fprintf ff "%a@[<2>%a@]" print_exp e (print_list print_static_exp "^""^""") app.a_params
     | Eselect ->
       let e = assert_1 args in
         fprintf ff "%a%a" print_exp e print_index app.a_params

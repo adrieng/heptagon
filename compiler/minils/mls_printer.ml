@@ -136,8 +136,8 @@ and print_app ff (app, args) =
     | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_extvalue "["";""]") args
     | Earray_fill ->
       let e = assert_1 args in
-      let n = assert_1 app.a_params in
-        fprintf ff "%a^%a" print_extvalue e print_static_exp n
+      let n_list = app.a_params in
+        fprintf ff "%a@[<2>%a@]" print_extvalue e (print_list print_static_exp "^""^""") n_list
     | Eselect ->
       let e = assert_1 args in
         fprintf ff "%a%a" print_extvalue e print_index app.a_params

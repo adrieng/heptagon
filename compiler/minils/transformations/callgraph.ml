@@ -182,12 +182,12 @@ struct
       let node_sig = find_value n.n_name in
       let node_sig, _ = Global_mapfold.node_it global_funs m node_sig in
       let node_sig = { node_sig with node_params = [];
-                                     node_params_constraints = [] } in
+                                     node_param_constraints = [] } in
       (* Find the name that was associated to this instance *)
       let ln = node_for_params_call n.n_name params in
         if not (check_value ln) then
           Modules.add_value ln node_sig;
-      { n with n_name = ln; n_params = []; n_params_constraints = []; }
+      { n with n_name = ln; n_params = []; n_param_constraints = []; }
 
     let node_dec n =
       List.map (node_dec_instance n) (get_node_instances n.n_name)
@@ -261,7 +261,7 @@ let node_by_longname node =
     let n = List.find (function Pnode n -> n.n_name = node | _ -> false) p.p_desc in
     (match n with
       | Pnode n -> n
-      | _ -> Misc.internal_error "callgraph" 0)
+      | _ -> Misc.internal_error "callgraph")
   with
     Not_found -> Error.message no_location (Error.Enode_unbound node)
 

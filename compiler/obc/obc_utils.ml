@@ -19,17 +19,26 @@ open Global_mapfold
 let mk_var_dec ?(loc=no_location) ?(mut=false) ident ty =
   { v_ident = ident; v_type = ty; v_mutable = mut; v_loc = loc }
 
+let mk_ext_value ?(loc=no_location) ty desc =
+  { w_desc = desc; w_ty = ty; w_loc = loc; }
+
+let mk_ext_value_int ?(loc=no_location) desc =
+  mk_ext_value ~loc:loc Initial.tint desc
+
+let mk_ext_value_bool ?(loc=no_location) desc =
+  mk_ext_value ~loc:loc Initial.tbool desc
+
 let mk_exp ?(loc=no_location) ty desc =
   { e_desc = desc; e_ty = ty; e_loc = loc }
 
 let mk_exp_int ?(loc=no_location) desc =
-  { e_desc = desc; e_ty = Initial.tint; e_loc = loc }
+  mk_exp ~loc:loc Initial.tint desc
 
 let mk_exp_static_int ?(loc=no_location) se =
-  mk_exp_int ~loc:loc (Econst se)
+  mk_exp_int ~loc:loc (Eextvalue (mk_ext_value_int (Wconst se)))
 
 let mk_exp_const_int ?(loc=no_location) i =
-  mk_exp_int ~loc:loc (Econst (Initial.mk_static_int i))
+  mk_exp_static_int ~loc:loc (Initial.mk_static_int i)
 
 let mk_exp_bool ?(loc=no_location) desc =
   { e_desc = desc; e_ty = Initial.tbool; e_loc = loc }
@@ -40,15 +49,21 @@ let mk_pattern ?(loc=no_location) ty desc =
 let mk_pattern_int ?(loc=no_location) desc =
   { pat_desc = desc; pat_ty = Initial.tint; pat_loc = loc }
 
-let mk_pattern_exp ty desc =
-  let pat = mk_pattern ty desc in
-    mk_exp ty (Epattern pat)
+let mk_ext_value_exp ty desc =
+  let w = mk_ext_value ty desc in
+  mk_exp ty (Eextvalue w)
+
+let mk_ext_value_exp_int desc = mk_ext_value_exp Initial.tint desc
+
+let mk_ext_value_exp_bool desc = mk_ext_value_exp Initial.tbool desc
+
+let mk_ext_value_static ty sed = mk_ext_value_exp ty (Wconst sed)
 
 let mk_evar ty id =
-  mk_exp ty (Epattern (mk_pattern ty (Lvar id)))
+  mk_ext_value_exp ty (Wvar id)
 
 let mk_evar_int id =
-  mk_exp Initial.tint (Epattern (mk_pattern Initial.tint (Lvar id)))
+  mk_evar Initial.tint id
 
 let mk_block ?(locals=[]) eq_list =
   { b_locals = locals;
@@ -86,8 +101,8 @@ let pattern_list_to_type p_l = match p_l with
   | [p] -> p.pat_ty
   | _ -> Tprod (List.map (fun p -> p.pat_ty) p_l)
 
-let pattern_of_exp e = match e.e_desc with
-  | Epattern l -> l
+let ext_value_of_exp e = match e.e_desc with
+  | Eextvalue w -> w
   | _ -> assert false
 
 let find_step_method cd =
@@ -102,8 +117,8 @@ let obj_ref_name o =
 
 (** Input a block [b] and remove all calls to [Reset] method from it *)
 let remove_resets b =
-  let block funs _ b =
-    let b,_ = Obc_mapfold.block funs () b in
+  let block funs () b =
+    let b, () = Obc_mapfold.block funs () b in
     let is_not_reset a = match a with
       | Acall( _,_,Mreset,_) -> false
       | _ -> true
@@ -210,3 +225,15 @@ let program_classes p =
     | _ -> acc
   in
     List.fold_right add_class p.p_desc []
+
+let rec ext_value_of_pattern patt =
+  let desc = match patt.pat_desc with
+    | Lvar id -> Wvar id
+    | Lmem id -> Wmem id
+    | Lfield (p, fn) -> Wfield (ext_value_of_pattern p, fn)
+    | Larray (p, e) -> Warray (ext_value_of_pattern p, e) in
+  mk_ext_value ~loc:patt.pat_loc patt.pat_ty desc
+
+let rec exp_of_pattern patt =
+  let w = ext_value_of_pattern patt in
+  mk_exp w.w_ty (Eextvalue w)

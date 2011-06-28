@@ -28,7 +28,9 @@ let rec find c = function
 let is_deadcode = function
     | Aassgn (lhs, e) ->
         (match e.e_desc with
-           | Epattern l -> l = lhs
+           | Eextvalue w ->
+             let w' = ext_value_of_pattern lhs in
+             w = w' (* TODO: proper compare *)
            | _ -> false
         )
     | Acase (_, []) -> true
@@ -59,7 +61,7 @@ and joinhandlers h1 h2 =
           with Not_found -> s1, h2 in
         (c1, join_block s1') :: joinhandlers h1' h2'
 
-let block funs acc b =
+let block _ acc b =
   { b with b_body = joinlist b.b_body }, acc
 
 let program p =

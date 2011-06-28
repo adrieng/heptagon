@@ -36,30 +36,28 @@ let exp funs local_const e =
       let sed =
         match e.e_desc with
           | Evar n ->
-            (try
-                 Svar (Q (qualify_const local_const (ToQ n)))
-            with
-              | Error.ScopingError _ -> raise Not_static)
-          | Eapp({ a_op = Earray_fill; a_params = [n] }, [e]) ->
-            Sarray_power (assert_se e, assert_se n)
+              (try Svar (Q (qualify_const local_const (ToQ n)))
+              with Error.ScopingError _ -> raise Not_static)
+          | Eapp({ a_op = Earray_fill; a_params = n_list }, [e]) ->
+              Sarray_power (assert_se e, List.map assert_se n_list)
           | Eapp({ a_op = Earray }, e_list) ->
-            Sarray (List.map assert_se e_list)
+              Sarray (List.map assert_se e_list)
           | Eapp({ a_op = Etuple }, e_list) ->
-            Stuple (List.map assert_se e_list)
+              Stuple (List.map assert_se e_list)
           | Eapp(app, e_list) ->
-            let op, e_list = static_app_from_app app e_list in
+              let op, e_list = static_app_from_app app e_list in
               Sop (op, List.map assert_se e_list)
           | Estruct e_list ->
-            Srecord (List.map (fun (f,e) -> f, assert_se e) e_list)
+              Srecord (List.map (fun (f,e) -> f, assert_se e) e_list)
           | _ -> raise Not_static
       in
-        { e with e_desc = Econst (mk_static_exp sed e.e_loc) }, local_const
+      { e with e_desc = Econst (mk_static_exp sed e.e_loc) }, local_const
     with
         Not_static -> e, local_const
 
 let node funs _ n =
   let local_const = Hept_scoping.build_const n.n_loc n.n_params in
-    Hept_parsetree_mapfold.node_dec funs local_const n
+  Hept_parsetree_mapfold.node_dec funs local_const n
 
 let const_dec funs local_const cd =
   let cd, _ = Hept_parsetree_mapfold.const_dec funs local_const cd in

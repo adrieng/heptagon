@@ -30,10 +30,7 @@ type arg = {
 type param = { p_name : name; p_type : ty }
 
 (** Constraints on size expressions *)
-type size_constraint =
-  | Cequal of static_exp * static_exp (* e1 = e2 *)
-  | Clequal of static_exp * static_exp (* e1 <= e2 *)
-  | Cfalse
+type constrnt = static_exp
 
 (** Node signature *)
 type node = {
@@ -41,7 +38,7 @@ type node = {
   node_outputs            : arg list;
   node_stateful           : bool;
   node_params             : param list;
-  node_params_constraints : size_constraint list;
+  node_param_constraints  : constrnt list;
   node_loc                : location}
 
 type field = { f_name : field_name; f_type : ty }
@@ -137,7 +134,7 @@ let mk_node ?(constraints = []) loc ins outs stateful params =
     node_outputs  = outs;
     node_stateful = stateful;
     node_params = params;
-    node_params_constraints = constraints;
+    node_param_constraints = constraints;
     node_loc = loc}
 
 let rec field_assoc f = function

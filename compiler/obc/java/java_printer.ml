@@ -73,7 +73,6 @@ and field ff f =
 
 and exp ff = function
   | Ethis -> fprintf ff "this"
-  | Eval p -> pattern ff p
   | Efun (f,e_l) -> op ff (f, e_l)
   | Emethod_call (o,m,e_l) -> fprintf ff "%a.%a%a" exp o method_name m args e_l
   | Enew (c,e_l) -> fprintf ff "new %a%a" new_ty c args e_l
@@ -91,6 +90,10 @@ and exp ff = function
   | Sconstructor c -> constructor_name ff c
   | Sstring s -> fprintf ff "\"%s\"" s
   | Snull -> fprintf ff "null"
+  | Efield (p,f) -> fprintf ff "%a.%a" exp p field_name f
+  | Evar v -> var_ident ff v
+  | Eclass c -> class_name ff c
+  | Earray_elem (p,e) -> fprintf ff "%a[%a]" exp p exp e
 
 and op ff (f, e_l) =
   let javaop = function
@@ -130,7 +133,7 @@ and op ff (f, e_l) =
 and args ff e_l = fprintf ff "@[(%a)@]" (print_list_r exp """,""") e_l
 
 and pattern ff = function
-  | Pfield (p,f) -> fprintf ff "%a.%a" pattern p field_name f
+  | Pfield (p, f) -> fprintf ff "%a.%a" pattern p field_name f
   | Pvar v -> var_ident ff v
   | Pclass c -> class_name ff c
   | Parray_elem (p,e) -> fprintf ff "%a[%a]" pattern p exp e

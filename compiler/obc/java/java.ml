@@ -77,8 +77,7 @@ and act = Anewvar of var_dec * exp
         | Afor of var_dec * exp * exp * block
         | Areturn of exp
 
-and exp = Eval of pattern
-        | Ethis
+and exp = Ethis
         | Efun of op_name * exp list
         | Emethod_call of exp * method_name * exp list
         | Easync_method_call of exp * method_name * exp list
@@ -93,7 +92,10 @@ and exp = Eval of pattern
         | Sconstructor of constructor_name
         | Sstring of string
         | Snull
-
+        | Efield of exp * field_name
+        | Eclass of class_name
+        | Evar of var_ident
+        | Earray_elem of exp * exp
 
 and pattern = Pfield of pattern * field_name
             | Pclass of class_name
@@ -131,7 +133,7 @@ let async_node = Names.qualname_of_string "AsyncNode"
 
 
 
-let mk_var x = Eval (Pvar x)
+let mk_var x = Evar x
 
 let mk_var_dec x ty =
   { vd_type = ty; vd_ident = x }

@@ -62,7 +62,6 @@ let translate_iterator_type = function
   | Heptagon.Imapfold -> Imapfold
 
 let rec translate_op = function
-  | Heptagon.Eequal -> Eequal
   | Heptagon.Eifthenelse -> Eifthenelse
   | Heptagon.Efun f -> Efun f
   | Heptagon.Enode f -> Enode f
@@ -92,7 +91,7 @@ let rec translate_extvalue e =
     | Heptagon.Ewhen (e, c, x) ->
         mk_extvalue (Wwhen (translate_extvalue e, c, x))
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield;
-                      Heptagon.a_params = params }, e_list, reset) ->
+                      Heptagon.a_params = params }, e_list, _) ->
         let e = assert_1 e_list in
         let f = assert_1 params in
         let fn = match f.se_desc with Sfield fn -> fn | _ -> assert false in
@@ -177,7 +176,7 @@ let node n =
     n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
-    n_params_constraints = n.Heptagon.n_params_constraints }
+    n_param_constraints = n.Heptagon.n_param_constraints }
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =

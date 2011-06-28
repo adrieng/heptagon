@@ -8,7 +8,7 @@ open Java_printer
 (** returns the vd and the pat of a fresh ident from [name] *)
 let mk_var ty name =
   let id = Idents.gen_var "java_main" name in
-  mk_var_dec id ty, Pvar id
+  mk_var_dec id ty, Pvar id, Evar id
 
 let program p =
   (*Scalarize*)
@@ -33,8 +33,8 @@ let program p =
       mk_field ~static:true ~final:true ~value:(Some (Sint 100)) Tint id, id
     in
     let main_methode =
-      let vd_step, pat_step = mk_var Tint "step" in
-      let vd_args, pat_args =
+      let vd_step, pat_step, exp_step = mk_var Tint "step" in
+      let vd_args, _, exp_args =
         mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
       let body =
         let vd_main, e_main, q_main, ty_main =
@@ -43,16 +43,16 @@ let program p =
             (find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
           let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
           let id = Idents.gen_var "java_main" "main" in
-          mk_var_dec id (Tclass q_main), Eval (Pvar id), q_main, ty_main
+          mk_var_dec id (Tclass q_main), Evar id, q_main, ty_main
         in
         let acts =
-          let integer = Eval(Pclass(Names.pervasives_qn "Integer")) in
-          let args1 = Eval(Parray_elem(pat_args, Sint 1)) in
-          let out = Eval(Pclass(Names.qualname_of_string "java.lang.System.out")) in
-          let jarrays = Eval(Pclass(Names.qualname_of_string "java.util.Arrays")) in
-          let jint = Eval(Pclass(Names.qualname_of_string "Integer")) in
-          let jfloat = Eval(Pclass(Names.qualname_of_string "Float")) in
-          let jbool = Eval(Pclass(Names.qualname_of_string "Boolean")) in
+          let integer = Eclass(Names.pervasives_qn "Integer") in
+          let args1 = Earray_elem(exp_args, Sint 1) in
+          let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
+          let jarrays = Eclass(Names.qualname_of_string "java.util.Arrays") in
+          let jint = Eclass(Names.qualname_of_string "Integer") in
+          let jfloat = Eclass(Names.qualname_of_string "Float") in
+          let jbool = Eclass(Names.qualname_of_string "Boolean") in
           let jsys = Eval(Pclass(Names.qualname_of_string "java.lang.System")) in
           let jminus = pervasives_qn "-" in
           let ret = Emethod_call(e_main, "step", []) in
@@ -78,11 +78,11 @@ let program p =
                                                       print_ret])) ]
           in
           [ Anewvar(vd_main, Enew (Tclass q_main, []));
-            Aifelse( Efun(Names.pervasives_qn ">", [Eval (Pfield (pat_args, "length")); Sint 1])
+            Aifelse( Efun(Names.pervasives_qn ">", [Efield (exp_args, "length"); Sint 1])
                    , mk_block [Aassgn(pat_step, Emethod_call(integer, "parseInt", [args1]))]
-                   , mk_block [Aassgn(pat_step, Eval (Pvar id_step_dnb))]);
+                   , mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
-            Obc2java.fresh_for (Eval pat_step) main_for_loop;
+            Obc2java.fresh_for pat_step main_for_loop;
             Aexp (Emethod_call(out, "printf",
               [ Sstring "time : %d\\n";
                 Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]))

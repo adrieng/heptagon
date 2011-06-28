@@ -46,7 +46,7 @@ and static_exp_desc =
   | Sconstructor of constructor_name
   | Sfield of field_name
   | Stuple of static_exp list
-  | Sarray_power of static_exp * static_exp (** power : 0^n : [0,0,0,0,0,..] *)
+  | Sarray_power of static_exp * (static_exp list) (** power : 0^n : [0,0,0,0,0,..] *)
   | Sarray of static_exp list (** [ e1, e2, e3 ] *)
   | Srecord of (field_name * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
   | Sop of fun_name * static_exp list (** defined ops for now in pervasives *)
@@ -101,7 +101,6 @@ and edesc =
 and app = { a_op: op; a_params: exp list; a_async : async_t option }
 
 and op =
-  | Eequal
   | Etuple
   | Enode of qualname
   | Efun of qualname
@@ -187,14 +186,15 @@ type contract =
     c_block   : block }
 
 type node_dec =
-  { n_name      : dec_name;
-    n_stateful : bool;
-    n_input     : var_dec list;
-    n_output    : var_dec list;
-    n_contract  : contract option;
-    n_block     : block;
-    n_loc       : location;
-    n_params    : var_dec list; }
+  { n_name        : dec_name;
+    n_stateful    : bool;
+    n_input       : var_dec list;
+    n_output      : var_dec list;
+    n_contract    : contract option;
+    n_block       : block;
+    n_loc         : location;
+    n_params      : var_dec list;
+    n_constraints : exp list; }
 
 type const_dec =
   { c_name  : dec_name;
@@ -220,12 +220,13 @@ type arg =
     a_name  : var_name option }
 
 type signature =
-  { sig_name      : dec_name;
-    sig_inputs    : arg list;
-    sig_stateful : bool;
-    sig_outputs   : arg list;
-    sig_params    : var_dec list;
-    sig_loc       : location }
+  { sig_name        : dec_name;
+    sig_inputs      : arg list;
+    sig_stateful    : bool;
+    sig_outputs     : arg list;
+    sig_params      : var_dec list;
+    sig_param_constraints : exp list;
+    sig_loc         : location }
 
 type interface = interface_decl list
 

@@ -1,7 +1,18 @@
 
 Plus ou moins ordonné du plus urgent au moins urgent.
 
-*- Bugs related to matching types without unaliasing it. In lots of parts. Use Modules.unalias_type. 
+Bugs :
+
+*- Typer les signatures (verifier que les contraintes sont bien des bools)
+
+*- Hept mapfold ne parcourt pas les types partout..... cf TODO du code.
+
+*- Bugs related to matching types without unaliasing it. In lots of parts. Use Modules.unalias_type.
+
+
+Ameliorations :
+
+*- Permettre des equations sans variables a gauche. Ou au moins ne pas donner de nom au pattern : _
 
 *- Collision entre les noms de params et les idents dans les noeuds.
 
@@ -9,11 +20,7 @@ Plus ou moins ordonné du plus urgent au moins urgent.
 
 *- Optimisation de la traduction des automates : pas besoin de variables de reset pour les états "continue", etc.
 
-*- (LG) Rajouter les annotations d'horloge dans le source (les mettres comme contrainte de sous typage en ck_base ?? voir avec lucy-n)
-
 *- Compléter la passe "static.ml" pour gérer l'ensemble des opérateurs de pervasives
-
-*- Permettre les déclarations des types et des noeuds et des constantes dans un ordre quelconque.
 
 *- Permettre la définition de constantes locales.
 

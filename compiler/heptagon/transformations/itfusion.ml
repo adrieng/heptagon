@@ -28,7 +28,7 @@ let anon_nodes = ref QualEnv.empty
 let add_anon_node inputs outputs locals eqs =
   let n = mk_fresh_node_name () in
   let b = mk_block ~locals:locals eqs in
-  let nd = mk_node ~input:inputs ~output:outputs ~local:locals n b in
+  let nd = mk_node ~input:inputs ~output:outputs n b in
   anon_nodes := QualEnv.add n nd !anon_nodes;
   n
 

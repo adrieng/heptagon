@@ -56,7 +56,6 @@ and app = {
   a_unsafe : bool }
 
 and op =
-  | Eequal
   | Etuple
   | Efun of fun_name
   | Enode of fun_name
@@ -145,15 +144,15 @@ type contract = {
   c_block   : block }
 
 type node_dec = {
-  n_name      : qualname;
-  n_stateful  : bool;
-  n_input     : var_dec list;
-  n_output    : var_dec list;
-  n_contract  : contract option;
-  n_block     : block;
-  n_loc       : location;
-  n_params    : param list;
-  n_params_constraints : size_constraint list }
+  n_name               : qualname;
+  n_stateful           : bool;
+  n_input              : var_dec list;
+  n_output             : var_dec list;
+  n_contract           : contract option;
+  n_block              : block;
+  n_loc                : location;
+  n_params             : param list;
+  n_param_constraints  : constrnt list }
 
 type const_dec = {
   c_name  : qualname;
@@ -173,12 +172,13 @@ and program_desc =
 
 
 type signature = {
-  sig_name      : qualname;
-  sig_inputs    : arg list;
-  sig_stateful  : bool;
-  sig_outputs   : arg list;
-  sig_params    : param list;
-  sig_loc       : location }
+  sig_name              : qualname;
+  sig_inputs            : arg list;
+  sig_stateful          : bool;
+  sig_outputs           : arg list;
+  sig_params            : param list;
+  sig_param_constraints : constrnt list;
+  sig_loc               : location }
 
 type interface = interface_decl list
 

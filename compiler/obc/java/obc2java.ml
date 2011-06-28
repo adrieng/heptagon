@@ -28,6 +28,7 @@ open Obc_utils
 open Java
 
 let mk_classe = mk_classe ~imports:import_async
+let this_field_ident id = Efield (Ethis, Idents.name id)
 
 
 (** Additional classes created during the translation *)
@@ -100,19 +101,47 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sbool b -> Sbool b
   | Types.Sstring s -> Sstring s
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
-  | Types.Sfield f -> eprintf "ojSfield @."; assert false;
+  | Types.Sfield _ -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
-  | Types.Sarray_power (see,pow) ->
-      let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
-                 with Errors.Error ->
-                   eprintf "%aStatic power of array should have integer power. \
-                            Please use callgraph or non-static exp in %a.@."
-                           Location.print_location se.Types.se_loc
-                           Global_printer.print_static_exp se;
-                   raise Errors.Error)
+  | Types.Sarray_power (see,pow_list) ->
+      let pow_list = List.rev pow_list in
+      let rec make_array tyl pow_list = match tyl, pow_list with
+        | Tarray(t, _), pow::pow_list ->
+            let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+                       with  Errors.Error ->
+                                   eprintf "%aStatic power of array should have integer power. \
+                                           Please use callgraph or non-static exp in %a.@."
+                              Location.print_location se.Types.se_loc
+                              Global_printer.print_static_exp se;
+                              raise Errors.Error)
+            in
+            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow)
+        | _ -> static_exp param_env see
       in
-      let se_l = Misc.repeat_list (static_exp param_env see) pow in
-      Enew_array (ty param_env se.Types.se_ty, se_l)
+      make_array (ty param_env se.Types.se_ty) pow_list
+        (*let t = match x.pat_ty with
+          | Tarray (t,_) -> t
+          | _ -> Misc.internal_error "mls2obc select slice type" 5
+        in
+      let eval_int pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+                          with  Errors.Error ->
+                                       eprintf "%aStatic power of array should have integer power. \
+                                               Please use callgraph or non-static exp in %a.@."
+                                Location.print_location se.Types.se_loc
+                                Global_printer.print_static_exp se;
+                                raise Errors.Error)
+      in
+      let rec make_matrix acc = match pow_list with
+        | [] -> acc
+        | pow :: pow_list ->
+              let pow = eval_int pow in
+              make_matrix (Misc.repeat_list acc pow) pow_list
+      in
+      let se_l = match pow_list with
+        | [] -> Misc.internal_error "Empty power list" 0
+        | pow :: pow_list -> make_matrix (Misc.repeat_list (static_exp param_env see)) pow_list
+      in
+      Enew_array (ty param_env se.Types.se_ty, se_l)*)
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
@@ -154,8 +183,7 @@ and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_i
 and var_dec_list param_env vd_l = List.map (var_dec param_env) vd_l
 
 and exp param_env e = match e.e_desc with
-  | Obc.Epattern p -> Eval (pattern param_env p)
-  | Obc.Econst se -> static_exp param_env se
+  | Obc.Eextvalue p -> ext_value param_env p
   | Obc.Eop (op,e_l) -> Efun (op, exp_list param_env e_l)
   | Obc.Estruct _ -> eprintf "ojEstruct@."; assert false (* TODO java *)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
@@ -174,9 +202,25 @@ and pattern param_env p = match p.pat_desc with
   | Obc.Lfield (p,f) -> Pfield (pattern param_env p, translate_field_name f)
   | Obc.Larray (p,e) -> Parray_elem (pattern param_env p, exp param_env e)
 
+and pattern_to_exp param_env p = match p.pat_desc with
+  | Obc.Lvar v -> Evar v
+  | Obc.Lmem v -> this_field_ident v
+  | Obc.Lfield (p,f) ->
+    Efield (pattern_to_exp param_env p, translate_field_name f)
+  | Obc.Larray (p,e) ->
+    Earray_elem (pattern_to_exp param_env p, exp param_env e)
+
+and ext_value param_env w = match w.w_desc with
+  | Obc.Wvar v -> Evar v
+  | Obc.Wconst c -> static_exp param_env c
+  | Obc.Wmem v -> this_field_ident v
+  | Obc.Wfield (p,f) -> Efield (ext_value param_env p, translate_field_name f)
+  | Obc.Warray (p,e) -> Earray_elem (ext_value param_env p, exp param_env e)
+
+
 let obj_ref param_env o = match o with
-  | Oobj id -> Eval (Pvar id)
-  | Oarray (id,p) -> Eval (Parray_elem (Pvar id, Eval (pattern param_env p)))
+  | Oobj id -> Evar id
+  | Oarray (id,p) -> Earray_elem (Evar id, pattern_to_exp param_env p)
 
 let rec act_list param_env act_l acts =
   let _act act acts = match act with
@@ -207,7 +251,7 @@ let rec act_list param_env act_l acts =
             | _ -> Ecast(t, e)
           in
           let p = pattern param_env p in
-          Aassgn (p, cast t (Eval (Pfield (Pvar return_id, "c"^(string_of_int i)))))
+          Aassgn (p, cast t (Efield (Evar return_id, "c"^(string_of_int i))))
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
@@ -270,7 +314,7 @@ let sig_args_to_vds param_env a_l =
 
 (** [copy_to_this vd_l] creates [this.x = x] for all [x] in [vd_l] *)
 let copy_to_this vd_l =
-  let _vd vd = Aassgn (Pthis vd.vd_ident, Eval (Pvar vd.vd_ident)) in
+  let _vd vd = Aassgn (Pthis vd.vd_ident, Evar vd.vd_ident) in
   List.map _vd vd_l
 
 
@@ -472,8 +516,8 @@ let class_def_list classes cd_l =
       let return_act =
         Areturn (match vd_output with
                   | [] -> Evoid
-                  | [vd] -> Eval (Pvar vd.vd_ident)
-                  | vd_l -> Enew (return_ty, List.map (fun vd -> Eval (Pvar vd.vd_ident)) vd_l))
+                  | [vd] -> Evar vd.vd_ident
+                  | vd_l -> Enew (return_ty, List.map (fun vd -> Evar vd.vd_ident) vd_l))
       in
       let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
       mk_methode ~throws:throws_async ~args:(var_dec_list param_env ostep.Obc.m_inputs)
@@ -492,8 +536,8 @@ let type_dec_list classes td_l =
     let classe_name = qualname_to_package_classe td.t_name in
     Idents.enter_node classe_name;
     match td.t_desc with
-      | Type_abs -> Misc.unsupported "obc2java, abstract type." 1
-      | Type_alias _ -> Misc.unsupported "obc2java, type alias." 2
+      | Type_abs -> Misc.unsupported "obc2java, abstract type."
+      | Type_alias _ -> Misc.unsupported "obc2java, type alias."
       | Type_enum c_l ->
           let mk_constr_enum c = translate_constructor_name_2 c td.t_name in
           (mk_enum (List.map mk_constr_enum c_l) classe_name) :: classes

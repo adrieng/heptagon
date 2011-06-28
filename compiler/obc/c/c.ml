@@ -70,11 +70,14 @@ and cexpr =
   | Cuop of string * cexpr (** Unary operator with its name. *)
   | Cbop of string * cexpr * cexpr (** Binary operator. *)
   | Cfun_call of string * cexpr list (** Function call with its parameters. *)
-  | Cconst of cconst (** Constants. *)
-  | Clhs of clhs (** Left-hand-side expressions are obviously expressions! *)
-  | Caddrof of clhs (** Take the address of a left-hand-side expression. *)
+  | Caddrof of cexpr (** Take the address of an expression. *)
   | Cstructlit of string * cexpr list (** Structure literal "{ f1, f2, ... }".*)
   | Carraylit of cexpr list (** Array literal [\[e1, e2, ...\]]. *)
+  | Cconst of cconst (** Constants. *)
+  | Cvar of string (** A local variable. *)
+  | Cderef of cexpr (** Pointer dereference, *ptr. *)
+  | Cfield of cexpr * qualname (** Field access to left-hand-side. *)
+  | Carray of cexpr * cexpr (** Array access cexpr[cexpr] *)
 and cconst =
   | Ccint of int (** Integer constant. *)
   | Ccfloat of float (** Floating-point number constant. *)
@@ -82,10 +85,10 @@ and cconst =
   | Cstrlit of string (** String literal, enclosed in double-quotes. *)
 (** C left-hand-side (ie. affectable) expressions. *)
 and clhs =
-  | Cvar of string (** A local variable. *)
-  | Cderef of clhs (** Pointer dereference, *ptr. *)
-  | Cfield of clhs * qualname (** Field access to left-hand-side. *)
-  | Carray of clhs * cexpr (** Array access clhs[cexpr] *)
+  | CLvar of string (** A local variable. *)
+  | CLderef of clhs (** Pointer dereference, *ptr. *)
+  | CLfield of clhs * qualname (** Field access to left-hand-side. *)
+  | CLarray of clhs * cexpr (** Array access clhs[cexpr] *)
 (** C statements. *)
 and cstm =
   | Csexpr of cexpr (** Expression evaluation, may cause side-effects! *)
@@ -234,28 +237,33 @@ and pp_cexpr fmt ce = match ce with
   | Cbop (s, l, r) -> fprintf fmt "(%a%s%a)" pp_cexpr l s pp_cexpr r
   | Cfun_call (s, el) ->
       fprintf fmt "%a(@[%a@])"  pp_string s  (pp_list1 pp_cexpr ",") el
-  | Cconst (Ccint i) -> fprintf fmt "%d" i
-  | Cconst (Ccfloat f) -> fprintf fmt "%f" f
-  | Cconst (Ctag "true") -> fprintf fmt "true"
-  | Cconst (Ctag "false") -> fprintf fmt "false"
-  | Cconst (Ctag t) -> pp_string fmt t
-  | Cconst (Cstrlit t) -> fprintf fmt "\"%s\"" t
-  | Clhs lhs -> fprintf fmt "%a" pp_clhs lhs
-  | Caddrof lhs -> fprintf fmt "&%a" pp_clhs lhs
+  | Caddrof e -> fprintf fmt "&%a" pp_cexpr e
   | Cstructlit (s, el) ->
       fprintf fmt "(%a){@[%a@]}" pp_string s (pp_list1 pp_cexpr ",") el
   | Carraylit el -> (* TODO master : WRONG *)
       fprintf fmt "((int []){@[%a@]})" (pp_list1 pp_cexpr ",") el
-
-and pp_clhs fmt lhs = match lhs with
+  | Cconst c -> pp_cconst fmt c
   | Cvar s -> pp_string fmt s
-  | Cderef lhs' -> fprintf fmt "*%a" pp_clhs lhs'
-  | Cfield (Cderef lhs, f) -> fprintf fmt "%a->%a" pp_clhs lhs  pp_qualname f
-  | Cfield (lhs, f) -> fprintf fmt "%a.%a" pp_clhs lhs  pp_qualname f
-  | Carray (lhs, e) ->
+  | Cderef e -> fprintf fmt "*%a" pp_cexpr e
+  | Cfield (Cderef e, f) -> fprintf fmt "%a->%a" pp_cexpr e pp_qualname f
+  | Cfield (e, f) -> fprintf fmt "%a.%a" pp_cexpr e pp_qualname f
+  | Carray (e1, e2) -> fprintf fmt "%a[%a]" pp_cexpr e1 pp_cexpr e2
+
+and pp_clhs fmt clhs = match clhs with
+  | CLvar s -> pp_string fmt s
+  | CLderef lhs' -> fprintf fmt "*%a" pp_clhs lhs'
+  | CLfield (CLderef lhs, f) -> fprintf fmt "%a->%a" pp_clhs lhs  pp_qualname f
+  | CLfield (lhs, f) -> fprintf fmt "%a.%a" pp_clhs lhs  pp_qualname f
+  | CLarray (lhs, e) ->
       fprintf fmt "%a[%a]"
         pp_clhs lhs
         pp_cexpr e
+
+and pp_cconst fmt cconst = match cconst with
+  | Ccint i -> fprintf fmt "%d" i
+  | Ccfloat f -> fprintf fmt "%f" f
+  | Ctag t -> pp_string fmt t
+  | Cstrlit t -> fprintf fmt "\"%s\"" t
 
 let pp_cdecl fmt cdecl = match cdecl with
   | Cdecl_enum (s, sl) ->
@@ -322,12 +330,6 @@ let output dir cprog =
 
 (** { Lexical conversions to C's syntax } *)
 
-(** Converts an expression to a lhs. *)
-let lhs_of_exp e =
-  match e with
-    | Clhs e -> e
-    | _ -> assert false
-
 (** Returns the type of a pointer to a type, except for
     types which are already pointers. *)
 let pointer_to ty =
@@ -347,4 +349,5 @@ let rec array_base_ctype ty idx_list =
   match ty, idx_list with
     | Cty_arr (_, ty), [_] -> ty
     | Cty_arr (_, ty), _::idx_list -> array_base_ctype ty idx_list
-    | _ -> assert false
+    | _ ->
+      assert false

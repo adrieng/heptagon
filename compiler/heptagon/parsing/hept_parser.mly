@@ -160,16 +160,17 @@ label_ty:
 ;
 
 node_dec:
-  | node_or_fun ident node_params LPAREN in_params RPAREN
-    RETURNS LPAREN out_params RPAREN
-    contract b=block(LET) TEL
-      {{ n_name = $2;
-         n_stateful = $1;
-         n_input  = $5;
-         n_output = $9;
-         n_contract = $11;
+  | n=node_or_fun f=ident pc=node_params LPAREN i=in_params RPAREN
+    RETURNS LPAREN o=out_params RPAREN
+    c=contract b=block(LET) TEL
+      {{ n_name = f;
+         n_stateful = n;
+         n_input  = i;
+         n_output = o;
+         n_contract = c;
          n_block = b;
-         n_params = $3;
+         n_params = fst pc;
+         n_constraints = snd pc;
          n_loc = (Loc($startpos,$endpos)) }}
 ;
 
@@ -207,9 +208,13 @@ nonmt_out_params:
   | var_last SEMICOL nonmt_out_params { $1 @ $3 }
 ;
 
+constraints:
+  | /*empty*/ {[]}
+  | BAR l=slist(SEMICOL, exp) { l }
+
 node_params:
-  | /* empty */ { [] }
-  | DOUBLE_LESS nonmt_params DOUBLE_GREATER { $2 }
+  | /* empty */ { [],[] }
+  | DOUBLE_LESS p=nonmt_params c=constraints DOUBLE_GREATER { p,c }
 ;
 
 contract:
@@ -481,9 +486,9 @@ _exp:
   | exp INFIX0 exp
       { mk_op_call $2 [$1; $3] }
   | exp EQUAL exp
-      { mk_call Eequal [$1; $3] }
+      { mk_op_call "=" [$1; $3] }
   | exp LESS_GREATER exp
-      { let e = mk_exp (mk_call Eequal [$1; $3]) (Loc($startpos,$endpos)) in
+      { let e = mk_exp (mk_op_call "=" [$1; $3]) (Loc($startpos,$endpos)) in
           mk_op_call "not" [e] }
   | exp OR exp
       { mk_op_call "or" [$1; $3] }
@@ -504,8 +509,8 @@ _exp:
   | LAST IDENT
       { Elast $2 }
 /*Array operations*/
-  | exp POWER simple_exp
-      { mk_call ~params:[$3] Earray_fill [$1] }
+  | exp POWER separated_nonempty_list(POWER, simple_exp)
+      { mk_call ~params:$3 Earray_fill [$1] }
   | simple_exp indexes
       { mk_call ~params:$2 Eselect [$1] }
   | simple_exp DOT indexes DEFAULT exp
@@ -652,13 +657,14 @@ _interface_decl:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
   | OPEN modul { Iopen $2 }
-  | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
-    RETURNS LPAREN params_signature RPAREN
-    { Isignature({ sig_name = $3;
-                   sig_inputs = $6;
-                   sig_stateful = $2;
-                   sig_outputs = $10;
-                   sig_params = $4;
+  | VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
+    RETURNS LPAREN o=params_signature RPAREN
+    { Isignature({ sig_name = f;
+                   sig_inputs = i;
+                   sig_stateful = n;
+                   sig_outputs = o;
+                   sig_params = fst pc;
+                   sig_param_constraints = snd pc;
                    sig_loc = (Loc($startpos,$endpos)) }) }
 ;
 

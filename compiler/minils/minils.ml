@@ -85,7 +85,7 @@ and op =
   | Eifthenelse        (** if arg1 then arg2 else arg3 *)
   | Efield_update      (** { arg1 with a_param1 = arg2 } *)
   | Earray             (** [ args ] *)
-  | Earray_fill        (** [arg1^a_param1] *)
+  | Earray_fill        (** [arg1^a_param1^..^a_paramn] *)
   | Eselect            (** arg1[a_params] *)
   | Eselect_slice      (** arg1[a_param1..a_param2] *)
   | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
@@ -127,7 +127,7 @@ type node_dec = {
   n_equs   : eq list;
   n_loc    : location;
   n_params : param list;
-  n_params_constraints : size_constraint list }
+  n_param_constraints : constrnt list }
 
 type const_dec = {
   c_name : qualname;
@@ -174,7 +174,7 @@ let mk_node
     n_equs = eq;
     n_loc = loc;
     n_params = param;
-    n_params_constraints = constraints }
+    n_param_constraints = constraints }
 
 let mk_type_dec type_desc name loc =
   { t_name = name; t_desc = type_desc; t_loc = loc }

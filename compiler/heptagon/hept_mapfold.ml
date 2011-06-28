@@ -285,7 +285,7 @@ and program_desc_it funs acc pd =
   with Fallback -> program_desc funs acc pd
 and program_desc funs acc pd = match pd with
   | Pconst cd -> let cd, acc = const_dec_it funs acc cd in Pconst cd, acc
-  | Ptype td -> pd, acc
+  | Ptype td -> pd, acc (* TODO types *)
   | Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
 
 let defaults = {

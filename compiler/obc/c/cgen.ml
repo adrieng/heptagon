@@ -139,56 +139,50 @@ let csubscript_of_idx_list e idx_list =
     represents the bounds of these two arrays. *)
 let rec copy_array src dest bounds =
   match bounds with
-    | [] -> [Caffect (dest, Clhs src)]
+    | [] -> [Caffect (dest, src)]
     | n::bounds ->
         let x = gen_symbol () in
         [Cfor(x, Cconst (Ccint 0), n,
-              copy_array (Carray (src, Clhs (Cvar x)))
-                (Carray (dest, Clhs (Cvar x))) bounds)]
-
-(** Returns the type associated with the name [n]
-    in the environnement [var_env] (which is an association list
-    mapping strings to cty). *)
-let rec assoc_type n var_env =
-  match var_env with
-    | [] -> Error.message no_location (Error.Evar n)
-    | (vn,ty)::var_env ->
-        if vn = n then
-          ty
-        else
-          assoc_type n var_env
+              copy_array (Carray (src, Cvar x))
+                (CLarray (dest, Cvar x)) bounds)]
 
 (** @return the unaliased version of a type. *)
-let rec unalias_ctype = function
+let rec unalias_ctype cty = match cty with
   | Cty_id ty_name ->
-      (try
-         match find_type ty_name with
-           | Talias ty -> unalias_ctype (ctype_of_otype ty)
-           | _ -> Cty_id ty_name
-      with Not_found -> Cty_id ty_name)
+    (try match find_type ty_name with
+    | Talias ty -> unalias_ctype (ctype_of_otype ty)
+    | _ -> Cty_id ty_name
+     with Not_found -> Cty_id ty_name)
   | Cty_arr (n, cty) -> Cty_arr (n, unalias_ctype cty)
   | Cty_ptr cty -> Cty_ptr (unalias_ctype cty)
   | cty -> cty
 
+(** Returns the type associated with the name [n]
+    in the environnement [var_env] (which is an association list
+    mapping strings to cty). *)
+and assoc_type n var_env =
+  try unalias_ctype (List.assoc n var_env)
+  with Not_found -> Error.message no_location (Error.Evar n)
+
 (** Returns the type associated with the lhs [lhs]
     in the environnement [var_env] (which is an association list
     mapping strings to cty).*)
-let rec assoc_type_lhs lhs var_env =
-  match lhs with
-    | Cvar x -> unalias_ctype (assoc_type x var_env)
-    | Carray (lhs, _) ->
-        let ty = assoc_type_lhs lhs var_env in
-        array_base_ctype ty [1]
-    | Cderef lhs ->
-        (match assoc_type_lhs lhs var_env with
-         | Cty_ptr ty -> ty
-         | _ -> Error.message no_location Error.Ederef_not_pointer)
-    | Cfield(Cderef (Cvar "self"), { name = x }) -> assoc_type x var_env
-    | Cfield(x, f) ->
-        let ty = assoc_type_lhs x var_env in
-        let n = struct_name ty in
-        let fields = find_struct n in
-        ctype_of_otype (field_assoc f fields)
+let rec assoc_type_lhs lhs var_env = match lhs with
+  | CLvar x -> unalias_ctype (assoc_type x var_env)
+  | CLarray (lhs, _) ->
+    let ty = assoc_type_lhs lhs var_env in
+    array_base_ctype ty [1]
+  | CLderef lhs ->
+    (match assoc_type_lhs lhs var_env with
+    | Cty_ptr ty -> ty
+    | _ -> Error.message no_location Error.Ederef_not_pointer)
+  | CLfield(CLderef (CLvar "self"), { name = x }) -> assoc_type x var_env
+  | CLfield(CLderef (CLvar "out"), { name = x }) -> assoc_type x var_env
+  | CLfield(x, f) ->
+    let ty = assoc_type_lhs x var_env in
+    let n = struct_name ty in
+    let fields = find_struct n in
+    ctype_of_otype (field_assoc f fields)
 
 (** Creates the statement a = [e_1, e_2, ..], which gives a list
     a[i] = e_i.*)
@@ -196,7 +190,7 @@ let rec create_affect_lit dest l ty =
   let rec _create_affect_lit dest i = function
     | [] -> []
     | v::l ->
-        let stm = create_affect_stm (Carray (dest, Cconst (Ccint i))) v ty in
+        let stm = create_affect_stm (CLarray (dest, Cconst (Ccint i))) v ty in
         stm@(_create_affect_lit dest (i+1) l)
   in
   _create_affect_lit dest 0 l
@@ -207,12 +201,13 @@ and create_affect_stm dest src ty =
     | Cty_arr (n, bty) ->
         (match src with
            | Carraylit l -> create_affect_lit dest l bty
-           | Clhs src ->
-               let x = gen_symbol () in
-               [Cfor(x, Cconst (Ccint 0), Cconst (Ccint n),
-                     create_affect_stm (Carray (dest, Clhs (Cvar x)))
-                       (Clhs (Carray (src, Clhs (Cvar x)))) bty)]
-           | _ -> assert false (** TODO: add missing cases eg for records *)
+           | src ->
+             let x = gen_symbol () in
+             [Cfor(x,
+                   Cconst (Ccint 0), Cconst (Ccint n),
+                   create_affect_stm
+                     (CLarray (dest, Cvar x))
+                     (Carray (src, Cvar x)) bty)]
         )
     | Cty_id ln ->
         (match src with
@@ -220,22 +215,17 @@ and create_affect_stm dest src ty =
               let create_affect { f_name = f_name;
                                   Signature.f_type = f_type; } e stm_list =
                 let cty = ctype_of_otype f_type in
-                create_affect_stm (Cfield (dest, f_name)) e cty @ stm_list in
+                create_affect_stm (CLfield (dest, f_name)) e cty @ stm_list in
               List.fold_right2 create_affect (find_struct ln) ce_list []
           | _ -> [Caffect (dest, src)])
     | _ -> [Caffect (dest, src)]
 
 (** Returns the expression to use e as an argument of
     a function expecting a pointer as argument. *)
-let address_of e =
-(*  try *)
-    let lhs = lhs_of_exp e in
-    match lhs with
-      | Carray _ -> Clhs lhs
-      | Cderef lhs -> Clhs lhs
-      | _ -> Caddrof lhs
-(*  with _ ->
-    e  *)
+let address_of e = match e with
+  | Carray _ -> e
+  | Cderef e -> e
+  | _ -> Caddrof e
 
 let rec cexpr_of_static_exp se =
   match se.se_desc with
@@ -254,9 +244,9 @@ let rec cexpr_of_static_exp se =
         in
           Cstructlit (ty_name,
                      List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
-    | Sarray_power(c,n) ->
-        let cc = cexpr_of_static_exp c in
-          Carraylit (repeat_list cc (int_of_static_exp n)) (* TODO should be recursive *)
+    | Sarray_power(c,n_list) ->
+          (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n)))
+                     (cexpr_of_static_exp c) n_list)
     | Svar ln ->
         (try
           let cd = find_const ln in
@@ -273,29 +263,23 @@ let rec cexpr_of_static_exp se =
 
 
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
-let rec cexpr_of_exp var_env exp =
+let rec cexpr_of_exp out_env var_env exp =
   match exp.e_desc with
-    (** Obj expressions that form valid C lhs are translated via clhs_of_exp. *)
-    | Epattern _  ->
-        Clhs (clhs_of_exp var_env exp)
-          (** Constants, the easiest translation. *)
-    | Econst lit ->
-        cexpr_of_static_exp lit
-          (** Operators *)
-    | Eop(op, exps) ->
-        cop_of_op var_env op exps
-          (** Structure literals. *)
+    | Eextvalue w  -> cexpr_of_ext_value out_env var_env w
+    (** Operators *)
+    | Eop(op, exps) -> cop_of_op out_env var_env op exps
+    (** Structure literals. *)
     | Estruct (tyn, fl) ->
-        let cexps = List.map (fun (_,e) -> cexpr_of_exp var_env e) fl in
+        let cexps = List.map (fun (_,e) -> cexpr_of_exp out_env var_env e) fl in
         let ctyn = cname_of_qn tyn in
         Cstructlit (ctyn, cexps)
     | Earray e_list ->
-        Carraylit (cexprs_of_exps var_env e_list)
+        Carraylit (cexprs_of_exps out_env var_env e_list)
     | Ebang _ ->
         (* TODO async *) assert false
 
-and cexprs_of_exps var_env exps =
-  List.map (cexpr_of_exp var_env) exps
+and cexprs_of_exps out_env var_env exps =
+  List.map (cexpr_of_exp out_env var_env) exps
 
 and cop_of_op_aux op_name cexps = match op_name with
     | { qual = Pervasives; name = op } ->
@@ -311,38 +295,92 @@ and cop_of_op_aux op_name cexps = match op_name with
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
         end
-    | {qual = m; name = op} -> Cfun_call(op,cexps)
+    | { name = op } -> Cfun_call(op,cexps)
 
-and cop_of_op var_env op_name exps =
-  let cexps = cexprs_of_exps var_env exps in
+and cop_of_op out_env var_env op_name exps =
+  let cexps = cexprs_of_exps out_env var_env exps in
   cop_of_op_aux op_name cexps
 
-and clhs_of_lhs var_env l = match l.pat_desc with
+and clhs_of_pattern out_env var_env l = match l.pat_desc with
   (** Each Obc variable corresponds to a real local C variable. *)
   | Lvar v ->
       let n = name v in
+      let n_lhs =
+        if IdentSet.mem v out_env
+        then CLfield (CLderef (CLvar "out"), local_qn n)
+        else CLvar n
+      in
+
       if List.mem_assoc n var_env then
         let ty = assoc_type n var_env in
         (match ty with
-           | Cty_ptr _ -> Cderef (Cvar n)
-           | _ -> Cvar n
+           | Cty_ptr _ -> CLderef n_lhs
+           | _ -> n_lhs
         )
       else
-        Cvar n
+        n_lhs
+  (** Dereference our [self] struct holding the node's memory. *)
+  | Lmem v -> CLfield (CLderef (CLvar "self"), local_qn (name v))
+  (** Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
+  | Lfield (l, fn) -> CLfield(clhs_of_pattern out_env var_env l, fn)
+  | Larray (l, idx) ->
+      CLarray(clhs_of_pattern out_env var_env l,
+              cexpr_of_exp out_env var_env idx)
+
+and clhs_list_of_pattern_list out_env var_env lhss =
+  List.map (clhs_of_pattern out_env var_env) lhss
+
+and cexpr_of_pattern out_env var_env l = match l.pat_desc with
+  (** Each Obc variable corresponds to a real local C variable. *)
+  | Lvar v ->
+      let n = name v in
+      let n_lhs =
+        if IdentSet.mem v out_env
+        then Cfield (Cderef (Cvar "out"), local_qn n)
+        else Cvar n
+      in
+
+      if List.mem_assoc n var_env then
+        let ty = assoc_type n var_env in
+        (match ty with
+           | Cty_ptr _ -> Cderef n_lhs
+           | _ -> n_lhs
+        )
+      else
+        n_lhs
   (** Dereference our [self] struct holding the node's memory. *)
   | Lmem v -> Cfield (Cderef (Cvar "self"), local_qn (name v))
   (** Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
-  | Lfield (l, fn) -> Cfield(clhs_of_lhs var_env l, fn)
+  | Lfield (l, fn) -> Cfield(cexpr_of_pattern out_env var_env l, fn)
   | Larray (l, idx) ->
-      Carray(clhs_of_lhs var_env l, cexpr_of_exp var_env idx)
+      Carray(cexpr_of_pattern out_env var_env l,
+             cexpr_of_exp out_env var_env idx)
 
-and clhss_of_lhss var_env lhss =
-  List.map (clhs_of_lhs var_env) lhss
+and cexpr_of_ext_value out_env var_env w = match w.w_desc with
+  | Wconst c -> cexpr_of_static_exp c
+  (** Each Obc variable corresponds to a plain local C variable. *)
+  | Wvar v ->
+    let n = name v in
+    let n_lhs =
+      if IdentSet.mem v out_env
+      then Cfield (Cderef (Cvar "out"), local_qn n)
+      else Cvar n
+    in
 
-and clhs_of_exp var_env exp = match exp.e_desc with
-  | Epattern l -> clhs_of_lhs var_env l
-  (** We were passed an expression that is not translatable to a valid C lhs?!*)
-  | _ -> invalid_arg "clhs_of_exp: argument not a Var, Mem or Field"
+    if List.mem_assoc n var_env then
+      let ty = assoc_type n var_env in
+      (match ty with
+      | Cty_ptr _ -> Cderef n_lhs
+      | _ -> n_lhs)
+    else
+      n_lhs
+  (** Dereference our [self] struct holding the node's memory. *)
+  | Wmem v -> Cfield (Cderef (Cvar "self"), local_qn (name v))
+  (** Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
+  | Wfield (l, fn) -> Cfield(cexpr_of_ext_value out_env var_env l, fn)
+  | Warray (l, idx) ->
+    Carray(cexpr_of_ext_value out_env var_env l,
+           cexpr_of_exp out_env var_env idx)
 
 let rec assoc_obj instance obj_env =
   match obj_env with
@@ -365,14 +403,14 @@ let out_var_name_of_objn o =
 (** Creates the list of arguments to call a node. [targeting] is the targeting
     of the called node, [mem] represents the node context and [args] the
     argument list.*)
-let step_fun_call var_env sig_info objn out args =
+let step_fun_call out_env var_env sig_info objn out args =
   if sig_info.node_stateful then (
     let mem =
       (match objn with
          | Oobj o -> Cfield (Cderef (Cvar "self"), local_qn (name o))
          | Oarray (o, l) ->
-             let l = clhs_of_lhs var_env l in
-               Carray (Cfield (Cderef (Cvar "self"), local_qn (name o)), Clhs l)
+             let l = cexpr_of_pattern out_env var_env l in
+             Carray (Cfield (Cderef (Cvar "self"), local_qn (name o)), l)
       ) in
       args@[Caddrof out; Caddrof mem]
   ) else
@@ -382,7 +420,7 @@ let step_fun_call var_env sig_info objn out args =
     [outvl] is a list of lhs where to put the results.
     [args] is the list of expressions to use as arguments.
     [mem] is the lhs where is stored the node's context.*)
-let generate_function_call var_env obj_env outvl objn args =
+let generate_function_call out_env var_env obj_env outvl objn args =
   (** Class name for the object to step. *)
   let classln = assoc_cn objn obj_env in
   let classn = cname_of_qn classln in
@@ -395,7 +433,7 @@ let generate_function_call var_env obj_env outvl objn args =
     else
       (** The step function takes scalar arguments and its own internal memory
           holding structure. *)
-      let args = step_fun_call var_env sig_info objn out args in
+      let args = step_fun_call out_env var_env sig_info objn out args in
       (** Our C expression for the function call. *)
       Cfun_call (classn ^ "_step", args)
   in
@@ -413,29 +451,38 @@ let generate_function_call var_env obj_env outvl objn args =
         let out_sig = output_names_list sig_info in
         let create_affect outv out_name =
           let ty = assoc_type_lhs outv var_env in
-            create_affect_stm outv (Clhs (Cfield (out, local_qn out_name))) ty
+            create_affect_stm outv (Cfield (out, local_qn out_name)) ty
         in
           (Csexpr fun_call)::(List.flatten (map2 create_affect outvl out_sig))
 
 (** Create the statement dest = c where c = v^n^m... *)
-let rec create_affect_const var_env dest c =
+let rec create_affect_const var_env (dest : clhs) c =
   match c.se_desc with
     | Svar ln ->
         let se = Static.simplify QualEnv.empty (find_const ln).c_value in
         create_affect_const var_env dest se
-    | Sarray_power(c, n) ->
-        let x = gen_symbol () in
-        [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp n,
-              create_affect_const var_env (Carray (dest, Clhs (Cvar x))) c)]
+    | Sarray_power(c, n_list) ->
+        let rec make_loop power_list replace = match power_list with
+          | [] -> dest, replace
+          | p :: power_list ->
+            let x = gen_symbol () in
+            let e, replace =
+              make_loop power_list
+                        (fun y -> [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp p, replace y)]) in
+            let e =  (CLarray (e, Cvar x)) in
+            e, replace
+        in
+        let e, b = make_loop n_list (fun y -> y) in
+        b (create_affect_const var_env e c)
     | Sarray cl ->
         let create_affect_idx c (i, affl) =
-          let dest = Carray (dest, Cconst (Ccint i)) in
+          let dest = CLarray (dest, Cconst (Ccint i)) in
             (i - 1, create_affect_const var_env dest c @ affl)
         in
           snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
     | Srecord f_se_list ->
         let affect_field affl (f, se) =
-          let dest_f = Cfield (dest, f) in
+          let dest_f = CLfield (dest, f) in
             (create_affect_const var_env dest_f se) @ affl
         in
           List.fold_left affect_field [] f_se_list
@@ -444,23 +491,23 @@ let rec create_affect_const var_env dest c =
 (** [cstm_of_act obj_env mods act] translates the Obj action [act] to a list of
     C statements, using the association list [obj_env] to map object names to
     class names.  *)
-let rec cstm_of_act var_env obj_env act =
+let rec cstm_of_act out_env var_env obj_env act =
   match act with
       (** Cosmetic : cases on boolean values are converted to if statements. *)
     | Acase (c, [({name = "true"}, te); ({ name = "false" }, fe)])
     | Acase (c, [({name = "false"}, fe); ({ name = "true"}, te)]) ->
-        let cc = cexpr_of_exp var_env c in
-        let cte = cstm_of_act_list var_env obj_env te in
-        let cfe = cstm_of_act_list var_env obj_env fe in
+        let cc = cexpr_of_exp out_env var_env c in
+        let cte = cstm_of_act_list out_env var_env obj_env te in
+        let cfe = cstm_of_act_list out_env var_env obj_env fe in
         [Cif (cc, cte, cfe)]
     | Acase (c, [({name = "true"}, te)]) ->
-        let cc = cexpr_of_exp var_env c in
-        let cte = cstm_of_act_list var_env obj_env te in
+        let cc = cexpr_of_exp out_env var_env c in
+        let cte = cstm_of_act_list out_env var_env obj_env te in
         let cfe = [] in
         [Cif (cc, cte, cfe)]
     | Acase (c, [({name = "false"}, fe)]) ->
-        let cc = Cuop ("!", (cexpr_of_exp var_env c)) in
-        let cte = cstm_of_act_list var_env obj_env fe in
+        let cc = Cuop ("!", (cexpr_of_exp out_env var_env c)) in
+        let cte = cstm_of_act_list out_env var_env obj_env fe in
         let cfe = [] in
         [Cif (cc, cte, cfe)]
 
@@ -474,35 +521,36 @@ let rec cstm_of_act var_env obj_env act =
         let ccl =
           List.map
             (fun (c,act) -> cname_of_qn c,
-               cstm_of_act_list var_env obj_env act) cl in
-        [Cswitch (cexpr_of_exp var_env e, ccl)]
+               cstm_of_act_list out_env var_env obj_env act) cl in
+        [Cswitch (cexpr_of_exp out_env var_env e, ccl)]
 
     | Ablock b ->
-        cstm_of_act_list var_env obj_env b
+        cstm_of_act_list out_env var_env obj_env b
 
     (** For composition of statements, just recursively apply our
         translation function on sub-statements. *)
     | Afor ({ v_ident = x }, i1, i2, act) ->
-        [Cfor(name x, cexpr_of_exp var_env i1,
-              cexpr_of_exp var_env i2, cstm_of_act_list var_env obj_env act)]
+        [Cfor(name x, cexpr_of_exp out_env var_env i1,
+              cexpr_of_exp out_env var_env i2,
+              cstm_of_act_list out_env var_env obj_env act)]
 
-    (** Special case for x = 0^n^n...*)
-    | Aassgn (vn, { e_desc = Econst c }) ->
-        let vn = clhs_of_lhs var_env vn in
+    (** Translate constant assignment *)
+    | Aassgn (vn, { e_desc = Eextvalue { w_desc = Wconst c }; }) ->
+        let vn = clhs_of_pattern out_env var_env vn in
         create_affect_const var_env vn c
 
     (** Purely syntactic translation from an Obc local variable to a C
         local one, with recursive translation of the rhs expression. *)
     | Aassgn (vn, e) ->
-        let vn = clhs_of_lhs var_env vn in
+        let vn = clhs_of_pattern out_env var_env vn in
         let ty = assoc_type_lhs vn var_env in
-        let ce = cexpr_of_exp var_env e in
+        let ce = cexpr_of_exp out_env var_env e in
         create_affect_stm vn ce ty
 
     (** Our Aop marks an operator invocation that will perform side effects. Just
         translate to a simple C statement. *)
     | Aop (op_name, args) ->
-        [Csexpr (cop_of_op var_env op_name args)]
+        [Csexpr (cop_of_op out_env var_env op_name args)]
 
     (** Reinitialization of an object variable, extracting the reset
         function's name from our environment [obj_env]. *)
@@ -519,7 +567,7 @@ let rec cstm_of_act var_env obj_env act =
            | Some size ->
                let x = gen_symbol () in
                let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
-               let elt = [Caddrof( Carray(field, Clhs (Cvar x)) )] in
+               let elt = [Caddrof( Carray(field, Cvar x) )] in
                  [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp size,
                        [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
         )
@@ -530,15 +578,15 @@ let rec cstm_of_act var_env obj_env act =
         local structure to hold the results, before allocating to our
         variables. *)
     | Acall (outvl, objn, Mstep, el) ->
-        let args = cexprs_of_exps var_env el in
-        let outvl = clhss_of_lhss var_env outvl in
-        generate_function_call var_env obj_env outvl objn args
+        let args = cexprs_of_exps out_env var_env el in
+        let outvl = clhs_list_of_pattern_list out_env var_env outvl in
+        generate_function_call out_env var_env obj_env outvl objn args
 
 
-and cstm_of_act_list var_env obj_env b =
+and cstm_of_act_list out_env var_env obj_env b =
   let l = List.map cvar_of_vd b.b_locals in
   let var_env = l @ var_env in
-  let cstm = List.flatten (List.map (cstm_of_act var_env obj_env) b.b_body) in
+  let cstm = List.flatten (List.map (cstm_of_act out_env var_env obj_env) b.b_body) in
     match l with
       | [] -> cstm
       | _ ->
@@ -589,12 +637,13 @@ let fun_def_of_step_fun n obj_env mem objs md =
   (** The body *)
   let mems = List.map cvar_of_vd (mem@md.m_outputs) in
   let var_env = args @ mems @ out_vars in
-  let body = cstm_of_act_list var_env obj_env md.m_body in
-
-  (** Substitute the return value variables with the corresponding
-      context field*)
-  let map = Csubst.assoc_map_for_fun md in
-  let body = List.map (Csubst.subst_stm map) body in
+  let out_env =
+    List.fold_left
+      (fun out_env vd -> IdentSet.add vd.v_ident out_env)
+      IdentSet.empty
+      md.m_outputs
+  in
+  let body = cstm_of_act_list out_env var_env obj_env md.m_body in
 
   Cfundef {
     f_name = fun_name;
@@ -644,7 +693,7 @@ let reset_fun_def_of_class_def cd =
     try
       let var_env = List.map cvar_of_vd cd.cd_mems in
       let reset = find_reset_method cd in
-      cstm_of_act_list var_env cd.cd_objs reset.m_body
+      cstm_of_act_list IdentSet.empty var_env cd.cd_objs reset.m_body
     with Not_found -> [] (* TODO C : nicely deal with stateless objects *)
   in
   Cfundef {
@@ -721,7 +770,7 @@ let cdefs_and_cdecls_of_type_decl otd =
                 block_body =
                   let gen_if t =
                     let t = cname_of_qn t in
-                    let funcall = Cfun_call ("strcmp", [Clhs (Cvar "s");
+                    let funcall = Cfun_call ("strcmp", [Cvar "s";
                                                         Cconst (Cstrlit t)]) in
                     let cond = Cbop ("==", funcall, Cconst (Ccint 0)) in
                     Cif (cond, [Creturn (Cconst (Ctag t))], []) in
@@ -737,11 +786,11 @@ let cdefs_and_cdecls_of_type_decl otd =
                   let gen_clause t =
                     let t = cname_of_qn t in
                     let fun_call =
-                      Cfun_call ("strcpy", [Clhs (Cvar "buf");
+                      Cfun_call ("strcpy", [Cvar "buf";
                                             Cconst (Cstrlit t)]) in
                     (t, [Csexpr fun_call]) in
-                  [Cswitch (Clhs (Cvar "x"), map gen_clause nl);
-                   Creturn (Clhs (Cvar "buf"))]; }
+                  [Cswitch (Cvar "x", map gen_clause nl);
+                   Creturn (Cvar "buf")]; }
           } in
         ([of_string_fun; to_string_fun],
          [Cdecl_enum (name, List.map cname_of_qn nl);

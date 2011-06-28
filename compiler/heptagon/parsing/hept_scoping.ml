@@ -45,6 +45,7 @@ struct
     | Evariable_already_defined of name
     | Econst_variable_already_defined of name
     | Estatic_exp_expected
+    | Eredefinition of qualname
 
   let message loc kind =
     begin match kind with
@@ -75,6 +76,10 @@ struct
       | Estatic_exp_expected ->
           eprintf "%aA static expression was expected.@."
             print_location loc
+      | Eredefinition qualname ->
+          eprintf "%aName %a was already defined.@."
+            print_location loc
+            print_qualname qualname
     end;
     raise Errors.Error
 
@@ -85,6 +90,9 @@ end
 
 open Error
 
+let safe_add loc add n x =
+  try ((add n x) : unit)
+  with Modules.Already_defined -> message loc (Eredefinition n)
 
 (** {3 Qualify when ToQ and check when Q according to the global env } *)
 
@@ -154,12 +162,13 @@ let mk_app ?(async = None) ?(params=[]) ?(unsafe=false) op =
   { Heptagon.a_op = op; Heptagon.a_params = params;
     Heptagon.a_unsafe = unsafe; Heptagon.a_async = async }
 
-let mk_signature name ins outs stateful params loc =
+let mk_signature name ins outs stateful params constraints loc =
   { Heptagon.sig_name = name;
     Heptagon.sig_inputs = ins;
     Heptagon.sig_stateful = stateful;
     Heptagon.sig_outputs = outs;
     Heptagon.sig_params = params;
+    Heptagon.sig_param_constraints = constraints;
     Heptagon.sig_loc = loc }
 
 
@@ -210,7 +219,7 @@ and translate_static_exp_desc loc ed =
     | Sconstructor c -> Types.Sconstructor (qualify_constrs c)
     | Sfield c -> Types.Sfield (qualify_field c)
     | Stuple se_list -> Types.Stuple (List.map t se_list)
-    | Sarray_power (se,sn) -> Types.Sarray_power (t se, t sn)
+    | Sarray_power (se,sn) -> Types.Sarray_power (t se, List.map t sn)
     | Sarray se_list -> Types.Sarray (List.map t se_list)
     | Srecord se_f_list ->
         let qualf (f, se) = (qualify_field f, t se) in
@@ -303,7 +312,6 @@ and translate_desc loc env = function
 
 
 and translate_op = function
-  | Eequal -> Heptagon.Eequal
   | Earrow -> Heptagon.Earrow
   | Eifthenelse -> Heptagon.Eifthenelse
   | Efield -> Heptagon.Efield
@@ -409,16 +417,18 @@ let translate_contract env ct =
     Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
     Heptagon.c_block = b }
 
-let params_of_var_decs =
-  List.map (fun vd -> Signature.mk_param
-                        vd.v_name
-                        (translate_type vd.v_loc vd.v_type))
+let params_of_var_decs p_l =
+  let pofvd vd = Signature.mk_param vd.v_name (translate_type vd.v_loc vd.v_type) in
+  List.map pofvd p_l
 
+
+let translate_constrnt e = expect_static_exp e
 
 let translate_node node =
   let n = current_qual node.n_name in
   Idents.enter_node n;
   let params = params_of_var_decs node.n_params in
+  let constraints = List.map translate_constrnt node.n_constraints in
   let input_env = Rename.append Rename.empty (node.n_input) in
   (* inputs should refer only to inputs *)
   let inputs = translate_vd_list input_env node.n_input in
@@ -429,7 +439,7 @@ let translate_node node =
   (* the env of the block is used in the contract translation *)
   let contract = Misc.optional (translate_contract env) node.n_contract in
   (* add the node signature to the environment *)
-  let node = { Heptagon.n_name = n;
+  let nnode = { Heptagon.n_name = n;
                Heptagon.n_stateful = node.n_stateful;
                Heptagon.n_input = inputs;
                Heptagon.n_output = outputs;
@@ -437,26 +447,25 @@ let translate_node node =
                Heptagon.n_block = b;
                Heptagon.n_loc = node.n_loc;
                Heptagon.n_params = params;
-               Heptagon.n_params_constraints = []; }
+               Heptagon.n_param_constraints = constraints; }
   in
-  add_value n (Hept_utils.signature_of_node node);
-  node
-
+  safe_add node.n_loc add_value n (Hept_utils.signature_of_node nnode);
+  nnode
 
 let translate_typedec ty =
     let n = current_qual ty.t_name in
     let tydesc = match ty.t_desc with
       | Type_abs ->
-          add_type n Signature.Tabstract;
+          safe_add ty.t_loc add_type n Signature.Tabstract;
           Heptagon.Type_abs
       | Type_alias t ->
           let t = translate_type ty.t_loc t in
-          add_type n (Signature.Talias t);
+          safe_add ty.t_loc add_type n (Signature.Talias t);
           Heptagon.Type_alias t
       | Type_enum(tag_list) ->
           let tag_list = List.map current_qual tag_list in
           List.iter (fun tag -> add_constrs tag n) tag_list;
-          add_type n (Signature.Tenum tag_list);
+          safe_add ty.t_loc add_type n (Signature.Tenum tag_list);
           Heptagon.Type_enum tag_list
       | Type_struct(field_ty_list) ->
           let translate_field_type (f,t) =
@@ -465,7 +474,7 @@ let translate_typedec ty =
             add_field f n;
             Signature.mk_field f t in
           let field_list = List.map translate_field_type field_ty_list in
-          add_type n (Signature.Tstruct field_list);
+          safe_add ty.t_loc add_type n (Signature.Tstruct field_list);
           Heptagon.Type_struct field_list in
     { Heptagon.t_name = n;
       Heptagon.t_desc = tydesc;
@@ -484,7 +493,7 @@ let translate_const_dec cd =
 
 let translate_program p =
   let translate_program_desc pd = match pd with
-    | Ppragma _ -> Misc.unsupported "pragma in scoping" 1
+    | Ppragma _ -> Misc.unsupported "pragma in scoping"
     | Pconst c -> Heptagon.Pconst (translate_const_dec c)
     | Ptype t -> Heptagon.Ptype (translate_typedec t)
     | Pnode n -> Heptagon.Pnode (translate_node n)
@@ -510,10 +519,11 @@ let translate_signature s =
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
+  let c = List.map translate_constrnt s.sig_param_constraints in
   let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful p in
   Signature.check_signature sig_node;
-  add_value n sig_node;
-  mk_signature n i o s.sig_stateful p s.sig_loc
+  safe_add s.sig_loc add_value n sig_node;
+  mk_signature n i o s.sig_stateful p c s.sig_loc
 
 
 let translate_interface_desc = function
