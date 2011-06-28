@@ -53,25 +53,25 @@ class boolean_input (table:GPack.table) n : input =
   let click button_clicked () =
     if not !click_processed then
       begin
-	click_processed := true;
-	value := not !value;
-	begin match button_clicked with
-	| false -> 
-	    but_true#set_active !value
-	| true ->
-	    but_false#set_active (not !value)
-	end;
-	begin match !autostep with
-	| None -> ()
-	| Some f -> f ()
-	end;
-	click_processed := false
+  click_processed := true;
+  value := not !value;
+  begin match button_clicked with
+  | false ->
+      but_true#set_active !value
+  | true ->
+      but_false#set_active (not !value)
+  end;
+  begin match !autostep with
+  | None -> ()
+  | Some f -> f ()
+  end;
+  click_processed := false
       end
   in
   let _ = (but_true#connect#clicked ~callback:(click true)) in
   let _ = (but_false#connect#clicked ~callback:(click false)) in
 object
-  method get_input = 
+  method get_input =
     if !value then "1" else "0"
   method get_random_input =
     let v = Random.bool () in
@@ -90,20 +90,20 @@ class enum_input mod_name value_list (table:GPack.table) n : input =
   let mod_name = modul_to_string mod_name in
   let value = ref ((List.hd value_list).name) in
   let click_processed = ref false in
-  
+
   let nb_values = List.length value_list in
   let buttons_frame  = GPack.table ~columns:nb_values ~rows:1 () in
-  let _ = table#attach 
+  let _ = table#attach
     ~expand:`BOTH ~left:1 ~right:3 ~top:n buttons_frame#coerce in
-    
+
   let rec create_buttons n first = function
       [] -> []
     | { name = value } :: value_list ->
-	let but = GButton.toggle_button ~label:value ~active:first () in
-	let _ = buttons_frame#attach 
-	  ~expand:`BOTH ~left:n ~right:(n+1) ~top:0 but#coerce in
-	(value,but) :: (create_buttons (n+1) false value_list) in
-  
+  let but = GButton.toggle_button ~label:value ~active:first () in
+  let _ = buttons_frame#attach
+    ~expand:`BOTH ~left:n ~right:(n+1) ~top:0 but#coerce in
+  (value,but) :: (create_buttons (n+1) false value_list) in
+
   let buttons = create_buttons 0 true value_list in
   let array_buttons = Array.of_list buttons in
 
@@ -113,25 +113,25 @@ class enum_input mod_name value_list (table:GPack.table) n : input =
     (fun (v,b) ->
        let prefixed_value = mod_name ^ "_" ^ v in
        let click () =
-	 if not !click_processed then
-	   begin
-	     click_processed := true;
-	     value := prefixed_value;
-	     !active_button#set_active false;
-	     b#set_active true;
-	     active_button := b;
-	     begin match !autostep with
-	     | None -> ()
-	     | Some f -> f ()
-	     end;
-	     click_processed := false
-	   end in
+   if not !click_processed then
+     begin
+       click_processed := true;
+       value := prefixed_value;
+       !active_button#set_active false;
+       b#set_active true;
+       active_button := b;
+       begin match !autostep with
+       | None -> ()
+       | Some f -> f ()
+       end;
+       click_processed := false
+     end in
        ignore(b#connect#clicked ~callback:click)
     )
     buttons in
 
 object
-  method get_input = 
+  method get_input =
     !value
   method get_random_input =
     let i = Random.int (Array.length array_buttons) in
@@ -167,7 +167,7 @@ object
   method reset = ()
 end
 
-class scale_input default_value lower upper to_float from_float digits 
+class scale_input default_value lower upper to_float from_float digits
   (table:GPack.table) n : input =
   let adj =
     GData.adjustment
@@ -175,8 +175,8 @@ class scale_input default_value lower upper to_float from_float digits
       ~lower:lower
       ~upper:upper
       () in
-  let scale = 
-    GRange.scale 
+  let scale =
+    GRange.scale
       `HORIZONTAL
       ~adjustment:adj
       ~digits:digits
@@ -197,7 +197,7 @@ object
     adj#set_value (to_float v)
   method reset = ()
 end
-	
+
 
 class type output =
 object
@@ -208,7 +208,7 @@ class label_output (table:GPack.table) n : output =
   let label = GMisc.label ~text:"" () in
   let _ = table#attach ~expand:`BOTH ~left:1 ~right:2 ~top:n label#coerce in
 object
-  method set_output s = 
+  method set_output s =
     label#set_text s
 end
 
@@ -225,25 +225,25 @@ let create_input v_name v_ty n (table:GPack.table) =
   table#attach ~expand:`BOTH ~left:0 ~right:1 ~top:n label#coerce;
   match v_ty with
   | Tid{ qual = Pervasives; name = "int" } ->
-      new scale_input 
-	0.0 0. 120.float_of_string 
-	(fun v ->
-	   string_of_int (int_of_float v))
-	0
-	table n
+      new scale_input
+  0.0 0. 120.float_of_string
+  (fun v ->
+     string_of_int (int_of_float v))
+  0
+  table n
   | Tid{ qual = Pervasives; name = "float" } ->
       new scale_input 0. 0. 100. float_of_string string_of_float 1 table n
   | Tid{ qual = Pervasives; name = "bool" } ->
       new boolean_input table n
   | Tid(name) ->
       begin try
-	let ty = find_type name in
-	begin match ty with
-	| Tenum(clist) -> new enum_input name.qual clist table n
-	| _ -> new entry_input "" table n
-	end
+  let ty = find_type name in
+  begin match ty with
+  | Tenum(clist) -> new enum_input name.qual clist table n
+  | _ -> new entry_input "" table n
+  end
       with Not_found ->
-	new entry_input "" table n
+  new entry_input "" table n
       end
   | _ -> failwith("Arrays and tuples not yet implemented")
 
@@ -277,7 +277,7 @@ let find_in_path filename =
              Only a minimal chronogram tool will be provided.\n" filename;
           raise Not_found
 
-let usage_msg = "Usage: " ^ 
+let usage_msg = "Usage: " ^
   Sys.executable_name ^ " -mod <Module> -node <node> -exec <exec>\n" ^
 "       " ^  Sys.executable_name ^ " -sig <file>.epci -node <node> -exec <exec>"
 and doc_sig  = "<file>.epci\tCompiled interface containing node <node> (for backward compatibility)"
@@ -297,8 +297,8 @@ let main () =
   let mod_name_of_epci epci_name =
     if Filename.check_suffix epci_name ".epci" then
       begin
-	let filename = Filename.chop_suffix epci_name ".epci" in
-	mod_name := String.capitalize(Filename.basename filename)
+  let filename = Filename.chop_suffix epci_name ".epci" in
+  mod_name := String.capitalize(Filename.basename filename)
       end
     else
       raise (Arg.Bad("Invalid compiled interface: " ^ epci_name)) in
@@ -314,20 +314,20 @@ let main () =
     arg_list
     (fun s -> raise (Arg.Bad ("Invalid argument: " ^ s)))
     usage_msg;
-  
+
   if (!mod_name = "")
     or (!node_name = "")
     or (!exec_name = "") then
       begin
-	Arg.usage arg_list usage_msg;
-	raise Error
+  Arg.usage arg_list usage_msg;
+  raise Error
       end;
-  
+
   open_module (Module !mod_name);
 
   let signature = find_value { qual = (Module !mod_name);
-			       name = !node_name } in
-  
+             name = !node_name } in
+
   let nb_inputs = List.length signature.node_inputs in
   let nb_outputs = List.length signature.node_outputs in
 
@@ -351,7 +351,7 @@ let main () =
   let out_frame     = GBin.frame ~label:"Outputs" ~packing:up_part#add () in
   (*   let output_frame = GPack.table ~row_spacings:0 ~border_width:1 ~columns:2 ~rows:nb_outputs  *)
   (*     ~packing:out_frame#add () in *)
-  let output_frame = GPack.table ~columns:2 ~rows:nb_outputs 
+  let output_frame = GPack.table ~columns:2 ~rows:nb_outputs
     ~packing:out_frame#add () in
 
   (* Step label *)
@@ -359,7 +359,7 @@ let main () =
   (* Period scale *)
   let period_label = GMisc.label ~text:"Period" ~packing:period_part#add () in
   let running_period_adj =
-    GData.adjustment 
+    GData.adjustment
       ~value:!running_period
       ~lower:0.001
       ~upper:1.0
@@ -367,8 +367,8 @@ let main () =
       ~page_incr:0.1
       ~page_size:0.1 () in
   ignore(running_period_adj#connect#value_changed
-	   (fun () -> running_period := running_period_adj#value));
-  let period_scale = 
+     (fun () -> running_period := running_period_adj#value));
+  let period_scale =
     GRange.scale
       `HORIZONTAL
       ~adjustment:running_period_adj
@@ -379,27 +379,27 @@ let main () =
       () in
   (* Step, autostep, random, run, quit buttons *)
   let bstep  = GButton.button ~label:"Step" ~packing:low_part#add () in
-  let bastep  = 
+  let bastep  =
     GButton.toggle_button ~label:"Autostep" ~packing:low_part#add () in
-  let brun  = 
+  let brun  =
     GButton.toggle_button ~label:"Run" ~packing:low_part#add () in
-  let brandom = 
+  let brandom =
     GButton.toggle_button ~label:"Random" ~packing:low_part#add () in
   let bquit  = GButton.button ~label:"Quit" ~packing:low_part#add () in
 
   (* chronogram windows *)
   let chrono = GWindow.window ~title:(!node_name ^ " - chronogram") () in
   let chrono_box = GPack.vbox ~packing:chrono#add () in
-  let chrono_chronos = 
+  let chrono_chronos =
     GPack.table ~homogeneous:false ~col_spacings:10
       ~columns:11 ~rows:(nb_inputs+nb_outputs)
       ~packing:chrono_box#add () in
   let packing_chrono = chrono_chronos#attach ~expand:`BOTH in
-  let chrono_buttons = 
+  let chrono_buttons =
     GPack.button_box `HORIZONTAL ~packing:chrono_box#add () in
   let blatex = GButton.button ~label:"Export in LaTeX"
     ~packing:chrono_buttons#add () in
-  let bgnuplot = GButton.button ~label:"Export for Gnuplot" 
+  let bgnuplot = GButton.button ~label:"Export for Gnuplot"
     ~packing:chrono_buttons#add () in
 
   let make_label () = GMisc.label ~text:" " () in
@@ -417,27 +417,27 @@ let main () =
   output_string oc_sim2chro "#@inputs\n";
 
   (* Adding inputs *)
-  
+
   let inputs,_ =
-    List.fold_left 
+    List.fold_left
       (fun (acc,n) { a_name = name; a_type = ty } ->
-	 let name = 
-	   match name with
-	   | None -> "Input " ^ (string_of_int n)
-	   | Some name -> name in
-	 let input = create_input name ty n input_frame in
-	 let _chrono_label =
-	   GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
-	 let chrono_data = Array.make 10 (make_label()) in
-	 for i = 0 to 9 do
-	   let lab = make_label () in
-	   chrono_data.(i) <- lab;
-	   packing_chrono ~left:(i+1) ~top:n lab#coerce
-	 done;
-	 let save = ref [] in
-	 saves := (name, save)::!saves;
-	 Printf.fprintf oc_sim2chro "\"%s\":%s\n" name (sim2chro_type ty);
-	 ((input,chrono_data,save)::acc),(n+1))
+   let name =
+     match name with
+     | None -> "Input " ^ (string_of_int n)
+     | Some name -> name in
+   let input = create_input name ty n input_frame in
+   let _chrono_label =
+     GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
+   let chrono_data = Array.make 10 (make_label()) in
+   for i = 0 to 9 do
+     let lab = make_label () in
+     chrono_data.(i) <- lab;
+     packing_chrono ~left:(i+1) ~top:n lab#coerce
+   done;
+   let save = ref [] in
+   saves := (name, save)::!saves;
+   Printf.fprintf oc_sim2chro "\"%s\":%s\n" name (sim2chro_type ty);
+   ((input,chrono_data,save)::acc),(n+1))
       ([],0)
       signature.node_inputs in
 
@@ -451,24 +451,24 @@ let main () =
   let outputs,_ =
     List.fold_left
       (fun (acc,n) { a_name = name; a_type = ty } ->
-	 let name = 
-	   match name with
-	   | None -> "Output " ^ (string_of_int n)
-	   | Some name -> name in
-	 let output = create_output name ty n output_frame in
-	 let n = n + nb_inputs in
-	 let _chrono_label =
-	   GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
-	 let chrono_data = Array.make 10 (make_label()) in
-	 for i = 0 to 9 do
-	   let lab = make_label () in
-	   chrono_data.(i) <- lab;
-	   packing_chrono ~left:(i+1) ~top:n lab#coerce
-	 done;
-	 let save = ref [] in
-	 Printf.fprintf oc_sim2chro "\"%s\":%s\n" name (sim2chro_type ty);
-	 saves := (name, save)::!saves;
-	 ((output,chrono_data,save)::acc),(n+1))
+   let name =
+     match name with
+     | None -> "Output " ^ (string_of_int n)
+     | Some name -> name in
+   let output = create_output name ty n output_frame in
+   let n = n + nb_inputs in
+   let _chrono_label =
+     GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
+   let chrono_data = Array.make 10 (make_label()) in
+   for i = 0 to 9 do
+     let lab = make_label () in
+     chrono_data.(i) <- lab;
+     packing_chrono ~left:(i+1) ~top:n lab#coerce
+   done;
+   let save = ref [] in
+   Printf.fprintf oc_sim2chro "\"%s\":%s\n" name (sim2chro_type ty);
+   saves := (name, save)::!saves;
+   ((output,chrono_data,save)::acc),(n+1))
       ([],0)
       signature.node_outputs in
 
@@ -476,7 +476,7 @@ let main () =
 
   (* create simulating process *)
   let (ic_sim,oc_sim) = Unix.open_process !exec_name in
-  
+
   let output_latex () =
     let oc = open_out (!node_name ^ ".tex") in
     output_string oc "\\[\n";
@@ -524,62 +524,62 @@ let main () =
       output_string oc_sim2chro "\n";
       flush oc_sim2chro
   in
-  
+
   let step () =
     incr nb_step;
     (* write inputs to simulating process *)
     let input_strings =
       List.fold_left
-	(fun acc (input,chrono,save) -> 
-	   let s = 
-	     if brandom#active
-	     then input#get_random_input
-	     else input#get_input in
-	   input#reset;
-	   Printf.fprintf oc_sim "%s\n" s;
-	   save := s::!save;
-	   if !nb_step <= 10 then
-	     ignore
+  (fun acc (input,chrono,save) ->
+     let s =
+       if brandom#active
+       then input#get_random_input
+       else input#get_input in
+     input#reset;
+     Printf.fprintf oc_sim "%s\n" s;
+     save := s::!save;
+     if !nb_step <= 10 then
+       ignore
                (List.fold_right
-		  (fun x i ->
-		     (chrono.(i))#set_text x ; i+1)
-		  !save 0)
-	   else 
-	     begin
-	       (chrono.(0))#set_text "...";
-	       for i = 1 to 9 do
-		 (chrono.(i))#set_text (List.nth !save (9-i))
-	       done
-	     end;
-	   s::acc)
-	[]
-	inputs in
+      (fun x i ->
+         (chrono.(i))#set_text x ; i+1)
+      !save 0)
+     else
+       begin
+         (chrono.(0))#set_text "...";
+         for i = 1 to 9 do
+     (chrono.(i))#set_text (List.nth !save (9-i))
+         done
+       end;
+     s::acc)
+  []
+  inputs in
 
     flush oc_sim;
-    
+
     (* read outputs *)
     let output_strings =
-      List.fold_left 
-	(fun acc (output,chrono,save) ->
-	   let s = input_line ic_sim in
-	   output#set_output s;
-	   save := s::!save;
-	   if !nb_step <= 10 then
-	     ignore
+      List.fold_left
+  (fun acc (output,chrono,save) ->
+     let s = input_line ic_sim in
+     output#set_output s;
+     save := s::!save;
+     if !nb_step <= 10 then
+       ignore
                (List.fold_right
-		  (fun x i ->
-		     (chrono.(i))#set_text x ; i+1)
-		  !save 0)
-	   else 
-	     begin
-	       (chrono.(0))#set_text "...";
-	       for i = 1 to 9 do
-		 (chrono.(i))#set_text (List.nth !save (9-i))
-	       done
-	     end;
-	   s::acc)
-	[]
-	outputs in
+      (fun x i ->
+         (chrono.(i))#set_text x ; i+1)
+      !save 0)
+     else
+       begin
+         (chrono.(0))#set_text "...";
+         for i = 1 to 9 do
+     (chrono.(i))#set_text (List.nth !save (9-i))
+         done
+       end;
+     s::acc)
+  []
+  outputs in
 
     step_sim2chro (input_strings,output_strings);
 
@@ -602,9 +602,9 @@ let main () =
 
   let toggle_run () =
     match !running_thread with
-    | None -> 
-	let t = Thread.create run () in
-	running_thread := Some t
+    | None ->
+  let t = Thread.create run () in
+  running_thread := Some t
     | Some t -> running_thread := None
   in
 

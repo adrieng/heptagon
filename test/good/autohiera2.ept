@@ -15,7 +15,7 @@ let
           state B
             do c = not(x);
             until true then A
-        end 
+        end
       until true then Two
     state Two
       do c = x;

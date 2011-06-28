@@ -111,7 +111,7 @@ let qualify_field = _qualify_with_error "field" qualify_field check_field
 (** Qualify a var name as a constant variable,
     if not in local_const or global_const then raise Not_found *)
 let qualify_var_as_const local_const c =
-  if S.mem c local_const
+  if NamesSet.mem c local_const
   then local_qn c
   else qualify_const c
 
@@ -161,24 +161,25 @@ end
 let mk_app ?(params=[]) ?(unsafe=false) op =
   { Heptagon.a_op = op; Heptagon.a_params = params; Heptagon.a_unsafe = unsafe }
 
-let mk_signature name ins outs stateful params loc =
+let mk_signature name ins outs stateful params constraints loc =
   { Heptagon.sig_name = name;
     Heptagon.sig_inputs = ins;
     Heptagon.sig_stateful = stateful;
     Heptagon.sig_outputs = outs;
     Heptagon.sig_params = params;
+    Heptagon.sig_param_constraints = constraints;
     Heptagon.sig_loc = loc }
 
 
 (** Function to build the defined static parameters set *)
 let build_const loc vd_list =
   let _add_const_var loc c local_const =
-    if S.mem c local_const
+    if NamesSet.mem c local_const
     then Error.message loc (Error.Econst_variable_already_defined c)
-    else S.add c local_const in
+    else NamesSet.add c local_const in
   let build local_const vd =
     _add_const_var loc vd.v_name local_const in
-  List.fold_left build S.empty vd_list
+  List.fold_left build NamesSet.empty vd_list
 
 
 (** { 3 Translate the AST into Heptagon. } *)
@@ -241,12 +242,25 @@ let rec translate_type loc ty =
   with
     | ScopingError err -> message loc err
 
+let rec translate_some_clock loc env ck = match ck with
+  | None -> Clocks.fresh_clock()
+  | Some(ck) -> translate_clock loc env ck
+
+and translate_clock loc env ck = match ck with
+  | Cbase -> Clocks.Cbase
+  | Con(ck,c,x) -> Clocks.Con(translate_clock loc env ck, qualify_constrs c, Rename.var loc env x)
+
+let rec translate_ct loc env ct = match ct with
+  | Ck ck -> Clocks.Ck (translate_clock loc env ck)
+  | Cprod c_l -> Clocks.Cprod (List.map (translate_ct loc env) c_l)
+
+
 let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
       Heptagon.e_ty = Types.invalid_type;
-      Heptagon.e_base_ck = Clocks.Cbase;
-      Heptagon.e_ct_annot = e.e_ct_annot;
+      Heptagon.e_level_ck = Clocks.Cbase;
+      Heptagon.e_ct_annot = Misc.optional (translate_ct e.e_loc env) e.e_ct_annot;
       Heptagon.e_loc = e.e_loc }
   with ScopingError(error) -> message e.e_loc error
 
@@ -296,7 +310,6 @@ and translate_desc loc env = function
 
 
 and translate_op = function
-  | Eequal -> Heptagon.Eequal
   | Earrow -> Heptagon.Earrow
   | Eifthenelse -> Heptagon.Eifthenelse
   | Efield -> Heptagon.Efield
@@ -381,9 +394,10 @@ and translate_var_dec env vd =
     { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
       Heptagon.v_type = translate_type vd.v_loc vd.v_type;
       Heptagon.v_last = translate_last vd.v_last;
-      Heptagon.v_clock = Clocks.fresh_clock(); (* TODO add clock annotations *)
+      Heptagon.v_clock = translate_some_clock vd.v_loc env vd.v_clock;
       Heptagon.v_loc = vd.v_loc }
 
+(** [env] should contain the declared variables prior to this translation *)
 and translate_vd_list env =
   List.map (translate_var_dec env)
 
@@ -399,42 +413,40 @@ let translate_contract env ct =
     Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
     Heptagon.c_block = b }
 
-let params_of_var_decs =
-  List.map (fun vd -> Signature.mk_param
-                        vd.v_name
-                        (translate_type vd.v_loc vd.v_type))
+let params_of_var_decs p_l =
+  let pofvd vd = Signature.mk_param vd.v_name (translate_type vd.v_loc vd.v_type) in
+  List.map pofvd p_l
 
-let args_of_var_decs =
-  List.map (fun vd -> Signature.mk_arg
-                        (Some vd.v_name)
-                        (translate_type vd.v_loc vd.v_type))
+
+let translate_constrnt e = expect_static_exp e
 
 let translate_node node =
   let n = current_qual node.n_name in
   Idents.enter_node n;
-  (* Inputs and outputs define the initial local env *)
-  let env0 = Rename.append Rename.empty (node.n_input @ node.n_output) in
   let params = params_of_var_decs node.n_params in
-  let inputs = translate_vd_list env0 node.n_input in
+  let constraints = List.map translate_constrnt node.n_constraints in
+  let input_env = Rename.append Rename.empty (node.n_input) in
+  (* inputs should refer only to inputs *)
+  let inputs = translate_vd_list input_env node.n_input in
+  (* Inputs and outputs define the initial local env *)
+  let env0 = Rename.append input_env node.n_output in
   let outputs = translate_vd_list env0 node.n_output in
   let b, env = translate_block env0 node.n_block in
-  let contract =
-    Misc.optional (translate_contract env) node.n_contract in
   (* the env of the block is used in the contract translation *)
+  let contract = Misc.optional (translate_contract env) node.n_contract in
   (* add the node signature to the environment *)
-  let i = args_of_var_decs node.n_input in
-  let o = args_of_var_decs node.n_output in
-  let p = params_of_var_decs node.n_params in
-  safe_add node.n_loc add_value n (Signature.mk_node i o node.n_stateful p);
-  { Heptagon.n_name = n;
-    Heptagon.n_stateful = node.n_stateful;
-    Heptagon.n_input = inputs;
-    Heptagon.n_output = outputs;
-    Heptagon.n_contract = contract;
-    Heptagon.n_block = b;
-    Heptagon.n_loc = node.n_loc;
-    Heptagon.n_params = params;
-    Heptagon.n_params_constraints = []; }
+  let nnode = { Heptagon.n_name = n;
+               Heptagon.n_stateful = node.n_stateful;
+               Heptagon.n_input = inputs;
+               Heptagon.n_output = outputs;
+               Heptagon.n_contract = contract;
+               Heptagon.n_block = b;
+               Heptagon.n_loc = node.n_loc;
+               Heptagon.n_params = params;
+               Heptagon.n_param_constraints = constraints; }
+  in
+  safe_add node.n_loc add_value n (Hept_utils.signature_of_node nnode);
+  nnode
 
 let translate_typedec ty =
     let n = current_qual ty.t_name in
@@ -477,7 +489,7 @@ let translate_const_dec cd =
 
 let translate_program p =
   let translate_program_desc pd = match pd with
-    | Ppragma _ -> Misc.unsupported "pragma in scoping" 1
+    | Ppragma _ -> Misc.unsupported "pragma in scoping"
     | Pconst c -> Heptagon.Pconst (translate_const_dec c)
     | Ptype t -> Heptagon.Ptype (translate_typedec t)
     | Pnode n -> Heptagon.Pnode (translate_node n)
@@ -488,15 +500,26 @@ let translate_program p =
     Heptagon.p_opened = p.p_opened;
     Heptagon.p_desc = desc; }
 
+
 let translate_signature s =
-  let translate_arg a =
-    Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type) in
+  let rec translate_some_clock ck = match ck with
+    | None -> Signature.Cbase
+    | Some ck -> translate_clock ck
+  and translate_clock ck = match ck with
+    | Cbase -> Signature.Cbase
+    | Con(ck,c,x) -> Signature.Con(translate_clock ck, qualify_constrs c, x)
+  and translate_arg a = Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
+                                                  (translate_some_clock a.a_clock)
+  in
   let n = current_qual s.sig_name in
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
   let p = params_of_var_decs s.sig_params in
-  safe_add s.sig_loc add_value n (Signature.mk_node i o s.sig_stateful p);
-  mk_signature n i o s.sig_stateful p s.sig_loc
+  let c = List.map translate_constrnt s.sig_param_constraints in
+  let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful p in
+  Signature.check_signature sig_node;
+  safe_add s.sig_loc add_value n sig_node;
+  mk_signature n i o s.sig_stateful p c s.sig_loc
 
 
 let translate_interface_desc = function

@@ -6,9 +6,9 @@ node f(x,z:int) returns (o:int)
   let
     r = false;
     automaton
-      state Init 
-        do o = 1 + 2 
-	until (o = 0) then Two 
+      state Init
+        do o = 1 + 2
+  until (o = 0) then Two
       state Two do o = 2 + 3 until (o = 1) then Two
     end;
     automaton

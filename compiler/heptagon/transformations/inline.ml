@@ -27,9 +27,9 @@ let mk_unique_node nd =
   let subst = List.map mk_bind (nd.n_block.b_local
                                 @ nd.n_input @ nd.n_output) in
 
-  let subst_var_dec funs () vd =
+  let subst_var_dec _ () vd =
     ({ vd with v_ident = (List.assoc vd.v_ident subst).v_ident; }, ()) in
-  let subst_edesc funs () ed = match ed with
+  let subst_edesc _ () ed = match ed with
       | Evar vn -> (Evar (List.assoc vn subst).v_ident, ())
       | _ -> raise Errors.Fallback in
   let subst_eqdesc funs () eqd =
@@ -100,7 +100,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
   | _ -> Hept_mapfold.exp funs (env, newvars, newequs) exp
 
 let block funs (env, newvars, newequs) blk =
-  let (block, (env, newvars, newequs)) =
+  let (_, (env, newvars, newequs)) =
     Hept_mapfold.block funs (env, newvars, newequs) blk in
   ({ blk with b_local = newvars @ blk.b_local; b_equs = newequs @ blk.b_equs; },
    (env, [], []))
@@ -117,11 +117,11 @@ let node_dec funs (env, newvars, newequs) nd =
 let program p =
   let env n =
     let d =
-      List.find 
-	(function 
-	   | Pnode nd -> nd.n_name = n
-	   | _ -> false) 
-	p.p_desc in
+      List.find
+  (function
+     | Pnode nd -> nd.n_name = n
+     | _ -> false)
+  p.p_desc in
     match d with
     | Pnode nd -> nd
     | _ -> assert false in

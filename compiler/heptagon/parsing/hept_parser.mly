@@ -9,7 +9,7 @@ open Hept_parsetree
 
 %}
 
-%token DOT LPAREN LPAREN_LESS RPAREN GREATER_RPAREN LBRACE RBRACE COLON SEMICOL
+%token DOT LPAREN LESS_LPAREN RPAREN RPAREN_GREATER LBRACE RBRACE COLON COLONCOLON SEMICOL
 %token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
@@ -39,7 +39,7 @@ open Hept_parsetree
 %token ASSUME
 %token ENFORCE
 %token WITH
-%token WHEN MERGE
+%token WHEN WHENOT MERGE ON ONOT
 %token POWER
 %token LBRACKET LBRACKETGREATER
 %token RBRACKET LESSRBRACKET
@@ -65,7 +65,7 @@ open Hept_parsetree
 %left AMPERSAND
 %left INFIX0 EQUAL LESS_GREATER
 %right INFIX1
-%right WHEN
+%right WHEN WHENOT
 %left INFIX2 SUBTRACTIVE
 %left STAR INFIX3
 %left INFIX4
@@ -160,16 +160,17 @@ label_ty:
 ;
 
 node_dec:
-  | node_or_fun ident node_params LPAREN in_params RPAREN
-    RETURNS LPAREN out_params RPAREN
-    contract b=block(LET) TEL
-      {{ n_name = $2;
-         n_stateful = $1;
-         n_input  = $5;
-         n_output = $9;
-         n_contract = $11;
+  | n=node_or_fun f=ident pc=node_params LPAREN i=in_params RPAREN
+    RETURNS LPAREN o=out_params RPAREN
+    c=contract b=block(LET) TEL
+      {{ n_name = f;
+         n_stateful = n;
+         n_input  = i;
+         n_output = o;
+         n_contract = c;
          n_block = b;
-         n_params = $3;
+         n_params = fst pc;
+         n_constraints = snd pc;
          n_loc = (Loc($startpos,$endpos)) }}
 ;
 
@@ -193,8 +194,8 @@ nonmt_params:
 ;
 
 param:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
+  | idl=ident_list COLON ty=ty_ident ck=ck_annot
+      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
 ;
 
 out_params:
@@ -207,9 +208,13 @@ nonmt_out_params:
   | var_last SEMICOL nonmt_out_params { $1 @ $3 }
 ;
 
+constraints:
+  | /*empty*/ {[]}
+  | BAR l=slist(SEMICOL, exp) { l }
+
 node_params:
-  | /* empty */ { [] }
-  | DOUBLE_LESS nonmt_params DOUBLE_GREATER { $2 }
+  | /* empty */ { [],[] }
+  | DOUBLE_LESS p=nonmt_params c=constraints DOUBLE_GREATER { p,c }
 ;
 
 contract:
@@ -248,12 +253,12 @@ loc_params:
 
 
 var_last:
-  | ident_list COLON ty_ident
-      { List.map (fun id -> mk_var_dec id $3 Var (Loc($startpos,$endpos))) $1 }
-  | LAST IDENT COLON ty_ident EQUAL exp
-      { [ mk_var_dec $2 $4 (Last(Some($6))) (Loc($startpos,$endpos)) ] }
-  | LAST IDENT COLON ty_ident
-      { [ mk_var_dec $2 $4 (Last(None)) (Loc($startpos,$endpos)) ] }
+  | idl=ident_list COLON ty=ty_ident ck=ck_annot
+      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
+  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot EQUAL e=exp
+      { [ mk_var_dec id ty ck (Last(Some(e))) (Loc($startpos,$endpos)) ] }
+  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot
+      { [ mk_var_dec id ty ck (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
 ident_list:
@@ -267,6 +272,30 @@ ty_ident:
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
 ;
+
+ct_annot:
+  | /*empty */        { None }
+  | COLONCOLON ck=ck
+  | ON ck=on_ck       { Some(Ck ck) }
+
+
+ck_annot:
+  | /*empty */        { None }
+  | COLONCOLON ck=ck
+  | ON ck=on_ck       { Some ck }
+
+ck:
+  | DOT                  { Cbase }
+  | ck=on_ck             { ck }
+
+
+on_ck:
+  | x=IDENT                                                { Con(Cbase,Q Initial.ptrue,x) }
+  | c=constructor_or_bool LPAREN x=IDENT RPAREN            { Con(Cbase,c,x) }
+  | b=ck ON x=IDENT                                        { Con(b,Q Initial.ptrue,x) }
+  | b=ck ONOT x=IDENT                                      { Con(b,Q Initial.pfalse,x) }
+  | b=ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN    { Con(b,c,x) }
+
 
 equs:
   | /* empty */                      { [] }
@@ -400,7 +429,7 @@ exps:
 
 simple_exp:
   | e=_simple_exp { mk_exp e (Loc($startpos,$endpos)) }
-  | LPAREN exp RPAREN { $2 }
+  | LPAREN e=exp ct=ct_annot RPAREN { { e with e_ct_annot = ct} }
 _simple_exp:
   | IDENT                            { Evar $1 }
   | const                            { Econst $1 }
@@ -439,6 +468,10 @@ _exp:
       { mk_op_call $2 [$1; $3] }
   | e=exp WHEN c=constructor_or_bool LPAREN ce=IDENT RPAREN
       { Ewhen (e, c, ce) }
+  | e=exp WHEN ce=IDENT
+      { Ewhen (e, Q Initial.ptrue, ce) }
+  | e=exp WHENOT ce=IDENT
+      { Ewhen (e, Q Initial.pfalse, ce) }
   | MERGE n=IDENT hs=merge_handlers
       { Emerge (n, hs) }
   | exp INFIX1 exp
@@ -446,9 +479,9 @@ _exp:
   | exp INFIX0 exp
       { mk_op_call $2 [$1; $3] }
   | exp EQUAL exp
-      { mk_call Eequal [$1; $3] }
+      { mk_op_call "=" [$1; $3] }
   | exp LESS_GREATER exp
-      { let e = mk_exp (mk_call Eequal [$1; $3]) (Loc($startpos,$endpos)) in
+      { let e = mk_exp (mk_op_call "=" [$1; $3]) (Loc($startpos,$endpos)) in
           mk_op_call "not" [e] }
   | exp OR exp
       { mk_op_call "or" [$1; $3] }
@@ -485,12 +518,12 @@ _exp:
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
   | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER q=qualname
-      pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
+      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it q [] n pargs args }
   | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
       LPAREN q=qualname DOUBLE_LESS sa=array_exp_list DOUBLE_GREATER RPAREN
-      pargs=delim_slist(COMMA, LPAREN_LESS, GREATER_RPAREN, exp)
+      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it q sa n pargs args }
 /*Records operators */
@@ -605,13 +638,14 @@ _interface_decl:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
   | OPEN modul { Iopen $2 }
-  | VAL node_or_fun ident node_params LPAREN params_signature RPAREN
-    RETURNS LPAREN params_signature RPAREN
-    { Isignature({ sig_name = $3;
-                   sig_inputs = $6;
-                   sig_stateful = $2;
-                   sig_outputs = $10;
-                   sig_params = $4;
+  | VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
+    RETURNS LPAREN o=params_signature RPAREN
+    { Isignature({ sig_name = f;
+                   sig_inputs = i;
+                   sig_stateful = n;
+                   sig_outputs = o;
+                   sig_params = fst pc;
+                   sig_param_constraints = snd pc;
                    sig_loc = (Loc($startpos,$endpos)) }) }
 ;
 
@@ -626,8 +660,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident { mk_arg (Some $1) $3 }
-  | ty_ident { mk_arg None $1 }
+  | IDENT COLON ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
+  | ty_ident ck=ck_annot { mk_arg None $1 ck }
 ;
 
 %%

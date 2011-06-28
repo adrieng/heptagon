@@ -85,6 +85,9 @@ and edesc funs acc ed = match ed with
           (c,w), acc in
       let c_w_list, acc = mapfold aux acc c_w_list in
         Emerge(x, c_w_list), acc
+  | Ewhen(e,c,x) ->
+      let e, acc = exp_it funs acc e in
+      Ewhen(e,c,x), acc
   | Estruct n_w_list ->
       let aux acc (n,w) =
         let w, acc = extvalue_it funs acc w in
@@ -136,8 +139,8 @@ and var_decs funs acc vds = mapfold (var_dec_it funs) acc vds
 
 and contract_it funs acc c = funs.contract funs acc c
 and contract funs acc c =
-  let c_assume, acc = exp_it funs acc c.c_assume in
-  let c_enforce, acc = exp_it funs acc c.c_enforce in
+  let c_assume, acc = extvalue_it funs acc c.c_assume in
+  let c_enforce, acc = extvalue_it funs acc c.c_enforce in
   let c_local, acc = var_decs_it funs acc c.c_local in
   let c_eq, acc = eqs_it funs acc c.c_eq in
   { c with

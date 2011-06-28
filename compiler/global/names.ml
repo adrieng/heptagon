@@ -42,9 +42,9 @@ module QualEnv = struct
   let append env' env = fold (fun key v env -> add key v env) env' env
 end
 
+module NamesSet = Set.Make (struct type t = string let compare = compare end)
 module QualSet = Set.Make (struct type t = qualname let compare = compare end)
 module ModulSet = Set.Make (struct type t = modul let compare = compare end)
-module S = Set.Make (struct type t = string let compare = compare end)
 
 
 let shortname { name = n; } = n
@@ -53,7 +53,7 @@ let modul { qual = m; } = m
 
 let rec modul_to_string m = match m with
   | Pervasives -> "Pervasives"
-  | LocalModule -> "\#$%@#_LOCAL_MODULE"
+  | LocalModule -> "#$%@#_LOCAL_MODULE"
   | Module n -> n
   | QualModule {qual = q; name = n} -> (modul_to_string q) ^"."^ n
 
@@ -68,7 +68,7 @@ let rec modul_of_string_list = function
 let qualname_of_string s =
   let q_l_n = Misc.split_string s "." in
   match List.rev q_l_n with
-    | [] -> Misc.internal_error "Names" 0
+    | [] -> Misc.internal_error "Names"
     | n::q_l -> { qual = modul_of_string_list q_l; name = n }
 
 let modul_of_string s =

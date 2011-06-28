@@ -93,8 +93,8 @@ let _load_module modul =
     let modname = match modul with
       | Names.Pervasives -> "Pervasives"
       | Names.Module n -> n
-      | Names.LocalModule -> Misc.internal_error "modules" 0
-      | Names.QualModule _ -> Misc.unsupported "modules" 0
+      | Names.LocalModule -> Misc.internal_error "modules"
+      | Names.QualModule _ -> Misc.unsupported "modules"
     in
     let name = String.uncapitalize modname in
     try

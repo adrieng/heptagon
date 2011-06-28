@@ -34,11 +34,6 @@ struct
     raise Errors.Error
 end
 
-let is_stateful e = match e.e_desc with
-  | Efby _ | Epre _ -> true
-  | Eapp({ a_op = Enode _ }, _, _) -> true
-  | _ -> false
-
 let exp_list_of_static_exp_list se_list =
   let mk_one_const se =
     mk_exp (Econst se) se.se_ty
@@ -269,7 +264,7 @@ and translate_eq ((d_list, eq_list) as context) eq = match eq.eq_desc with
         mk_equation ~loc:eq.eq_loc (Eblock { b with b_local = v @ b.b_local; b_equs = eqs})
       in
       d_list, eq :: eq_list
-  | _ -> Misc.internal_error "normalize" 0
+  | _ -> Misc.internal_error "normalize"
 
 and translate_eq_list d_list eq_list =
   List.fold_left

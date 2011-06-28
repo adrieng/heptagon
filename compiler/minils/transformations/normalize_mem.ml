@@ -22,8 +22,9 @@ let eq _ (outputs, eqs, env) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
   | Evarpat x, Efby _ ->
       if Mls_utils.vd_mem x outputs then
         let ty = eq.eq_rhs.e_ty in
+        let ck = eq.eq_rhs.e_base_ck in
         let x_copy = Idents.gen_var "normalize_mem" ("out_"^(Idents.name x)) in
-        let exp_x = mk_exp ty (Eextvalue (mk_extvalue ~ty:ty (Wvar x))) in
+        let exp_x = mk_exp ck ty (Eextvalue (mk_extvalue ~ty:ty (Wvar x))) in
         let eq_copy = { eq with eq_lhs = Evarpat x_copy; eq_rhs = exp_x } in
         let env = Env.add x x_copy env in
           eq, (outputs, eq::eq_copy::eqs, env)

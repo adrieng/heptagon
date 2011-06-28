@@ -63,6 +63,9 @@ let print_const_dec ff c =
     fprintf ff "const %a = %a@."
       print_qualname c.c_name print_static_exp c.c_value
 
+let print_ct_annot ff = function
+  | None -> ()
+  | Some ct -> fprintf ff " :: %a" print_ct ct
 
 let rec print_params ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") l
@@ -90,9 +93,9 @@ and print_exps ff e_list =
 
 and print_exp ff e =
  if !Compiler_options.full_type_info then
-    fprintf ff "(%a : %a)"
-      print_exp_desc e.e_desc print_type e.e_ty
-  else fprintf ff "%a" print_exp_desc e.e_desc
+    fprintf ff "(%a : %a%a)"
+      print_exp_desc e.e_desc print_type e.e_ty print_ct_annot e.e_ct_annot
+  else fprintf ff "%a%a" print_exp_desc e.e_desc print_ct_annot e.e_ct_annot
 
 and print_exp_desc ff = function
   | Evar x -> print_ident ff x
@@ -134,9 +137,6 @@ and print_every ff reset =
 
 and print_app ff (app, args) =
   match app.a_op with
-    | Eequal ->
-      let e1, e2 = assert_2 args in
-        fprintf ff "@[<2>%a@ = %a@]" print_exp e1  print_exp e2
     | Etuple -> print_exp_tuple ff args
     | Efun f | Enode f ->
         fprintf ff "@[%a@,%a@,%a@]"
@@ -157,7 +157,7 @@ and print_app ff (app, args) =
     | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") args
     | Earray_fill ->
       let e = assert_1 args in
-				fprintf ff "%a@[<2>%a@]" print_exp e (print_list print_static_exp "^""^""") app.a_params 
+        fprintf ff "%a@[<2>%a@]" print_exp e (print_list print_static_exp "^""^""") app.a_params
     | Eselect ->
       let e = assert_1 args in
         fprintf ff "%a%a" print_exp e print_index app.a_params

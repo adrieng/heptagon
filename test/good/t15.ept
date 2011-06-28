@@ -1,6 +1,6 @@
 (* Crashes the pass removing intermediate equations. *)
 
 node foo() returns (res:int)
-  let 
+  let
     res = if true then 1 else 1;
   tel

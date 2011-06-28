@@ -19,7 +19,10 @@ type ident = {
   num : int;        (* a unique index *)
   source : string;  (* the original name in the source *)
   is_generated : bool;
+  is_reset : bool;
 }
+
+let is_reset id = id.is_reset
 
 type var_ident = ident
 
@@ -93,14 +96,14 @@ module S = Set.Make (struct type t = string
 module UniqueNames =
 struct
   open Names
-  let used_names = ref (ref S.empty) (** Used strings in the current node *)
+  let used_names = ref (ref NamesSet.empty) (** Used strings in the current node *)
   let env = ref Env.empty (** Map idents to their string *)
-  let (node_env : S.t ref QualEnv.t ref) = ref QualEnv.empty
+  let (node_env : NamesSet.t ref QualEnv.t ref) = ref QualEnv.empty
 
   (** This function should be called every time we enter a node *)
   let enter_node n =
     (if not (QualEnv.mem n !node_env)
-    then node_env := QualEnv.add n (ref S.empty) !node_env);
+    then node_env := QualEnv.add n (ref NamesSet.empty) !node_env);
     used_names := QualEnv.find n !node_env
 
   (** @return a unique string for each identifier. Idents corresponding
@@ -113,31 +116,33 @@ struct
       s ^ "_" ^ (string_of_int !num) in
     let rec fresh_string base =
       let fs = fresh base in
-      if S.mem fs !(!used_names) then fresh_string base else fs in
+      if NamesSet.mem fs !(!used_names) then fresh_string base else fs in
     if not (Env.mem n !env) then
       (let s = n.source in
-       let s = if S.mem s !(!used_names) then fresh_string s else s in
-       !used_names := S.add s !(!used_names);
+       let s = if NamesSet.mem s !(!used_names) then fresh_string s else s in
+       !used_names := NamesSet.add s !(!used_names);
        env := Env.add n s !env)
 
   let name id =
     Env.find id !env
 end
 
-let gen_fresh pass_name kind_to_string kind =
+let gen_fresh pass_name kind_to_string ?(reset=false) kind =
   let s = kind_to_string kind in
   let s = if !Compiler_options.full_name then "__"^pass_name ^ "_" ^ s else s in
   num := !num + 1;
-  let id = { num = !num; source = s; is_generated = true } in
+  let id = { num = !num; source = s; is_generated = true; is_reset = reset } in
     UniqueNames.assign_name id; id
 
-let gen_var pass_name name = gen_fresh pass_name (fun () -> name) ()
+let gen_var pass_name ?(reset=false) name =
+  gen_fresh pass_name (fun () -> name) ~reset:reset ()
 
-let ident_of_name s =
+let ident_of_name ?(reset=false) s =
   num := !num + 1;
-  let id = { num = !num; source = s; is_generated = false } in
+  let id = { num = !num; source = s; is_generated = false; is_reset = reset } in
     UniqueNames.assign_name id; id
 
+let source_name id = id.source
 let name id = UniqueNames.name id
 let enter_node n = UniqueNames.enter_node n
 

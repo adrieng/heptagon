@@ -19,9 +19,10 @@ open Initial
 open Heptagon
 
 (* Helper functions to create AST. *)
-let mk_exp desc ?(ct_annot = Clocks.invalid_clock) ?(loc = no_location) ty  =
+(* TODO : After switch, all mk_exp should take care of level_ck *)
+let mk_exp desc ?(level_ck = Cbase) ?(ct_annot = None) ?(loc = no_location) ty =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
-    e_base_ck = Cbase; e_loc = loc; }
+    e_level_ck = level_ck; e_loc = loc; }
 
 let mk_app ?(params=[]) ?(unsafe=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe }
@@ -60,16 +61,17 @@ let mk_simple_equation pat e =
 let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
 
-let mk_signature name ins outs stateful params loc =
+let mk_signature name ins outs stateful params constraints loc =
   { sig_name = name;
     sig_inputs = ins;
     sig_stateful = stateful;
     sig_outputs = outs;
     sig_params = params;
+    sig_param_constraints = constraints;
     sig_loc = loc }
 
 let mk_node
-    ?(input = []) ?(output = []) ?(contract = None) ?(local = [])
+    ?(input = []) ?(output = []) ?(contract = None)
     ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
     name block =
   { n_name = name;
@@ -80,7 +82,7 @@ let mk_node
     n_block = block;
     n_loc = loc;
     n_params = param;
-    n_params_constraints = constraints }
+    n_param_constraints = constraints }
 
 (** @return the set of variables defined in [pat]. *)
 let vars_pat pat =
@@ -97,3 +99,17 @@ let vars_pat pat =
 let rec vd_mem n = function
   | [] -> false
   | vd::l -> vd.v_ident = n or (vd_mem n l)
+
+let args_of_var_decs =
+  (* before the clocking the clock is wrong in the signature *)
+ List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
+                                      vd.v_type Signature.Cbase)
+
+let signature_of_node n =
+    { node_inputs = args_of_var_decs n.n_input;
+      node_outputs  = args_of_var_decs n.n_output;
+      node_stateful = n.n_stateful;
+      node_params = n.n_params;
+      node_param_constraints = n.n_param_constraints;
+      node_loc = n.n_loc }
+

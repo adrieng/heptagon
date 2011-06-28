@@ -244,7 +244,7 @@ let rec cexpr_of_static_exp se =
           Cstructlit (ty_name,
                      List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
     | Sarray_power(c,n_list) ->
-          (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n))) 
+          (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n)))
                      (cexpr_of_static_exp c) n_list)
     | Svar ln ->
         (try
@@ -291,7 +291,7 @@ and cop_of_op_aux op_name cexps = match op_name with
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
         end
-    | { name = op; _ } -> Cfun_call(op,cexps)
+    | { name = op } -> Cfun_call(op,cexps)
 
 and cop_of_op out_env var_env op_name exps =
   let cexps = cexprs_of_exps out_env var_env exps in
@@ -462,8 +462,8 @@ let rec create_affect_const var_env (dest : clhs) c =
           | [] -> dest, replace
           | p :: power_list ->
             let x = gen_symbol () in
-            let e, replace = 
-              make_loop power_list 
+            let e, replace =
+              make_loop power_list
                         (fun y -> [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp p, replace y)]) in
             let e =  (CLarray (e, Cvar x)) in
             e, replace
@@ -531,7 +531,7 @@ let rec cstm_of_act out_env var_env obj_env act =
               cstm_of_act_list out_env var_env obj_env act)]
 
     (** Translate constant assignment *)
-    | Aassgn (vn, { e_desc = Eextvalue { w_desc = Wconst c; _}; }) ->
+    | Aassgn (vn, { e_desc = Eextvalue { w_desc = Wconst c }; }) ->
         let vn = clhs_of_pattern out_env var_env vn in
         create_affect_const var_env vn c
 

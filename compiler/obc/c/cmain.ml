@@ -82,7 +82,7 @@ let assert_node_res cd =
             Cif (Cuop ("!", Cfield (Cvar (fst out), local_qn outn)),
                  [Csexpr (Cfun_call ("fprintf",
                                      [Cvar "stderr";
-				                              Cconst (Cstrlit ("Node \\\"" ^ name
+                                      Cconst (Cstrlit ("Node \\\"" ^ name
                                                             ^ "\\\" failed at step" ^
                                                               " %d.\\n"));
                                       Cvar step_counter]));
@@ -133,24 +133,24 @@ let main_def_of_class_def cd =
         let scan_exp =
           let printf_s = Format.sprintf "%s ? " prompt in
           let format_s = format_for_type ty in
-	  let exp_scanf = Cfun_call ("scanf",
+    let exp_scanf = Cfun_call ("scanf",
                                      [Cconst (Cstrlit format_s);
                                       Caddrof lhs]) in
-	  let body =
-	    if !Compiler_options.hepts_simulation
-	    then (* hepts: systematically test and quit when EOF *)
-	      [Cif(Cbop("==",exp_scanf,Cvar("EOF")),
-		   [Creturn(mk_int 0)],[])]
-	    else
-	      [Csexpr (exp_scanf);] in
-	  let body =
-	    if !Compiler_options.hepts_simulation then
-	      body
-	    else
-	      Csexpr (Cfun_call ("printf",
+    let body =
+      if !Compiler_options.hepts_simulation
+      then (* hepts: systematically test and quit when EOF *)
+        [Cif(Cbop("==",exp_scanf,Cvar("EOF")),
+       [Creturn(mk_int 0)],[])]
+      else
+        [Csexpr (exp_scanf);] in
+    let body =
+      if !Compiler_options.hepts_simulation then
+        body
+      else
+        Csexpr (Cfun_call ("printf",
                                  Cconst (Cstrlit printf_s)
                                  :: args_format_s))
-	      :: body in
+        :: body in
           Csblock { var_decls = [];
                     block_body = body; } in
         match need_buf_for_ty ty with
@@ -169,21 +169,21 @@ let main_def_of_class_def cd =
         let iter_var = fresh "i" in
         let lhs = Carray (lhs, Cvar iter_var) in
         let (writes, bufs) = write_lhs_of_ty lhs ty in
-	let writes_loop =
-	  Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, writes) in
-	if !Compiler_options.hepts_simulation then
-	  ([writes_loop], bufs)
-	else
+  let writes_loop =
+    Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, writes) in
+  if !Compiler_options.hepts_simulation then
+    ([writes_loop], bufs)
+  else
           ([cprint_string "[ ";
-	    writes_loop;
+      writes_loop;
             cprint_string "]"], bufs)
     | _ ->
         let varn = fresh "buf" in
         let format_s = format_for_type ty in
-	let format_s =
-	  if !Compiler_options.hepts_simulation
-	  then format_s ^ "\\n"
-	  else format_s ^ " " in
+  let format_s =
+    if !Compiler_options.hepts_simulation
+    then format_s ^ "\\n"
+    else format_s ^ " " in
         let nbuf_opt = need_buf_for_ty ty in
         let ep = match nbuf_opt with
           | None -> [lhs]
@@ -209,9 +209,9 @@ let main_def_of_class_def cd =
         write_lhs_of_ty (Cfield (Cvar "res",
                                  local_qn (name vd.v_ident))) vd.v_type in
       if !Compiler_options.hepts_simulation then
-	(stm, vars)
+  (stm, vars)
       else
-	(cprint_string "=> " :: stm, vars)
+  (cprint_string "=> " :: stm, vars)
     in
     split (map write_lhs_of_ty_for_vd stepm.m_outputs) in
   let printf_calls = List.concat printf_calls in
@@ -240,7 +240,7 @@ let main_def_of_class_def cd =
     concat scanf_calls
     @ [Csexpr funcall]
     @ printf_calls
-    @ 
+    @
       (if !Compiler_options.hepts_simulation
        then []
        else [Csexpr (Cfun_call ("puts", [Cconst (Cstrlit "")]))])

@@ -53,7 +53,8 @@ let state_type_dec_list = ref []
 
 (* create and add to the env the constructors corresponding to a name state *)
 let intro_state_constr type_name state state_env =
-  let c = Modules.fresh_constr "automata" state in
+  let n = String.capitalize (Names.shortname type_name) ^ "_" ^ state in
+  let c = Modules.fresh_constr "automata" n in
   Modules.add_constrs c type_name; NamesEnv.add state c state_env
 
 (* create and add the the global env and to state_type_dec_list
@@ -75,7 +76,7 @@ let no_strong_transition state_handlers =
 
 
 let translate_automaton v eq_list handlers =
-  let type_name = Modules.fresh_type "automata" "states" in
+  let type_name = Modules.fresh_type "automata" "state" in
   (* the state env associate a name to a qualified constructor *)
   let state_env =
     List.fold_left
@@ -94,8 +95,7 @@ let translate_automaton v eq_list handlers =
   let pre_next_resetname = fresh PNR in
 
   let name n = NamesEnv.find n state_env in
-  let state n =
-    mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype in
+  let state n = mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype in
   let statevar n = mk_var_exp n tstatetype in
   let boolvar n = mk_var_exp n (Tid Initial.pbool) in
 

@@ -1,7 +1,7 @@
 const n : int = 33
 
 node stopbb(shiftenable : bool) returns (dataout : bool^n)
-var last dataint : bool^n; f : bool; 
+var last dataint : bool^n; f : bool;
 let
   f = false;
   dataout = (f^n) fby dataint;

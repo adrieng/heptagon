@@ -103,21 +103,21 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sbool b -> Sbool b
   | Types.Sstring s -> Sstring s
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
-  | Types.Sfield f -> eprintf "ojSfield @."; assert false;
+  | Types.Sfield _ -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
   | Types.Sarray_power (see,pow_list) ->
       let pow_list = List.rev pow_list in
       let rec make_array tyl pow_list = match tyl, pow_list with
-        | Tarray(t, _), pow::pow_list -> 
+        | Tarray(t, _), pow::pow_list ->
             let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
                        with  Errors.Error ->
-               										eprintf "%aStatic power of array should have integer power. \
-                        									 Please use callgraph or non-static exp in %a.@."
-                         		 Location.print_location se.Types.se_loc
-                         		 Global_printer.print_static_exp se;
-               						   raise Errors.Error)
+                                   eprintf "%aStatic power of array should have integer power. \
+                                           Please use callgraph or non-static exp in %a.@."
+                              Location.print_location se.Types.se_loc
+                              Global_printer.print_static_exp se;
+                              raise Errors.Error)
             in
-            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow) 
+            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow)
         | _ -> static_exp param_env see
       in
       make_array (ty param_env se.Types.se_ty) pow_list
@@ -126,20 +126,20 @@ let rec static_exp param_env se = match se.Types.se_desc with
           | _ -> Misc.internal_error "mls2obc select slice type" 5
         in
       let eval_int pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
-                 				 with  Errors.Error ->
-                   										eprintf "%aStatic power of array should have integer power. \
-                            									 Please use callgraph or non-static exp in %a.@."
-                           		 Location.print_location se.Types.se_loc
-                           		 Global_printer.print_static_exp se;
-                   						 raise Errors.Error)
+                          with  Errors.Error ->
+                                       eprintf "%aStatic power of array should have integer power. \
+                                               Please use callgraph or non-static exp in %a.@."
+                                Location.print_location se.Types.se_loc
+                                Global_printer.print_static_exp se;
+                                raise Errors.Error)
       in
       let rec make_matrix acc = match pow_list with
         | [] -> acc
-        | pow :: pow_list -> 
-							let pow = eval_int pow in
+        | pow :: pow_list ->
+              let pow = eval_int pow in
               make_matrix (Misc.repeat_list acc pow) pow_list
       in
-      let se_l = match pow_list with 
+      let se_l = match pow_list with
         | [] -> Misc.internal_error "Empty power list" 0
         | pow :: pow_list -> make_matrix (Misc.repeat_list (static_exp param_env see)) pow_list
       in
@@ -157,7 +157,7 @@ and boxed_ty param_env t = match t with
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
 and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
@@ -171,7 +171,7 @@ and ty param_env t :Java.ty = match t with
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type" 1
+  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
 
@@ -420,8 +420,8 @@ let type_dec_list classes td_l =
     let classe_name = qualname_to_package_classe td.t_name in
     Idents.enter_node classe_name;
     match td.t_desc with
-      | Type_abs -> Misc.unsupported "obc2java, abstract type." 1
-      | Type_alias _ -> Misc.unsupported "obc2java, type alias." 2
+      | Type_abs -> Misc.unsupported "obc2java, abstract type."
+      | Type_alias _ -> Misc.unsupported "obc2java, type alias."
       | Type_enum c_l ->
           let mk_constr_enum c = translate_constructor_name_2 c td.t_name in
           (mk_enum (List.map mk_constr_enum c_l) classe_name) :: classes

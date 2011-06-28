@@ -108,7 +108,7 @@ let rec typing e =
         candlist l
     | Eiterator (_, _, _, pe_list, e_list, _) ->
         ctuplelist (List.map typing (pe_list@e_list))
-    | Ewhen (e, c, x) ->
+    | Ewhen (e, _, x) ->
         let t = typing e in
         let tc = read x in
         cseq tc t
@@ -135,7 +135,7 @@ and apply op e_list =
         let i2 = typing e2 in
         let i3 = typing e3 in
         cseq t1 (cor i2 i3)
-    | (Eequal | Efun _| Enode _ | Econcat | Eselect_slice
+    | ( Efun _| Enode _ | Econcat | Eselect_slice
       | Eselect_dyn | Eselect_trunc | Eselect _ | Earray_fill) ->
         ctuplelist (List.map typing e_list)
     | (Earray | Etuple) ->

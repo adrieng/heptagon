@@ -18,18 +18,23 @@ val ident_compare : ident -> ident -> int
 (** Get the full name of an identifier (it is guaranteed to be unique) *)
 val name : ident -> string
 
+(** Get the source name of an identifier (useful when dealing with signatures *)
+val source_name : ident -> string
+
 (** [gen_fresh pass_name kind_to_string kind]
     generate a fresh ident with a sweet [name].
     It should be used to define a [fresh] function specific to a pass. *)
-val gen_fresh : string -> ('a -> string) -> 'a -> ident
+val gen_fresh : string -> ('a -> string) -> ?reset:bool -> 'a -> ident
 
 (** [gen_var pass_name name]
     generates a fresh ident with a sweet [name] *)
-val gen_var : string -> string -> ident
+val gen_var : string -> ?reset:bool -> string -> ident
 
-(** [ident_of_name n] returns an identifier corresponding
+(** [ident_of_name n] returns an fresh identifier corresponding
   to a _source_ variable (do not use it for generated variables). *)
-val ident_of_name : string -> ident
+val ident_of_name : ?reset:bool -> string -> ident
+
+val is_reset : ident -> bool
 
 (** /!\ This function should be called every time we enter a node *)
 val enter_node : Names.qualname -> unit

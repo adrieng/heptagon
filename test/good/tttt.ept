@@ -1,0 +1,6 @@
+node f(c:bool;x:int) returns (o:int)
+let
+  reset
+  o = merge c (true -> (0 fby x) when c) (false -> 0 fby (o whenot c));
+  every true
+tel
