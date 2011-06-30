@@ -44,16 +44,7 @@ let fresh_for size body =
   let id = mk_var_dec i Tint in
   Afor (id, Sint 0, size, mk_block (body i))
 
- (* current module is not translated to keep track,
-    there is no issue since printed without the qualifier *)
-let rec translate_modul m = m (*match m with
-  | Pervasives
-  | LocalModule -> m
-  | _ when m = g_env.current_mod -> m
-  | Module n ->  Module n
-  | QualModule { qual = q; name = n} ->
-      QualModule { qual = translate_modul q; name = String.lowercase n }
-*)
+let translate_modul m = m
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
 let translate_const_name { qual = m; name = n } =
@@ -103,45 +94,23 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield _ -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
-  | Types.Sarray_power (see,pow_list) ->
-      let pow_list = List.rev pow_list in
-      let rec make_array tyl pow_list = match tyl, pow_list with
-        | Tarray(t, _), pow::pow_list ->
-            let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
-                       with  Errors.Error ->
-                                   eprintf "%aStatic power of array should have integer power. \
-                                           Please use callgraph or non-static exp in %a.@."
-                              Location.print_location se.Types.se_loc
-                              Global_printer.print_static_exp se;
-                              raise Errors.Error)
+  | Types.Sarray_power (see, pow_l) ->
+      let rec new_array t pow_l = match t, pow_l with
+        | _, [] -> static_exp param_env see
+        | Tarray(t',_), pow::pow_l ->
+            let pow =
+              (try Static.int_of_static_exp Names.QualEnv.empty pow
+              with Errors.Error ->
+                eprintf "%aIn the Java backend, Static power of array should have integer power.@\n\
+                         Please use callgraph or non-static exp in %a.@."
+                        Location.print_location se.Types.se_loc
+                        Global_printer.print_static_exp se;
+                raise Errors.Error)
             in
-            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow)
-        | _ -> static_exp param_env see
+            Enew_array (t, Misc.repeat_list (new_array t' pow_l) pow)
+        | _,_ -> Misc.internal_error "obc2java_asyncnode : wrong sarraypower type"
       in
-      make_array (ty param_env se.Types.se_ty) pow_list
-        (*let t = match x.pat_ty with
-          | Tarray (t,_) -> t
-          | _ -> Misc.internal_error "mls2obc select slice type" 5
-        in
-      let eval_int pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
-                          with  Errors.Error ->
-                                       eprintf "%aStatic power of array should have integer power. \
-                                               Please use callgraph or non-static exp in %a.@."
-                                Location.print_location se.Types.se_loc
-                                Global_printer.print_static_exp se;
-                                raise Errors.Error)
-      in
-      let rec make_matrix acc = match pow_list with
-        | [] -> acc
-        | pow :: pow_list ->
-              let pow = eval_int pow in
-              make_matrix (Misc.repeat_list acc pow) pow_list
-      in
-      let se_l = match pow_list with
-        | [] -> Misc.internal_error "Empty power list" 0
-        | pow :: pow_list -> make_matrix (Misc.repeat_list (static_exp param_env see)) pow_list
-      in
-      Enew_array (ty param_env se.Types.se_ty, se_l)*)
+      new_array (ty param_env se.Types.se_ty) pow_l
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
@@ -161,7 +130,7 @@ and boxed_ty param_env t = match t with
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
-  | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
+  | Types.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
 
 and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
@@ -176,7 +145,7 @@ and ty param_env t :Java.ty = match t with
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
-  | Types.Tasync (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
+  | Types.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
 
@@ -350,7 +319,7 @@ let create_async_classe async base_classe =
   let field_result, ty_aresult, ty_result, id_result, var_result =
     let t = b_out |> Signature.types_of_arg_list |> Types.prod in
     let ty_result = boxed_ty param_env t in
-    let t = Types.Tasync(async, t) in
+    let t = Types.Tfuture((), t) in
     let aty = ty param_env t in
     let result_id = Idents.gen_var "obc2java" "result" in
     mk_field ~protection:Pprotected aty result_id, aty, ty_result, result_id, mk_var result_id
@@ -388,7 +357,7 @@ let create_async_classe async base_classe =
       let act_result =
         let exp_call =
           let args = var_inst::exps_step in
-          let executor = Eval (Pfield (Pclass the_java_pervasives, "executor_cached")) in
+          let executor = Efield (Eclass the_java_pervasives, "executor_cached") in
           Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
         in Aassgn (Pthis id_result, exp_call)
       in
@@ -411,7 +380,7 @@ let create_async_classe async base_classe =
     in
     let call =
       let body =
-        let act = Areturn (Emethod_call (Eval (Pthis id_inst), "step", exps_step)) in
+        let act = Areturn (Emethod_call (Evar id_inst, "step", exps_step)) in
         mk_block [act]
       in mk_methode ~throws:throws_async ~returns:ty_result body "call"
     in mk_classe ~protection:Pprotected ~static:true ~fields:fields ~implements:[java_callable]

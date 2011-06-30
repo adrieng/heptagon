@@ -15,6 +15,7 @@ let keyword_table = ((Hashtbl.create 149) : (string, token) Hashtbl.t);;
 
 List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "async", ASYNC;
+ "future", FUTURE;
  "node", NODE;
  "fun", FUN;
  "returns", RETURNS;

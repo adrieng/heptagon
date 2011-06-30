@@ -432,7 +432,7 @@ and check_type cenv = function
   | Tid ty_name -> Tid ty_name (* TODO bug ? should check that ty_name exists ? *)
   | Tprod l -> Tprod (List.map (check_type cenv) l)
   | Tinvalid -> Tinvalid
-  | Tasync (a, t) -> Tasync (a, check_type const_env t)
+  | Tfuture (a, t) -> Tfuture (a, check_type cenv t)
 
 and typing_static_exp cenv se =
   try
@@ -492,8 +492,8 @@ and typing_static_exp cenv se =
                         (Tid q)) f_se_list in
           Srecord f_se_list, Tid q
      | Sasync se ->
-          let typed_se, ty = typing_static_exp const_env se in
-          Sasync typed_se, Tasync ((),ty)
+          let typed_se, ty = typing_static_exp cenv se in
+          Sasync typed_se, Tfuture ((),ty)
   in
    { se with se_ty = ty; se_desc = desc }, ty
 
@@ -606,15 +606,15 @@ let rec typing cenv h e =
           Eiterator(it, { app with a_op = op; a_params = typed_params }
                       , typed_n, typed_pe_list, typed_e_list, reset), ty
       | Eiterator (it, ({ a_op = Ebang; } as app), n, [], [e], reset) ->
-          let typed_e, ty = typing const_env h e in
-          let typed_n = expect_static_exp const_env (Tid Initial.pint) n in
+          let typed_e, ty = typing cenv h e in
+          let typed_n = expect_static_exp cenv (Tid Initial.pint) n in
           let result_ty, expect_ty = (match ty with
-            | Tarray (Tasync (a, t), s) -> t, Tasync(a,t)
+            | Tarray (Tfuture (a, t), s) -> t, Tfuture(a,t)
             | _ -> message e.e_loc (Eshould_be_async ty))
           in
-          let ty, typed_e_l = typing_iterator const_env h it n [expect_ty] [result_ty] [e] in
+          let ty, typed_e_l = typing_iterator cenv h it n [expect_ty] [result_ty] [e] in
           (* add size constraints *)
-          add_size_constraint (Clequal (mk_static_int 1, typed_n));
+          add_constraint_leq cenv (mk_static_int 1) typed_n;
           (* return the type *)
           Eiterator(it, app, typed_n, [], typed_e_l, reset), ty
       | Eiterator _ -> assert false
@@ -820,9 +820,9 @@ and typing_app cenv h app e_list =
         Tarray (element_type t1, n), app, [typed_e1; typed_e2]
     | Ebang ->
         let e = assert_1 e_list in
-        let typed_e, t = typing const_env h e in
+        let typed_e, t = typing cenv h e in
         (match t with
-          | Tasync (_, t) -> t, app, [typed_e]
+          | Tfuture (_, t) -> t, app, [typed_e]
           | _ -> message e.e_loc (Eshould_be_async t))
 
 

@@ -46,7 +46,7 @@ let rec fresh_ct ty = match ty with
         | _ -> Cprod (List.map fresh_ct ty_list))
   | Tarray (t, _) -> fresh_ct t
   | Tid _ | Tinvalid -> Ck (fresh_clock())
-  | Tasync (_,t) -> fresh_ct t
+  | Tfuture (_,t) -> fresh_ct t
 
 
 (** returns the canonic (short) representant of a [ck]
@@ -108,7 +108,7 @@ let rec skeleton ck = function
       (match ty_list with
         | [_] -> Ck ck
         | l -> Cprod (List.map (skeleton ck) l))
-  | Tarray (t, _) | Tasync (_, t) -> skeleton ck t
+  | Tarray (t, _) | Tfuture (_, t) -> skeleton ck t
   | Tid _ | Tinvalid -> Ck ck
 
 let unprod ct =

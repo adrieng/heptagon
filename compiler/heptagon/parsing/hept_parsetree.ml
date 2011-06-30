@@ -33,8 +33,6 @@ type field_name = qualname
 type constructor_name = qualname
 type constant_name = qualname
 
-type async_t = unit
-
 type static_exp = { se_desc: static_exp_desc; se_loc: location }
 
 and static_exp_desc =
@@ -63,15 +61,7 @@ type ty =
   | Tprod of ty list
   | Tid of qualname
   | Tarray of ty * exp
-  | Tasync of async_t * ty
-
-and ck =
-  | Cbase
-  | Con of ck * constructor_name * var_name
-
-and ct =
-  | Ck of ck
-  | Cprod of ct list
+  | Tfuture of future_t * ty
 
 and ck =
   | Cbase
@@ -121,6 +111,10 @@ and op =
 and pat =
   | Etuplepat of pat list
   | Evarpat of var_name
+
+and async_t = exp list
+and future_t = unit
+
 
 type eq =
     { eq_desc : eqdesc;
@@ -259,6 +253,9 @@ let mk_iterator_call it app n pexps exps =
 
 let mk_static_exp desc loc =
   { se_desc = desc; se_loc = loc }
+  
+let mk_static_exp_exp desc loc =
+  mk_exp (Econst { se_desc = desc; se_loc = loc }) loc
 
 let mk_constructor_exp f loc =
   mk_exp (Econst (mk_static_exp (Sconstructor f) loc)) loc

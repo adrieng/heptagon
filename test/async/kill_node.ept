@@ -5,7 +5,7 @@ let
 tel
 
 node main () returns ()
-var y: async int;
+var y: future int;
 let
   y = async lent<<5>>();
 tel

@@ -111,7 +111,7 @@ and type_compare ty1 ty2 = match ty1, ty2 with
       let cr = type_compare ty1 ty2 in
       if cr <> 0 then cr else static_exp_compare se1 se2
   | Tinvalid, _ | _, Tinvalid -> -1
-  | Tasync (a1, t1), Tasync (a2, t2) ->
+  | Tfuture (a1, t1), Tfuture (a2, t2) ->
       let cr = type_compare t1 t2 in
       if cr <> 0 then cr else async_t_compare a1 a2
 
@@ -122,6 +122,6 @@ and type_compare ty1 ty2 = match ty1, ty2 with
 
   | Tarray _, (Tprod _ | Tid _) -> -1
 
-  | Tasync _, Tunit -> 1
-  | Tasync _, _ -> -1
+  | Tfuture _, Tunit -> 1
+  | Tfuture _, _ -> -1
 

@@ -4,7 +4,7 @@ let
 tel
 
 node counter3() returns (b: bool)
-var last t: async int; cpt: int;
+var last t: future int; cpt: int;
 let
   cpt = counter(false,true);
   automaton

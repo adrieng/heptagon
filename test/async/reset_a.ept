@@ -5,7 +5,7 @@ let
 tel
 
 node main() returns (r : int; half : bool)
-var c : async int;
+var c : future int;
 let
   half = true fby not half;
   reset

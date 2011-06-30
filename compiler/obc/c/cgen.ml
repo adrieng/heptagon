@@ -103,7 +103,7 @@ let rec ctype_of_otype oty =
     | Tarray(ty, n) -> Cty_arr(int_of_static_exp n, ctype_of_otype ty)
     | Tprod _ -> assert false
     | Tinvalid -> assert false
-    | Tasync _ -> assert false (* TODO async *)
+    | Tfuture _ -> assert false (* TODO async *)
 
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =

@@ -155,7 +155,6 @@ and act ff = function
   | Anewvar (vd,e) -> fprintf ff "@[<4>%a =@ %a;@]" (var_dec false) vd exp e
   | Aassgn (p,e) -> fprintf ff "@[<4>%a =@ %a;@]" pattern p exp e
   | Aexp e -> fprintf ff "@[%a@];" exp e
-  | Aasync_method_call _ -> Misc.internal_error "java_printer, Aasync call not translated" 1
   | Aswitch (e, c_b_l) ->
       let pcb ff (c,b) =
         fprintf ff "@[<v4>case %a:@ %a@ break;@]" bare_constructor_name c block b in

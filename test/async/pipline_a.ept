@@ -12,7 +12,7 @@ tel
 
 
 node normalized_movie<<n: int>> (i: int^n) returns (im: int^n)
-var m: async int; trash: int;
+var m: future int; trash: int;
 let
   m = async mean<<n>>(i);
   (im,trash) = mapfold<<n>> substr (i fby i, 0 -> !(pre m))

@@ -53,7 +53,7 @@ let program p =
           let jint = Eclass(Names.qualname_of_string "Integer") in
           let jfloat = Eclass(Names.qualname_of_string "Float") in
           let jbool = Eclass(Names.qualname_of_string "Boolean") in
-          let jsys = Eval(Pclass(Names.qualname_of_string "java.lang.System")) in
+          let jsys = Eclass(Names.qualname_of_string "java.lang.System") in
           let jminus = pervasives_qn "-" in
           let ret = Emethod_call(e_main, "step", []) in
           let print_ret, separate = match ty_main with
@@ -68,13 +68,13 @@ let program p =
           in
           let vd_t1, e_t1 =
             let id = Idents.gen_var "java_main" "t" in
-            mk_var_dec id Tlong, Eval (Pvar id)
+            mk_var_dec id Tlong, Evar id
           in
           let main_for_loop i =
             if separate
             then [ Aexp(Emethod_call(e_main, "step", []));
-                   Aexp(Emethod_call(out, "printf", [ Sstring "%d => _\\n"; Eval (Pvar i)])) ]
-            else [ Aexp(Emethod_call(out, "printf", [ Sstring "%d => %s\\n"; Eval (Pvar i);
+                   Aexp(Emethod_call(out, "printf", [ Sstring "%d => _\\n"; Evar i])) ]
+            else [ Aexp(Emethod_call(out, "printf", [ Sstring "%d => %s\\n"; Evar i;
                                                       print_ret])) ]
           in
           [ Anewvar(vd_main, Enew (Tclass q_main, []));
@@ -82,7 +82,7 @@ let program p =
                    , mk_block [Aassgn(pat_step, Emethod_call(integer, "parseInt", [args1]))]
                    , mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
-            Obc2java.fresh_for pat_step main_for_loop;
+            Obc2java.fresh_for exp_step main_for_loop;
             Aexp (Emethod_call(out, "printf",
               [ Sstring "time : %d\\n";
                 Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]))

@@ -11,9 +11,10 @@ open Names
 open Misc
 open Location
 
-type async_t = unit
+type future_t = unit
+type async_t = static_exp list
 
-type static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
+and static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
 
 and static_exp_desc =
   | Svar of constant_name
@@ -35,7 +36,7 @@ and ty =
   | Tid of type_name (** Usable type_name are alias or pervasives {bool,int,float} (see [Initial]) *)
   | Tarray of ty * static_exp (** [base_type] * [size] *) (* ty should not be prod *)
   | Tinvalid
-  | Tasync of async_t * ty
+  | Tfuture of future_t * ty
 
 let invalid_type = Tinvalid (** Invalid type given to untyped expression etc. *)
 
@@ -50,7 +51,7 @@ let unprod = function
 
 let asyncify async ty_list = match async with
   | None -> ty_list
-  | Some a -> List.map (fun ty -> Tasync (a,ty)) ty_list
+  | Some _ -> List.map (fun ty -> Tfuture ((),ty)) ty_list
 
 let mk_static_exp ?(loc = no_location) ty desc = (*note ~ty: replace as first arg*)
   { se_desc = desc; se_ty = ty; se_loc = loc }

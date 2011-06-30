@@ -47,7 +47,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP MAPI FOLD FOLDI MAPFOLD
-%token ASYNC BANG
+%token ASYNC BANG FUTURE
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -273,8 +273,12 @@ ty_ident:
       { t }
   | ty_ident POWER simple_exp
       { Tarray ($1, $3) }
+  | FUTURE t=ty_ident
+      { Tfuture ((),t) }
+/*
   | ASYNC t=ty_ident
-      { Tasync ((), t) }
+      { Tasync ((!Compiler_options.java_queue_nb, !Compiler_options.java_queue_size), t) }
+  | ASYNC DOUBLE_LESS _t DOUBLE_GREATER t */
 ;
 
 ct_annot:
@@ -548,9 +552,12 @@ call_params:
 
 %inline async:
   | /*empty*/ { None }
-  | ASYNC     { Some () }
+  | ASYNC
+      { Some [mk_static_exp_exp (Sint !Compiler_options.java_queue_nb) (Loc($startpos,$endpos));
+              mk_static_exp_exp (Sint !Compiler_options.java_queue_size) (Loc($startpos,$endpos))] }    
+  | ASYNC DOUBLE_LESS l=slist(COMMA,exp) DOUBLE_GREATER { Some l }
 
-app:
+app: 
   | LPAREN app=app RPAREN { app }
   | a=async BANG p=call_params { mk_app Ebang a p }
   | a=async q=qualname p=call_params { mk_app (Enode q) a p }

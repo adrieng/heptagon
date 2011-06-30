@@ -128,7 +128,13 @@ and edesc funs acc ed = match ed with
 and app_it funs acc a = funs.app funs acc a
 and app funs acc a =
   let p, acc = mapfold (exp_it funs) acc a.a_params in
-  { a with a_params = p }, acc
+  let async, acc = match a.a_async with
+    | None -> None, acc
+    | Some async ->
+        let async, acc = mapfold (exp_it funs) acc async in
+        Some async, acc
+  in
+  { a with a_params = p; a_async = async }, acc
 
 
 and pat_it funs acc p =
@@ -270,7 +276,7 @@ and ty funs acc t = match t with
       let t, acc = ty_it funs acc t in
       let e, acc = exp_it funs acc e in
       Tarray (t, e), acc
-  | Tasync (a, t) -> let t, acc = ty_it funs acc t in Tasync (a, t), acc
+  | Tfuture (a, t) -> let t, acc = ty_it funs acc t in Tfuture (a, t), acc
 
 
 and const_dec_it funs acc c = funs.const_dec funs acc c

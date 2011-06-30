@@ -118,7 +118,7 @@ let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_leve
           (fun (f, e) -> (f, translate_extvalue e)) f_e_list in
         Estruct f_e_list
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Earrow }, _, _) ->
-         Error.message loc Error.Eunsupported_language_construct
+        Misc.internal_error "Hept2mls : Earrow still present"
     | Heptagon.Eapp(app, e_list, reset) ->
         Eapp (translate_app app, List.map translate_extvalue e_list, translate_reset reset)
     | Heptagon.Eiterator(it, app, n, pe_list, e_list, reset) ->
@@ -127,9 +127,8 @@ let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_leve
                     List.map translate_extvalue pe_list,
                     List.map translate_extvalue e_list,
                     translate_reset reset)
-    | Heptagon.Efby _
-    | Heptagon.Elast _ ->
-        Error.message loc Error.Eunsupported_language_construct
+    | Heptagon.Efby _ -> Misc.internal_error "Hept2mls : Efby still present"
+    | Heptagon.Elast _ -> Misc.internal_error "Hept2mls : Elast still present"
     | Heptagon.Emerge (x, c_e_list) ->
         Emerge (x, List.map (fun (c,e)-> c, translate_extvalue e) c_e_list)
   in

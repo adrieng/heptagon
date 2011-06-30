@@ -40,10 +40,6 @@ let print_full_qualname ff qn = _print_qualname ~full:true ff qn
 
 let print_shortname ff {name = n} = print_name ff n
 
-let print_async ff async = match async with
-  | None -> ()
-  | Some () -> fprintf ff "async "
-  
 let print_ident ff id = Format.fprintf ff "%s" (name id)
 
  let rec print_ck ff = function
@@ -105,7 +101,14 @@ and print_type ff = function
   | Tid id -> print_qualname ff id
   | Tarray (ty, n) ->
       fprintf ff "@[<hov2>%a^%a@]" print_type ty print_static_exp n
-  | Tasync (a, t) -> fprintf ff "(%a%a)" print_async (Some a) print_type t
+  | Tfuture (a, t) -> fprintf ff "(%a%a)" print_future a print_type t
+
+and print_async ff async = match async with
+  | None -> ()
+  | Some i_l -> fprintf ff "async@[%a@]" (print_list_r print_static_exp "<<"","">>") i_l
+
+and print_future ff future = match future with
+  | () -> ()
 
 let print_field ff field =
   fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type

@@ -7,5 +7,5 @@ tel
 
 fun main () returns (r:int^n)
 let
-  r = map<<n>> ! (map<<n>> async f (2^n));
+  r = map<<n>> ! (map<<n>> async<<n,1>> f (2^n));
 tel

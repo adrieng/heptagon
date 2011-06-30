@@ -74,7 +74,7 @@ and edesc =
                  * extvalue list * extvalue list * var_ident option
                        (** map f <<n>> <(extvalue)> (extvalue) reset ident *)
 
-and app = { a_op: op; a_params: static_exp list; a_async  : async_t option; a_unsafe: bool }
+and app = { a_op: op; a_params: static_exp list; a_async: async_t option; a_unsafe: bool }
     (** Unsafe applications could have side effects
         and be delicate about optimizations, !be careful! *)
 

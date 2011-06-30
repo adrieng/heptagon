@@ -72,7 +72,8 @@ let target_path : string option ref = ref None
 let set_target_path path =
   target_path := Some path
 
-let java_queue_size = ref 0
+let java_queue_size = ref 1
+let java_queue_nb = ref 1
 
 let full_type_info = ref false
 
@@ -125,4 +126,5 @@ and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
 and doc_inline = "<node>\t\tInline node <node>"
 and doc_itfusion = "\t\tEnable iterator fusion."
 and doc_tomato = "\t\tEnable automata minimization."
-and doc_java_queue_size = "\t\tSet the input queue size for async nodes, 0 means threadPool."
+and doc_java_queue_size = "\t\tSet the default input queue size for async nodes, 0 means threadPool."
+and doc_java_queue_nb = "\t\tSet the default thread number for async nodes." 
