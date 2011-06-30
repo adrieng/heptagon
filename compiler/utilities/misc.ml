@@ -163,6 +163,11 @@ let mapfold_right f l acc =
   List.fold_right (fun e (acc, l) -> let acc, e = f e acc in (acc, e :: l))
     l (acc, [])
 
+let rec fold_right_1 f l = match l with
+  | [] -> invalid_arg "fold_right_1: empty list"
+  | [x] -> x
+  | x :: l -> f x (fold_right_1 f l)
+
 let mapi f l =
   let rec aux i = function
     | [] -> []

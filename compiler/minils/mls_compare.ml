@@ -44,7 +44,7 @@ let rec exp_compare e1 e2 =
   let cr = type_compare e1.e_ty e2.e_ty in
   if cr <> 0 then cr
   else
-    let cr = clock_compare e1.e_ck e2.e_ck in
+    let cr = clock_compare e1.e_base_ck e2.e_base_ck in
     if cr <> 0 then cr
     else
       match e1.e_desc, e2.e_desc with
@@ -58,6 +58,11 @@ let rec exp_compare e1 e2 =
             if cr <> 0 then cr
             else let cr = list_compare extvalue_compare el1 el2 in
             if cr <> 0 then cr else option_compare ident_compare vio1 vio2
+        | Ewhen (e1, cn1, id1), Ewhen (e2, cn2, id2) ->
+            let cr = compare cn1 cn2 in
+            if cr <> 0 then cr
+            else let cr = ident_compare id1 id2 in
+            if cr <> 0 then cr else exp_compare e1 e2
         | Emerge (vi1, cnel1), Emerge (vi2, cnel2) ->
             let compare_cne (cn1, e1) (cn2, e2) =
               let cr = compare cn1 cn2 in
@@ -89,6 +94,9 @@ let rec exp_compare e1 e2 =
 
         | Eapp _, (Eextvalue _ | Efby _) -> -1
         | Eapp _, _ -> 1
+
+        | Ewhen _, (Eextvalue _ | Efby _ | Eapp _) -> -1
+        | Ewhen _, _ -> 1
 
         | Emerge _, (Estruct _ | Eiterator _) -> 1
         | Emerge _, _ -> -1
