@@ -165,24 +165,43 @@ let rec add_equation is_input (tenv : tom_env) eq =
       | Eextvalue w ->
         let class_id_list, w = extvalue is_input w [] in
         Eextvalue w, id, 0, class_id_list
+
       | Eapp (app, w_list, rst) ->
         let class_id_list, w_list = mapfold_right (extvalue is_input) w_list [] in
-        Eapp (app, w_list, rst), id, 0, class_id_list
+        let class_id_list = match rst with
+          | None -> class_id_list
+          | Some rst ->
+            class_ref_of_var is_input (mk_extvalue ~ty:Initial.tbool (Wvar rst)) rst
+            :: class_id_list in
+        Eapp (app, w_list, optional (fun _ -> dummy_var) rst), id, 0, class_id_list
+
       | Efby (seo, w) ->
         let class_id_list, w = extvalue is_input w [] in
         Efby (seo, w), id, 0, class_id_list
+
       | Ewhen (e', cn, x) ->
         let ed, add_when, when_count, class_id_list = decompose e' in
         ed, (fun e' -> { e with e_desc = Ewhen (add_when e', cn, x) }), when_count + 1,
         class_ref_of_var is_input (mk_extvalue ~clock:e'.e_base_ck ~ty:Initial.tbool (Wvar x)) x
         :: class_id_list
-      | Emerge (vi, clause_list) ->
+
+      | Emerge (x, clause_list) ->
         let class_id_list, clause_list = mapfold_right add_clause clause_list [] in
-        Emerge (vi, clause_list), id, 0, class_id_list
+        let x_id =
+          class_ref_of_var is_input (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool (Wvar x)) x in
+        Emerge (dummy_var, clause_list), id, 0, x_id :: class_id_list
+
       | Eiterator (it, app, se, partial_w_list, w_list, rst) ->
         let class_id_list, partial_w_list = mapfold_right (extvalue is_input) partial_w_list [] in
         let class_id_list, w_list = mapfold_right (extvalue is_input) w_list class_id_list in
-        Eiterator (it, app, se, partial_w_list, w_list, rst), id, 0, class_id_list
+        let class_id_list = match rst with
+          | None -> class_id_list
+          | Some rst ->
+            class_ref_of_var is_input (mk_extvalue ~ty:Initial.tbool (Wvar rst)) rst
+            :: class_id_list in
+        Eiterator (it, app, se, partial_w_list, w_list, optional (fun _ -> dummy_var) rst),
+        id, 0, class_id_list
+
       | Estruct field_val_list ->
         let class_id_list, field_val_list = mapfold_right add_clause field_val_list [] in
         Estruct field_val_list, id, 0, class_id_list
@@ -277,38 +296,48 @@ let rec reconstruct (((tenv : tom_env), cenv) as env) =
     mk_equation pat e :: eq_list in
   IntMap.fold reconstruct_class cenv []
 
-and reconstruct_exp_desc ((tenv : tom_env), (cenv : eq_repr list IntMap.t) as env) headd children =
-  let reconstruct_clauses clause_list =
+and reconstruct_exp_desc (((tenv : tom_env), (cenv : eq_repr list IntMap.t)) as env) headd children =
+  let reconstruct_clauses clause_list children =
     let (qn_list, w_list) = List.split clause_list in
     let w_list = reconstruct_extvalues env w_list children in
     List.combine qn_list w_list in
 
   match headd with
+
   | Eextvalue w ->
     let w = assert_1 (reconstruct_extvalues env [w] children) in
     Eextvalue w
+
   | Efby (ini, w) ->
     let w = assert_1 (reconstruct_extvalues env [w] children) in
     Efby (ini, w)
-  | Eapp (app, w_list, rst) ->
-    Eapp (app, reconstruct_extvalues env w_list children, optional (new_ident_for env) rst)
+
+  | Eapp (app, w_list, rst_dummy) ->
+    let rst, children = match rst_dummy with
+      | None -> None, children
+      | Some _ -> Some (reconstruct_class_ref env (List.hd children)), List.tl children in
+    Eapp (app, reconstruct_extvalues env w_list children, optional extract_name rst)
+
   | Ewhen _ -> assert false (* no Ewhen in exprs *)
-  | Emerge (ck_x, clause_list) ->
-    Emerge (new_ident_for env ck_x, reconstruct_clauses clause_list)
+
+  | Emerge (x_ref, clause_list) ->
+    let x_ref, children = List.hd children, List.tl children in
+    Emerge (extract_name (reconstruct_class_ref env x_ref),
+            reconstruct_clauses clause_list children)
+
   | Estruct field_val_list ->
-    let field_val_list = reconstruct_clauses field_val_list in
+    let field_val_list = reconstruct_clauses field_val_list children in
     Estruct field_val_list
-  | Eiterator (it, app, se, partial_w_list, w_list, rst) ->
+
+  | Eiterator (it, app, se, partial_w_list, w_list, rst_dummy) ->
+    let rst, children = match rst_dummy with
+      | None -> None, children
+      | Some _ -> Some (reconstruct_class_ref env (List.hd children)), List.tl children in
     let total_w_list = reconstruct_extvalues env (partial_w_list @ w_list) children in
     let partial_w_list, w_list = split_at (List.length partial_w_list) total_w_list in
-    Eiterator (it, app, se, partial_w_list, w_list, optional (new_ident_for env) rst)
+    Eiterator (it, app, se, partial_w_list, w_list, optional extract_name rst)
 
 and reconstruct_extvalues env w_list children =
-  let extract_name w = match w.w_desc with
-    | Wvar x -> x
-    | _ -> invalid_arg "extract_name: not a var"
-  in
-
   let rec reconstruct_extvalue w (children : class_ref list) = match w.w_desc with
     | Wconst _ -> w, children
     | Wvar _ ->
@@ -330,6 +359,10 @@ and reconstruct_extvalues env w_list children =
 
   let (children, w_list) = List.fold_right consume w_list (List.rev children, []) in
   w_list
+
+and extract_name w = match w.w_desc with
+  | Wvar x -> x
+  | _ -> invalid_arg "extract_name: not a var"
 
 and reconstruct_class_ref (tenv, cenv) cr = match cr with
   | Cr_input w -> w
