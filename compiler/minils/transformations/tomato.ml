@@ -269,7 +269,7 @@ let ident_for_class, reset_idents =
       id),
   (fun () -> Hashtbl.clear ht)
 
-let rec reconstruct (((tenv : tom_env), cenv) as env) =
+let rec reconstruct ((tenv, cenv) as env) =
   reset_idents ();
 
   let reconstruct_class id eq_repr_list eq_list =
@@ -478,13 +478,28 @@ let rec fix_local_var_dec ((tenv, cenv) as env) vd (seen, vd_list) =
 and fix_local_var_decs tenv vd_list =
   snd (List.fold_right (fix_local_var_dec tenv) vd_list (IntSet.empty, []))
 
-let rec fix_output_var_dec ((tenv, cenv) as env) vd vd_list =
-  let class_id = (PatMap.find (Evarpat vd.v_ident) tenv).er_class in
-  { vd with
-    v_ident = new_ident_for env vd.v_ident;
-    v_clock = reconstruct_clock env vd.v_clock; } :: vd_list
 
-and fix_output_var_decs tenv vd_list = List.fold_right (fix_output_var_dec tenv) vd_list []
+let rec fix_output_var_dec ((tenv, cenv) as env) vd (seen, equs, vd_list) =
+  let class_id = (PatMap.find (Evarpat vd.v_ident) tenv).er_class in
+  if IntSet.mem class_id seen
+  then
+    let new_id = gen_var "out" in
+    let new_vd = { vd with v_ident = new_id; } in
+    let new_eq =
+      let w = mk_extvalue ~ty:vd.v_type ~clock:vd.v_clock (Wvar (new_ident_for env vd.v_ident)) in
+      mk_equation (Evarpat new_id) (mk_exp vd.v_clock vd.v_type ~ck:vd.v_clock (Eextvalue w))
+    in
+    (seen, new_eq :: equs, new_vd :: vd_list)
+  else
+    (IntSet.add class_id seen, equs,
+     { vd with
+       v_ident = new_ident_for env vd.v_ident;
+       v_clock = reconstruct_clock env vd.v_clock; } :: vd_list)
+
+and fix_output_var_decs tenv (equs, vd_list) =
+  let (_, equs, vd_list) =
+    List.fold_right (fix_output_var_dec tenv) vd_list (IntSet.empty, equs, []) in
+  equs, vd_list
 
 let node nd =
   Idents.enter_node nd.n_name;
@@ -504,7 +519,7 @@ let node nd =
   let eq_list = reconstruct (tenv, cenv) in
 
   let local = fix_local_var_decs (tenv, cenv) nd.n_local in
-  let output = fix_output_var_decs (tenv, cenv) nd.n_output in
+  let eq_list, output = fix_output_var_decs (tenv, cenv) (eq_list, nd.n_output) in
 
   { nd with n_equs = eq_list; n_output = output; n_local = local; }
 
