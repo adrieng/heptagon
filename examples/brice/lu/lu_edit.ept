@@ -1,0 +1,121 @@
+open Dl
+
+
+const empty_sline : float^Dl.ssize = 0.0^Dl.ssize
+const empty_sline2 : float^Dl.ssize^Dl.ssize = 0.0^Dl.ssize^Dl.ssize
+(*const empty_line : float^Dl.ssize = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]*)
+(*type Dl.smatrix = { Dl.matrix : float^Dl.ssize^Dl.ssize; Dl.none : bool  }*)
+
+const empty_smatrix : Dl.smatrix = {Dl.matrix = 0.0^Dl.ssize^Dl.ssize; Dl.none = false}
+const null_smatrix : Dl.smatrix = {Dl.matrix = 0.0^Dl.ssize^Dl.ssize; Dl.none = true}
+const empty_line : Dl.smatrix^Dl.size = null_smatrix^Dl.size
+
+(* Utils *)
+
+node loop(r, t : bool; s, e, incr : int) returns (l : bool; i : int)
+  let
+    l = (i = e);
+    reset
+      i = s -> (if pre i < e & t then pre i + incr else pre i)
+    every (true -> t & (r or pre l))
+  tel
+
+node edge(s : bool) returns(s' : bool)
+  let
+    s' = false -> not pre s & s;
+  tel
+
+node nedge(s : bool) returns(s' : bool)
+  let
+    s' = false -> pre s & not s;
+  tel
+
+node wait(r, x : bool) returns(last passed : bool = false)
+  let
+    reset
+      passed = last passed or x; 
+    every r
+  tel
+
+node for(nbi : int; t : bool) returns(i : int; end_for : bool)
+  let
+    (end_for, i) = loop(false, t, 0, nbi, 1);
+  tel
+
+node for2(nbi, nbj : int; t : bool) returns(i, j : int; end_for : bool)
+  var end_i, end_j : bool;
+  let
+    (j, end_j) = for(nbj, t);
+    (end_i, i) = loop(false, nedge(end_j), 0, nbi, 1);
+    end_for    = end_j & end_i;
+  tel
+
+node for3(nbi, nbj, nbk : int; t : bool) returns(i, j, k : int; end_for : bool)
+  var end_jk, end_i : bool;
+  let
+    (j, k, end_jk) = for2(nbj, nbk, t);
+    (end_i, i)     = loop(false, nedge(end_jk), 0, nbi, 1);
+    end_for        = end_jk & end_i;
+  tel
+
+(* reads a submatrix, expects the array *)
+fun sread(i, j : int; s : float^Dl.ssize^Dl.ssize) returns(v : float)
+  let
+    v = (s.[i] default empty_sline).[j] default 0.0
+  tel
+
+(* writes a submatrix, expects only an array *)
+fun swrite(i, j : int; v : float; s : float^Dl.ssize^Dl.ssize at ra) 
+    returns(r : float^Dl.ssize^Dl.ssize at ra)
+  let
+    r = [ s with [i][j] = v ];
+  tel
+
+(* changes a non null smatrix, inserting the given value *)
+fun swrites(i, j : int; v : float; s : Dl.smatrix) returns(r : Dl.smatrix)
+  var rt : float^Dl.ssize^Dl.ssize;
+  let
+    rt = [ s.matrix with [i][j] = v];
+    r = { Dl.matrix = rt; Dl.none = false};
+  tel
+
+
+
+(* reads the matrix *)
+fun read(i, j : int; m : Dl.smatrix^Dl.size^Dl.size) returns (s : Dl.smatrix)
+  let
+    s = (m.[i] default empty_line).[j] default null_smatrix;
+  tel
+
+(* writes the matrix with a matrix *)
+fun reads(i, j : int; m : Dl.smatrix^Dl.size^Dl.size) returns (s : float^Dl.ssize^Dl.ssize)
+  var temp2 : Dl.smatrix;
+  let
+    temp2 = m[>i<][>j<];
+    s = if temp2.none then empty_sline2 else temp2.matrix;
+  tel
+
+(* writes the matrix *)
+fun write(i, j : int; s : Dl.smatrix; m : Dl.smatrix^Dl.size^Dl.size at ra) 
+    returns (o : Dl.smatrix^Dl.size^Dl.size at ra)
+  let
+    o = [ m with [i][j] = s]
+  tel
+
+(* writes the matrix with a matrix *)
+fun writes(i, j : int; s : float^Dl.ssize^Dl.ssize; m : Dl.smatrix^Dl.size^Dl.size at ra) 
+    returns (o :Dl.smatrix^Dl.size^Dl.size at ra)
+  let
+    o = [ m with [i][j] = {Dl.matrix = s; Dl.none = false}]
+  tel
+
+
+(* does nothing *)
+fun nothing() returns()
+  let
+  tel
+
+node delay_i(k : int; def, f : int) returns(o : int)
+  let
+    o = def;
+  tel

@@ -1,0 +1,18 @@
+const ssize : int = 32
+const size : int = 12
+
+(* type smatrix = None | Some of *) 
+
+type smatrix = 
+  {
+    matrix : float^ssize^ssize;
+    none : bool
+  }
+
+(* val fun float_of_int(x : int) returns (y : float)
+
+val fun sub_matrix(m : smatrix; ibegin : int; iend : int; jbegin : int; jend : int) returns (r : smatrix)
+
+val fun read_in(i : int; j : int; m : smatrix) returns (y : float)
+
+val fun write_in(i : int; j : int; v : float; m : smatrix) returns (y : float) *)

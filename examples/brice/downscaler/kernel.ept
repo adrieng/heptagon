@@ -1,0 +1,80 @@
+zpen Utils
+
+const iwidth : int = 1920
+const owidth : int = 720
+
+const iheight : int = 1080
+const oheight : int = 480
+
+const iwidth2 : int = iwidth + 2
+
+const rgb_empty : Utils.rgb = {Utils.r = 0; Utils.g = 0; Utils.b = 0}
+
+
+
+(* does the convolution of a 3*3 matrix of ints *)
+fun iconv(a, z, e, r, t, y, u, i, o : int) returns(c : int)
+  let
+    c = (a + z + e + r + 8*t + y + u + i + o) / 16;
+  tel
+
+
+(* does the convolution of a 3*3 matrix of rgbs *)
+fun rgbconv(a, z, e, r, t, y, u, i, o : Utils.rgb) returns(c : Utils.rgb)
+  var cr, cb, cg : int;
+  let
+    cr = iconv(a.r, z.r, e.r, r.r, t.r, y.r, u.r, i.r, o.r);
+    cg = iconv(a.g, z.g, e.g, r.g, t.g, y.g, u.g, i.g, o.g);
+    cb = iconv(a.b, z.b, e.b, r.b, t.b, y.b, u.b, i.b, o.b);
+    c = {Utils.r = cr; Utils.g = cg; Utils.b = cb};
+  tel
+
+
+(* does the convolution *)
+node conv(r1, r2, r3, r4, r5, r6, r7, r8, r : Utils.rgb; bi : bool; i : int) returns(o : Utils.rgb; b, e : bool)
+  let
+    o = rgbconv(r1, r2, r3, r4, r5, r6, r7, r8, r);
+    b = if (i = 0) then true
+        else if i = 1 then false
+        else if i = 2 then true
+        else if i = 3 then false
+        else if i = 4 then false
+        else if i = 5 then true
+        else if i = 6 then false
+        else if i = 7 then false
+        else false;
+    e = true;
+  tel
+
+
+(* the main function *)
+(* __kernel node main(r : Utils.rgb) returns(o : Utils.rgb; f : bool) *)
+node main(r : Utils.rgb) returns(o : Utils.rgb; f : bool)
+  var vf, vc : bool; c : int;
+      r1, r2, r3, r4, r5, r6, r7, r8 : rgb;
+  let    
+    r1 = delay_r(2 * iwidth + 2, rgb_empty, r);
+    r2 = delay_r(2 * iwidth + 1, rgb_empty, r);
+    r3 = delay_r(2 * iwidth, rgb_empty, r);
+    r4 = delay_r(iwidth + 2, rgb_empty, r);
+    r5 = delay_r(iwidth + 1, rgb_empty, r);
+    r6 = delay_r(iwidth, rgb_empty, r);
+    r7 = delay_r(2, rgb_empty, r);
+    r8 = delay_r(1, rgb_empty, r);
+    (o, vc) = (r, true);
+    (*(o, vc) = kernel<<8>> (<(rgb_empty, false), r1, r2, r3, r4, r5, r6, r7, r8>) (conv, r);*)
+
+    c = counter (720 * 9, - (2 * iwidth + 2));
+    vf =  if c < 0 then false
+          else if c < 720 then true
+          else if c < 720*2 then false
+          else if c < 720*3 then true
+          else if c < 720*4 then false
+          else if c < 720*5 then false
+          else if c < 720*6 then true
+          else if c < 720*7 then false
+          else if c < 720*8 then false
+          else if c < 720*9 then true
+          else true;
+    f = vc & vf;
+  tel

@@ -1,0 +1,136 @@
+open Utils
+
+
+const rgb_empty : rgb = {r = 0; g = 0; b = 0}
+
+
+
+(* takes a flow of rgb and gives the corresponding flow of pixels *)
+node r2p(r : rgb) returns(p : pixel)
+  var ht, wt : int;
+  let
+    wt = counter(iwidth);
+    ht = 0 -> if (wt = 0) then 
+                if (pre ht = iheight - 1) then 
+                  0 
+                else 
+                  pre ht + 1
+              else 
+                pre ht;
+    p = {rgb = r; h = ht;  w = wt};
+  tel
+
+
+(* does the convolution of a 3*3 matrix of ints *)
+fun iconv(a, z, e, r, t, y, u, i, o : int) returns(c : int)
+  var fa, fz, fe, fr, ft, fy, fu, fi, fo : float;
+  let
+    fa = float_of_int(a);
+    fz = float_of_int(z);
+    fe = float_of_int(e);
+    fr = float_of_int(r);
+    ft = float_of_int(t);
+    fy = float_of_int(y);
+    fu = float_of_int(u);
+    fi = float_of_int(i);
+    fo = float_of_int(o);
+    c = int_of_float((fa +. fz +. fe +. fr +. 8.0*.ft +. fy +. fu +. fi +. fo) /. 16.0);
+  tel
+
+
+(* does the convolution of a 3*3 matrix of rgbs *)
+fun rgbconv(a, z, e, r, t, y, u, i, o : rgb) returns(c : rgb)
+  var cr, cb, cg : int;
+  let
+    cr = iconv(a.r, z.r, e.r, r.r, t.r, y.r, u.r, i.r, o.r);
+    cg = iconv(a.g, z.g, e.g, r.g, t.g, y.g, u.g, i.g, o.g);
+    cb = iconv(a.b, z.b, e.b, r.b, t.b, y.b, u.b, i.b, o.b);
+    c = {r = cr; g = cg; b = cb};
+  tel
+
+
+(* does the convolution *)
+node conv(p : pixel) returns(o : pixel)
+  var last b : bool = false; r : rgb; ht, wt, k : int;
+      last rgba : rgb^(iwidth * 3) = rgb_empty^(iwidth * 3);
+  let
+    k = counter (iwidth * 3);
+    b = last b or (k >= iwidth + 1);
+    rgba = [last rgba with [k] = p.rgb];
+    ht = delayi1(p.h);
+    wt = delayi1(p.w);
+
+    r = if b & ht = 0 & wt = 0 then
+          rgbconv4(rgba.[(k - iwidth - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k) % (iwidth * 3)] default rgb_empty)
+        else if b & ht = 0 & wt = iwidth - 1 then
+          rgbconv4(rgba.[(k - iwidth - 2) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - 2) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - 1) % (iwidth * 3)] default rgb_empty)
+        else if b & ht = iheight - 1 & wt = 0 then
+          rgbconv4(rgba.[(k - 2 * iwidth - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - 2 * iwidth) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth) % (iwidth * 3)] default rgb_empty)
+        else if b & ht = iheight - 1 & wt = iweight - 1 then
+          rgbconv4(rgba.[(k - 2 * iwidth - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - 2 * iwidth) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth) % (iwidth * 3)] default rgb_empty)
+          
+
+        else if b then
+          rgbconv(rgba.[(k - iwidth * 2 - 2) % (iwidth * 3)] default rgb_empty, 
+                  rgba.[(k - iwidth * 2 - 1) % (iwidth * 3)] default rgb_empty, 
+                  rgba.[(k - iwidth * 2) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth - 2) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - 2) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - 1) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k) % (iwidth * 3)] default rgb_empty)
+        else
+          rgb_empty;
+    o = { rgb = r; h = ht; w = wt};
+  tel
+
+
+(* downscaler *)
+node downscale(p : rgb) returns(o : rgb; b : bool)
+  var t : rgb;
+  let
+    t = conv(p);
+    automaton
+      state Init
+        var k : int;
+        do
+          k = counter (iwidth * 3);
+          o = rgb_empty;
+          b = false;
+        until k = 2 * iwidth + 1 then Main
+
+      state Main
+        var vf, hf : bool; c : int; tr : rgb;
+        do
+          c = counter (720 * 9);
+            vf =  if c < 720 then true
+                  else if c < 720*2 then false
+                  else if c < 720*3 then true
+                  else if c < 720*4 then false
+                  else if c < 720*5 then false
+                  else if c < 720*6 then true
+                  else if c < 720*7 then false
+                  else if c < 720*8 then false
+                  else if c < 720*9 then true
+                  else true;
+
+          hf = true fby false fby true fby false fby false
+              fby true fby false fby false fby hf;
+
+          b = hf & vf;
+          o = t;
+    end;
+  tel

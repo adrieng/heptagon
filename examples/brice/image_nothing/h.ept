@@ -1,0 +1,13 @@
+const iwidth : int = 960
+const iheight : int = 540
+
+const width : int = 360
+const height : int = 240
+
+
+type rgb =
+  {
+    r : int;
+    g : int;
+    b : int
+  }

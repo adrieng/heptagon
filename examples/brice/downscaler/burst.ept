@@ -1,0 +1,62 @@
+const iwidth : int = 1920
+const owidth : int = 720
+
+const iheight : int = 1080
+const oheight : int = 480
+
+type rgb =
+  {
+    r : int;
+    g : int;
+    b : int
+  }
+
+
+
+(* does the convolution of a 3*3 matrix of ints *)
+fun iconv(a, z, e, r, t, y, u, i, o : int) returns(c : int)
+  let
+    c = (a + z + e + r + 8*t + y + u + i + o) / 16;
+  tel
+
+
+(* does the convolution of a 3*3 matrix of rgbs *)
+fun rgbconv(a, z, e, r, t, y, u, i, o : rgb) returns(c : rgb)
+  var cr, cb, cg : int;
+  let
+    cr = iconv(a.r, z.r, e.r, r.r, t.r, y.r, u.r, i.r, o.r);
+    cg = iconv(a.g, z.g, e.g, r.g, t.g, y.g, u.g, i.g, o.g);
+    cb = iconv(a.b, z.b, e.b, r.b, t.b, y.b, u.b, i.b, o.b);
+    c = {r = cr; g = cg; b = cb};
+  tel
+
+
+(* does the convolution *)
+fun conv(r : rgb^iheight^iwidth; io, jo : int) returns(o : rgb)
+  var r1, r2, r3, r4, r5, r6, r7, r8, r9 : rgb;
+      i, j : int;
+  let
+    i = (io * 9) / 4 + 1;
+    j = (jo * 8) / 3 + 1;
+    r1 = r[>i - 1<][>j - 1<];
+    r2 = r[>i - 1<][>  j  <];
+    r3 = r[>i - 1<][>j + 1<];
+    r4 = r[>  i  <][>j - 1<];
+    r5 = r[>  i  <][>  j  <];
+    r6 = r[>  i  <][>j + 1<];
+    r7 = r[>i + 1<][>j - 1<];
+    r8 = r[>i + 1<][>  j  <];
+    r9 = r[>i + 1<][>j - 1<];
+    o = rgbconv(r1, r2, r3, r4, r5, r6, r7, r8, r9);
+  tel
+
+
+(*(* the main function *)
+fun main(r : rgb^iheight^iwidth) returns(o : rgb by col by row)
+  var vf, hf : bool; c : int;
+  let
+    kerg
+      o = merge col_o (i -> keri merge row (j -> conv(r, i, j)) irek);
+    grek
+  tel
+*)

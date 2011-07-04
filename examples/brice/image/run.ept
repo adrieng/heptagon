@@ -1,0 +1,218 @@
+open H
+
+
+
+(*****************************************************************************)
+(*                                 Downscaler                                *)
+(*****************************************************************************)
+
+
+(* does the convolution of a 3*3 matrix of ints *)
+fun iconv(a, z, e, r, t, y, u, i, o : int) returns(c : int)
+  let
+    c = (a + z + e + r + 8*t + y + u + i + o) / 16;
+  tel
+
+
+(* does the convolution of a 3*3 matrix of rgbs *)
+fun rgbconv(a, z, e, r, t, y, u, i, o : rgb) returns(c : rgb)
+  var cr, cb, cg : int;
+  let
+    cr = iconv(a.r, z.r, e.r, r.r, t.r, y.r, u.r, i.r, o.r);
+    cg = iconv(a.g, z.g, e.g, r.g, t.g, y.g, u.g, i.g, o.g);
+    cb = iconv(a.b, z.b, e.b, r.b, t.b, y.b, u.b, i.b, o.b);
+    c = {r = cr; g = cg; b = cb};
+  tel
+
+
+(* does the convolution *)
+fun conv(r : rgb^iheight^iwidth; io, jo : int) returns(o : rgb)
+  var r1, r2, r3, r4, r5, r6, r7, r8, r9 : rgb;
+      i, j : int;
+  let
+    i = (io * 9) / 4 + 1;
+    j = (jo * 8) / 3 + 1;
+    r1 = r[>i - 1<][>j - 1<];
+    r2 = r[>i - 1<][>  j  <];
+    r3 = r[>i - 1<][>j + 1<];
+    r4 = r[>  i  <][>j - 1<];
+    r5 = r[>  i  <][>  j  <];
+    r6 = r[>  i  <][>j + 1<];
+    r7 = r[>i + 1<][>j - 1<];
+    r8 = r[>i + 1<][>  j  <];
+    r9 = r[>i + 1<][>j - 1<];
+    o = rgbconv(r1, r2, r3, r4, r5, r6, r7, r8, r9);
+  tel
+
+
+
+(*****************************************************************************)
+(*                   Convertion to grayscale and integration                 *)
+(*****************************************************************************)
+
+
+(* integrates over a row (returns a row) *) 
+node acc_r(p : int^H.height^H.width; i : int) returns(o : int)
+  var j : int; t : int;
+  let
+    j = 0 fby j + 1;
+    t = 0 fby o;
+    o = p[>j<][>i<] + t;
+  tel
+
+(* integrates over a column (returns a column) *) 
+node acc_c(p : rgb^H.width^H.height; j : int) returns(o, o_sq : int)
+  var i : int; t, t_sq : int; v : int;
+  let
+    i = 0 fby i + 1;
+    t = 0 fby o;
+    t_sq = 0 fby o_sq;
+    v = (p[>i<][>j<].r + p[>i<][>j<].g + p[>i<][>j<].b) / 3;
+    o = t + v;
+    o_sq = t_sq + v * v;
+  tel
+    
+
+
+(*****************************************************************************)
+(*                                 Features                                  *)
+(*****************************************************************************)
+
+
+fun sqrt(i : int) returns(o : int)
+  let
+    o = 5;
+  tel
+
+(* @input :  p    : integral matrice
+ *           std  : standard deviation
+ *           nbr  : feature to use
+ *           k    : used scale
+ *           i, j : upper left position of the frame 
+ * @output : o    : computed value of the feature
+ *)
+fun feat_value(p : int^V.width^V.height; std, nbr, k, i, j : int)
+    returns(o : int)
+  var fvalt, fval : int;
+  let
+    fvalt = p[>i + ((features[>nbr<]).x[0] * scales[>k<] / scales[0])<]
+             [>j + ((features[>nbr<]).y[0] * scales[>k<] / scales[0])<]
+            * (features[>nbr<]).val_at_corners[0]
+            + p[>i + ((features[>nbr<]).x[1] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[1] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[1]
+            + p[>i + ((features[>nbr<]).x[2] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[2] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[2]
+            + p[>i + ((features[>nbr<]).x[3] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[3] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[3]
+            + p[>i + ((features[>nbr<]).x[4] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[4] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[4]
+            + p[>i + ((features[>nbr<]).x[5] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[5] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[5]
+            + p[>i + ((features[>nbr<]).x[6] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[6] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[6]
+            + p[>i + ((features[>nbr<]).x[7] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[7] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[7]
+            + p[>i + ((features[>nbr<]).x[8] * scales[>k<] / scales[0])<]
+               [>j + ((features[>nbr<]).y[8] * scales[>k<] / scales[0])<]
+              * (features[>nbr<]).val_at_corners[8];
+    fval = fvalt / std;
+    switch (fval * (features[>nbr<]).parity < (features[>nbr<]).thresh * (features[>nbr<]).parity)
+      | true do o = (features[>nbr<]).alpha;
+      | false do o = 0
+    end
+    o = 0;
+  tel
+
+(* @input :  p      : integral matrice
+ *           p_sq   : integral matrice of the squares
+ *           io, jo : position of the output
+ *           k      : scale to use
+ * @output : o      : whether there is a face or not
+ *)
+fun computation(p, p_sq : int^V.width^V.height; io, jo, k : int)
+    returns(o : bool)
+  var i, j, i2, j2, num_pix, sum_pix, mean_value, sum_pix_sq, va : int;
+  let
+    (* upper left *)
+    i = io * paces[>k<];
+    j = jo * paces[>k<];
+
+    (* down right *)
+    i2 = i + scales[>k<] - 1;
+    j2 = j + scales[>k<] - 1;
+
+    (* luminosity *)
+    num_pix = (scales[>k<] - 1) * (scales[>k<] - 1);
+    sum_pix = p[>i2<][>j2<]
+              - p[>i<][>j2<]
+              - p[>i2<][>j<]
+              + p[>i<][>j<];
+    mean_value = sum_pix / num_pix;
+
+    (* variance *)
+    sum_pix_sq = p_sq[>i2<][>j2<]
+                 - p_sq[>i<][>j2<]
+                 - p_sq[>i2<][>j<]
+                 + p_sq[>i<][>j<];
+    va = (num_pix * sum_pix_sq - sum_pix * sum_pix) / (num_pix * num_pix);
+
+    (* if the frame is too bright, too dark or without enough variance, then reject *)
+    switch (mean_value > 20 & mean_value < 200 & va > 25)
+      | false do o = false;
+
+      |true
+        var feat_sum, std : int;
+        do
+          std = sqrt(va);
+          feat_sum = 
+            feat_value(p, std,  0, k, i, j)
+            + feat_value(p, std, 1, k, i, j)
+            + feat_value(p, std, 2, k, i, j)
+            + feat_value(p, std, 3, k, i, j)
+            + feat_value(p, std, 4, k, i, j)
+            + feat_value(p, std, 5, k, i, j)
+            + feat_value(p, std, 6, k, i, j)
+            + feat_value(p, std, 7, k, i, j)
+            + feat_value(p, std, 8, k, i, j);
+          o = feat_sum > V.global_threshold;
+    end;
+  tel
+
+
+
+(*****************************************************************************)
+(*                               Main function                               *)
+(*****************************************************************************)
+
+
+node run(r : rgb^H.iwidth^H.iheight) returns(d : rgb; s0, s1, s2, s3, s4 : bool)
+  var int_c     : int;
+      int_rc    : int;
+      int_c_sq  : int;
+      int_rc_sq : int;
+      a_c_sq    : int;
+      a_rc_sq   : int;
+  let
+    d = conv(r, 0, 1);
+
+    (int_c, int_c_sq) = acc_c(d^H.width^H.height, 0);
+    int_rc = acc_r(int_c^H.height^H.width, 1);
+    int_rc_sq = acc_r(int_c_sq^H.height^H.width, 1);
+
+    a_rc    = int_rc;
+    a_rc_sq = int_rc_sq;
+
+    s0 = computation(a_rc, a_rc_sq, 1, 2, 0);
+    s1 = computation(a_rc, a_rc_sq, 1, 2, 1);
+    s2 = computation(a_rc, a_rc_sq, 1, 2, 2);
+    s3 = computation(a_rc, a_rc_sq, 1, 2, 3);
+    s4 = computation(a_rc, a_rc_sq, 1, 2, 4);
+  tel
+

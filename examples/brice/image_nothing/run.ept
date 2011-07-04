@@ -1,0 +1,106 @@
+const iwidth : int = 960
+const iheight : int = 540
+
+const width : int = 360
+const height : int = 240
+
+
+type rgb =
+  {
+    r : int;
+    g : int;
+    b : int
+  }
+
+
+
+(*****************************************************************************)
+(*                                 Downscaler                                *)
+(*****************************************************************************)
+
+
+(* does the convolution of a 3*3 matrix of ints *)
+fun iconv(a, z, e, r, t, y, u, i, o : int) returns(c : int)
+  let
+    c = (a + z + e + r + 8*t + y + u + i + o) / 16;
+  tel
+
+
+(* does the convolution of a 3*3 matrix of rgbs *)
+fun rgbconv(a, z, e, r, t, y, u, i, o : rgb) returns(c : rgb)
+  var cr, cb, cg : int;
+  let
+    cr = iconv(a.r, z.r, e.r, r.r, t.r, y.r, u.r, i.r, o.r);
+    cg = iconv(a.g, z.g, e.g, r.g, t.g, y.g, u.g, i.g, o.g);
+    cb = iconv(a.b, z.b, e.b, r.b, t.b, y.b, u.b, i.b, o.b);
+    c = {r = cr; g = cg; b = cb};
+  tel
+
+
+(* does the convolution *)
+fun conv(r : rgb^iwidth^iheight; io : int; h : rgb; jo : int) returns(o : rgb)
+  var r1, r2, r3, r4, r5, r6, r7, r8, r9 : rgb;
+      i, j : int;
+  let
+    i = (io * 9) / 4 + 1;
+    j = (jo * 8) / 3 + 1;
+    r1 = r[>i - 1<][>j - 1<];
+    r2 = r[>i - 1<][>  j  <];
+    r3 = r[>i - 1<][>j + 1<];
+    r4 = r[>  i  <][>j - 1<];
+    r5 = r[>  i  <][>  j  <];
+    r6 = r[>  i  <][>j + 1<];
+    r7 = r[>i + 1<][>j - 1<];
+    r8 = r[>i + 1<][>  j  <];
+    r9 = r[>i + 1<][>j - 1<];
+    o = rgbconv(r1, r2, r3, r4, r5, r6, r7, r8, r9);
+  tel
+
+
+
+
+(*****************************************************************************)
+(*                               Main function                               *)
+(*****************************************************************************)
+
+fun nothing(r : rgb^width^height; i : int; rt : rgb; j : int)
+    returns(o : rgb)
+  let
+    o = rt;
+  tel
+
+
+(*****************************************************************************)
+(*                               Main function                               *)
+(*****************************************************************************)
+
+
+fun aux1(__global__ r : rgb^iwidth^iheight; t1 : rgb^width; i : int)
+    returns (t2 : rgb^width)
+  let
+    ki
+      t2 = mapi<<width>> conv (<r, i>) (t1);
+    ik
+  tel
+
+fun aux2(r : rgb^width^height; t1 : rgb^width; i : int)
+    returns (t2 : rgb^width)
+  let
+      t2 = mapi<<width>> nothing (<r, i>) (t1);
+  tel
+
+fun run(r : rgb^iwidth^iheight) 
+    returns(a_rc      : rgb^width^height;
+            a_rc_sq   : rgb^width^height)
+  let
+    kg
+      var d : rgb^width^height; t1 : rgb^width^height;
+      t1 = {r = 0; g = 0; b = 0}^width^height;
+          (* downscale *)
+      d = mapi<<height>> aux1 (<r>) (t1);
+
+          (* for the sake of example *)
+      a_rc    = mapi<<height>> aux2 (<d>) (d);
+      a_rc_sq = mapi<<height>> aux2 (<d>) (d);
+    gk
+  tel

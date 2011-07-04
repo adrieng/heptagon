@@ -1,0 +1,43 @@
+const iwidth : int = 960
+const iheight : int = 540
+
+const width : int = 360
+const height : int = 240
+
+
+const nbr_scales : int = 5
+
+const nbr_features : int = 9
+const global_threshold : int = 272
+
+const paces : int^V.nbr_scales = [2, 2, 4, 6, 8]
+const scales : int^V.nbr_scales = [25, 31, 39, 49, 61]
+
+type rgb =
+  {
+    r : int;
+    g : int;
+    b : int
+  }
+
+type feature =
+  {
+    x : int^9;
+    y : int^9;
+    val_at_corners : int^9;
+    parity : int;
+    thresh : int;
+    alpha : int
+  }
+
+
+const features : feature^V.nbr_features =
+  {
+    V.x = 0^9; 
+    V.y = 0^9; 
+    V.val_at_corners = 0^9; 
+    V.parity = 0; 
+    V.thresh = 0; 
+    V.alpha = 0
+  }^V.nbr_features
+
