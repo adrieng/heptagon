@@ -50,6 +50,9 @@ exception List_too_short
     Raises List_too_short exception if the list is too short. *)
 val split_at : int -> 'a list -> 'a list * 'a list
 
+(** [take n l] returns the [n] first elements of the list [l] *)
+val take : int -> 'a list -> 'a list
+
 (** [remove x l] removes all occurrences of x from list l.*)
 val remove : 'a -> 'a list -> 'a list
 
@@ -81,6 +84,11 @@ val mapfold_right
 (** [fold_right_1 f [x1; x2; ...; xn]] = f x1 (f x2 (f ... xn)). The list should
     have at least one element! *)
 val fold_right_1 :
+  ('a -> 'a -> 'a) -> 'a list -> 'a
+
+(** [fold_left_1 f [x1; x2; ...; xn]] = f (f ... (f x1 x2) ...) xn. The list should
+    have at least one element! *)
+val fold_left_1 :
   ('a -> 'a -> 'a) -> 'a list -> 'a
 
 (** Mapi *)
