@@ -178,6 +178,11 @@ let rec fold_left_1 f l = match l with
   | [x] -> x
   | x :: l -> f (fold_left_1 f l) x
 
+let rec fold_left4 f acc l1 l2 l3 l4 = match l1, l2, l3, l4 with
+  | [], [], [], [] -> acc
+  | x1 :: l1, x2 :: l2, x3 :: l3, x4 :: l4 -> fold_left4 f (f acc x1 x2 x3 x4) l1 l2 l3 l4
+  | _ -> invalid_arg "Misc.fold_left4"
+
 let mapi f l =
   let rec aux i = function
     | [] -> []
