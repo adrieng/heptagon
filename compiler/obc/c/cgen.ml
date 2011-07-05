@@ -556,17 +556,8 @@ let rec cstm_of_act out_env var_env obj_env act =
         let on = obj_ref_name o in
         let obj = assoc_obj on obj_env in
         let classn = cname_of_qn obj.o_class in
-        (match obj.o_size with
-           | None ->
-             [Csexpr (Cfun_call (classn ^ "_reset",
-                [Caddrof (Cfield (Cderef (Cvar "self"), local_qn (name on)))]))]
-           | Some size ->
-               let x = gen_symbol () in
-               let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
-               let elt = [Caddrof( Carray(field, Cvar x) )] in
-                 [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp size,
-                       [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
-        )
+          [Csexpr (Cfun_call (classn ^ "_reset",
+                             [Caddrof (Cfield (Cderef (Cvar "self"), local_qn (name on)))]))]
 
     (** Step functions applications can return multiple values, so we use a
         local structure to hold the results, before allocating to our
