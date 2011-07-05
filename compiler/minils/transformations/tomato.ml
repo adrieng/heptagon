@@ -20,7 +20,8 @@ open Clocks
 open Pp_tools
 open Mls_compare
 
-(* Data-flow minimization on MiniLS:
+(*
+  Data-flow minimization on MiniLS:
 
    1. Put each equation into a big map. It maps variable names to triples (class_id * truncated
    expression * class_id list). Initially, each local variable is in the same class.
@@ -296,7 +297,7 @@ let rec reconstruct ((tenv, cenv) as env) =
     mk_equation pat e :: eq_list in
   IntMap.fold reconstruct_class cenv []
 
-and reconstruct_exp_desc (((tenv : tom_env), (cenv : eq_repr list IntMap.t)) as env) headd children =
+and reconstruct_exp_desc ((tenv, cenv) as env) headd children =
   let reconstruct_clauses clause_list children =
     let (qn_list, w_list) = List.split clause_list in
     let w_list = reconstruct_extvalues env w_list children in
@@ -399,19 +400,22 @@ and pattern_name env ty name = match ty with
 
 module EqClasses = Map.Make(
   struct
-    type t = exp * int option list
+    type t = exp * ck * int option list
 
     let unsafe { e_desc = ed; _ } = match ed with
       | Eapp (app, _, _) | Eiterator (_, app, _, _, _, _) -> app.a_unsafe
       | _ -> false
 
-    let compare (e1, cr_list1) (e2, cr_list2) =
-      let cr = CompareModulo.exp_compare e1 e2 in
+    let compare (e1, ck1, cr_list1) (e2, ck2, cr_list2) =
+      let cr = ClockCompareModulo.clock_compare ck1 ck2 in
       if cr <> 0 then cr
       else
-        if unsafe e1 then 1
-        else
-          (if unsafe e2 then -1 else list_compare Pervasives.compare cr_list1 cr_list2)
+        (let cr = CompareModulo.exp_compare e1 e2 in
+         if cr <> 0 then cr
+         else
+           if unsafe e1 then 1
+           else
+             (if unsafe e2 then -1 else list_compare Pervasives.compare cr_list1 cr_list2))
   end)
 
 let compute_new_class (tenv : tom_env) =
@@ -437,10 +441,8 @@ let compute_new_class (tenv : tom_env) =
         Some er.er_class in
     let children = List.map map_class_ref eqr.er_children in
 
-    let key = (eqr.er_head, children) in
-    let id = try EqClasses.find key classes with Not_found ->
-      Format.printf "Could not find %a@." print_exp (fst key);
-      fresh_id () in
+    let key = (eqr.er_head, eqr.er_clock, children) in
+    let id = try EqClasses.find key classes with Not_found -> fresh_id () in
 
     eqr.er_class <- id;
     EqClasses.add key id classes
@@ -478,7 +480,7 @@ let rec fix_local_var_dec ((tenv, cenv) as env) vd (seen, vd_list) =
 and fix_local_var_decs tenv vd_list =
   snd (List.fold_right (fix_local_var_dec tenv) vd_list (IntSet.empty, []))
 
-
+(* May add new local equations in the case of fusedo outputs *)
 let rec fix_output_var_dec ((tenv, cenv) as env) vd (seen, equs, vd_list) =
   let class_id = (PatMap.find (Evarpat vd.v_ident) tenv).er_class in
   if IntSet.mem class_id seen
