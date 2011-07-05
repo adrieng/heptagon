@@ -45,11 +45,8 @@ let parse_interface modname lexbuf =
   (* Parsing of the file *)
   let i = do_silent_pass "Parsing" (parse Hept_parser.interface) lexbuf in
 
-  (* TODO ?
-  let i = { i with Hept_parsetree.=i_modname = modname } in *)
-
-  (* Fuse static exps together *) (* TODO cf Hept_static_scoping *)
-  (*let i = do_silent_pass "Static Scoping" Hept_static_scoping.interface i in *)
+  (* Fuse static exps together *)
+  let i = do_silent_pass "Static Scoping" Hept_static_scoping.interface i in
 
   (* Convert the parse tree to Heptagon AST *)
   let i = do_silent_pass "Scoping" Hept_scoping.translate_interface i in

@@ -73,10 +73,9 @@ let program p =
   let p, _ = Hept_parsetree_mapfold.program_it funs Names.NamesSet.empty p in
   p
 
-(* (* TODO mapfold on interface *)
 let interface i =
   let funs = { Hept_parsetree_mapfold.defaults
                with node_dec = node; exp = exp; const_dec = const_dec } in
   let i, _ = Hept_parsetree_mapfold.interface_it funs Names.NamesSet.empty i in
   i
-*)
+
