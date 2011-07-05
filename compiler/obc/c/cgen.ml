@@ -229,15 +229,11 @@ and create_affect_stm dest src ty =
 
 (** Returns the expression to use e as an argument of
     a function expecting a pointer as argument. *)
-let address_of e =
-(*  try *)
+let address_of ty e =
     let lhs = lhs_of_exp e in
-    match lhs with
-      | Carray _ -> Clhs lhs
-      | Cderef lhs -> Clhs lhs
+    match ty with
+      | Tarray _ -> Clhs lhs
       | _ -> Caddrof lhs
-(*  with _ ->
-    e  *)
 
 let rec cexpr_of_static_exp se =
   match se.se_desc with
@@ -369,7 +365,7 @@ let step_fun_call var_env sig_info objn out args =
     | [], [] -> []
     | e::l, ad::ads ->
         (*this arg is targeted, use a pointer*)
-        let e = if Linearity.is_linear ad.a_linearity then address_of e else e in
+        let e = if Linearity.is_linear ad.a_linearity then address_of ad.a_type e else e in
           e::(add_targeting l ads)
     | _, _ -> assert false
   in
