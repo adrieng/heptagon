@@ -123,7 +123,8 @@ let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
 
 let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
                     Names.qualname_of_string "java.util.concurrent.ExecutionException";
-                    Names.qualname_of_string "jeptagon.AsyncNode"]
+                    Names.qualname_of_string "jeptagon.AsyncNode";
+                    Names.qualname_of_string "jeptagon.AsyncFun"]
 
 let throws_async = [Names.qualname_of_string "InterruptedException";
                     Names.qualname_of_string "ExecutionException"]
