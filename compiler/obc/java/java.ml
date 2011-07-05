@@ -129,6 +129,7 @@ let throws_async = [Names.qualname_of_string "InterruptedException";
                     Names.qualname_of_string "ExecutionException"]
 
 let async_node = Names.qualname_of_string "AsyncNode"
+let async_fun = Names.qualname_of_string "AsyncFun"
 
 
 

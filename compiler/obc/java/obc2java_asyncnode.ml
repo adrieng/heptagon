@@ -321,7 +321,11 @@ let create_async_classe async base_classe =
   let field_node, ty_node, ty_result, aty_result, id_node =
     let t = b_out |> Signature.types_of_arg_list |> Types.prod in
     let ty_result = boxed_ty param_env t in
-    let ty_node = Tgeneric (async_node, [ty_result]) in
+    let ty_node =
+      if b_stateful
+      then Tgeneric (async_node, [ty_result])
+      else Tgeneric (async_fun, [ty_result])
+    in
     let aty_result = ty param_env (Types.Tfuture((), t)) in
     let id_node = Idents.gen_var "obc2java" "node" in
     mk_field ~protection:Pprotected ty_node id_node, ty_node, ty_result, aty_result, id_node

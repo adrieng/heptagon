@@ -5,16 +5,16 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
-public class AsyncNode<T> {
+public class AsyncFun<T> {
 	
 	protected final ArrayBlockingQueue<FutureTask<T>>[] queue;
 	protected int currentQueue;
 	protected final int queueNb;
 	protected final Thread[] t;
 	
-	protected class AsyncNodeThread extends Thread {
+	protected class AsyncFunThread extends Thread {
 		protected final int queueId;
-		public AsyncNodeThread(int queueId) {
+		public AsyncFunThread(int queueId) {
 			this.queueId = queueId;
 		}
 		public void run() {
@@ -28,7 +28,7 @@ public class AsyncNode<T> {
 	}
 		
 	@SuppressWarnings("unchecked")
-	public AsyncNode(int queueNb, int queueSize) {
+	public AsyncFun(int queueNb, int queueSize) {
 		if (queueNb<1) { java.lang.System.err.println("asyncnode given with 0 thread to execute"); }
 		this.queue = new ArrayBlockingQueue[queueNb];
 		this.t = new Thread[queueNb];
@@ -36,7 +36,7 @@ public class AsyncNode<T> {
 		this.queueNb = queueNb;
 		for (int i = 0; i<queueNb; i++) {
 			this.queue[i] = new ArrayBlockingQueue<FutureTask<T>>(queueSize,false);
-			t[i] = new AsyncNodeThread(i);
+			t[i] = new AsyncFunThread(i);
 			t[i].start();
 		}
 	}
@@ -47,13 +47,14 @@ public class AsyncNode<T> {
 			queue[currentQueue].put(t);
 		}
 		catch (InterruptedException e) { e.printStackTrace(); }
+		// There is no dependency between calls,
+		// the heuristic is to use the available threads in a round-robin manner.
+		currentQueue = (currentQueue + 1) % queueNb;
 		return (Future<T>) t;
 	}
 
 
 	public void reset() {
-		// the heuristic is to use the available threads in a round-robin manner.
-		currentQueue = (currentQueue + 1) % queueNb;
 	}
 	
 		
