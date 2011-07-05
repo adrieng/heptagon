@@ -26,6 +26,13 @@ let program p =
   (* Create a runnable main simulation *)
   if !Compiler_options.simulation
   then (
+    let q_main =
+      try !Compiler_options.simulation_node |> qualify_value
+      with Not_found ->
+        Format.eprintf "Unable to find main node: %s@." !Compiler_options.simulation_node;
+        raise Errors.Error
+    in
+    let ty_main = (find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
     let class_name = Obc2java.fresh_classe (!Compiler_options.simulation_node ^ "_sim") in
     Idents.enter_node class_name;
     let field_step_dnb, id_step_dnb =
@@ -38,9 +45,6 @@ let program p =
         mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
       let body =
         let vd_main, e_main, q_main, ty_main =
-          let q_main = !Compiler_options.simulation_node |> qualify_value in (*qual*)
-          let ty_main =
-            (find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
           let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
           let id = Idents.gen_var "java_main" "main" in
           mk_var_dec id (Tclass q_main), Evar id, q_main, ty_main
