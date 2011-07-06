@@ -21,6 +21,7 @@ CC="gcc -std=c99 -I../../../lib/c"
 
 # par defaut : pas de test de generation de code
 
+tomato=0
 java=0
 c=0
 
@@ -207,6 +208,11 @@ activate_c () {
   coption="$coption -target c"
 }
 
+activate_tomato () {
+  tomato=1
+  coption="$coption -tomato"
+}
+
 activate_all () {
   activate_java
   activate_c
@@ -231,6 +237,9 @@ while [ $# -gt 0 ]; do
       shift;;
     "-mls" )
       activate_minils
+      shift;;
+    "-tomato" )
+      activate_tomato
       shift;;
     "-h" )
       echo "usage : $0 <options> <compilo>"

@@ -400,6 +400,7 @@ and reconstruct_extvalues mapping w_list children =
 
   let consume w (children, result_w_list) =
     let w, children = reconstruct_extvalue w children in
+    let w = { w with w_ck = reconstruct_clock mapping w.w_ck } in
     children, w :: result_w_list
   in
 
@@ -528,13 +529,14 @@ let rec fix_output_var_dec mapping vd (seen, equs, vd_list) =
   let Info (x, _, _, _) = Env.find vd.v_ident mapping in
   if IdentSet.mem x seen
   then
-    let new_id = gen_var "out" in
-    let new_vd = { vd with v_ident = new_id; } in
+    let new_id = vd.v_ident in
+    let new_clock = reconstruct_clock mapping vd.v_clock in
+    let new_vd = { vd with v_ident = new_id; v_clock = new_clock } in
     let new_eq =
-      let w = mk_extvalue ~ty:vd.v_type ~clock:vd.v_clock (Wvar x) in
+      let w = mk_extvalue ~ty:vd.v_type ~clock:new_clock (Wvar x) in
       mk_equation
         (Evarpat new_id)
-        (mk_exp vd.v_clock vd.v_type ~ct:(Ck vd.v_clock) ~ck:vd.v_clock (Eextvalue w))
+        (mk_exp new_clock vd.v_type ~ct:(Ck new_clock) ~ck:new_clock (Eextvalue w))
     in
     (seen, new_eq :: equs, new_vd :: vd_list)
   else
@@ -566,6 +568,7 @@ let node nd =
   (* Reconstruct equation list from grouped equivalence classes *)
   let eq_list = reconstruct (tenv, cenv) mapping in
 
+  (* Fix renamed var_decs, and add intermediate equations for fused outputs *)
   let local = fix_local_var_decs mapping nd.n_local in
   let eq_list, output = fix_output_var_decs mapping (eq_list, nd.n_output) in
 
