@@ -20,6 +20,10 @@ open Clocks
 open Pp_tools
 open Mls_compare
 
+let debug = false
+
+let debug_do f () = if debug then f () else ()
+
 (*
   Data-flow minimization on MiniLS:
 
@@ -501,12 +505,12 @@ let compute_new_class (tenv : tom_env) =
 let rec separate_classes tenv =
   let rec fix (id, tenv) =
     let new_id, tenv = compute_new_class tenv in
-    Format.printf "New tenv %d:\n%a@." id debug_tenv tenv;
+    debug_do (fun () -> Format.printf "New tenv %d:\n%a@." id debug_tenv tenv) ();
     if new_id = id then tenv else fix (new_id, tenv)
   in
-  Format.printf "Initial tenv:\n%a@." debug_tenv tenv;
+  debug_do (fun () -> Format.printf "Initial tenv:\n%a@." debug_tenv tenv) ();
   let id, tenv = compute_new_class tenv in
-  Format.printf "New tenv %d:\n%a@." id debug_tenv tenv;
+  debug_do (fun () -> Format.printf "New tenv %d:\n%a@." id debug_tenv tenv) ();
   fix (id, tenv)
 
 (********************************************************************)
