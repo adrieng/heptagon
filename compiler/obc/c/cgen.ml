@@ -556,8 +556,14 @@ let rec cstm_of_act out_env var_env obj_env act =
         let on = obj_ref_name o in
         let obj = assoc_obj on obj_env in
         let classn = cname_of_qn obj.o_class in
-          [Csexpr (Cfun_call (classn ^ "_reset",
-                             [Caddrof (Cfield (Cderef (Cvar "self"), local_qn (name on)))]))]
+        let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
+        (match o with
+          | Oobj _ ->
+              [Csexpr (Cfun_call (classn ^ "_reset", [Caddrof field]))]
+          | Oarray (_, p) ->
+                    [Csexpr (Cfun_call (classn ^ "_reset",
+                      [Caddrof (Carray(field, cexpr_of_pattern out_env var_env p))]))]
+        )
 
     (** Step functions applications can return multiple values, so we use a
         local structure to hold the results, before allocating to our
