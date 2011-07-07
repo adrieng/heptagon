@@ -796,8 +796,8 @@ and typing_iterator cenv h
   in
   let mk_array_type ty_list = List.map (array_of_idx_list n_list) ty_list in
   let n_size = List.length n_list in
-  let mk_array_type_butnlast ty_list =
-    map_butnlast n_size (array_of_idx_list n_list) ty_list in
+  let mk_array_type_butlast ty_list =
+    map_butlast (array_of_idx_list n_list) ty_list in
   match it with
   | Imap ->
       let args_ty_list = mk_array_type args_ty_list in
@@ -821,7 +821,7 @@ and typing_iterator cenv h
       prod result_ty_list, typed_e_list
 
   | Ifold ->
-      let args_ty_list = mk_array_type_butnlast args_ty_list in
+      let args_ty_list = mk_array_type_butlast args_ty_list in
       let typed_e_list =
         typing_args cenv h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
@@ -839,7 +839,7 @@ and typing_iterator cenv h
             ( try unify cenv idx_ty (Tid Initial.pint)
               with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
            idx_ty_list;
-        let args_ty_list = mk_array_type_butnlast (args_ty_list@[acc_ty]) in
+        let args_ty_list = mk_array_type_butlast (args_ty_list@[acc_ty]) in
       let typed_e_list =
         typing_args cenv h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
@@ -849,8 +849,8 @@ and typing_iterator cenv h
       (List.hd result_ty_list), typed_e_list
 
     | Imapfold ->
-      let args_ty_list = mk_array_type_butnlast args_ty_list in
-      let result_ty_list = mk_array_type_butnlast result_ty_list in
+      let args_ty_list = mk_array_type_butlast args_ty_list in
+      let result_ty_list = mk_array_type_butlast result_ty_list in
       let typed_e_list = typing_args cenv h
         args_ty_list e_list in
       (*check accumulator type matches in input and output*)
