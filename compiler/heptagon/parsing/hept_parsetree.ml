@@ -82,7 +82,7 @@ and edesc =
   | Efby of exp * exp
   | Estruct of (qualname * exp) list
   | Eapp of app * exp list
-  | Eiterator of iterator_type * app * exp * exp list * exp list
+  | Eiterator of iterator_type * app * exp list * exp list * exp list
   | Ewhen of exp * constructor_name * var_name
   | Emerge of var_name * (constructor_name * exp) list
 
@@ -240,8 +240,8 @@ let mk_call ?(params=[]) op exps =
 let mk_op_call ?(params=[]) s exps =
   mk_call ~params:params (Efun (Q (Names.pervasives_qn s))) exps
 
-let mk_iterator_call it ln params n pexps exps =
-  Eiterator (it, mk_app (Enode ln) params, n, pexps, exps)
+let mk_iterator_call it ln params n_list pexps exps =
+  Eiterator (it, mk_app (Enode ln) params, n_list, pexps, exps)
 
 let mk_static_exp desc loc =
   { se_desc = desc; se_loc = loc }

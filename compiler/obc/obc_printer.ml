@@ -18,7 +18,7 @@ let print_obj ff o =
   fprintf ff " : "; print_qualname ff o.o_class;
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") o.o_params;
   (match o.o_size with
-     | Some se -> fprintf ff "[%a]" print_static_exp se
+     | Some se -> fprintf ff "%a" (print_list_r print_static_exp "[" "][" "]") se
      | None -> ());
   fprintf ff "@]"
 
@@ -78,9 +78,9 @@ let print_asgn ff pref x e =
 let print_obj_call ff = function
   | Oobj o -> print_ident ff o
   | Oarray (o, i) ->
-      fprintf ff "%a[%a]"
+      fprintf ff "%a%a"
         print_ident o
-        print_lhs i
+        (print_list_r print_lhs "[" "][" "]") i
 
 let print_method_name ff = function
   | Mstep -> fprintf ff "step"

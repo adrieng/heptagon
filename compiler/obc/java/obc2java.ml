@@ -42,6 +42,28 @@ let fresh_for size body =
   let id = mk_var_dec i Tint in
   Afor (id, Sint 0, size, mk_block (body i))
 
+(** fresh nested Afor from 0 to [size]
+    with [body] a function from [var_ident] list (the iterator list) to [act] list :
+    s_l = [10; 20]
+    then
+    for i in 20
+      for j in 10
+        body [i][j]
+    *)
+let fresh_nfor s_l body =
+  let rec aux s_l i_l = match s_l with
+    | [s] ->
+        let i = Idents.gen_var "obc2java" "i" in
+        let id = (mk_var_dec i Tint) in
+        Afor (id, Sint 0, s, mk_block (body (List.rev (i::i_l))))
+    | s::s_l ->
+        let i = Idents.gen_var "obc2java" "i" in
+        let id = mk_var_dec i Tint in
+        Afor (id, Sint 0, s, mk_block ([aux s_l (i::i_l)]))
+    | [] -> Misc.internal_error "Fresh nfor called with empty size list"
+  in
+  aux s_l []
+
  (* current module is not translated to keep track,
     there is no issue since printed without the qualifier *)
 let rec translate_modul m = m (*match m with
@@ -146,7 +168,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
       Enew_array (ty param_env se.Types.se_ty, se_l)*)
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
-  | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
+  | Types.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
 
 and boxed_ty param_env t = match t with
@@ -156,7 +178,15 @@ and boxed_ty param_env t = match t with
   | Types.Tid t when t = Initial.pint -> Tclass (Names.local_qn "Integer")
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
-  | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
+  | Types.Tarray _ ->
+    let rec gather_array t = match t with
+      | Types.Tarray (t,size) ->
+          let t, s_l = gather_array t in
+          t, (static_exp param_env size)::s_l
+      | _ -> ty param_env t, []
+    in
+    let t, s_l = gather_array t in
+    Tarray (t, s_l)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
 and tuple_ty param_env ty_l =
@@ -170,7 +200,15 @@ and ty param_env t :Java.ty = match t with
   | Types.Tid t when t = Initial.pint -> Tint
   | Types.Tid t when t = Initial.pfloat -> Tfloat
   | Types.Tid t -> Tclass (qualname_to_class_name t)
-  | Types.Tarray (t,size) -> Tarray (ty param_env t, static_exp param_env size)
+  | Types.Tarray _ ->
+      let rec gather_array t = match t with
+        | Types.Tarray (t,size) ->
+            let t, s_l = gather_array t in
+            t, (static_exp param_env size)::s_l
+        | _ -> ty param_env t, []
+      in
+      let t, s_l = gather_array t in
+      Tarray (t, s_l)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
@@ -194,27 +232,47 @@ and pattern param_env p = match p.pat_desc with
   | Obc.Lvar v -> Pvar v
   | Obc.Lmem v -> Pthis v
   | Obc.Lfield (p,f) -> Pfield (pattern param_env p, translate_field_name f)
-  | Obc.Larray (p,e) -> Parray_elem (pattern param_env p, exp param_env e)
+  | Obc.Larray _ ->
+      let p, idx_l =
+        let rec gather_idx acc p = match p.pat_desc with
+          | Obc.Larray (p,e) -> gather_idx ((exp param_env e)::acc) p
+          | _ -> pattern param_env p, acc
+        in
+        let p, idx_l = gather_idx [] p in
+        p, idx_l
+      in
+      Parray_elem (p, idx_l)
 
 and pattern_to_exp param_env p = match p.pat_desc with
   | Obc.Lvar v -> Evar v
   | Obc.Lmem v -> this_field_ident v
   | Obc.Lfield (p,f) ->
     Efield (pattern_to_exp param_env p, translate_field_name f)
-  | Obc.Larray (p,e) ->
-    Earray_elem (pattern_to_exp param_env p, exp param_env e)
+  | Obc.Larray _ ->
+      let p, idx_l =
+        let rec gather_idx acc p = match p.pat_desc with
+          | Obc.Larray (p,e) -> gather_idx ((exp param_env e)::acc) p
+          | _ -> pattern_to_exp param_env p, acc
+        in
+        let p, idx_l = gather_idx [] p in
+        p, idx_l
+      in
+      Earray_elem (p, idx_l)
 
 and ext_value param_env w = match w.w_desc with
   | Obc.Wvar v -> Evar v
   | Obc.Wconst c -> static_exp param_env c
   | Obc.Wmem v -> this_field_ident v
   | Obc.Wfield (p,f) -> Efield (ext_value param_env p, translate_field_name f)
-  | Obc.Warray (p,e) -> Earray_elem (ext_value param_env p, exp param_env e)
+  | Obc.Warray (p,e) -> Earray_elem (ext_value param_env p, [exp param_env e])
 
 
 let obj_ref param_env o = match o with
   | Oobj id -> Evar id
-  | Oarray (id,p) -> Earray_elem (Evar id, pattern_to_exp param_env p)
+  | Oarray (id, p_l) ->
+      (* the generated list is in java order *)
+      let idx_l = List.map (fun p -> pattern_to_exp param_env p) p_l in
+      Earray_elem (Evar id, idx_l)
 
 let rec act_list param_env act_l acts =
   let _act act acts = match act with
@@ -350,19 +408,19 @@ let class_def_list classes cd_l =
             | None ->
                 let t = Idents.Env.find od.o_ident obj_env in
                 (Aassgn (Pthis od.o_ident, Enew (t, params)))::acts
-            | Some size ->
-                let size = static_exp param_env size in
+            | Some size_l ->
+                let size_l = List.rev (List.map (static_exp param_env) size_l) in
                 let t = Idents.Env.find od.o_ident obj_env in
-                let assgn_elem i =
-                  [ Aassgn (Parray_elem (Pthis od.o_ident, mk_var i), Enew (t, params)) ]
+                let assgn_elem i_l =
+                  [ Aassgn (Parray_elem (Pthis od.o_ident, List.map mk_var i_l), Enew (t, params)) ]
                 in
-                (Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size), [])))
-                 :: (fresh_for size assgn_elem)
+                (Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size_l), [])))
+                 :: (fresh_nfor size_l assgn_elem)
                  :: acts
         in
         (* function to allocate the arrays *)
         let allocate acts vd = match vd.v_type with
-          | Types.Tarray (t, size) ->
+          | Types.Tarray _ ->
               let t = ty param_env vd.v_type in
               ( Aassgn (Pthis vd.v_ident, Enew_array (t,[])) ):: acts
           | _ -> acts
@@ -386,7 +444,8 @@ let class_def_list classes cd_l =
       let obj_to_field fields od =
         let jty = match od.o_size with
           | None -> Idents.Env.find od.o_ident obj_env
-          | Some size -> Tarray (Idents.Env.find od.o_ident obj_env, static_exp param_env size)
+          | Some size_l -> Tarray (Idents.Env.find od.o_ident obj_env,
+                                   List.map (static_exp param_env) size_l)
         in
         (mk_field ~protection:Pprotected jty od.o_ident) :: fields
       in

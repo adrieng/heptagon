@@ -45,7 +45,7 @@ let program p =
       let vd_step, pat_step, exp_step = mk_var Tint "step" in
 
       let vd_args, _, exp_args =
-        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
+        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0])) "args" in
 
       let get_arg i = Earray_elem(exp_args, Sint i) in
 

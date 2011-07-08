@@ -32,8 +32,8 @@ with one defined var y ( defnames = {y} ) and used var x
     }
 *)
 
-(* base_ck is used to have correct behavior for side effects :
-   it keep track of the fact that a cal
+(* e_level_ck is used to have correct behavior for side effects :
+   it keep track of the fact that a call
    without interaction with the dataflow was in a case of the switch *)
 
 

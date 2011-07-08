@@ -67,6 +67,12 @@ let rec pattern_of_idx_list p l =
   in
   aux p l
 
+let rec exp_of_idx_list e l = match e.w_ty, l with
+  | _, [] -> e
+  | Tarray (ty',_), idx :: l ->
+    exp_of_idx_list (mk_ext_value ty' (Warray (e, idx))) l
+  | _ -> internal_error "mls2obc"
+
 let rec extvalue_of_idx_list w l = match w.w_ty, l with
   | _, [] -> w
   | Tarray (ty',_), idx :: l ->
@@ -86,10 +92,24 @@ let rec ext_value_of_trunc_idx_list p l =
 
 let array_elt_of_exp idx e =
   match e.e_desc, Modules.unalias_type e.e_ty with
-  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) }; }, Tarray (ty,_) -> mk_ext_value_exp ty (Wconst c)
-    | _, Tarray (ty,_) ->
-        mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
-    | _ -> internal_error "mls2obc"
+  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) }; }, Tarray (ty,_) ->
+      mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+  | _, Tarray (ty,_) ->
+      mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
+  | _ -> internal_error "mls2obc"
+
+let rec array_elt_of_exp_list idx_list e =
+  match e.e_desc, Modules.unalias_type e.e_ty with
+    | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) } }, Tarray (ty,_) ->
+        mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+    | _ , t ->
+        let rec ty id_l t = match id_l, t with
+          | [] , t -> t
+          | _::id_l , Tarray (t,_) -> ty id_l t
+          | _, _ -> internal_error "mls2obc"
+        in
+        mk_exp (ty idx_list t) (Eextvalue (extvalue_of_idx_list (ext_value_of_exp e) idx_list))
+
 
 (** Creates the expression that checks that the indices
     in idx_list are in the bounds. If idx_list=[e1;..;ep]
@@ -367,7 +387,7 @@ and translate_act map pat
       assert false
 
 (** In an iteration, objects used are element of object arrays *)
-type obj_array = { oa_index : Obc.pattern; oa_size : static_exp }
+type obj_array = { oa_index : Obc.pattern list; oa_size : static_exp list }
 
 (** A [None] context is normal, otherwise, we are in an iteration *)
 type call_context = obj_array option
@@ -427,16 +447,17 @@ let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
                    | _, _ -> action @ s) in
         v' @ v, si'@si, j'@j, s
 
-    | pat, Minils.Eiterator (it, app, n, pe_list, e_list, reset) ->
+    | pat, Minils.Eiterator (it, app, n_list, pe_list, e_list, reset) ->
         let name_list = translate_pat map e.Minils.e_ty pat in
         let p_list = List.map (translate_extvalue_to_exp map) pe_list in
         let c_list = List.map (translate_extvalue_to_exp map) e_list in
-        let x, xd = fresh_it () in
+        let xl, xdl = List.split (List.map (fun _ -> fresh_it ()) n_list) in
         let call_context =
-          Some { oa_index = mk_pattern_int (Lvar x); oa_size = n} in
-        let n = mk_exp_static_int n in
+          Some { oa_index = List.map (fun x -> mk_pattern_int (Lvar x)) xl;
+                 oa_size = n_list} in
+        let n_list = List.map mk_exp_static_int n_list in
         let si', j', action = translate_iterator map call_context it
-          name_list app loc n x xd p_list c_list e.Minils.e_ty in
+          name_list app loc n_list xl xdl p_list c_list e.Minils.e_ty in
         let action = List.map (control map ck) action in
         let s =
           (match reset, app.Minils.a_op with
@@ -509,50 +530,64 @@ and mk_node_call map call_context app loc (name_list : Obc.pattern list) args ty
     | _ -> assert false
 
 and translate_iterator map call_context it name_list
-    app loc n x xd p_list c_list ty =
-  let unarray ty = match ty with
-    | Tarray (t,_) -> t
+    app loc n_list xl xdl p_list c_list ty =
+  let rec unarray n ty = match ty, n with
+    | Tarray (t,_), 1 -> t
+    | Tarray (t,_), n -> unarray (n-1) t
     | _ ->
         Format.eprintf "%a" Global_printer.print_type ty;
         internal_error "mls2obc"
   in
+  let unarray = unarray (List.length n_list) in
   let array_of_output name_list ty_list =
-    List.map2 (fun l ty -> mk_pattern ty (Larray (l, mk_evar_int x))) name_list ty_list
+    let rec aux l ty xl = match ty, xl with
+      | _, [] -> l
+      | Tarray(tyn, _), x :: xl -> aux (mk_pattern ~loc:loc ty (Larray(l, mk_evar_int x))) tyn xl
+      | _, _ -> assert false
+    in
+    List.map2 (fun l ty -> aux l ty xl) name_list ty_list
   in
   let array_of_input c_list =
-    List.map (array_elt_of_exp (mk_evar_int x)) c_list in
+    List.map (array_elt_of_exp_list (List.map mk_evar_int xl)) c_list
+  in
+  let mk_loop b xdl nl =
+    let rec mk_loop b xdl nl = match xdl, nl with
+      | xd::[], n::[] -> Afor (xd, mk_exp_const_int 0, n, b)
+      | xd::xdl, n::nl -> mk_loop (mk_block [Afor (xd, mk_exp_const_int 0, n, b)]) xdl nl
+      | _, _ -> assert false
+    in
+    mk_loop b (List.rev xdl) nl
+  in
   match it with
     | Minils.Imap ->
         let c_list = array_of_input c_list in
         let ty_list = List.map unarray (Types.unprod ty) in
-        let name_list = array_of_output name_list ty_list in
+        let name_list = array_of_output name_list (Types.unprod ty) in
         let node_out_ty = Types.prod ty_list in
         let v, si, j, action = mk_node_call map call_context
           app loc name_list (p_list@c_list) node_out_ty in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_exp_const_int 0, n, bi)], j,
-           [Afor (xd, mk_exp_const_int 0, n, b)]
+          [mk_loop bi xdl n_list], j, [mk_loop b xdl n_list]
 
     | Minils.Imapi ->
         let c_list = array_of_input c_list in
         let ty_list = List.map unarray (Types.unprod ty) in
-        let name_list = array_of_output name_list ty_list in
+        let name_list = array_of_output name_list (Types.unprod ty) in
         let node_out_ty = Types.prod ty_list in
         let v, si, j, action = mk_node_call map call_context
-          app loc name_list (p_list@c_list@[mk_evar_int x]) node_out_ty in
+          app loc name_list (p_list@c_list@(List.map mk_evar_int xl)) node_out_ty in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_exp_const_int 0, n, bi)], j,
-           [Afor (xd, mk_exp_const_int 0, n, b)]
+          [mk_loop bi xdl n_list], j, [mk_loop b xdl n_list]
 
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
         let ty_list = Misc.map_butlast unarray (Types.unprod ty) in
-        let ty_name_list, ty_acc_out = Misc.split_last ty_list in
+        let ty_name_list, _ = Misc.split_last (Types.unprod ty) in
         let (name_list, acc_out) = Misc.split_last name_list in
         let name_list = array_of_output name_list ty_name_list in
         let node_out_ty = Types.prod ty_list in
@@ -564,8 +599,8 @@ and translate_iterator map call_context it name_list
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_exp_const_int 0, n, bi)], j,
-           [Aassgn (acc_out, acc_in); Afor (xd, mk_exp_const_int 0, n, b)]
+          [mk_loop bi xdl n_list], j,
+           [Aassgn (acc_out, acc_in); mk_loop b xdl n_list]
 
     | Minils.Ifold ->
         let (c_list, acc_in) = split_last c_list in
@@ -578,21 +613,21 @@ and translate_iterator map call_context it name_list
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_exp_const_int 0, n, bi)], j,
-           [ Aassgn (acc_out, acc_in); Afor (xd, mk_exp_const_int 0, n, b) ]
+          [mk_loop bi xdl n_list], j,
+           [ Aassgn (acc_out, acc_in); mk_loop b xdl n_list]
 
     | Minils.Ifoldi ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
         let acc_out = last_element name_list in
         let v, si, j, action = mk_node_call map call_context app loc name_list
-          (p_list @ c_list @ [ mk_evar_int x; exp_of_pattern acc_out ]) ty
+          (p_list @ c_list @ (List.map mk_evar_int xl) @ [ exp_of_pattern acc_out ]) ty
         in
         let v = translate_var_dec v in
         let b = mk_block ~locals:v action in
         let bi = mk_block si in
-          [Afor (xd, mk_exp_const_int 0, n, bi)], j,
-           [ Aassgn (acc_out, acc_in); Afor (xd, mk_exp_const_int 0, n, b) ]
+          [mk_loop bi xdl n_list], j,
+           [ Aassgn (acc_out, acc_in); mk_loop b xdl n_list]
 
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list

@@ -517,11 +517,11 @@ _exp:
   | exp AROBASE exp
       { mk_call Econcat [$1; $3] }
 /*Iterators*/
-  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER q=qualname
+  | it=iterator DOUBLE_LESS n=separated_nonempty_list(COMMA, simple_exp) DOUBLE_GREATER q=qualname
       pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it q [] n pargs args }
-  | it=iterator DOUBLE_LESS n=simple_exp DOUBLE_GREATER
+  | it=iterator DOUBLE_LESS n=separated_nonempty_list(COMMA, simple_exp) DOUBLE_GREATER
       LPAREN q=qualname DOUBLE_LESS sa=array_exp_list DOUBLE_GREATER RPAREN
       pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN

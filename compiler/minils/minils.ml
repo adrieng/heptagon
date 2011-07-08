@@ -70,7 +70,7 @@ and edesc =
                        (** merge ident (Constructor -> extvalue)+ *)
   | Estruct of (field_name * extvalue) list
                        (** { field=extvalue; ... } *)
-  | Eiterator of iterator_type * app * static_exp
+  | Eiterator of iterator_type * app * static_exp list
                  * extvalue list * extvalue list * var_ident option
                        (** map f <<n>> <(extvalue)> (extvalue) reset ident *)
 
