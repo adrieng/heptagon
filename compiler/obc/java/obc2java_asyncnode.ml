@@ -111,7 +111,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
         | _,_ -> Misc.internal_error "obc2java_asyncnode : wrong sarraypower type"
       in
       new_array (ty param_env se.Types.se_ty) pow_l
-      
+
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
@@ -349,7 +349,7 @@ let create_async_classe async base_classe =
       let async = Misc.assert_2 (List.map (static_exp param_env) async) in
       let async_node_args = [fst async; snd async] in
       let act_result = Aassgn (Pthis id_node, Enew (ty_node, async_node_args)) in
-      let act_reset = Aexp (Emethod_call (Ethis, "reset", [])) in
+      let act_reset = Aexp (Emethod_call (Efield (Ethis, Idents.name id_node), "reset", [])) in
       mk_block (act_result::act_inst::acts_params)
       , mk_block [act_reset; act_inst]
     in
