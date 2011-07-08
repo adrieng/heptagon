@@ -30,12 +30,12 @@ let compile_program p =
   (* Level clocks *)
   let p = pass "Level clock" true Level_clock.program p pp in
 
-  (* Automata minimization *)
-(*
+  (* Dataglow minimization *)
+
   let p =
     let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
-    pass "Automata minimization" call_tomato Tomato.program p pp in
-*)
+    pass "Data-flow minimization" call_tomato Tomato.program p pp in
+
 (** TODO: re enable when ported to the new AST
   let p =
     pass "Automata minimization checks" true Tomato.tomato_checks p pp in

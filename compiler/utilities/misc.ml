@@ -104,6 +104,11 @@ let rec split_at n l = match n, l with
       let l1, l2 = split_at (n-1) l in
         x::l1, l2
 
+let rec take n l = match n, l with
+  | 0, l -> []
+  | n, h :: t -> take (n - 1) t
+  | _ -> invalid_arg "take: list is too short"
+
 let remove x l =
   List.filter (fun y -> x <> y) l
 
@@ -162,6 +167,21 @@ let mapfold f acc l =
 let mapfold_right f l acc =
   List.fold_right (fun e (acc, l) -> let acc, e = f e acc in (acc, e :: l))
     l (acc, [])
+
+let rec fold_right_1 f l = match l with
+  | [] -> invalid_arg "fold_right_1: empty list"
+  | [x] -> x
+  | x :: l -> f x (fold_right_1 f l)
+
+let rec fold_left_1 f l = match l with
+  | [] -> invalid_arg "fold_left_1: empty list"
+  | [x] -> x
+  | x :: l -> f (fold_left_1 f l) x
+
+let rec fold_left4 f acc l1 l2 l3 l4 = match l1, l2, l3, l4 with
+  | [], [], [], [] -> acc
+  | x1 :: l1, x2 :: l2, x3 :: l3, x4 :: l4 -> fold_left4 f (f acc x1 x2 x3 x4) l1 l2 l3 l4
+  | _ -> invalid_arg "Misc.fold_left4"
 
 let mapi f l =
   let rec aux i = function

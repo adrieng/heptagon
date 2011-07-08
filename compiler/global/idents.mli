@@ -3,7 +3,7 @@ open Names
 
 (** This modules manages unique identifiers,
   /!\ To be effective, [enter_node] has to be called when entering a node
-  [gen_fresh] generates an identifier
+  [gen_var] generates a variable identifier
   [name] returns a unique name (inside its node) from an identifier. *)
 
 (** The (abstract) type of identifiers*)
@@ -36,7 +36,7 @@ val ident_of_name : ?reset:bool -> string -> ident
 
 val is_reset : ident -> bool
 
-(** /!\ This function should be called every time we enter a node *)
+(** /!\ [enter_node qualname] should be called every time we enter a node with name [qualname]. *)
 val enter_node : Names.qualname -> unit
 
 (** Maps taking an identifier as a key. *)

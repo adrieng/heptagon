@@ -40,7 +40,11 @@ let var_from_name map x =
   begin try
     Env.find x map
   with
-      _ -> assert false
+      _ ->
+        Format.eprintf
+          "Internal compiler error: unknown identifier %a@."
+          Global_printer.print_ident x;
+        assert false
   end
 
 let ext_value_exp_from_name map x =

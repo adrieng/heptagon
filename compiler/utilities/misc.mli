@@ -46,9 +46,12 @@ val split_last : 'a list -> ('a list * 'a)
 val split_nlast : int -> 'a list -> ('a list * 'a list)
 
 exception List_too_short
-(** [split_at n l] splits [l] in two after the [n]th value.
+(** [split_at n l] splits [l] in two after the [n]th value (starting at 0).
     Raises List_too_short exception if the list is too short. *)
 val split_at : int -> 'a list -> 'a list * 'a list
+
+(** [take n l] returns the [n] first elements of the list [l] *)
+val take : int -> 'a list -> 'a list
 
 (** [remove x l] removes all occurrences of x from list l.*)
 val remove : 'a -> 'a list -> 'a list
@@ -77,6 +80,20 @@ val mapfold: ('acc -> 'b -> 'c * 'acc) -> 'acc -> 'b list -> 'c list * 'acc
 (** Mapfold, right version. *)
 val mapfold_right
   : ('a -> 'acc -> 'acc * 'b) -> 'a list -> 'acc -> 'acc * 'b list
+
+(** [fold_right_1 f [x1; x2; ...; xn]] = f x1 (f x2 (f ... xn)). The list should
+    have at least one element! *)
+val fold_right_1 :
+  ('a -> 'a -> 'a) -> 'a list -> 'a
+
+(** [fold_left_1 f [x1; x2; ...; xn]] = f (f ... (f x1 x2) ...) xn. The list should
+    have at least one element! *)
+val fold_left_1 :
+  ('a -> 'a -> 'a) -> 'a list -> 'a
+
+(** [fold_left4] is fold_left with four lists *)
+val fold_left4 :
+  ('a -> 'b -> 'c -> 'd -> 'e -> 'a) -> 'a -> 'b list -> 'c list -> 'd list -> 'e list -> 'a
 
 (** Mapi *)
 val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
