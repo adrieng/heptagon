@@ -10,6 +10,7 @@ let mk_var ty name =
   let id = Idents.gen_var "java_main" name in
   mk_var_dec id ty, Pvar id, Evar id
 
+
 let program p =
   (*Scalarize*)
   let p = Compiler_utils.pass "Scalarize" true Scalarize.program p Obc_compiler.pp in
@@ -32,7 +33,9 @@ let program p =
         Format.eprintf "Unable to find main node: %s@." !Compiler_options.simulation_node;
         raise Errors.Error
     in
-    let ty_main = (find_value q_main).node_outputs |> types_of_arg_list |> Types.prod in
+    let sig_main = find_value q_main in
+    let ty_main = sig_main.node_outputs |> types_of_arg_list |> Types.prod in
+    let ty_main_args = sig_main.node_params |> types_of_param_list in
     let class_name = Obc2java.fresh_classe (!Compiler_options.simulation_node ^ "_sim") in
     Idents.enter_node class_name;
     let field_step_dnb, id_step_dnb =
@@ -40,9 +43,21 @@ let program p =
       mk_field ~static:true ~final:true ~value:(Some (Sint 100)) Tint id, id
     in
     let main_methode =
+
+      (* step is the current iteration step *)
       let vd_step, pat_step, exp_step = mk_var Tint "step" in
+
       let vd_args, _, exp_args =
         mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
+
+      let get_arg i = Earray_elem(exp_args, Sint i) in
+
+  (*    (* argnb is the current argument during the parsing *)
+      let vd_argnb, pat_argnb, exp_argnb = mk_var Tint "argNb" in
+      let init_argnb = Aassgn (pat_argnb, Sint 0) in
+      let incr_argnb = Aassgn (pat_argnb, Efun(pervasives_qn "+", [exp_argnb; Sint 1])) in
+      let exp_current_arg = Earray_elem(exp_args, exp_argnb) in
+    *)
       let body =
         let vd_main, e_main, q_main, ty_main =
           let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
@@ -50,8 +65,6 @@ let program p =
           mk_var_dec id (Tclass q_main), Evar id, q_main, ty_main
         in
         let acts =
-          let integer = Eclass(Names.pervasives_qn "Integer") in
-          let args1 = Earray_elem(exp_args, Sint 1) in
           let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
           let jarrays = Eclass(Names.qualname_of_string "java.util.Arrays") in
           let jint = Eclass(Names.qualname_of_string "Integer") in
@@ -59,6 +72,33 @@ let program p =
           let jbool = Eclass(Names.qualname_of_string "Boolean") in
           let jsys = Eclass(Names.qualname_of_string "java.lang.System") in
           let jminus = pervasives_qn "-" in
+
+          (* parse arguments to give to the main *)
+          let rec parse_args t_l i = match t_l with
+            | [] -> []
+            | t::t_l when t = Initial.tint ->
+                (Emethod_call(jint, "parseInt", [get_arg i]))
+                :: parse_args t_l (i+1)
+            | t::t_l when t = Initial.tfloat ->
+                (Emethod_call(jfloat, "parseFloat", [get_arg i]))
+                :: parse_args t_l (i+1)
+            | t::t_l when t = Initial.tint ->
+                (Emethod_call(jbool, "parseBool", [get_arg i]))
+                :: parse_args t_l (i+1)
+            | _ -> Misc.unsupported "java main does not support parsing complexe static args"
+          in
+          let main_args = parse_args ty_main_args 0 in
+
+          let parse_max_iteration =
+            let t_size = List.length ty_main_args in
+            (* no more arg to give to main, the last one if it exists is the iteration nb *)
+            Aifelse(Efun(Names.pervasives_qn ">", [ Efield (exp_args, "length"); Sint t_size ]),
+                    (* given max number of iterations *)
+                    mk_block [Aassgn(pat_step,
+                              Emethod_call(jint, "parseInt", [get_arg t_size]))],
+                    (* default max number of iterations *)
+                    mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
+          in
           let ret = Emethod_call(e_main, "step", []) in
           let print_ret, separate = match ty_main with
             | Types.Tarray (Types.Tarray _, _) ->
@@ -70,10 +110,6 @@ let program p =
             | Types.Tprod [] -> Java.Sstring "_", true
             | _ -> Emethod_call(ret, "toString", []), false
           in
-          let vd_t1, e_t1 =
-            let id = Idents.gen_var "java_main" "t" in
-            mk_var_dec id Tlong, Evar id
-          in
           let main_for_loop i =
             if separate
             then [ Aexp(Emethod_call(e_main, "step", []));
@@ -81,10 +117,12 @@ let program p =
             else [ Aexp(Emethod_call(out, "printf", [ Sstring "%d => %s\\n"; Evar i;
                                                       print_ret])) ]
           in
-          [ Anewvar(vd_main, Enew (Tclass q_main, []));
-            Aifelse( Efun(Names.pervasives_qn ">", [Efield (exp_args, "length"); Sint 1])
-                   , mk_block [Aassgn(pat_step, Emethod_call(integer, "parseInt", [args1]))]
-                   , mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
+          let vd_t1, e_t1 =
+            let id = Idents.gen_var "java_main" "t" in
+            mk_var_dec id Tlong, Evar id
+          in
+          [ Anewvar(vd_main, Enew (Tclass q_main, main_args));
+            parse_max_iteration;
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
             Obc2java.fresh_for exp_step main_for_loop;
             Aexp (Emethod_call(out, "printf",
