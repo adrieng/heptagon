@@ -121,7 +121,7 @@ and type_compare ty1 ty2 = match ty1, ty2 with
   | Tid _, _ -> 1
 
   | Tarray _, (Tprod _ | Tid _) -> -1
+  | Tarray _, _ -> 1
 
-  | Tfuture _, Tunit -> 1
   | Tfuture _, _ -> -1
 

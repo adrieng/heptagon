@@ -204,7 +204,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
           class_ref_of_var is_input (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool (Wvar x)) x in
         Emerge (dummy_var, clause_list), id, 0, x_id :: class_id_list
 
-      | Eiterator (it, app, se, partial_w_list, w_list, rst) ->
+      | Eiterator (it, app, sel, partial_w_list, w_list, rst) ->
         let class_id_list, partial_w_list = mapfold_right (extvalue is_input) partial_w_list [] in
         let class_id_list, w_list = mapfold_right (extvalue is_input) w_list class_id_list in
         let class_id_list = match rst with
@@ -212,7 +212,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
           | Some rst ->
             class_ref_of_var is_input (mk_extvalue ~ty:Initial.tbool (Wvar rst)) rst
             :: class_id_list in
-        Eiterator (it, app, se, partial_w_list, w_list, optional (fun _ -> dummy_var) rst),
+        Eiterator (it, app, sel, partial_w_list, w_list, optional (fun _ -> dummy_var) rst),
         id, 0, class_id_list
 
       | Estruct field_val_list ->
@@ -337,8 +337,8 @@ let rec reconstruct ((tenv, cenv) as env) mapping =
         reconstruct_clock mapping repr.er_head.e_level_ck in (* not strictly needed, done for
                                                             consistency reasons *)
       let ct = reconstruct_clock_type mapping repr.er_head.e_ct in
-      { repr.er_head with e_desc = ed; e_base_ck = ck; e_level_ck = level_ck; e_ct = ct; } in
-  in
+      { repr.er_head with e_desc = ed; e_base_ck = ck; e_level_ck = level_ck; e_ct = ct; }
+    in
 
     let e = repr.er_add_when e in
 
@@ -380,13 +380,13 @@ and reconstruct_exp_desc mapping headd children =
     let field_val_list = reconstruct_clauses field_val_list children in
     Estruct field_val_list
 
-  | Eiterator (it, app, se, partial_w_list, w_list, rst_dummy) ->
+  | Eiterator (it, app, sel, partial_w_list, w_list, rst_dummy) ->
     let rst, children = match rst_dummy with
       | None -> None, children
       | Some _ -> Some (reconstruct_class_ref mapping (List.hd children)), List.tl children in
     let total_w_list = reconstruct_extvalues mapping (partial_w_list @ w_list) children in
     let partial_w_list, w_list = split_at (List.length partial_w_list) total_w_list in
-    Eiterator (it, app, se, partial_w_list, w_list, optional extract_name rst)
+    Eiterator (it, app, sel, partial_w_list, w_list, optional extract_name rst)
 
 and reconstruct_extvalues mapping w_list children =
   let rec reconstruct_extvalue w (children : class_ref list) = match w.w_desc with
@@ -443,7 +443,7 @@ module EqClasses = Map.Make(
   struct
     type t = exp * ct * (int * int list) option list
 
-    let unsafe { e_desc = ed; _ } = match ed with
+    let unsafe { e_desc = ed } = match ed with
       | Eapp (app, _, _) | Eiterator (_, app, _, _, _, _) -> app.a_unsafe
       | _ -> false
 
@@ -460,7 +460,7 @@ module EqClasses = Map.Make(
   end)
 
 let rec path_environment tenv =
-  let enrich_env pat { er_class = id; _ } env =
+  let enrich_env pat { er_class = id } env =
     let rec enrich pat path env = match pat with
       | Evarpat x -> Env.add x (id, path) env
       | Etuplepat pat_list ->

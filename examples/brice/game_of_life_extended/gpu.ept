@@ -1,24 +1,27 @@
 
 const extendedLife_majority : int = 1
 
-const size : int = 32
-const osize : int = 42
-const nbr : int = 15
+(* should be divisible by tiling *)
+const game_size :int = 840
+const tiling : int = 15
+const size : int = game_size / tiling
 
-const r : int = 4
-const b : int = 2 * r + 1
+(* neighbour *)
+const nghb : int = 4
+const osize : int = size + 2 * nghb
+const block : int = 2 * nghb + 1
 
-fun mult_add(a : local int^osize^osize; i, j, k, l, acc : int)
+fun mult_add(a : int^osize^osize; i, j, k, l, acc : int)
     returns(o : int)
   let
     o = a[> i + k <][> j + l <] + acc;
   tel
 
-node life_cell(a : local int^osize^osize; i, j : int)
+node life_cell(a : int^osize^osize; i, j : int)
      returns(o : int)
   var t : int; last k : int = 0;
   let
-    t = foldi<<b, b>> mult_add(<a, i, j>) (0);
+    t = foldi<<block, block>> mult_add(<a, i, j>) (0);
     automaton
       state Init
         do
@@ -47,15 +50,15 @@ node life_cell(a : local int^osize^osize; i, j : int)
 
 fun newi(i, i2 : int) returns(ni, ni2 : int)
   let
-    switch (i2 < r)
+    switch (i2 < nghb)
       | true do
-          ni = (i - 1) % nbr;
-          ni2 = size - r + i2;
+          ni = (i - 1) % tiling;
+          ni2 = size - nghb + i2;
       | false do
-          switch (i2 >= size + r)
+          switch (i2 >= size + nghb)
             | true do
-                ni = (i + 1) % nbr;
-                ni2 = i2 - size - r;
+                ni = (i + 1) % tiling;
+                ni2 = i2 - size - nghb;
             | false do
                 ni = i;
                 ni2 = i - r;
@@ -64,7 +67,7 @@ fun newi(i, i2 : int) returns(ni, ni2 : int)
   tel
 
 
-fun fill_loc(a : global int^size^size^nbr^nbr; i, j, i2, j2 : int) returns(o : int)
+fun fill_loc(a : int^size^size^tiling^tiling; i, j, i2, j2 : int) returns(o : int)
   var ni, nj, ni2, nj2 : int;
   let
     (ni, ni2) = newi(i, i2);
@@ -72,22 +75,16 @@ fun fill_loc(a : global int^size^size^nbr^nbr; i, j, i2, j2 : int) returns(o : i
     o = a[>ni<][>nj<][>ni2<][>nj2<];
   tel
 
-node game_of_life(a : global int^size^size^nbr^nbr; i, j : int) returns(o : local int^size^size)
+node game_of_life(a : int^size^size^nbr^nbr; i, j : int) returns(o : local int^size^size)
   var a_loc : local int^osize^osize;
   let
     a_loc = pmapi<<osize, osize>> fill_loc(<a, i, j>) ();
     o = pmapi<<size, size>> life_cell(<a_loc>) ();
   tel
 
-kernel game_of_life_par(a : global int^size^size^nbr^nbr) returns(o : global int^size^size^nbr^nbr)
-  let
-    o = mapi<<nbr, nbr>> game_of_life(<a>) ();
-  tel
-
-node aux() returns(o : int^size^size^nbr^nbr)
-  var c, d : global int^size^size^nbr^nbr;
+node aux() returns()
+  var c, d : int^size^size^nbr^nbr;
   let
     c = (0^size^size^nbr^nbr) fby d;
-    d = game_of_life_par(c);
-    o = d;
+    d = mapi<<nbr, nbr>> game_of_life(<c>) ();
   tel

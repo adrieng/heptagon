@@ -44,8 +44,6 @@ let fresh_for size body =
   let id = mk_var_dec i Tint in
   Afor (id, Sint 0, size, mk_block (body i))
 
-let translate_modul m = m
-
 (** fresh nested Afor from 0 to [size]
     with [body] a function from [var_ident] list (the iterator list) to [act] list :
     s_l = [10; 20]
@@ -68,6 +66,7 @@ let fresh_nfor s_l body =
   in
   aux s_l []
 
+let rec translate_modul m = m
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
 let translate_const_name { qual = m; name = n } =
@@ -117,23 +116,45 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield _ -> eprintf "ojSfield @."; assert false;
   | Types.Stuple se_l ->  tuple param_env se_l
-  | Types.Sarray_power (see, pow_l) ->
-      let rec new_array t pow_l = match t, pow_l with
-        | _, [] -> static_exp param_env see
-        | Tarray(t',_), pow::pow_l ->
-            let pow =
-              (try Static.int_of_static_exp Names.QualEnv.empty pow
+  | Types.Sarray_power (see,pow_list) ->
+      let pow_list = List.rev pow_list in
+      let rec make_array tyl pow_list = match tyl, pow_list with
+        | Tarray(t, _), pow::pow_list ->
+            let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+                       with  Errors.Error ->
+                                   eprintf "%aStatic power of array should have integer power. \
+                                           Please use callgraph or non-static exp in %a.@."
+                              Location.print_location se.Types.se_loc
+                              Global_printer.print_static_exp se;
+                              raise Errors.Error)
+            in
+            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow)
+        | _ -> static_exp param_env see
+      in
+      make_array (ty param_env se.Types.se_ty) pow_list
+        (*let t = match x.pat_ty with
+          | Tarray (t,_) -> t
+          | _ -> Misc.internal_error "mls2obc select slice type" 5
+        in
+      let eval_int pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
               with Errors.Error ->
-                eprintf "%aIn the Java backend, Static power of array should have integer power.@\n\
+                                       eprintf "%aStatic power of array should have integer power. \
                          Please use callgraph or non-static exp in %a.@."
                         Location.print_location se.Types.se_loc
                         Global_printer.print_static_exp se;
                 raise Errors.Error)
             in
-            Enew_array (t, Misc.repeat_list (new_array t' pow_l) pow)
-        | _,_ -> Misc.internal_error "obc2java_asyncnode : wrong sarraypower type"
+      let rec make_matrix acc = match pow_list with
+        | [] -> acc
+        | pow :: pow_list ->
+              let pow = eval_int pow in
+              make_matrix (Misc.repeat_list acc pow) pow_list
       in
-      new_array (ty param_env se.Types.se_ty) pow_l
+      let se_l = match pow_list with
+        | [] -> Misc.internal_error "Empty power list" 0
+        | pow :: pow_list -> make_matrix (Misc.repeat_list (static_exp param_env see)) pow_list
+      in
+      Enew_array (ty param_env se.Types.se_ty, se_l)*)
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
@@ -408,23 +429,36 @@ let create_async_classe async base_classe =
   in
 
   let step =
-    let body =
-      let act_syncronize =
-        Aif( Efun(Initial.mk_pervasives "<>", [Snull; var_result])
-           , mk_block [Aexp (Emethod_call(var_result, "get", []))])
-      in
-      let act_result =
-        let exp_call =
-          let args = var_inst::exps_step in
-          let executor = Efield (Eclass the_java_pervasives, "executor_cached") in
-          Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
-        in Aassgn (Pthis id_result, exp_call)
-      in
-      let act_return = Areturn var_result in
-      if b_stateful
-      then mk_block [act_syncronize; act_result; act_return]
-      else mk_block [act_result; act_return] (* no synchro if a fun *)
-    in mk_methode ~throws:throws_async  ~args:vds_step ~returns:ty_aresult body "step"
+    if !Compiler_options.java_queue_size = 0
+    then
+      let body =
+        let act_syncronize =
+          Aif( Efun(Initial.mk_pervasives "<>", [Snull; var_result])
+             , mk_block [Aexp (Emethod_call(var_result, "get", []))])
+        in
+        let act_result =
+          let exp_call =
+            let args = var_inst::exps_step in
+            let executor = Efield (Eclass the_java_pervasives, "executor_cached") in
+            Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
+          in Aassgn (Pthis id_result, exp_call)
+        in
+        let act_return = Areturn var_result in
+        if b_stateful
+        then mk_block [act_syncronize; act_result; act_return]
+        else mk_block [act_result; act_return] (* no synchro if a fun *)
+      in mk_methode ~throws:throws_async  ~args:vds_step ~returns:ty_aresult body "step"
+    else
+      let body =
+        let act_return =
+          let exp_call =
+            let args = var_inst::exps_step in
+            Emethod_call (mk_var id_node, "submit", [Enew (Tclass callable_classe_name, args)] )
+          in
+          Areturn exp_call
+        in
+        mk_block [act_return]
+      in mk_methode ~throws:throws_async  ~args:vds_step ~returns:aty_result body "step"
   in
 
   (* Inner class *)

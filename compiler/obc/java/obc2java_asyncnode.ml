@@ -44,8 +44,6 @@ let fresh_for size body =
   let id = mk_var_dec i Tint in
   Afor (id, Sint 0, size, mk_block (body i))
 
-let translate_modul m = m
-
 (** fresh nested Afor from 0 to [size]
     with [body] a function from [var_ident] list (the iterator list) to [act] list :
     s_l = [10; 20]
@@ -67,6 +65,8 @@ let fresh_nfor s_l body =
     | [] -> Misc.internal_error "Fresh nfor called with empty size list"
   in
   aux s_l []
+
+let rec translate_modul m = m
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
 let translate_const_name { qual = m; name = n } =
@@ -116,27 +116,25 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
   | Types.Sfield _ -> Misc.unsupported "field acces in Java backend. ojSfield @."
   | Types.Stuple se_l -> tuple param_env se_l
-  | Types.Sarray_power (see, pow_l) ->
-      let rec new_array t pow_l = match t, pow_l with
-        | _, [] -> static_exp param_env see
-        | Tarray(t',_), pow::pow_l ->
-            let pow =
-              (try Static.int_of_static_exp Names.QualEnv.empty pow
-              with Errors.Error ->
-                eprintf "%aIn the Java backend, Static power of array should have integer power.@\n\
-                         Please use callgraph or non-static exp in %a.@."
-                        Location.print_location se.Types.se_loc
-                        Global_printer.print_static_exp se;
-                raise Errors.Error)
+  | Types.Sarray_power (see,pow_list) ->
+      let pow_list = List.rev pow_list in
+      let rec make_array tyl pow_list = match tyl, pow_list with
+        | Tarray(t, _), pow::pow_list ->
+            let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+                       with  Errors.Error ->
+                                   eprintf "%aStatic power of array should have integer power. \
+                                           Please use callgraph or non-static exp in %a.@."
+                              Location.print_location se.Types.se_loc
+                              Global_printer.print_static_exp se;
+                              raise Errors.Error)
             in
-            Enew_array (t, Misc.repeat_list (new_array t' pow_l) pow)
-        | _,_ -> Misc.internal_error "obc2java_asyncnode : wrong sarraypower type"
+            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow)
+        | _ -> static_exp param_env see
       in
-      new_array (ty param_env se.Types.se_ty) pow_l
-
+      make_array (ty param_env se.Types.se_ty) pow_list
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
-  | Types.Srecord _ -> eprintf "ojSrecord@."; assert false; (* TODO java *)
+  | Types.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
   | Types.Sop (f, se_l) ->
       Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
   | Types.Sasync se ->
@@ -256,8 +254,8 @@ let rec act_list param_env act_l acts =
     | Obc.Aop (op,e_l) -> Aexp (Efun (op, exp_list param_env e_l)) :: acts
     | Obc.Acall ([], obj, Mstep, e_l)
     | Obc.Aasync_call (_,[], obj, Mstep, e_l) ->
-        let acall = Aexp(Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l)) in
-        acall::acts
+        let acall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
+        Aexp acall::acts
     | Obc.Acall ([p], obj, Mstep, e_l)
     | Obc.Aasync_call (_,[p], obj, Mstep, e_l) ->
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
@@ -285,8 +283,8 @@ let rec act_list param_env act_l acts =
         assgn::(copies@acts)
     | Obc.Acall (_, obj, Mreset, _)
     | Obc.Aasync_call (_,_, obj, Mreset, _) ->
-        let acall = Aexp( Emethod_call (obj_ref param_env obj, "reset", [])) in
-        acall::acts
+        let acall = Emethod_call (obj_ref param_env obj, "reset", []) in
+        Aexp acall::acts
     | Obc.Acase (e, c_b_l) when e.e_ty = Types.Tid Initial.pbool ->
         (match c_b_l with
           | [] -> acts
@@ -374,7 +372,20 @@ let create_async_classe async base_classe =
     let id = base_classe.o_ident in
     mk_field ~protection:Pprotected t id, t, id, mk_var id, mk_var_dec id t
   in
-  (* [node] : field used to store the current asyncnode *)
+  
+
+  (* [result] : field used to stock the asynchronous result (only for threadpool)*)
+  let field_result, ty_aresult, ty_result, id_result, var_result =
+    let t = b_out |> Signature.types_of_arg_list |> Types.prod in
+    let ty_result = boxed_ty param_env t in
+    let t = Types.Tfuture((), t) in
+    let aty = ty param_env t in
+    let result_id = Idents.gen_var "obc2java" "result" in
+    mk_field ~protection:Pprotected aty result_id, aty, ty_result, result_id, mk_var result_id
+  in
+      
+
+  (* [node] : field used to store the current asyncnode (only for asyncnode)*)
   let field_node, ty_node, ty_result, aty_result, id_node =
     let t = b_out |> Signature.types_of_arg_list |> Types.prod in
     let ty_result = boxed_ty param_env t in
@@ -387,7 +398,12 @@ let create_async_classe async base_classe =
     let id_node = Idents.gen_var "obc2java" "node" in
     mk_field ~protection:Pprotected ty_node id_node, ty_node, ty_result, aty_result, id_node
   in
-  let fields = field_inst::field_node::fields_params in
+      
+  let fields =
+    if !Compiler_options.java_queue_size = 0
+    then field_inst::field_result::fields_params
+    else field_inst::field_node::fields_params    
+  in
 
   (* [step] arguments *)
   let fields_step, vds_step, exps_step =
@@ -401,31 +417,61 @@ let create_async_classe async base_classe =
 
   let constructor, reset =
     let body, body_r =
-      let acts_params = copy_to_this vds_params in
-      let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
-      let async = Misc.assert_2 (List.map (static_exp param_env) async) in
-      let async_node_args = [fst async; snd async] in
-      let act_result = Aassgn (Pthis id_node, Enew (ty_node, async_node_args)) in
-      let act_reset = Aexp (Emethod_call (Efield (Ethis, Idents.name id_node), "reset", [])) in
-      mk_block (act_result::act_inst::acts_params)
-      , mk_block [act_reset; act_inst]
+      if !Compiler_options.java_queue_size = 0
+      then
+        let acts_params = copy_to_this vds_params in
+        let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
+        let act_result = Aassgn (Pthis id_result, Snull) in
+        mk_block (act_result::act_inst::acts_params)
+        , mk_block [act_result; act_inst]
+      else
+        let acts_params = copy_to_this vds_params in
+        let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
+        let async = Misc.assert_2 (List.map (static_exp param_env) async) in
+        let async_node_args = [fst async; snd async] in
+        let act_result = Aassgn (Pthis id_node, Enew (ty_node, async_node_args)) in
+        let act_reset = Aexp (Emethod_call (Efield (Ethis, Idents.name id_node), "reset", [])) in
+        mk_block (act_result::act_inst::acts_params)
+        , mk_block [act_reset; act_inst]
+
     in
     mk_methode ~args:vds_params body (shortname classe_name)
     , mk_methode body_r "reset"
   in
 
   let step =
-    let body =
-      let act_return =
-        let exp_call =
-          let args = var_inst::exps_step in
-          Emethod_call (mk_var id_node, "submit", [Enew (Tclass callable_classe_name, args)] )
+    if !Compiler_options.java_queue_size = 0
+    then
+      let body =
+        let act_syncronize =
+          Aif( Efun(Initial.mk_pervasives "<>", [Snull; var_result])
+             , mk_block [Aexp (Emethod_call(var_result, "get", []))])
         in
-        Areturn exp_call
-      in
-      mk_block [act_return] (* TODO deal with stateless... reset each step ? reuse threads ? *)
-    in mk_methode ~throws:throws_async  ~args:vds_step ~returns:aty_result body "step"
+        let act_result =
+          let exp_call =
+            let args = var_inst::exps_step in
+            let executor = Efield (Eclass the_java_pervasives, "executor_cached") in
+            Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
+          in Aassgn (Pthis id_result, exp_call)
+        in
+        let act_return = Areturn var_result in
+        if b_stateful
+        then mk_block [act_syncronize; act_result; act_return]
+        else mk_block [act_result; act_return] (* no synchro if a fun *)
+      in mk_methode ~throws:throws_async  ~args:vds_step ~returns:ty_aresult body "step"
+    else
+      let body =
+        let act_return =
+          let exp_call =
+            let args = var_inst::exps_step in
+            Emethod_call (mk_var id_node, "submit", [Enew (Tclass callable_classe_name, args)] )
+          in
+          Areturn exp_call
+        in
+        mk_block [act_return]
+      in mk_methode ~throws:throws_async  ~args:vds_step ~returns:aty_result body "step"
   in
+
 
   (* Inner class *)
 

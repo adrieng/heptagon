@@ -532,12 +532,6 @@ _exp:
       pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
       LPAREN args=exps RPAREN
       { mk_iterator_call it app n pargs args }
-  | it=iterator DOUBLE_LESS n=separated_nonempty_list(COMMA, simple_exp) DOUBLE_GREATER
-      app=app
-      LPAREN q=qualname DOUBLE_LESS sa=array_exp_list DOUBLE_GREATER RPAREN
-      pargs=delim_slist(COMMA, LESS_LPAREN, RPAREN_GREATER, exp)
-      LPAREN args=exps RPAREN
-      { mk_iterator_call it app n pargs args }
 /*Records operators */
   | LBRACE simple_exp WITH DOT c=qualname EQUAL exp RBRACE
       { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))]
