@@ -442,7 +442,7 @@ module EqClasses = Map.Make(
   struct
     type t = exp * ct * (int * int list) option list
 
-    let unsafe { e_desc = ed; _ } = match ed with
+    let unsafe { e_desc = ed } = match ed with
       | Eapp (app, _, _) | Eiterator (_, app, _, _, _, _) -> app.a_unsafe
       | _ -> false
 
@@ -459,7 +459,7 @@ module EqClasses = Map.Make(
   end)
 
 let rec path_environment tenv =
-  let enrich_env pat { er_class = id; _ } env =
+  let enrich_env pat { er_class = id } env =
     let rec enrich pat path env = match pat with
       | Evarpat x -> Env.add x (id, path) env
       | Etuplepat pat_list ->
