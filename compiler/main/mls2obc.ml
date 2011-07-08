@@ -546,7 +546,7 @@ and translate_iterator map call_context it name_list
   let array_of_output name_list ty_list =
     let rec aux l ty xl = match ty, xl with
       | _, [] -> l
-      | Tarray(tyn, _), x :: xl -> aux (mk_pattern ~loc:loc ty (Larray(l, mk_evar_int x))) tyn xl
+      | Tarray(tyn, _), x :: xl -> aux (mk_pattern ~loc:loc tyn (Larray(l, mk_evar_int x))) tyn xl
       | _, _ -> assert false
     in
     List.map2 (fun l ty -> aux l ty xl) name_list ty_list
@@ -590,11 +590,11 @@ and translate_iterator map call_context it name_list
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
-        let ty_list = Misc.map_butlast unarray (Types.unprod ty) in
-        let ty_name_list, _ = Misc.split_last (Types.unprod ty) in
+        let ty_list = Types.unprod ty in
+        let ty_name_list, _ = Misc.split_last ty_list in
         let (name_list, acc_out) = Misc.split_last name_list in
         let name_list = array_of_output name_list ty_name_list in
-        let node_out_ty = Types.prod ty_list in
+        let node_out_ty = Types.prod (Misc.map_butlast unarray ty_list) in
         let v, si, j, action = mk_node_call map call_context app loc
           (name_list @ [ acc_out ])
           (p_list @ c_list @ [ exp_of_pattern acc_out ])
