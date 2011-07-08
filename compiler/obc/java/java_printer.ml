@@ -38,6 +38,7 @@ let final ff f = if f then fprintf ff "final " else ()
 let rec _ty news ff t = match t with
   | Tbool -> fprintf ff "boolean"
   | Tint -> fprintf ff "int"
+  | Tlong -> fprintf ff "long"
   | Tfloat -> fprintf ff "float"
   | Tclass n -> class_name ff n
   | Tgeneric (n, ty_l) ->

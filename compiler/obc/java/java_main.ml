@@ -47,7 +47,7 @@ let program p =
       let vd_args, _, exp_args =
         mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0])) "args" in
 
-      let get_arg i = Earray_elem(exp_args, Sint i) in
+      let get_arg i = Earray_elem(exp_args, [Sint i]) in
 
   (*    (* argnb is the current argument during the parsing *)
       let vd_argnb, pat_argnb, exp_argnb = mk_var Tint "argNb" in
@@ -67,6 +67,8 @@ let program p =
           let jint = Eclass(Names.qualname_of_string "Integer") in
           let jfloat = Eclass(Names.qualname_of_string "Float") in
           let jbool = Eclass(Names.qualname_of_string "Boolean") in
+          let jsys = Eclass(Names.qualname_of_string "java.lang.System") in
+          let jminus = pervasives_qn "-" in
 
           (* parse arguments to give to the main *)
           let rec parse_args t_l i = match t_l with
@@ -102,6 +104,7 @@ let program p =
             | t when t = Initial.tfloat -> Emethod_call(jfloat, "toString", [ret])
             | t when t = Initial.tbool -> Emethod_call(jbool, "toString", [ret])
             | _ -> Emethod_call(ret, "toString", [])
+          in
           let main_for_loop i =
             [Aexp (Emethod_call(out, "printf",
                                 [Sstring "%d => %s\\n"; Evar i; print_ret]))]

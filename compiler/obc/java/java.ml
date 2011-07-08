@@ -21,6 +21,7 @@ type ty = Tclass of class_name
         | Tgeneric of class_name * ty list
         | Tbool
         | Tint
+        | Tlong
         | Tfloat
         | Tarray of ty * exp list
         | Tunit
@@ -107,6 +108,7 @@ let rec default_value ty = match ty with
   | Tgeneric _ -> Snull
   | Tbool -> Sbool true
   | Tint -> Sint 0
+  | Tlong -> Sint 0
   | Tfloat -> Sfloat 0.0
   | Tunit -> Evoid
   | Tarray _ -> Enew_array (ty,[])
