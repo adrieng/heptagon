@@ -80,11 +80,11 @@ struct
             let cr = compare fn1 fn2 in
             if cr <> 0 then cr else extvalue_compare e1 e2 in
           list_compare compare_fne fnel1 fnel2
-        | Eiterator (it1, app1, se1, pel1, el1, vio1),
-          Eiterator (it2, app2, se2, pel2, el2, vio2) ->
+        | Eiterator (it1, app1, sel1, pel1, el1, vio1),
+          Eiterator (it2, app2, sel2, pel2, el2, vio2) ->
           let cr = compare it1 it2 in
           if cr <> 0 then cr else
-            let cr = Global_compare.static_exp_compare se1 se2 in
+            let cr = list_compare Global_compare.static_exp_compare sel1 sel2 in
             if cr <> 0 then cr else
               let cr = app_compare app1 app2 in
               if cr <> 0 then cr else
