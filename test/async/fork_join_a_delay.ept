@@ -1,0 +1,14 @@
+const n:int = 15
+
+
+fun f(i:int) returns (r:int)
+let
+  r = do_stuff(i);
+tel
+
+node main () returns ()
+var r:int^n; rf:(future int)^n;
+let
+  rf = map<<n>> async f (2^n);
+  r = map<<n>> ! (((async 0)^n) fby rf);
+tel

@@ -1,11 +1,13 @@
-const n:int = 24
+const n:int = 15
+
 
 fun f(i:int) returns (r:int)
 let
   r = do_stuff(i);
 tel
 
-fun main () returns (r:int^n)
+fun main () returns ()
+var r:int^n;
 let
-  r = map<<n>> ! (map<<n>> async<<n,1>> f (2^n));
+  r = map<<n>> ! (map<<n>> async f (2^n));
 tel
