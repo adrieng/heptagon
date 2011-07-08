@@ -30,12 +30,20 @@ val unique : 'a list -> 'a list
     l except the last element. *)
 val map_butlast : ('a -> 'a) -> 'a list -> 'a list
 
+(** [map_butnlast f l] applies f to all the elements of
+    l except the n last element. *)
+val map_butnlast : int -> ('a -> 'a) -> 'a list -> 'a list
+
 (** [last_element l] returns the last element of the list l.*)
 val last_element : 'a list -> 'a
 
 (** [split_last l] returns the list l without its last element
     and the last element of the list .*)
 val split_last : 'a list -> ('a list * 'a)
+
+(** [split_nlast l] returns the list l without its n last elements
+    and the last element of the list .*)
+val split_nlast : int -> 'a list -> ('a list * 'a list)
 
 exception List_too_short
 (** [split_at n l] splits [l] in two after the [n]th value.

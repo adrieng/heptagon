@@ -3,8 +3,7 @@
 
 RUN_DIR="`pwd`"
 
-
-SCRIPT_DIR="$RUN_DIR/`dirname $0`"
+SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 
 COMPILER_DIR="$SCRIPT_DIR/compiler"
 COMPILER=heptc.byte

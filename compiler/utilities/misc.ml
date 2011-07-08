@@ -49,6 +49,19 @@ let rec map_butlast f l =
     | [a] -> [a]
     | a::l -> (f a)::(map_butlast f l)
 
+let map_butnlast n f l =
+  let rec aux l = match l with
+    | [] -> [], 0
+    | a::l ->
+        let (res, k) = aux l in
+        if k < n then
+          a::res, (k + 1)
+        else
+          (f a)::res, (k+1)
+  in
+  let res, _ = aux l in
+  res
+
 let rec last_element l =
   match l with
     | [] -> assert false
@@ -63,6 +76,23 @@ let rec split_last = function
   | v::l ->
       let l, a = split_last l in
       v::l, a
+
+(** [split_nlasts l] returns l without its last n elements and
+    the last n elements of l. *)
+let rec split_nlast n l =
+  let rec aux l = match l with
+    | [] -> [], [], 0
+    | a::l ->
+        let (l1, l2, k) = aux l in
+        if k < n then
+          l1, a::l2, (k + 1)
+        else
+          a::l1, l2, (k+1)
+  in
+  let l1, l2, k = aux l in
+  if (k < n) then
+    assert false
+  else l1, l2
 
 exception List_too_short
 (** [split_at n l] splits [l] in two after the [n]th value.

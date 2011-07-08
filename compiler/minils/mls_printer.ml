@@ -106,11 +106,11 @@ and print_exp_desc ff = function
       fprintf ff "@[<2>(%a@ when %a(%a))@]" print_exp e print_qualname c print_ident x
   | Estruct f_w_list ->
       print_record (print_couple print_qualname print_extvalue """ = """) ff f_w_list
-  | Eiterator (it, f, param, pargs, args, reset) ->
+  | Eiterator (it, f, params, pargs, args, reset) ->
       fprintf ff "@[<2>(%s (%a)<<%a>>)@,(%a)%a@]%a"
         (iterator_to_string it)
         print_app (f, [])
-        print_static_exp param
+        (print_list_r print_static_exp """, """) params
         print_w_tuple pargs
         print_w_tuple args
         print_every reset

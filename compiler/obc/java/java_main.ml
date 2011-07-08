@@ -48,9 +48,9 @@ let program p =
       let vd_step, pat_step, exp_step = mk_var Tint "step" in
 
       let vd_args, _, exp_args =
-        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), (Sint 0))) "args" in
+        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0])) "args" in
 
-      let get_arg i = Earray_elem(exp_args, Sint i) in
+      let get_arg i = Earray_elem(exp_args, [Sint i]) in
 
   (*    (* argnb is the current argument during the parsing *)
       let vd_argnb, pat_argnb, exp_argnb = mk_var Tint "argNb" in
@@ -100,22 +100,17 @@ let program p =
                     mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
           in
           let ret = Emethod_call(e_main, "step", []) in
-          let print_ret, separate = match ty_main with
-            | Types.Tarray (Types.Tarray _, _) ->
-                Emethod_call(jarrays, "deepToString", [ret]), false
-            | Types.Tarray _ -> Emethod_call(jarrays, "toString", [ret]), false
-            | t when t = Initial.tint -> Emethod_call(jint, "toString", [ret]), false
-            | t when t = Initial.tfloat -> Emethod_call(jfloat, "toString", [ret]), false
-            | t when t = Initial.tbool -> Emethod_call(jbool, "toString", [ret]), false
-            | Types.Tprod [] -> Java.Sstring "_", true
-            | _ -> Emethod_call(ret, "toString", []), false
+          let print_ret = match ty_main with
+            | Types.Tarray (Types.Tarray _, _) -> Emethod_call(jarrays, "deepToString", [ret])
+            | Types.Tarray _ -> Emethod_call(jarrays, "toString", [ret])
+            | t when t = Initial.tint -> Emethod_call(jint, "toString", [ret])
+            | t when t = Initial.tfloat -> Emethod_call(jfloat, "toString", [ret])
+            | t when t = Initial.tbool -> Emethod_call(jbool, "toString", [ret])
+            | _ -> Emethod_call(ret, "toString", [])
           in
           let main_for_loop i =
-            if separate
-            then [ Aexp(Emethod_call(e_main, "step", []));
-                   Aexp(Emethod_call(out, "printf", [ Sstring "%d => _\\n"; Evar i])) ]
-            else [ Aexp(Emethod_call(out, "printf", [ Sstring "%d => %s\\n"; Evar i;
-                                                      print_ret])) ]
+            [Aexp (Emethod_call(out, "printf",
+                                [Sstring "%d => %s\\n"; Evar i; print_ret]))]
           in
           let vd_t1, e_t1 =
             let id = Idents.gen_var "java_main" "t" in

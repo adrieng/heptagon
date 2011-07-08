@@ -409,8 +409,12 @@ let step_fun_call out_env var_env sig_info objn out args =
       (match objn with
          | Oobj o -> Cfield (Cderef (Cvar "self"), local_qn (name o))
          | Oarray (o, l) ->
-             let l = cexpr_of_pattern out_env var_env l in
-             Carray (Cfield (Cderef (Cvar "self"), local_qn (name o)), l)
+             let f = Cfield (Cderef (Cvar "self"), local_qn (name o)) in
+             let rec mk_idx pl = match pl with
+              | [] -> f
+              | p::pl -> Carray (mk_idx pl, cexpr_of_pattern out_env var_env p)
+             in
+             mk_idx l
       ) in
       args@[Caddrof out; Caddrof mem]
   ) else
@@ -560,16 +564,18 @@ let rec cstm_of_act out_env var_env obj_env act =
         let on = obj_ref_name o in
         let obj = assoc_obj on obj_env in
         let classn = cname_of_qn obj.o_class in
-        (match obj.o_size with
-           | None ->
-             [Csexpr (Cfun_call (classn ^ "_reset",
-                [Caddrof (Cfield (Cderef (Cvar "self"), local_qn (name on)))]))]
-           | Some size ->
-               let x = gen_symbol () in
-               let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
-               let elt = [Caddrof( Carray(field, Cvar x) )] in
-                 [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp size,
-                       [Csexpr (Cfun_call (classn ^ "_reset", elt ))] )]
+        let field = Cfield (Cderef (Cvar "self"), local_qn (name on)) in
+        (match o with
+          | Oobj _ ->
+              [Csexpr (Cfun_call (classn ^ "_reset", [Caddrof field]))]
+          | Oarray (_, pl) ->
+              let rec mk_loop pl field = match pl with
+                | [] ->
+                    [Csexpr (Cfun_call (classn ^ "_reset", [Caddrof field]))]
+                | p::pl ->
+                    mk_loop pl (Carray(field, cexpr_of_pattern out_env var_env p))
+              in
+                 mk_loop pl field
         )
 
     | Aasync_call _ -> assert false (* TODO async *)
@@ -664,7 +670,12 @@ let mem_decl_of_class_def cd =
     if is_stateful od.o_class then
       let ty = Cty_id (qn_append od.o_class "_mem") in
       let ty = match od.o_size with
-        | Some se -> Cty_arr (int_of_static_exp se, ty)
+        | Some nl ->
+          let rec mk_idx nl = match nl with
+            | [] -> ty
+            | n::nl -> Cty_arr (int_of_static_exp n, mk_idx nl)
+          in
+            mk_idx nl
         | None -> ty in
         (name od.o_ident, ty)::l
     else

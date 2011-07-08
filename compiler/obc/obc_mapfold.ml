@@ -158,7 +158,7 @@ and var_decs funs acc vds = mapfold (var_dec_it funs) acc vds
 and obj_dec_it funs acc od = funs.obj_dec funs acc od
 and obj_dec funs acc od =
   let o_size, acc = optional_wacc
-    (static_exp_it funs.global_funs) acc od.o_size in
+    (mapfold (static_exp_it funs.global_funs)) acc od.o_size in
   { od with o_size = o_size }, acc
 
 and obj_decs_it funs acc ods = funs.obj_decs funs acc ods

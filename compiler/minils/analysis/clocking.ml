@@ -138,7 +138,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
       | Ewhen (e,c,n) ->
           let ck_n = ck_of_name h n in
           let base = expect (skeleton ck_n e.e_ty) e in
-          skeleton (Con (ck_n, c, n)) e.e_ty, base
+          skeleton (Con (ck_n, c, n)) e.e_ty, Con (ck_n, c, n)
       | Emerge (x, c_e_list) ->
           let ck = ck_of_name h x in
           List.iter (fun (c,e) -> expect_extvalue h (Con (ck,c,x)) e) c_e_list;
@@ -151,28 +151,30 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
           let base_ck = fresh_clock () in
           let ct = typing_app h base_ck pat op args in
           ct, base_ck
-      | Eiterator (it, {a_op = op}, _, pargs, args, _) -> (* hyperchronous reset *)
+      | Eiterator (it, {a_op = op}, nl, pargs, args, _) -> (* hyperchronous reset *)
           let base_ck = fresh_clock() in
           let ct = match it with
             | Imap -> (* exactly as if clocking the node *)
                 typing_app h base_ck pat op (pargs@args)
-            | Imapi -> (* clocking the node with the extra [i] input on [ck_r] *)
-                let i (* stubs [i] as 0 *) =
-                  mk_extvalue ~ty:Initial.tint ~clock:base_ck (Wconst (Initial.mk_static_int 0))
+            | Imapi -> (* clocking the node with the extra i input on [ck_r] *)
+                let il (* stubs i as 0 *) =
+                  List.map (fun x -> mk_extvalue ~ty:Initial.tint 
+                    ~clock:base_ck (Wconst (Initial.mk_static_int 0))) nl
                 in
-                typing_app h base_ck pat op (pargs@args@[i])
+                typing_app h base_ck pat op (pargs@args@il)
             | Ifold | Imapfold ->
                 (* clocking node with equality constaint on last input and last output *)
                 let ct = typing_app h base_ck pat op (pargs@args) in
                 unify_ck (Clocks.last_clock ct) (Misc.last_element args).w_ck;
                 ct
-            | Ifoldi -> (* clocking the node with the extra [i] and last in/out constraints *)
-                let i (* stubs [i] as 0 *) =
-                  mk_extvalue ~ty:Initial.tint ~clock:base_ck (Wconst (Initial.mk_static_int 0))
+            | Ifoldi -> (* clocking the node with the extra i and last in/out constraints *)
+                let il (* stubs i as 0 *) =
+                  List.map (fun x -> mk_extvalue ~ty:Initial.tint 
+                    ~clock:base_ck (Wconst (Initial.mk_static_int 0))) nl
                 in
                 let rec insert_i args = match args with
-                  | [] -> [i]
-                  | [l] -> i::[l]
+                  | [] -> il
+                  | [l] -> il @ [l]
                   | h::l -> h::(insert_i l)
                 in
                 let ct = typing_app h base_ck pat op (pargs@(insert_i args)) in

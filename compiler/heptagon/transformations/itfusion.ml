@@ -108,7 +108,7 @@ let edesc funs acc ed =
                         o1, o2 = f (_v1, _v2, z')
         *)
         let mk_arg e (inp, acc_eq_list, largs, args, b) = match e.e_desc with
-          | Eiterator(Imap, g, m, [], local_args, _) when are_equal n m ->
+          | Eiterator(Imap, g, m, [], local_args, _) when List.for_all2 are_equal n m ->
               let new_inp, e, acc_eq_list = mk_call g acc_eq_list in
               new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->

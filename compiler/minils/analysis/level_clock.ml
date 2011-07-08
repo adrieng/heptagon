@@ -11,7 +11,7 @@ open Clocks
 open Minils
 
 (* Any clock variable left after clocking is free and should be set to level_ck.
-   Since inputs and outputs are grounded to Cbase, this append when
+   Since inputs and outputs are grounded to Cbase, this happens when
    no data dependence exists between an expression and the inputs/outputs.*)
 
 (* We are confident that it is sufficient to unify level_ck with base_ck

@@ -24,7 +24,7 @@ type ty = Tclass of class_name
         | Tint
         | Tlong
         | Tfloat
-        | Tarray of ty * exp
+        | Tarray of ty * exp list
         | Tunit
 
 and classe = { c_protection : protection;
@@ -94,12 +94,12 @@ and exp = Ethis
         | Efield of exp * field_name
         | Eclass of class_name
         | Evar of var_ident
-        | Earray_elem of exp * exp
+        | Earray_elem of exp * exp list
 
 and pattern = Pfield of pattern * field_name
             | Pclass of class_name
             | Pvar of var_ident
-            | Parray_elem of pattern * exp
+            | Parray_elem of pattern * exp list
             | Pthis of field_ident
 
 type program = classe list
