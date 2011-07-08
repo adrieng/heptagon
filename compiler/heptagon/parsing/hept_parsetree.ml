@@ -253,7 +253,7 @@ let mk_iterator_call it app n pexps exps =
 
 let mk_static_exp desc loc =
   { se_desc = desc; se_loc = loc }
-  
+
 let mk_static_exp_exp desc loc =
   mk_exp (Econst { se_desc = desc; se_loc = loc }) loc
 

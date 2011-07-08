@@ -51,7 +51,7 @@ fun conv(r : rgb^iheight^iwidth; io, jo : int) returns(o : rgb)
 (*****************************************************************************)
 
 
-(* integrates over a row (returns a row) *) 
+(* integrates over a row (returns a row) *)
 node acc_r(p : int^H.height^H.width; i : int) returns(o : int)
   var j : int; t : int;
   let
@@ -60,7 +60,7 @@ node acc_r(p : int^H.height^H.width; i : int) returns(o : int)
     o = p[>j<][>i<] + t;
   tel
 
-(* integrates over a column (returns a column) *) 
+(* integrates over a column (returns a column) *)
 node acc_c(p : rgb^H.width^H.height; j : int) returns(o, o_sq : int)
   var i : int; t, t_sq : int; v : int;
   let
@@ -71,7 +71,7 @@ node acc_c(p : rgb^H.width^H.height; j : int) returns(o, o_sq : int)
     o = t + v;
     o_sq = t_sq + v * v;
   tel
-    
+
 
 
 (*****************************************************************************)
@@ -88,7 +88,7 @@ fun sqrt(i : int) returns(o : int)
  *           std  : standard deviation
  *           nbr  : feature to use
  *           k    : used scale
- *           i, j : upper left position of the frame 
+ *           i, j : upper left position of the frame
  * @output : o    : computed value of the feature
  *)
 fun feat_value(p : int^V.width^V.height; std, nbr, k, i, j : int)
@@ -171,7 +171,7 @@ fun computation(p, p_sq : int^V.width^V.height; io, jo, k : int)
         var feat_sum, std : int;
         do
           std = sqrt(va);
-          feat_sum = 
+          feat_sum =
             feat_value(p, std,  0, k, i, j)
             + feat_value(p, std, 1, k, i, j)
             + feat_value(p, std, 2, k, i, j)

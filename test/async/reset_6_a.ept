@@ -12,8 +12,8 @@ let
     c = async lent()
   every half;
   r = !(async 0 fby async 0 fby async 0 fby async 0 fby
-	async 0 fby async 0 fby async 0 fby async 0 fby
-	async 0 fby async 0 fby async 0 fby async 0 fby
-	async 0 fby async 0 fby async 0 fby async 0 fby
-	async 0 fby async 0 fby async 0 fby async 0 fby c);
+  async 0 fby async 0 fby async 0 fby async 0 fby
+  async 0 fby async 0 fby async 0 fby async 0 fby
+  async 0 fby async 0 fby async 0 fby async 0 fby
+  async 0 fby async 0 fby async 0 fby async 0 fby c);
 tel

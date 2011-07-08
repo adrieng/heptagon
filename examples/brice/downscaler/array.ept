@@ -13,7 +13,7 @@ const rgb_empty : Utils.rgb = {Utils.r = 0; Utils.g = 0; Utils.b = 0}
 
 
 (* takes a flow of rgb and gives the corresponding array of rgbs *)
-node r2ap(r : Utils.rgb) 
+node r2ap(r : Utils.rgb)
      returns(last a : Utils.rgb^iwidth2^3 = rgb_empty^iwidth2^3)
   var k, w : int;
   let

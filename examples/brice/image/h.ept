@@ -33,11 +33,11 @@ type feature =
 
 const features : feature^V.nbr_features =
   {
-    V.x = 0^9; 
-    V.y = 0^9; 
-    V.val_at_corners = 0^9; 
-    V.parity = 0; 
-    V.thresh = 0; 
+    V.x = 0^9;
+    V.y = 0^9;
+    V.val_at_corners = 0^9;
+    V.parity = 0;
+    V.thresh = 0;
     V.alpha = 0
   }^V.nbr_features
 

@@ -1,9 +1,9 @@
 const ssize : int = 32
 const size : int = 12
 
-(* type smatrix = None | Some of *) 
+(* type smatrix = None | Some of *)
 
-type smatrix = 
+type smatrix =
   {
     matrix : float^ssize^ssize;
     none : bool

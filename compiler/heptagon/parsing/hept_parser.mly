@@ -554,10 +554,10 @@ call_params:
   | /*empty*/ { None }
   | ASYNC
       { Some [mk_static_exp_exp (Sint !Compiler_options.java_queue_nb) (Loc($startpos,$endpos));
-              mk_static_exp_exp (Sint !Compiler_options.java_queue_size) (Loc($startpos,$endpos))] }    
+              mk_static_exp_exp (Sint !Compiler_options.java_queue_size) (Loc($startpos,$endpos))] }
   | ASYNC DOUBLE_LESS l=slist(COMMA,exp) DOUBLE_GREATER { Some l }
 
-app: 
+app:
   | LPAREN app=app RPAREN { app }
   | a=async BANG p=call_params { mk_app Ebang a p }
   | a=async q=qualname p=call_params { mk_app (Enode q) a p }

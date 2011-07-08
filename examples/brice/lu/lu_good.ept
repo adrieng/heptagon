@@ -8,22 +8,22 @@ open Lu_edit
 
 
 (* does LU on a submatrix *)
-node lu0in(i, k : int; m : float^Dl.ssize^Dl.ssize at sm) 
+node lu0in(i, k : int; m : float^Dl.ssize^Dl.ssize at sm)
      returns(o : float^Dl.ssize^Dl.ssize at sm; finish : bool)
   let
     automaton
       state Init
-        var v, v2 : float; 
-        do 
+        var v, v2 : float;
+        do
           v = sread(i, k, m);
-          v2 = sread(k, k, m); 
+          v2 = sread(k, k, m);
           o = swrite(i, k, v /. v2, m);
           finish = false
         until true then Loop
 
       state Loop
-        var j : int; v, v2, v3 : float; 
-        do 
+        var j : int; v, v2, v3 : float;
+        do
           j = (k + 1) -> pre j + 1;
           v = sread(i, j, m);
           v2 = sread(i, k, m);
@@ -39,9 +39,9 @@ node lu0in(i, k : int; m : float^Dl.ssize^Dl.ssize at sm)
      end;
   tel
 
-node lu0(diag : float^Dl.ssize^Dl.ssize at sm) 
+node lu0(diag : float^Dl.ssize^Dl.ssize at sm)
      returns(o : float^Dl.ssize^Dl.ssize at sm; finish : bool)
-  var last k : int = 0; last tick : bool = true; 
+  var last k : int = 0; last tick : bool = true;
   let
     automaton
       state Loop
@@ -60,7 +60,7 @@ node lu0(diag : float^Dl.ssize^Dl.ssize at sm)
           o = diag;
           k = last k + 1;
         until true then Loop
-        unless (last k = Dl.ssize - 1) then End        
+        unless (last k = Dl.ssize - 1) then End
 
       state End
         do
@@ -72,22 +72,22 @@ node lu0(diag : float^Dl.ssize^Dl.ssize at sm)
 
 
 (* propagates the LU transform on the columns of the matrix *)
-node bdivin(i, k : int; diag : float^Dl.ssize^Dl.ssize; row : float^Dl.ssize^Dl.ssize at sm) 
+node bdivin(i, k : int; diag : float^Dl.ssize^Dl.ssize; row : float^Dl.ssize^Dl.ssize at sm)
      returns(o : float^Dl.ssize^Dl.ssize at sm; finish : bool)
   let
     automaton
       state Init
         var v, v2 : float;
-        do 
+        do
           v = sread(i, k, row);
-          v2 = sread(k, k, diag); 
+          v2 = sread(k, k, diag);
           o = swrite(i, k, v /. v2, row);
           finish = false
         until true then Loop
 
       state Loop
         var j : int; v, v2, v3 : float;
-        do 
+        do
           j = (k + 1) -> pre j + 1;
           v = sread(i, j, row);
           v2 = sread(i, k, row);
@@ -103,9 +103,9 @@ node bdivin(i, k : int; diag : float^Dl.ssize^Dl.ssize; row : float^Dl.ssize^Dl.
      end;
   tel
 
-node bdiv(diag : float^Dl.ssize^Dl.ssize; row : float^Dl.ssize^Dl.ssize at sm) 
+node bdiv(diag : float^Dl.ssize^Dl.ssize; row : float^Dl.ssize^Dl.ssize at sm)
      returns(o : float^Dl.ssize^Dl.ssize at sm; finish : bool)
-  var last i : int = 0; last tick : bool = true; 
+  var last i : int = 0; last tick : bool = true;
   let
     automaton
       state Loop
@@ -124,7 +124,7 @@ node bdiv(diag : float^Dl.ssize^Dl.ssize; row : float^Dl.ssize^Dl.ssize at sm)
           i = last i + 1;
           finish = false
         until true then Loop
-        unless (last i = Dl.ssize - 1) then End        
+        unless (last i = Dl.ssize - 1) then End
 
       state End
         do
@@ -135,7 +135,7 @@ node bdiv(diag : float^Dl.ssize^Dl.ssize; row : float^Dl.ssize^Dl.ssize at sm)
 
 
 (* propagates the LU transform on the rows of the matrix *)
-node fwd(diag : float^Dl.ssize^Dl.ssize; col : float^Dl.ssize^Dl.ssize at sm)  
+node fwd(diag : float^Dl.ssize^Dl.ssize; col : float^Dl.ssize^Dl.ssize at sm)
      returns(o : float^Dl.ssize^Dl.ssize at sm; finish : bool)
   let
     automaton
@@ -147,8 +147,8 @@ node fwd(diag : float^Dl.ssize^Dl.ssize; col : float^Dl.ssize^Dl.ssize at sm)
             i = (k + 1) -> pre i + 1
           every last tick;
           tick = (i = Dl.ssize - 1);
-          v = sread(i, j, col); 
-          v2 = sread(i, k, diag); 
+          v = sread(i, j, col);
+          v2 = sread(i, k, diag);
           v3 = sread(k, j, col);
           o = swrite(i, j, v -. v2 *. v3, col);
           finish = false
@@ -163,7 +163,7 @@ node fwd(diag : float^Dl.ssize^Dl.ssize; col : float^Dl.ssize^Dl.ssize at sm)
 
 
 (* propagates the LU transform on the last blocks (see lu) *)
-node bmod(row, col : float^Dl.ssize^Dl.ssize; inner : float^Dl.ssize^Dl.ssize at sm) 
+node bmod(row, col : float^Dl.ssize^Dl.ssize; inner : float^Dl.ssize^Dl.ssize at sm)
      returns(o : float^Dl.ssize^Dl.ssize at sm; finish : bool)
   let
     automaton
@@ -171,8 +171,8 @@ node bmod(row, col : float^Dl.ssize^Dl.ssize; inner : float^Dl.ssize^Dl.ssize at
         var v, v2, v3 : float; i, j, k : int; c : bool;
         do
           (i, j, k, c) = for3(Dl.ssize - 1, Dl.ssize - 1, Dl.ssize -1, true);
-          v = sread(i, j, inner); 
-          v2 = sread(i, k, row); 
+          v = sread(i, j, inner);
+          v2 = sread(i, k, row);
           v3 = sread(k, j, col);
           o = swrite(i, j, v -. v2 *. v3, inner);
           finish = false
@@ -195,7 +195,7 @@ node bmod(row, col : float^Dl.ssize^Dl.ssize; inner : float^Dl.ssize^Dl.ssize at
 
 
 (* modifies A[i,j] after A[k,j] and A[i,k] if A[k,j] and A[i,k] are not null *)
-node luin2(a : Dl.smatrix^Dl.size^Dl.size at am; k, i, j : int) 
+node luin2(a : Dl.smatrix^Dl.size^Dl.size at am; k, i, j : int)
      returns (o : Dl.smatrix^Dl.size^Dl.size at am; e: bool)
   var inn : Dl.smatrix; it, it2 : float^Dl.ssize^Dl.ssize at im;
   let
@@ -209,7 +209,7 @@ node luin2(a : Dl.smatrix^Dl.size^Dl.size at am; k, i, j : int)
 (* A[k,j] null ? *)
 node luin(a : Dl.smatrix^Dl.size^Dl.size at am; k, i : int) returns (o : Dl.smatrix^Dl.size^Dl.size at am; e : bool)
   var j : int; c : Dl.smatrix; last tick : bool = true;
-  let 
+  let
     j = k + 1 -> if last tick then pre j + 1 else pre j;
     c = read(k, j, a);
     reset
@@ -237,8 +237,8 @@ node lu(a : Dl.smatrix^Dl.size^Dl.size at am) returns(o : Dl.smatrix^Dl.size^Dl.
       (* propagate on the row and column *)
       state StepRC
         var ot : Dl.smatrix^Dl.size^Dl.size at am;
-            i : int; c,r : Dl.smatrix; 
-            last er : bool = true; last ec : bool = true; 
+            i : int; c,r : Dl.smatrix;
+            last er : bool = true; last ec : bool = true;
             rt, rt2 : float^Dl.ssize^Dl.ssize at rm;
             ct, ct2 : float^Dl.ssize^Dl.ssize at cm;
         do
@@ -282,7 +282,7 @@ node lu(a : Dl.smatrix^Dl.size^Dl.size at am) returns(o : Dl.smatrix^Dl.size^Dl.
         unless (last k >= Dl.size -1) then StepEnd
 
       state StepEnd
-        do 
+        do
           o = a;
           finish = true;
     end;
@@ -292,11 +292,11 @@ node lu(a : Dl.smatrix^Dl.size^Dl.size at am) returns(o : Dl.smatrix^Dl.size^Dl.
 
 (*****************************************************************************)
 (*                                   split                                   *)
-(*****************************************************************************)  
+(*****************************************************************************)
 
 
 (* to split diagonal blocks of A between L and U after the LU transformation *)
-node split_block(a : float^Dl.ssize^Dl.ssize; re : bool) 
+node split_block(a : float^Dl.ssize^Dl.ssize; re : bool)
      returns(finish : bool; l : Dl.smatrix; u : Dl.smatrix)
   var l_temp : Dl.smatrix; u_temp : Dl.smatrix;
   let
@@ -331,13 +331,13 @@ node split_block(a : float^Dl.ssize^Dl.ssize; re : bool)
 
 
 (* split the matrix *)
-node split_mat(a : Dl.smatrix^Dl.size^Dl.size; l : Dl.smatrix^Dl.size^Dl.size at lm; u : Dl.smatrix^Dl.size^Dl.size at um) 
+node split_mat(a : Dl.smatrix^Dl.size^Dl.size; l : Dl.smatrix^Dl.size^Dl.size at lm; u : Dl.smatrix^Dl.size^Dl.size at um)
      returns(lo : Dl.smatrix^Dl.size^Dl.size at lm; uo : Dl.smatrix^Dl.size^Dl.size at um; e : bool)
   var lts, uts : Dl.smatrix;
       i, j : int; eij : bool; last esb : bool = true;
   let
     (i, j, eij) = for2(Dl.size, Dl.size, last esb);
-    (esb, lts, uts) = if (i = j) then 
+    (esb, lts, uts) = if (i = j) then
                         split_block(reads(i, j, a), last esb & (not eij))
                       else
                         if (i > j) then
@@ -360,7 +360,7 @@ node split_mat(a : Dl.smatrix^Dl.size^Dl.size; l : Dl.smatrix^Dl.size^Dl.size at
 
 
 (* does the multiplication of two blocks *)
-node mpy_add(a, b : float^Dl.ssize^Dl.ssize; c : float^Dl.ssize^Dl.ssize at sm) 
+node mpy_add(a, b : float^Dl.ssize^Dl.ssize; c : float^Dl.ssize^Dl.ssize at sm)
      returns(o : float^Dl.ssize^Dl.ssize at sm; finish : bool)
   let
     automaton
@@ -368,8 +368,8 @@ node mpy_add(a, b : float^Dl.ssize^Dl.ssize; c : float^Dl.ssize^Dl.ssize at sm)
         var v, v2, v3 : float; r : bool; i, j, k : int;
         do
           (i, j, k, r) = for3(Dl.ssize - 1, Dl.ssize - 1, Dl.ssize -1, true);
-          v = sread(i, j, c); 
-          v2 = sread(i, k, a); 
+          v = sread(i, j, c);
+          v2 = sread(i, k, a);
           v3 = sread(k, j, b);
           o = swrite(i, j, v +. v2 *. v3, c);
           finish = false
@@ -384,7 +384,7 @@ node mpy_add(a, b : float^Dl.ssize^Dl.ssize; c : float^Dl.ssize^Dl.ssize at sm)
 
 
 (* multiplication of two sparse matrices : C = A*B *)
-node mat_mult(a, b : Dl.smatrix^Dl.size^Dl.size; c : Dl.smatrix^Dl.size^Dl.size at cm) 
+node mat_mult(a, b : Dl.smatrix^Dl.size^Dl.size; c : Dl.smatrix^Dl.size^Dl.size at cm)
      returns(o : Dl.smatrix^Dl.size^Dl.size at cm; finish : bool)
   let
     automaton
@@ -402,12 +402,12 @@ node mat_mult(a, b : Dl.smatrix^Dl.size^Dl.size; c : Dl.smatrix^Dl.size^Dl.size 
           reset
             (cs2, tick) = if (not ta.none & not tb.none) then
                             mpy_add(ta.matrix, tb.matrix, cs)
-                          else 
+                          else
                             (cs, true)
           every last tick;
           o = if (not ta.none & not tb.none) then
                 writes(i, j, cs, c)
-              else 
+              else
                 c;
         until r & tick then End
 

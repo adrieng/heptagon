@@ -1,4 +1,4 @@
-zpen Utils
+open Utils
 
 const iwidth : int = 1920
 const owidth : int = 720
@@ -52,7 +52,7 @@ node conv(r1, r2, r3, r4, r5, r6, r7, r8, r : Utils.rgb; bi : bool; i : int) ret
 node main(r : Utils.rgb) returns(o : Utils.rgb; f : bool)
   var vf, vc : bool; c : int;
       r1, r2, r3, r4, r5, r6, r7, r8 : rgb;
-  let    
+  let
     r1 = delay_r(2 * iwidth + 2, rgb_empty, r);
     r2 = delay_r(2 * iwidth + 1, rgb_empty, r);
     r3 = delay_r(2 * iwidth, rgb_empty, r);

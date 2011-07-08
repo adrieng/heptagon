@@ -33,7 +33,7 @@ node nedge(s : bool) returns(s' : bool)
 node wait(r, x : bool) returns(last passed : bool = false)
   let
     reset
-      passed = last passed or x; 
+      passed = last passed or x;
     every r
   tel
 
@@ -65,7 +65,7 @@ fun sread(i, j : int; s : float^Dl.ssize^Dl.ssize) returns(v : float)
   tel
 
 (* writes a submatrix, expects only an array *)
-fun swrite(i, j : int; v : float; s : float^Dl.ssize^Dl.ssize at ra) 
+fun swrite(i, j : int; v : float; s : float^Dl.ssize^Dl.ssize at ra)
     returns(r : float^Dl.ssize^Dl.ssize at ra)
   let
     r = [ s with [i][j] = v ];
@@ -96,14 +96,14 @@ fun reads(i, j : int; m : Dl.smatrix^Dl.size^Dl.size) returns (s : float^Dl.ssiz
   tel
 
 (* writes the matrix *)
-fun write(i, j : int; s : Dl.smatrix; m : Dl.smatrix^Dl.size^Dl.size at ra) 
+fun write(i, j : int; s : Dl.smatrix; m : Dl.smatrix^Dl.size^Dl.size at ra)
     returns (o : Dl.smatrix^Dl.size^Dl.size at ra)
   let
     o = [ m with [i][j] = s]
   tel
 
 (* writes the matrix with a matrix *)
-fun writes(i, j : int; s : float^Dl.ssize^Dl.ssize; m : Dl.smatrix^Dl.size^Dl.size at ra) 
+fun writes(i, j : int; s : float^Dl.ssize^Dl.ssize; m : Dl.smatrix^Dl.size^Dl.size at ra)
     returns (o :Dl.smatrix^Dl.size^Dl.size at ra)
   let
     o = [ m with [i][j] = {Dl.matrix = s; Dl.none = false}]

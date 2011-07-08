@@ -10,12 +10,12 @@ node r2p(r : rgb) returns(p : pixel)
   var ht, wt : int;
   let
     wt = counter(iwidth);
-    ht = 0 -> if (wt = 0) then 
-                if (pre ht = iheight - 1) then 
-                  0 
-                else 
+    ht = 0 -> if (wt = 0) then
+                if (pre ht = iheight - 1) then
+                  0
+                else
                   pre ht + 1
-              else 
+              else
                 pre ht;
     p = {rgb = r; h = ht;  w = wt};
   tel
@@ -80,11 +80,11 @@ node conv(p : pixel) returns(o : pixel)
                   rgba.[(k - 2 * iwidth) % (iwidth * 3)] default rgb_empty,
                   rgba.[(k - iwidth - 1) % (iwidth * 3)] default rgb_empty,
                   rgba.[(k - iwidth) % (iwidth * 3)] default rgb_empty)
-          
+
 
         else if b then
-          rgbconv(rgba.[(k - iwidth * 2 - 2) % (iwidth * 3)] default rgb_empty, 
-                  rgba.[(k - iwidth * 2 - 1) % (iwidth * 3)] default rgb_empty, 
+          rgbconv(rgba.[(k - iwidth * 2 - 2) % (iwidth * 3)] default rgb_empty,
+                  rgba.[(k - iwidth * 2 - 1) % (iwidth * 3)] default rgb_empty,
                   rgba.[(k - iwidth * 2) % (iwidth * 3)] default rgb_empty,
                   rgba.[(k - iwidth - 2) % (iwidth * 3)] default rgb_empty,
                   rgba.[(k - iwidth - 1) % (iwidth * 3)] default rgb_empty,

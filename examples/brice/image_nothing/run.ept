@@ -89,7 +89,7 @@ fun aux2(r : rgb^width^height; t1 : rgb^width; i : int)
       t2 = mapi<<width>> nothing (<r, i>) (t1);
   tel
 
-fun run(r : rgb^iwidth^iheight) 
+fun run(r : rgb^iwidth^iheight)
     returns(a_rc      : rgb^width^height;
             a_rc_sq   : rgb^width^height)
   let

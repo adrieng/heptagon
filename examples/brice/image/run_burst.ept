@@ -65,14 +65,14 @@ node acc_c(p : rgb^H.height^H.width; j : int) returns(o, o_sq : int by bh)
     i = 0 fby i + 1;
     t = 0 fby o;
     t_sq = 0 fby o_sq;
-    v = ((stutter bh p)[>i<][>(stutter bh j)<].r 
-         + (stutter bh p)[>i<][>(stutter bh j)<].g 
+    v = ((stutter bh p)[>i<][>(stutter bh j)<].r
+         + (stutter bh p)[>i<][>(stutter bh j)<].g
          + (stutter bh p)[>i<][>(stutter bh j)<].b)
         / 3;
     o = t + v;
     o_sq = t + v * v;
   tel
-    
+
 
 
 (*****************************************************************************)
@@ -89,7 +89,7 @@ fun sqrt(i : int) returns(o : int)
  *           std  : standard deviation
  *           nbr  : feature to use
  *           k    : used scale
- *           i, j : upper left position of the frame 
+ *           i, j : upper left position of the frame
  * @output : o    : computed value of the feature
  *)
 fun feat_value(p : int^V.width^W.height; std, nbr, k, i, j : int)
@@ -171,7 +171,7 @@ fun computation(p, p_sq : int^V.width^V.height; io, jo, k : int)
         var feat_sum, std : int;
         do
           std = sqrt(va);
-          feat_sum = 
+          feat_sum =
             feat_value(p, std,  0, k, i, j)
             + feat_value(p, std, 1, k, i, j)
             + feat_value(p, std, 2, k, i, j)
@@ -192,9 +192,9 @@ fun computation(p, p_sq : int^V.width^V.height; io, jo, k : int)
 (*****************************************************************************)
 
 
-fun run(r : rgb^H.iheight^H.iwidth) 
+fun run(r : rgb^H.iheight^H.iwidth)
     returns(d  : rgb by bh by bw;
-            s0 : bool by bsc0_h by bsc0_w; 
+            s0 : bool by bsc0_h by bsc0_w;
             s1 : bool by bsc1_h by bsc1_w;
             s2 : bool by bsc2_h by bsc2_w;
             s3 : bool by bsc3_h by bsc3_w;
@@ -223,20 +223,20 @@ fun run(r : rgb^H.iheight^H.iwidth)
         a_rc_sq = b2a(bh, bw, int_rc_sq);
 
         (* compute the features *)
-        s0 = merge iter(bsc0_h) 
-               (i -> ki merge iter(bsc0_w) 
+        s0 = merge iter(bsc0_h)
+               (i -> ki merge iter(bsc0_w)
                        (j -> computation(a_rc, a_rc_sq_sq, i, j, 0))ik);
-        s1 = merge iter(bsc1_h) 
-               (i -> ki merge iter(bsc1_w) 
+        s1 = merge iter(bsc1_h)
+               (i -> ki merge iter(bsc1_w)
                        (j -> computation(a_rc, a_rc_sq, i, j, 1))ik);
-        s2 = merge iter(bsc2_h) 
-               (i -> ki merge iter(bsc2_w) 
+        s2 = merge iter(bsc2_h)
+               (i -> ki merge iter(bsc2_w)
                        (j -> computation(a_rc, a_rc_sq, i, j, 2))ik);
-        s3 = merge iter(bsc3_h) 
-               (i -> ki merge iter(bsc3_w) 
+        s3 = merge iter(bsc3_h)
+               (i -> ki merge iter(bsc3_w)
                        (j -> computation(a_rc, a_rc_sq, i, j, 3))ik);
-        s4 = merge iter(bsc4_h) 
-               (i -> ki merge iter(bsc4_w) 
+        s4 = merge iter(bsc4_h)
+               (i -> ki merge iter(bsc4_w)
                        (j -> computation(a_rc, a_rc_sq, i, j, 4))ik);
     wk
   tel

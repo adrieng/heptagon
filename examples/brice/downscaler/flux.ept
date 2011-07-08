@@ -62,7 +62,7 @@ node main(r : Utils.rgb) returns(o : Utils.rgb; f : bool)
           else if c < 720*9 then true
           else true;
 
-    
+
     hf = true fby false fby true fby false fby false
       fby true fby false fby false fby hf;
 
