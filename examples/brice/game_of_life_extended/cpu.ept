@@ -1,0 +1,88 @@
+(*node l(a, b : int) returns(c : int)
+  var i : int;
+  let
+    i = b fby c;
+    c = a + i;
+  tel
+
+
+node k(a, b : int^10^7^5) returns(c : int^10^7^5)
+  let
+    c = map<<10,7,5>> l (a,b);
+  tel
+
+
+node h(a, b : int^10^7^5; d : bool) returns(c : int^10^7^5)
+  let
+    switch d
+    | true do c = k(a,b)
+    | false do c = a
+    end;
+  tel*)
+(*
+node line(b : int; a :  int^5) returns(o : int^5)
+  let
+    o = map<<5>> ( * )(<b>) (a);
+  tel
+
+
+kernel mult_matrix(a : int^5^5; b : int) returns(o : int^5^5)
+  let
+    o = pmap<<5>> line(<b>) (a);
+  tel
+*)
+
+const extendedLife_majority : int = 1
+
+const size : int = 32
+const osize : int = 42
+const nbr : int = 15
+const sn : int = size * nbr
+
+const r : int = 4
+const b : int = 2 * r + 1
+
+fun mult_add(a : int^sn^sn; i, j, k, l, acc : int)
+    returns(o : int)
+  let
+    o = a[> (i + k - r) % sn <][> (j + l - r) % sn <] + acc;
+  tel
+
+node life_cell(a : int^sn^sn; c, i, j : int)
+     returns(o : int)
+  var t : int; last k : int = 0;
+  let 
+    t = foldi<<b, b>> mult_add<(a, i, j)> (0);
+    automaton
+      state Init
+        do
+          o = c;
+        until 
+          o = 1 then Alive
+        | true then Dead
+
+      state Alive
+        do  
+          k = 0 fby (k + 1);
+          o = 1;
+        unless
+          t < 41 & last k < 20 then Dead
+        | t < 36 then Dead
+
+      state Dead
+        do  
+          k = 0 fby (k + 1);
+          o = 0;
+        unless
+          t > 40 & last k < 20 then Alive
+        | t > 45 then Dead
+    end;
+  tel
+
+node game_of_life_par() returns()
+  var c, d : int^sn^sn;
+  let 
+    c = (0^sn^sn) fby d;
+    d = mapi<<sn, sn>> life_cell<(c)> (c);
+  tel 
+
