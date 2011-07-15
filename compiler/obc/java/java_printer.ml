@@ -108,6 +108,7 @@ and op ff (f, e_l) =
     | "/." -> "/"
     | "+." -> "+"
     | "-." -> "-"
+    | "%" -> "%"
     | op   -> op
   in
   match Names.modul f with
@@ -116,7 +117,7 @@ and op ff (f, e_l) =
         |("+" | "-" | "*" | "/"
         |"+." | "-." | "*." | "/."
         | "=" | "<>" | "<" | "<="
-        | ">" | ">=" | "&" | "or") as n ->
+        | ">" | ">=" | "&" | "or" | "%") as n ->
            let e1,e2 = Misc.assert_2 e_l in
            fprintf ff "(@[%a@ %s %a@])" exp e1 (javaop n) exp e2
         | "not" ->
