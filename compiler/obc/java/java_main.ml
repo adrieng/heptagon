@@ -14,7 +14,7 @@ let mk_var ty name =
 let program p =
   (*Scalarize*)
   let p = Compiler_utils.pass "Scalarize" true Scalarize.program p Obc_compiler.pp in
-  let p_java = Obc2java_asyncnode.program p in
+  let p_java = Obc2java.program p in
   let dir = Compiler_utils.build_path "java" in
   Compiler_utils.ensure_dir dir;
 
@@ -33,7 +33,7 @@ let program p =
     let sig_main = find_value q_main in
     let ty_main = sig_main.node_outputs |> types_of_arg_list |> Types.prod in
     let ty_main_args = sig_main.node_params |> types_of_param_list in
-    let class_name = Obc2java_asyncnode.fresh_classe (!Compiler_options.simulation_node ^ "_sim") in
+    let class_name = Obc2java.fresh_classe (!Compiler_options.simulation_node ^ "_sim") in
     Idents.enter_node class_name;
     let field_step_dnb, id_step_dnb =
       let id = Idents.gen_var "java_main" "default_step_nb" in
@@ -49,15 +49,9 @@ let program p =
 
       let get_arg i = Earray_elem(exp_args, [Sint i]) in
 
-  (*    (* argnb is the current argument during the parsing *)
-      let vd_argnb, pat_argnb, exp_argnb = mk_var Tint "argNb" in
-      let init_argnb = Aassgn (pat_argnb, Sint 0) in
-      let incr_argnb = Aassgn (pat_argnb, Efun(pervasives_qn "+", [exp_argnb; Sint 1])) in
-      let exp_current_arg = Earray_elem(exp_args, exp_argnb) in
-    *)
       let body =
         let vd_main, e_main, q_main, ty_main =
-          let q_main = Obc2java_asyncnode.qualname_to_package_classe q_main in (*java qual*)
+          let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
           let id = Idents.gen_var "java_main" "main" in
           mk_var_dec id (Tclass q_main), Evar id, q_main, ty_main
         in
@@ -116,7 +110,7 @@ let program p =
           [ Anewvar(vd_main, Enew (Tclass q_main, main_args));
             parse_max_iteration;
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
-            Obc2java_asyncnode.fresh_for exp_step main_for_loop;
+            Obc2java.fresh_for exp_step main_for_loop;
             Aexp (Emethod_call(out, "printf",
               [ Sstring "time : %d\\n";
                 Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]))

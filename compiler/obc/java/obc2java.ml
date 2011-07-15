@@ -114,12 +114,12 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sbool b -> Sbool b
   | Types.Sstring s -> Sstring s
   | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
-  | Types.Sfield _ -> eprintf "ojSfield @."; assert false;
-  | Types.Stuple se_l ->  tuple param_env se_l
+  | Types.Sfield _ -> Misc.unsupported "field acces in Java backend. ojSfield @."
+  | Types.Stuple se_l -> tuple param_env se_l
   | Types.Sarray_power (see,pow_list) ->
       let pow_list = List.rev pow_list in
       let rec make_array tyl pow_list = match tyl, pow_list with
-        | Tarray(t, _), pow::pow_list ->
+        | Tarray(t, e::e_l), pow::pow_list ->
             let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
                        with  Errors.Error ->
                                    eprintf "%aStatic power of array should have integer power. \
@@ -128,33 +128,10 @@ let rec static_exp param_env se = match se.Types.se_desc with
                               Global_printer.print_static_exp se;
                               raise Errors.Error)
             in
-            Enew_array (tyl, Misc.repeat_list (make_array t pow_list) pow)
+            Enew_array (tyl, Misc.repeat_list (make_array (Tarray(t,e_l)) pow_list) pow)
         | _ -> static_exp param_env see
       in
       make_array (ty param_env se.Types.se_ty) pow_list
-        (*let t = match x.pat_ty with
-          | Tarray (t,_) -> t
-          | _ -> Misc.internal_error "mls2obc select slice type" 5
-        in
-      let eval_int pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
-              with Errors.Error ->
-                                       eprintf "%aStatic power of array should have integer power. \
-                         Please use callgraph or non-static exp in %a.@."
-                        Location.print_location se.Types.se_loc
-                        Global_printer.print_static_exp se;
-                raise Errors.Error)
-            in
-      let rec make_matrix acc = match pow_list with
-        | [] -> acc
-        | pow :: pow_list ->
-              let pow = eval_int pow in
-              make_matrix (Misc.repeat_list acc pow) pow_list
-      in
-      let se_l = match pow_list with
-        | [] -> Misc.internal_error "Empty power list" 0
-        | pow :: pow_list -> make_matrix (Misc.repeat_list (static_exp param_env see)) pow_list
-      in
-      Enew_array (ty param_env se.Types.se_ty, se_l)*)
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
@@ -395,7 +372,9 @@ let create_async_classe async base_classe =
     let id = base_classe.o_ident in
     mk_field ~protection:Pprotected t id, t, id, mk_var id, mk_var_dec id t
   in
-  (* [result] : field used to stock the asynchronous result *)
+  
+
+  (* [result] : field used to stock the asynchronous result (only for threadpool)*)
   let field_result, ty_aresult, ty_result, id_result, var_result =
     let t = b_out |> Signature.types_of_arg_list |> Types.prod in
     let ty_result = boxed_ty param_env t in
@@ -404,7 +383,27 @@ let create_async_classe async base_classe =
     let result_id = Idents.gen_var "obc2java" "result" in
     mk_field ~protection:Pprotected aty result_id, aty, ty_result, result_id, mk_var result_id
   in
-  let fields = field_inst::field_result::fields_params in
+      
+
+  (* [node] : field used to store the current asyncnode (only for asyncnode)*)
+  let field_node, ty_node, ty_result, aty_result, id_node =
+    let t = b_out |> Signature.types_of_arg_list |> Types.prod in
+    let ty_result = boxed_ty param_env t in
+    let ty_node =
+      if b_stateful
+      then Tgeneric (async_node, [ty_result])
+      else Tgeneric (async_fun, [ty_result])
+    in
+    let aty_result = ty param_env (Types.Tfuture((), t)) in
+    let id_node = Idents.gen_var "obc2java" "node" in
+    mk_field ~protection:Pprotected ty_node id_node, ty_node, ty_result, aty_result, id_node
+  in
+      
+  let fields =
+    if !Compiler_options.java_queue_size = 0
+    then field_inst::field_result::fields_params
+    else field_inst::field_node::fields_params    
+  in
 
   (* [step] arguments *)
   let fields_step, vds_step, exps_step =
@@ -418,11 +417,23 @@ let create_async_classe async base_classe =
 
   let constructor, reset =
     let body, body_r =
-      let acts_params = copy_to_this vds_params in
-      let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
-      let act_result = Aassgn (Pthis id_result, Snull) in
-      mk_block (act_result::act_inst::acts_params)
-      , mk_block [act_result; act_inst]
+      if !Compiler_options.java_queue_size = 0
+      then
+        let acts_params = copy_to_this vds_params in
+        let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
+        let act_result = Aassgn (Pthis id_result, Snull) in
+        mk_block (act_result::act_inst::acts_params)
+        , mk_block [act_result; act_inst]
+      else
+        let acts_params = copy_to_this vds_params in
+        let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
+        let async = Misc.assert_2 (List.map (static_exp param_env) async) in
+        let async_node_args = [fst async; snd async] in
+        let act_result = Aassgn (Pthis id_node, Enew (ty_node, async_node_args)) in
+        let act_reset = Aexp (Emethod_call (Efield (Ethis, Idents.name id_node), "reset", [])) in
+        mk_block (act_result::act_inst::acts_params)
+        , mk_block [act_reset; act_inst]
+
     in
     mk_methode ~args:vds_params body (shortname classe_name)
     , mk_methode body_r "reset"
@@ -460,6 +471,7 @@ let create_async_classe async base_classe =
         mk_block [act_return]
       in mk_methode ~throws:throws_async  ~args:vds_step ~returns:aty_result body "step"
   in
+
 
   (* Inner class *)
 
