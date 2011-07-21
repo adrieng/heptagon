@@ -174,7 +174,7 @@ let message loc kind =
     | Estatic_constraint c ->
         eprintf "%aThis application doesn't respect the static constraint :@\n%a.@."
           print_location loc
-          print_location c.se_loc
+          print_static_exp c
     | Esplit_enum ty ->
         eprintf
           "%aThe first argument of split has to be an \
@@ -385,26 +385,33 @@ let rec _unify cenv t1 t2 =
              _ -> raise Unify
         )
     | Tarray (ty1, e1), Tarray (ty2, e2) ->
-        add_constraint_eq cenv e1 e2;
+        (try
+           add_constraint_eq ~unsafe:true cenv e1 e2
+         with Solve_failed _ ->
+           raise Unify);
         _unify cenv ty1 ty2
     | _ -> raise Unify
 
 (** { 3 Constraints related functions } *)
 and (curr_constrnt : constrnt list ref) = ref []
 
-and solve c_l =
+and solve ?(unsafe=false) c_l =
   try Static.solve Names.QualEnv.empty c_l
-  with Solve_failed c -> error (Estatic_constraint c)
+  with Solve_failed c ->
+    if unsafe then
+      raise (Solve_failed c)
+    else
+      error (Estatic_constraint c)
 
 (** [cenv] is the constant env which will be used to simplify the given constraints *)
-and add_constraint cenv c =
+and add_constraint ?(unsafe=false) cenv c =
   let c = expect_static_exp cenv Initial.tbool c in
-  curr_constrnt := (solve [c])@(!curr_constrnt)
+  curr_constrnt := (solve ~unsafe:unsafe [c])@(!curr_constrnt)
 
 (** Add the constraint [c1=c2] *)
-and add_constraint_eq cenv c1 c2 =
+and add_constraint_eq ?(unsafe=false) cenv c1 c2 =
   let c = mk_static_exp tbool (Sop (mk_pervasives "=",[c1;c2])) in
-  add_constraint cenv c
+  add_constraint ~unsafe:unsafe cenv c
 
 (** Add the constraint [c1<=c2] *)
 and add_constraint_leq cenv c1 c2 =

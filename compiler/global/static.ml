@@ -181,9 +181,9 @@ let rec solve const_env =
     | [] -> []
     | c :: l ->
         let l = solve const_env l in
-        let (res, c) = is_true const_env c in
+        let (res, solved_c) = is_true const_env c in
         (match res with
-           | None -> c :: l
+           | None -> solved_c :: l
            | Some v -> if not v then raise (Solve_failed c) else l)
 (*
 (** Substitutes variables in the size exp with their value
