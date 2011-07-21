@@ -141,6 +141,9 @@ struct
       let id, last = find n env in
       if not last then message loc (Enot_last n) else id
     with Not_found -> message loc (Evar_unbound n)
+  (** Adds a name to the list of used names and idents. *)
+  let add_used_name env n =
+    add n (ident_of_name n, false) env
   (** Add a var *)
   let add_var loc env n =
     if mem n env then message loc (Evariable_already_defined n)
@@ -424,9 +427,12 @@ let translate_contract env ct =
     Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
     Heptagon.c_block = b }
 
-let params_of_var_decs p_l =
-  let pofvd vd = Signature.mk_param vd.v_name (translate_type vd.v_loc vd.v_type) in
-  List.map pofvd p_l
+let params_of_var_decs env p_l =
+  let pofvd env vd =
+    let env = Rename.add_used_name env vd.v_name in
+    Signature.mk_param vd.v_name (translate_type vd.v_loc vd.v_type), env
+  in
+  Misc.mapfold pofvd env p_l
 
 
 let translate_constrnt e = expect_static_exp e
@@ -447,13 +453,13 @@ let args_of_var_decs =
 let translate_node node =
   let n = current_qual node.n_name in
   Idents.enter_node n;
-  let params = params_of_var_decs node.n_params in
+  let params, env = params_of_var_decs Rename.empty node.n_params in
   let constraints = List.map translate_constrnt node.n_constraints in
-  let input_env = Rename.append Rename.empty (node.n_input) in
+  let env = Rename.append env (node.n_input) in
   (* inputs should refer only to inputs *)
-  let inputs = translate_vd_list input_env node.n_input in
+  let inputs = translate_vd_list env node.n_input in
   (* Inputs and outputs define the initial local env *)
-  let env0 = Rename.append input_env node.n_output in
+  let env0 = Rename.append env node.n_output in
   let outputs = translate_vd_list env0 node.n_output in
   let b, env = translate_block env0 node.n_block in
   (* the env of the block is used in the contract translation *)
@@ -538,7 +544,7 @@ let translate_signature s =
   let n = current_qual s.sig_name in
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
-  let p = params_of_var_decs s.sig_params in
+  let p, _ = params_of_var_decs Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
   let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful p in
   Signature.check_signature sig_node;
