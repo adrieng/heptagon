@@ -86,9 +86,6 @@ let is_stateful n =
 
 (** {2 Translation from Obc to C using our AST.} *)
 
-(** [fold_stm_list] is an utility function that transforms a list of statements
-    into one statements using Cseq constructors. *)
-
 (** [ctype_of_type mods oty] translates the Obc type [oty] to a C
     type. We assume that identified types have already been defined
     before use. [mods] is an accumulator for modules to be opened for
@@ -106,14 +103,6 @@ let rec ctype_of_otype oty =
     | Tprod _ -> assert false
     | Tinvalid -> assert false
 
-let cvarlist_of_ovarlist vl =
-  let cvar_of_ovar vd =
-    let ty = ctype_of_otype vd.v_type in
-    let ty = if Linearity.is_linear vd.v_linearity then pointer_to ty else ty in
-    name vd.v_ident, ty
-  in
-  List.map cvar_of_ovar vl
-
 let copname = function
   | "="  -> "==" | "<>" -> "!=" | "&"  -> "&&" | "or" -> "||" | "+" -> "+"
   | "-" -> "-" | "*" -> "*" | "/" -> "/" | "*." -> "*" | "/." -> "/"
@@ -125,28 +114,6 @@ let copname = function
 (** Translates an Obc var_dec to a tuple (name, cty). *)
 let cvar_of_vd vd =
   name vd.v_ident, ctype_of_otype vd.v_type
-
-(** If idx_list = [e1;..;ep], returns the lhs e[e1]...[ep] *)
-let rec csubscript_of_e_list e idx_list =
-  match idx_list with
-    | [] -> e
-    | idx::idx_list ->
-        Carray (csubscript_of_e_list e idx_list, idx)
-
-(** If idx_list = [i1;..;ip], returns the lhs e[i1]...[ip] *)
-let csubscript_of_idx_list e idx_list =
-  csubscript_of_e_list e (List.map (fun i -> Cconst (Ccint i)) idx_list)
-
-(** Generate the expression to copy [src] into [dest], where bounds
-    represents the bounds of these two arrays. *)
-let rec copy_array src dest bounds =
-  match bounds with
-    | [] -> [Caffect (dest, src)]
-    | n::bounds ->
-        let x = gen_symbol () in
-        [Cfor(x, Cconst (Ccint 0), n,
-              copy_array (Carray (src, Cvar x))
-                (CLarray (dest, Cvar x)) bounds)]
 
 (** @return the unaliased version of a type. *)
 let rec unalias_ctype cty = match cty with
@@ -616,7 +583,7 @@ let qn_append q suffix =
 
 (** Builds the argument list of step function*)
 let step_fun_args n md =
-  let args = cvarlist_of_ovarlist md.m_inputs in
+  let args = List.map cvar_of_vd md.m_inputs in
   let out_arg = [("out", Cty_ptr (Cty_id (qn_append n "_out")))] in
   let context_arg =
     if is_stateful n then
@@ -750,26 +717,6 @@ let cdefs_and_cdecls_of_class_def cd =
   defs
 
 (** {2 Type translation} *)
-
-
-let decls_of_type_decl otd =
-  let name = cname_of_qn otd.t_name in
-  match otd.t_desc with
-    | Type_abs -> [] (*assert false*)
-    | Type_alias ty -> [Cdecl_typedef (ctype_of_otype ty, name)]
-    | Type_enum nl ->
-        let name = !global_name ^ "_" ^ name in
-        [Cdecl_enum (name, List.map cname_of_qn nl);
-         Cdecl_function (name ^ "_of_string",
-                         Cty_id otd.t_name,
-                         [("s", Cty_ptr Cty_char)]);
-         Cdecl_function ("string_of_" ^ name,
-                         Cty_ptr Cty_char,
-                         [("x", Cty_id otd.t_name); ("buf", Cty_ptr Cty_char)])]
-    | Type_struct fl ->
-        let decls = List.map (fun f -> cname_of_qn f.Signature.f_name,
-                                ctype_of_otype f.Signature.f_type) fl in
-        [Cdecl_struct (name, decls)];;
 
 (** Translates an Obc type declaration to its C counterpart. *)
 let cdefs_and_cdecls_of_type_decl otd =

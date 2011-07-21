@@ -216,7 +216,7 @@ let main_def_of_class_def cd =
     split (map write_lhs_of_ty_for_vd stepm.m_outputs) in
   let printf_calls = List.concat printf_calls in
 
-  let cinp = cvarlist_of_ovarlist stepm.m_inputs in
+  let cinp = List.map cvar_of_vd stepm.m_inputs in
   let cout = ["res", (Cty_id (qn_append cd.cd_name "_out"))] in
 
   let varlist =
