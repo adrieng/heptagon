@@ -1,0 +1,10 @@
+fun f(a,b:int) returns (u,v:int)
+let
+  u = a + b;
+  v = a * b;
+tel
+
+fun h(a,b:int) returns (u,v:int)
+let
+  (u,v) = f(f(a,b));
+tel

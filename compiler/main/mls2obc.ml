@@ -94,18 +94,31 @@ let rec ext_value_of_trunc_idx_list p l =
   in
   aux p l
 
+let rec ty_of_idx_list ty idx_list = match ty, idx_list with
+  | _, [] -> ty
+  | Tarray(ty, _), idx::idx_list -> ty_of_idx_list ty idx_list
+  | _, _ -> internal_error "mls2obc ty_of_idx_list"
+
+let mk_static_array_power ty c params = match params with
+  | [] -> mk_ext_value_exp ty (Wconst c)
+  | _ ->
+    let se = mk_static_exp ty (Sarray_power (c, params)) in
+    mk_ext_value_exp ty (Wconst se)
+
 let array_elt_of_exp idx e =
   match e.e_desc, Modules.unalias_type e.e_ty with
-  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) }; }, Tarray (ty,_) ->
-      mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _::new_params) }; }, Tarray (ty,_) ->
+     mk_static_array_power ty c new_params
   | _, Tarray (ty,_) ->
       mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
   | _ -> internal_error "mls2obc array_elt_of_exp"
 
 let rec array_elt_of_exp_list idx_list e =
   match e.e_desc, Modules.unalias_type e.e_ty with
-    | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) } }, Tarray (ty,_) ->
-        mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+    | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, params) } }, Tarray (ty,n) ->
+      let new_params, _ = Misc.split_at (List.length params - List.length idx_list) params in
+      let ty = ty_of_idx_list (Tarray(ty,n)) idx_list in
+      mk_static_array_power ty c new_params
     | _ , t ->
         let rec ty id_l t = match id_l, Modules.unalias_type t with
           | [] , t -> t

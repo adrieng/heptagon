@@ -1,0 +1,4 @@
+node f() returns (o:int^2^3^4)
+let
+  o = (2^2^3^4)[0][1]
+tel
