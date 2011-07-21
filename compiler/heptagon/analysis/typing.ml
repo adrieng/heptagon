@@ -31,6 +31,7 @@ type error =
   | Eundefined of name
   | Elast_undefined of name
   | Etype_clash of ty * ty
+  | Eargs_clash of ty * ty
   | Earity_clash of int * int
   | Estatic_arity_clash of int * int
   | Ealready_defined of name
@@ -82,6 +83,12 @@ let message loc kind =
     | Etype_clash(actual_ty, expected_ty) ->
         eprintf "%aType Clash: this expression has type %a, @\n\
             but is expected to have type %a.@."
+          print_location loc
+          print_type actual_ty
+          print_type expected_ty
+    | Eargs_clash(actual_ty, expected_ty) ->
+        eprintf "%aType Clash: arguments of type %a were given, @\n\
+            but %a was expected.@."
           print_location loc
           print_type actual_ty
           print_type expected_ty
@@ -906,7 +913,7 @@ and typing_array_subscript cenv h idx_list ty  =
         add_constraint_leq cenv idx bound;
         let typed_idx_list, ty = typing_array_subscript cenv h idx_list ty in
         typed_idx::typed_idx_list, ty
-    | _, _ -> error (Esubscripted_value_not_an_array ty)
+    | _, _ -> raise (TypingError (Esubscripted_value_not_an_array ty))
 
 (* This function checks that the array dimensions matches
    the subscript. It returns the base type wrt the nb of indices. *)
@@ -918,18 +925,23 @@ and typing_array_subscript_dyn cenv h idx_list ty =
         let ty, typed_idx_list =
           typing_array_subscript_dyn cenv h idx_list ty in
         ty, typed_idx::typed_idx_list
-    | _, _ -> error (Esubscripted_value_not_an_array ty)
+    | _, _ -> raise (TypingError (Esubscripted_value_not_an_array ty))
 
 and typing_args cenv h expected_ty_list e_list =
-    let typed_e_list, args_ty_list =
-      List.split (List.map (typing cenv h) e_list)
-    in
-    let args_ty_list = flatten_ty_list args_ty_list in
-    (match args_ty_list, expected_ty_list with
-      | [], [] -> ()
-      | _, _ -> unify cenv (prod args_ty_list) (prod expected_ty_list)
-    );
-    typed_e_list
+  let typed_e_list, args_ty_list =
+    List.split (List.map (typing cenv h) e_list)
+  in
+  let args_ty_list = flatten_ty_list args_ty_list in
+  (match args_ty_list, expected_ty_list with
+    | [], [] -> ()
+    | _, _ ->
+      (try
+        unify cenv (prod args_ty_list) (prod expected_ty_list)
+      with _ ->
+        raise (TypingError (Eargs_clash (prod args_ty_list, prod expected_ty_list)))
+      )
+  );
+  typed_e_list
 
 and typing_node_params cenv params_sig params =
   List.map2 (fun p_sig p -> expect_static_exp cenv
