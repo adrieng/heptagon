@@ -260,7 +260,7 @@ let rec cexpr_of_static_exp se =
             Error.message se.se_loc Error.Estatic_exp_compute_failed
           else
             cexpr_of_static_exp se'
-    | Stuple _ -> assert false (** TODO *)
+    | Stuple _ -> Misc.internal_error "cgen: static tuple"
 
 
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
@@ -707,11 +707,12 @@ let out_decl_of_class_def cd =
     tasked to reset the class [cd]. *)
 let reset_fun_def_of_class_def cd =
   let body =
-    try
+    if cd.cd_stateful then
       let var_env = List.map cvar_of_vd cd.cd_mems in
       let reset = find_reset_method cd in
       cstm_of_act_list IdentSet.empty var_env cd.cd_objs reset.m_body
-    with Not_found -> [] (* TODO C : nicely deal with stateless objects *)
+    else
+      []
   in
   Cfundef {
     f_name = (cname_of_qn cd.cd_name) ^ "_reset";

@@ -442,7 +442,8 @@ and check_type cenv = function
   | Tarray(ty, e) ->
       let typed_e = expect_static_exp cenv (Tid Initial.pint) e in
       Tarray(check_type cenv ty, typed_e)
-  | Tid ty_name -> Tid ty_name (* TODO bug ? should check that ty_name exists ? *)
+  (* No need to check that the type is defined as it is done by the scoping. *)
+  | Tid ty_name -> Tid ty_name
   | Tprod l -> Tprod (List.map (check_type cenv) l)
   | Tinvalid -> Tinvalid
 

@@ -86,9 +86,7 @@ let rec find c = function
 let is_deadcode = function
     | Aassgn (lhs, e) ->
         (match e.e_desc with
-           | Eextvalue w ->
-             let w' = ext_value_of_pattern lhs in
-             w = w' (* TODO: proper compare *)
+           | Eextvalue w -> Obc_compare.compare_lhs_extvalue lhs w = 0
            | _ -> false
         )
     | Acase (_, []) -> true
