@@ -71,17 +71,17 @@ let rec pattern_of_idx_list p l =
   in
   aux p l
 
-let rec exp_of_idx_list e l = match e.w_ty, l with
+let rec exp_of_idx_list e l = match Modules.unalias_type e.w_ty, l with
   | _, [] -> e
   | Tarray (ty',_), idx :: l ->
     exp_of_idx_list (mk_ext_value ty' (Warray (e, idx))) l
-  | _ -> internal_error "mls2obc"
+  | _ -> internal_error "mls2obc exp_of_idx_list"
 
-let rec extvalue_of_idx_list w l = match w.w_ty, l with
+let rec extvalue_of_idx_list w l = match Modules.unalias_type w.w_ty, l with
   | _, [] -> w
   | Tarray (ty',_), idx :: l ->
     extvalue_of_idx_list (mk_ext_value ty' (Warray (w, idx))) l
-  | _ -> internal_error "mls2obc"
+  | _ -> internal_error "mls2obc extvalue_of_idx_list"
 
 let rec ext_value_of_trunc_idx_list p l =
   let mk_between idx se =
@@ -90,7 +90,7 @@ let rec ext_value_of_trunc_idx_list p l =
   let rec aux p l = match p.w_ty, l with
     | _, [] -> p
     | Tarray (ty', se), idx :: l -> aux (mk_ext_value ty' (Warray (p, mk_between idx se))) l
-    | _ -> internal_error "mls2obc"
+    | _ -> internal_error "mls2obc ext_value_of_trunc_idx_list"
   in
   aux p l
 
@@ -100,17 +100,17 @@ let array_elt_of_exp idx e =
       mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
   | _, Tarray (ty,_) ->
       mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
-  | _ -> internal_error "mls2obc"
+  | _ -> internal_error "mls2obc array_elt_of_exp"
 
 let rec array_elt_of_exp_list idx_list e =
   match e.e_desc, Modules.unalias_type e.e_ty with
     | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) } }, Tarray (ty,_) ->
         mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
     | _ , t ->
-        let rec ty id_l t = match id_l, t with
+        let rec ty id_l t = match id_l, Modules.unalias_type t with
           | [] , t -> t
           | _::id_l , Tarray (t,_) -> ty id_l t
-          | _, _ -> internal_error "mls2obc"
+          | _, _ -> internal_error "mls2obc ty"
         in
         mk_exp (ty idx_list t) (Eextvalue (extvalue_of_idx_list (ext_value_of_exp e) idx_list))
 
