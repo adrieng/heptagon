@@ -14,6 +14,7 @@ open Idents
 open Static
 open Signature
 open Types
+open Linearity
 open Clocks
 open Initial
 
@@ -31,6 +32,7 @@ type exp = {
   e_ty        : ty;
   e_ct_annot  : ct option; (* exists when a source annotation exists *)
   e_level_ck  : ck; (* set by the switch pass, represents the activation base of the expression *)
+  mutable e_linearity : linearity;
   e_loc       : location }
 
 and desc =
@@ -45,6 +47,7 @@ and desc =
     (** exp when Constructor(ident) *)
   | Emerge of var_ident * (constructor_name * exp) list
     (** merge ident (Constructor -> exp)+ *)
+  | Esplit of exp * exp
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp list
                   * exp list * exp list * exp option
@@ -78,6 +81,7 @@ and pat =
 type eq = {
   eq_desc      : eqdesc;
   eq_stateful : bool;
+  eq_inits    : init;
   eq_loc       : location; }
 
 and eqdesc =
@@ -117,6 +121,7 @@ and present_handler = {
 and var_dec = {
   v_ident : var_ident;
   v_type  : ty;
+  v_linearity : linearity;
   v_clock : ck;
   v_last  : last;
   v_loc   : location }

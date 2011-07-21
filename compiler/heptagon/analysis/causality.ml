@@ -14,7 +14,8 @@ open Names
 open Idents
 open Heptagon
 open Location
-open Graph
+open Sgraph
+open Linearity
 open Causal
 
 let cempty = Cempty
@@ -53,6 +54,7 @@ let rec cseqlist l =
     | c1 :: l -> cseq c1 (cseqlist l)
 
 let read x = Cread(x)
+let linread x = Clinread(x)
 let lastread x = Clastread(x)
 let cwrite x = Cwrite(x)
 
@@ -62,7 +64,7 @@ let rec pre = function
   | Cand(c1, c2) -> Cand(pre c1, pre c2)
   | Ctuple l -> Ctuple (List.map pre l)
   | Cseq(c1, c2) -> Cseq(pre c1, pre c2)
-  | Cread _ -> Cempty
+  | Cread _ | Clinread _ -> Cempty
   | (Cwrite _ | Clastread _ | Cempty) as c -> c
 
 (* projection and restriction *)
@@ -82,7 +84,7 @@ let clear env c =
           let c2 = clearec c2 in
           cseq c1 c2
       | Ctuple l -> Ctuple (List.map clearec l)
-      | Cwrite(id) | Cread(id) | Clastread(id) ->
+      | Cwrite(id) | Cread(id) | Clinread(id) | Clastread(id) ->
           if IdentSet.mem id env then Cempty else c
       | Cempty -> c in
   clearec c
@@ -95,7 +97,10 @@ let build dec =
 let rec typing e =
   match e.e_desc with
     | Econst _ -> cempty
-    | Evar(x) -> read x
+    | Evar(x) ->
+        (match e.e_linearity with
+          | Lat _ -> linread x
+          | _ -> read x)
     | Elast(x) -> lastread x
     | Epre (_, e) -> pre (typing e)
     | Efby (e1, e2) ->
@@ -116,6 +121,10 @@ let rec typing e =
         let t = read x in
         let tl = List.map (fun (_,e) -> typing e) c_e_list in
         cseq t (candlist tl)
+    | Esplit(c, e) ->
+        let t = typing c in
+        let te = typing e in
+          cseq t te
 
 
 (** Typing an application *)

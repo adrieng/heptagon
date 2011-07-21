@@ -15,6 +15,7 @@ open Idents
 open Signature
 open Static
 open Types
+open Linearity
 open Clocks
 
 (** Warning: Whenever Minils ast is modified,
@@ -43,6 +44,7 @@ and extvalue = {
   w_desc      : extvalue_desc;
   mutable w_ck: ck;
   w_ty        : ty;
+  w_linearity : linearity;
   w_loc       : location }
 
 and extvalue_desc =
@@ -57,6 +59,7 @@ and exp = {
   mutable e_base_ck : ck;
   mutable e_ct      : ct;
   e_ty              : ty;
+  e_linearity : linearity;
   e_loc             : location }
 
 and edesc =
@@ -106,6 +109,7 @@ type eq = {
 type var_dec = {
   v_ident : var_ident;
   v_type : ty;
+  v_linearity : linearity;
   v_clock : ck;
   v_loc : location }
 
@@ -126,7 +130,8 @@ type node_dec = {
   n_equs   : eq list;
   n_loc    : location;
   n_params : param list;
-  n_param_constraints : constrnt list }
+  n_param_constraints : constrnt list;
+  n_mem_alloc : (ty * Interference_graph.ivar list) list; }
 
 type const_dec = {
   c_name : qualname;
@@ -147,15 +152,22 @@ and program_desc =
 
 (*Helper functions to build the AST*)
 
-let mk_extvalue ~ty ?(clock = fresh_clock()) ?(loc = no_location) desc =
-  { w_desc = desc; w_ty = ty;
+let mk_extvalue ~ty ?(linearity = Ltop) ?(clock = fresh_clock()) ?(loc = no_location) desc =
+  { w_desc = desc; w_ty = ty; w_linearity = linearity;
     w_ck = clock; w_loc = loc }
 
-let mk_exp level_ck ty ?(ck = Cbase) ?(ct = fresh_ct ty) ?(loc = no_location) desc =
-  { e_desc = desc; e_ty = ty; e_level_ck = level_ck; e_base_ck = ck; e_ct = ct; e_loc = loc }
+let mk_exp level_ck ty ?(linearity = Ltop) ?(ck = Cbase)
+    ?(ct = fresh_ct ty) ?(loc = no_location) desc =
+  { e_desc = desc; e_ty = ty; e_linearity = linearity;
+    e_level_ck = level_ck; e_base_ck = ck; e_ct = ct; e_loc = loc }
 
-let mk_var_dec ?(loc = no_location) ident ty ck =
-  { v_ident = ident; v_type = ty; v_clock = ck; v_loc = loc }
+let mk_var_dec ?(loc = no_location) ?(linearity = Ltop) ident ty ck =
+  { v_ident = ident; v_type = ty; v_linearity = linearity;  v_clock = ck; v_loc = loc }
+
+let mk_extvalue_exp ?(linearity = Ltop) ?(clock = fresh_clock())
+    ?(loc = no_location) level_ck ty desc =
+  mk_exp ~ck:clock ~loc:loc level_ck ty
+    (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ~linearity:linearity ~ty:ty desc))
 
 let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
@@ -163,6 +175,7 @@ let mk_equation ?(loc = no_location) pat exp =
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
     ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
+    ?(mem_alloc=[])
     name =
   { n_name = name;
     n_stateful = stateful;
@@ -173,7 +186,8 @@ let mk_node
     n_equs = eq;
     n_loc = loc;
     n_params = param;
-    n_param_constraints = constraints }
+    n_param_constraints = constraints;
+    n_mem_alloc = mem_alloc }
 
 let mk_type_dec type_desc name loc =
   { t_name = name; t_desc = type_desc; t_loc = loc }

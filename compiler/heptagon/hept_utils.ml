@@ -14,14 +14,15 @@ open Idents
 open Static
 open Signature
 open Types
+open Linearity
 open Clocks
 open Initial
 open Heptagon
 
 (* Helper functions to create AST. *)
 (* TODO : After switch, all mk_exp should take care of level_ck *)
-let mk_exp desc ?(level_ck = Cbase) ?(ct_annot = None) ?(loc = no_location) ty =
-  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
+let mk_exp desc ?(linearity = Ltop) ?(level_ck = Cbase) ?(ct_annot = None) ?(loc = no_location) ty =
+  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot; e_linearity = linearity;
     e_level_ck = level_ck; e_loc = loc; }
 
 let mk_app ?(params=[]) ?(unsafe=false) op =
@@ -37,10 +38,11 @@ let mk_equation ?(loc=no_location) desc =
   let _, s = Stateful.eqdesc Stateful.funs false desc in
   { eq_desc = desc;
     eq_stateful = s;
+    eq_inits = Lno_init;
     eq_loc = loc; }
 
-let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty =
-  { v_ident = name; v_type = ty; v_clock = clock;
+let mk_var_dec ?(last = Var) ?(linearity = Ltop) ?(clock = fresh_clock()) name ty =
+  { v_ident = name; v_type = ty; v_linearity = linearity; v_clock = clock;
     v_last = last; v_loc = no_location }
 
 let mk_block ?(stateful = true) ?(defnames = Env.empty) ?(locals = []) eqs =

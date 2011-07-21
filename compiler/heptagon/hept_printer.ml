@@ -18,6 +18,7 @@ open Format
 open Global_printer
 open Pp_tools
 open Types
+open Linearity
 open Signature
 open Heptagon
 
@@ -32,15 +33,24 @@ let iterator_to_string i =
 let print_iterator ff it =
   fprintf ff "%s" (iterator_to_string it)
 
-let rec print_pat ff = function
-  | Evarpat n -> print_ident ff n
-  | Etuplepat pat_list ->
-      fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
+let print_init ff = function
+  | Lno_init -> ()
+  | Linit_var r -> fprintf ff "init<<%s>> " r
+  | _ -> ()
 
-let rec print_vd ff { v_ident = n; v_type = ty; v_last = last } =
-  fprintf ff "%a%a : %a%a"
+let rec print_pat_init ff (pat, inits) = match pat, inits with
+  | Evarpat n, i -> fprintf ff "%a%a" print_init i  print_ident n
+  | Etuplepat pl, Linit_tuple il ->
+      fprintf ff "@[<2>(%a)@]" (print_list_r print_pat_init """,""") (List.combine pl il)
+  | Etuplepat pl, Lno_init ->
+      let l = List.map (fun p -> p, Lno_init) pl in
+        fprintf ff "@[<2>(%a)@]" (print_list_r print_pat_init """,""") l
+  | _, _ -> assert false
+
+let rec print_vd ff { v_ident = n; v_type = ty; v_linearity = lin; v_last = last } =
+  fprintf ff "%a%a : %a%a%a"
     print_last last  print_ident n
-    print_type ty  print_last_value last
+    print_type ty  print_linearity lin  print_last_value last
 
 and print_last ff = function
   | Last _ -> fprintf ff "last "
@@ -93,8 +103,9 @@ and print_exps ff e_list =
 
 and print_exp ff e =
  if !Compiler_options.full_type_info then
-    fprintf ff "(%a : %a%a)"
-      print_exp_desc e.e_desc print_type e.e_ty print_ct_annot e.e_ct_annot
+    fprintf ff "(%a : %a%a%a)"
+      print_exp_desc e.e_desc print_type e.e_ty
+                              print_linearity e.e_linearity print_ct_annot e.e_ct_annot
   else fprintf ff "%a%a" print_exp_desc e.e_desc print_ct_annot e.e_ct_annot
 
 and print_exp_desc ff = function
@@ -125,6 +136,9 @@ and print_exp_desc ff = function
   | Emerge (x, tag_e_list) ->
       fprintf ff "@[<2>merge %a@ %a@]"
         print_ident x print_tag_e_list tag_e_list
+  | Esplit (x, e1) ->
+      fprintf ff "@[<2>split %a@ %a@]"
+        print_exp x  print_exp e1
 
 and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c
@@ -187,7 +201,7 @@ and print_app ff (app, args) =
 let rec print_eq ff eq =
   match eq.eq_desc with
     | Eeq(p, e) ->
-      fprintf ff "@[<2>%a =@ %a@]" print_pat p  print_exp e
+      fprintf ff "@[<2>%a =@ %a@]" print_pat_init (p, eq.eq_inits)  print_exp e
     | Eautomaton(state_handler_list) ->
       fprintf ff "@[<v>@[<hv 2>automaton @ %a@]@,end@]"
         print_state_handler_list state_handler_list

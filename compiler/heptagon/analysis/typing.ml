@@ -53,6 +53,8 @@ type error =
   | Emerge_uniq of qualname
   | Emerge_mix of qualname
   | Estatic_constraint of constrnt
+  | Esplit_enum of ty
+  | Esplit_tuple of ty
 
 exception Unify
 exception TypingError of error
@@ -173,6 +175,18 @@ let message loc kind =
         eprintf "%aThis application doesn't respect the static constraint :@\n%a.@."
           print_location loc
           print_location c.se_loc
+    | Esplit_enum ty ->
+        eprintf
+          "%aThe first argument of split has to be an \
+               enumerated type (found: %a).@."
+          print_location loc
+          print_type ty
+    | Esplit_tuple ty ->
+        eprintf
+          "%aThe second argument of spit cannot \
+               be a tuple (found: %a).@."
+          print_location loc
+          print_type ty
   end;
   raise Errors.Error
 
@@ -626,6 +640,22 @@ let rec typing cenv h e =
             List.map (fun (c, e) -> (c, expect cenv h t e)) c_e_list in
           Emerge (x, (c1,typed_e1)::typed_c_e_list), t
       | Emerge (_, []) -> assert false
+
+      | Esplit(c, e2) ->
+          let typed_c, ty_c = typing cenv h c in
+          let typed_e2, ty = typing cenv h e2 in
+          let n =
+            match ty_c with
+              | Tid tc ->
+                  (match find_type tc with | Tenum cl-> List.length cl | _ -> -1)
+              | _ ->  -1 in
+            if n < 0 then
+              message e.e_loc (Esplit_enum ty_c);
+            (*the type of e should not be a tuple *)
+            (match ty with
+              | Tprod _ -> message e.e_loc (Esplit_tuple ty)
+              | _ -> ());
+            Esplit(typed_c, typed_e2), Tprod (repeat_list ty n)
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
   with

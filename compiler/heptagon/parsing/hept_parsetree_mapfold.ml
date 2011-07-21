@@ -110,6 +110,9 @@ and edesc funs acc ed = match ed with
   | Ewhen (e, c, x) ->
     let e, acc = exp_it funs acc e in
       Ewhen (e, c, x), acc
+  | Esplit (x, e2) ->
+      let e2, acc = exp_it funs acc e2 in
+        Esplit(x, e2), acc
   | Eapp (app, args) ->
       let app, acc = app_it funs acc app in
       let args, acc = mapfold (exp_it funs) acc args in
@@ -166,10 +169,10 @@ and eqdesc funs acc eqd = match eqd with
   | Eblock b ->
       let b, acc = block_it funs acc b in
       Eblock b, acc
-  | Eeq (p, e) ->
+  | Eeq (p, inits, e) ->
       let p, acc = pat_it funs acc p in
       let e, acc = exp_it funs acc e in
-      Eeq (p, e), acc
+      Eeq (p, inits, e), acc
 
 
 and block_it funs acc b = funs.block funs acc b

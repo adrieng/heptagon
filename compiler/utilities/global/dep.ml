@@ -8,7 +8,7 @@
 (**************************************************************************)
 (* dependences between equations *)
 
-open Graph
+open Sgraph
 open Idents
 
 module type READ =

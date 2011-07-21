@@ -328,8 +328,6 @@ let output_cfile dir (filen, cfile_desc) =
 let output dir cprog =
   List.iter (output_cfile dir) cprog
 
-(** { Lexical conversions to C's syntax } *)
-
 (** Returns the type of a pointer to a type, except for
     types which are already pointers. *)
 let pointer_to ty =

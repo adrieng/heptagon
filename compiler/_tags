@@ -3,8 +3,8 @@
 <preproc.ml>: camlp4of, use_camlp4
 <**/hept_parser.ml>: use_menhirLib
 <**/mls_parser.ml>: use_menhirLib
-<**/*.{byte,native}>: use_unix, use_str, link_menhirLib, debug
-true: use_menhir
+<**/*.{byte,native}>: use_unix, use_str, link_menhirLib, link_graph, debug
+true: use_menhir, use_graph
 
 <main/hepts.ml>: use_lablgtk, thread
 <main/hepts.{byte,native}>: use_lablgtk, use_lablgtkthread, thread

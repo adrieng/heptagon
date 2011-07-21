@@ -71,7 +71,9 @@ let output_names_list sig_info =
     | Some n -> n
     | None -> Error.message no_location Error.Eno_unnamed_output
   in
-  List.map remove_option sig_info.node_outputs
+  let outputs = List.filter
+    (fun ad -> not (Linearity.is_linear ad.a_linearity)) sig_info.node_outputs in
+    List.map remove_option outputs
 
 let is_stateful n =
   try
@@ -107,6 +109,7 @@ let rec ctype_of_otype oty =
 let cvarlist_of_ovarlist vl =
   let cvar_of_ovar vd =
     let ty = ctype_of_otype vd.v_type in
+    let ty = if Linearity.is_linear vd.v_linearity then pointer_to ty else ty in
     name vd.v_ident, ty
   in
   List.map cvar_of_ovar vl
@@ -221,10 +224,10 @@ and create_affect_stm dest src ty =
 
 (** Returns the expression to use e as an argument of
     a function expecting a pointer as argument. *)
-let address_of e = match e with
-  | Carray _ -> e
-  | Cderef e -> e
-  | _ -> Caddrof e
+let address_of ty e =
+  match ty with
+    | Tarray _ -> e
+    | _ -> Caddrof e
 
 let rec cexpr_of_static_exp se =
   match se.se_desc with
@@ -400,6 +403,15 @@ let out_var_name_of_objn o =
     of the called node, [mem] represents the node context and [args] the
     argument list.*)
 let step_fun_call out_env var_env sig_info objn out args =
+  let rec add_targeting l ads = match l, ads with
+    | [], [] -> []
+    | e::l, ad::ads ->
+        (*this arg is targeted, use a pointer*)
+        let e = if Linearity.is_linear ad.a_linearity then address_of ad.a_type e else e in
+          e::(add_targeting l ads)
+    | _, _ -> assert false
+  in
+  let args = (add_targeting args sig_info.node_inputs) in
   if sig_info.node_stateful then (
     let mem =
       (match objn with

@@ -58,6 +58,15 @@ let is_record_type ty = match ty with
 let is_op = function
   | { qual = Pervasives; name = _ } -> true | _ -> false
 
+let pat_from_dec_list decs =
+  Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) decs)
+
+let tuple_from_dec_list decs =
+  let aux vd =
+    mk_extvalue ~clock:vd.v_clock ~ty:vd.v_type (Wvar vd.v_ident)
+  in
+    Eapp(mk_app Earray, List.map aux decs, None)
+
 module Vars =
 struct
   let add x acc = if List.mem x acc then acc else x :: acc
@@ -158,13 +167,11 @@ end
 (* Assumes normal form, all fby are solo rhs *)
 let node_memory_vars n =
   let eq _ acc ({ eq_lhs = pat; eq_rhs = e } as eq) =
-    match e.e_desc with
-    | Efby(_, _) ->
-        let v_l = Vars.vars_pat [] pat in
-        let t_l = Types.unprod e.e_ty in
-        let acc = (List.combine v_l t_l) @ acc in
-        eq, acc
-    | _ -> eq, acc
+    match pat, e.e_desc with
+    | Evarpat x, Efby(_, _) ->
+        let acc = (x, e.e_ty) :: acc in
+          eq, acc
+    | _, _ -> eq, acc
   in
   let funs = { Mls_mapfold.defaults with eq = eq } in
   let _, acc = node_dec_it funs [] n in

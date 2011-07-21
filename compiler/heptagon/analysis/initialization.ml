@@ -260,7 +260,9 @@ let rec typing h e =
             (fun acc (_, e) -> imax acc (itype (typing h e))) izero c_e_list in
         let i = imax (IEnv.find_var x h) i in
         skeleton i e.e_ty
-
+    | Esplit (c, e2) ->
+        let i = imax (itype (typing h c)) (itype (typing h e2)) in
+          skeleton i e.e_ty
 
 (** Typing an application *)
 and apply h app e_list =

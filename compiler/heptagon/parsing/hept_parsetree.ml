@@ -85,6 +85,7 @@ and edesc =
   | Eiterator of iterator_type * app * exp list * exp list * exp list
   | Ewhen of exp * constructor_name * var_name
   | Emerge of var_name * (constructor_name * exp) list
+  | Esplit of var_name * exp
 
 and app = { a_op: op; a_params: exp list; }
 
@@ -119,7 +120,7 @@ and eqdesc =
   | Epresent of present_handler list * block
   | Ereset of block * exp
   | Eblock of block
-  | Eeq of pat * exp
+  | Eeq of pat * Linearity.init * exp
 
 and block =
   { b_local : var_dec list;
@@ -148,6 +149,7 @@ and present_handler =
 and var_dec =
   { v_name  : var_name;
     v_type  : ty;
+    v_linearity : Linearity.linearity;
     v_clock : ck option;
     v_last  : last;
     v_loc   : location; }
@@ -203,6 +205,7 @@ and program_desc =
 type arg =
   { a_type  : ty;
     a_clock : ck option;
+    a_linearity : Linearity.linearity;
     a_name  : var_name option }
 
 type signature =
@@ -261,9 +264,9 @@ let mk_equation desc loc =
 let mk_interface_decl desc loc =
   { interf_desc = desc; interf_loc = loc }
 
-let mk_var_dec name ty ck last loc =
-  { v_name = name; v_type = ty; v_clock = ck;
-    v_last = last; v_loc = loc }
+let mk_var_dec ?(linearity=Linearity.Ltop) name ty ck last loc =
+  { v_name = name; v_type = ty; v_linearity = linearity;
+    v_clock =ck; v_last = last; v_loc = loc }
 
 let mk_block locals eqs loc =
   { b_local = locals; b_equs = eqs;
@@ -272,8 +275,8 @@ let mk_block locals eqs loc =
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
-let mk_arg name ty ck =
-  { a_type = ty; a_name = name; a_clock = ck}
+let mk_arg name (ty,lin) ck =
+  { a_type = ty; a_linearity = lin; a_name = name; a_clock = ck }
 
 let ptrue = Q Initial.ptrue
 let pfalse = Q Initial.pfalse

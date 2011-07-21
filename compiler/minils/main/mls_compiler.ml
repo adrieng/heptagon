@@ -42,9 +42,17 @@ let compile_program p =
 *)
 
   (* Scheduling *)
-  let p = pass "Scheduling" true Schedule.program p pp in
+  let p =
+    if !Compiler_options.use_interf_scheduler then
+      pass "Scheduling (with minimization of interferences)" true Schedule_interf.program p pp
+    else
+      pass "Scheduling" true Schedule.program p pp
+  in
 
-   (* Normalize memories*)
+  (* Normalize memories*)
   let p = pass "Normalize memories" true Normalize_mem.program p pp in
+
+  (* Memory allocation *)
+  let p = pass "memory allocation" !do_mem_alloc Interference.program p pp in
 
   p

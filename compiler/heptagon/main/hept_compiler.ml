@@ -18,6 +18,7 @@ let compile_program p =
   (* Typing *)
   let p = silent_pass "Statefulness check" true Stateful.program p in
   let p = pass "Typing" true Typing.program p pp in
+  let p = pass "Linear Typing" !do_mem_alloc Linear_typing.program p pp in
 
   (* Causality check *)
   let p = silent_pass "Causality check" !causality Causality.program p in

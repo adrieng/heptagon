@@ -12,12 +12,13 @@ open Idents
 open Location
 open Misc
 open Types
+open Linearity
 open Obc
 open Obc_mapfold
 open Global_mapfold
 
-let mk_var_dec ?(loc=no_location) ?(mut=false) ident ty =
-  { v_ident = ident; v_type = ty; v_mutable = mut; v_loc = loc }
+let mk_var_dec ?(loc=no_location) ?(linearity = Ltop) ?(mut=false) ident ty =
+  { v_ident = ident; v_type = ty; v_linearity = linearity; v_mutable = mut; v_loc = loc }
 
 let mk_ext_value ?(loc=no_location) ty desc =
   { w_desc = desc; w_ty = ty; w_loc = loc; }
@@ -110,10 +111,22 @@ let find_step_method cd =
 let find_reset_method cd =
   List.find (fun m -> m.m_name = Mreset) cd.cd_methods
 
+let replace_step_method st cd =
+  let f md = if md.m_name = Mstep then st else md in
+    { cd with cd_methods = List.map f cd.cd_methods }
+
 let obj_ref_name o =
   match o with
     | Oobj obj
     | Oarray (obj, _) -> obj
+
+let rec find_obj o j = match j with
+  | [] -> assert false
+  | obj::j ->
+    if o = obj.o_ident then
+      Modules.find_value obj.o_class
+    else
+      find_obj o j
 
 (** Input a block [b] and remove all calls to [Reset] method from it *)
 let remove_resets b =

@@ -46,6 +46,7 @@ struct
     | Econst_variable_already_defined of name
     | Estatic_exp_expected
     | Eredefinition of qualname
+    | Elinear_type_no_memalloc
 
   let message loc kind =
     begin match kind with
@@ -80,6 +81,9 @@ struct
           eprintf "%aName %a was already defined.@."
             print_location loc
             print_qualname qualname
+      | Elinear_type_no_memalloc ->
+          eprintf "%aLinearity annotations cannot be used without memory allocation.@."
+            print_location loc
     end;
     raise Errors.Error
 
@@ -259,6 +263,7 @@ let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
       Heptagon.e_ty = Types.invalid_type;
+      Heptagon.e_linearity = Linearity.Ltop;
       Heptagon.e_level_ck = Clocks.Cbase;
       Heptagon.e_ct_annot = Misc.optional (translate_ct e.e_loc env) e.e_ct_annot;
       Heptagon.e_loc = e.e_loc }
@@ -307,7 +312,10 @@ and translate_desc loc env = function
           (c, e) in
         List.map fun_c_e c_e_list in
       Heptagon.Emerge (x, c_e_list)
-
+  | Esplit (x, e1) ->
+     let x = translate_exp env (mk_exp (Evar x) loc) in
+     let e1 = translate_exp env e1 in
+       Heptagon.Esplit(x, e1)
 
 and translate_op = function
   | Earrow -> Heptagon.Earrow
@@ -331,8 +339,10 @@ and translate_pat loc env = function
   | Etuplepat l -> Heptagon.Etuplepat (List.map (translate_pat loc env) l)
 
 let rec translate_eq env eq =
+  let init = match eq.eq_desc with | Eeq(_, init, _) -> init | _ -> Linearity.Lno_init in
   { Heptagon.eq_desc = translate_eq_desc eq.eq_loc env eq.eq_desc ;
     Heptagon.eq_stateful = false;
+    Heptagon.eq_inits = init;
     Heptagon.eq_loc = eq.eq_loc; }
 
 and translate_eq_desc loc env = function
@@ -341,7 +351,7 @@ and translate_eq_desc loc env = function
         (translate_switch_handler loc env)
         switch_handlers in
       Heptagon.Eswitch (translate_exp env e, sh)
-  | Eeq(p, e) ->
+  | Eeq(p, _, e) ->
       Heptagon.Eeq (translate_pat loc env p, translate_exp env e)
   | Epresent (present_handlers, b) ->
       Heptagon.Epresent
@@ -393,6 +403,7 @@ and translate_var_dec env vd =
   (* env is initialized with the declared vars before their translation *)
     { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
       Heptagon.v_type = translate_type vd.v_loc vd.v_type;
+      Heptagon.v_linearity = vd.v_linearity;
       Heptagon.v_last = translate_last vd.v_last;
       Heptagon.v_clock = translate_some_clock vd.v_loc env vd.v_clock;
       Heptagon.v_loc = vd.v_loc }
@@ -419,6 +430,19 @@ let params_of_var_decs p_l =
 
 
 let translate_constrnt e = expect_static_exp e
+
+(*
+let args_of_var_decs =
+  let arg_of_vd vd =
+    if Linearity.is_linear vd.v_linearity && not !Compiler_options.do_mem_alloc then
+      message vd.v_loc Elinear_type_no_memalloc
+    else
+      Signature.mk_arg ~linearity:vd.v_linearity
+        (Some vd.v_name)
+        (translate_type vd.v_loc vd.v_type)
+  in
+    List.map arg_of_vd
+*)
 
 let translate_node node =
   let n = current_qual node.n_name in

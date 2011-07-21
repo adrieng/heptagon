@@ -10,6 +10,7 @@
 open Names
 open Types
 open Location
+open Linearity
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
@@ -24,6 +25,7 @@ type arg = {
   a_name  : name option;
   a_type  : ty;
   a_clock : ck; (** [a_clock] set to [Cbase] means at the node activation clock *)
+  a_linearity : linearity;
 }
 
 (** Node static parameters *)
@@ -122,7 +124,10 @@ let types_of_arg_list l = List.map (fun ad -> ad.a_type) l
 
 let types_of_param_list l = List.map (fun p -> p.p_type) l
 
-let mk_arg name ty ck = { a_type = ty; a_name = name; a_clock = ck }
+let linearities_of_arg_list l = List.map (fun ad -> ad.a_linearity) l
+
+let mk_arg ?(linearity = Ltop) name ty ck =
+  { a_type = ty; a_linearity = linearity; a_name = name; a_clock = ck }
 
 let mk_param name ty = { p_name = name; p_type = ty }
 

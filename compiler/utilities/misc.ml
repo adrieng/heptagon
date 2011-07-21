@@ -164,6 +164,12 @@ let mapfold f acc l =
                 ([],acc) l in
   List.rev l, acc
 
+let mapfold2 f acc l1 l2 =
+  let l,acc = List.fold_left2
+                (fun (l,acc) e1 e2 -> let e,acc = f acc e1 e2 in e::l, acc)
+                ([],acc) l1 l2 in
+  List.rev l, acc
+
 let mapfold_right f l acc =
   List.fold_right (fun e (acc, l) -> let acc, e = f e acc in (acc, e :: l))
     l (acc, [])
@@ -277,4 +283,42 @@ let split_string s separator = Str.split (separator |> Str.quote |> Str.regexp) 
 
 let file_extension s = split_string s "." |> last_element
 
+(** Memoize the result of the function [f]*)
+let memoize f =
+  let map = Hashtbl.create 100 in
+    fun x ->
+      try
+        Hashtbl.find map x
+      with
+        | Not_found -> let r = f x in Hashtbl.add map x r; r
 
+(** Memoize the result of the function [f], taht should expect a
+   tuple as input and be reflexive (f (x,y) = f (y,x)) *)
+let memoize_couple f =
+  let map = Hashtbl.create 100 in
+    fun (x,y) ->
+      try
+        Hashtbl.find map (x,y)
+      with
+        | Not_found ->
+            let r = f (x,y) in Hashtbl.add map (x,y) r; Hashtbl.add map (y,x) r; r
+
+(** [iter_couple f l] calls f for all x and y distinct in [l].  *)
+let rec iter_couple f l = match l with
+  | [] -> ()
+  | x::l ->
+      List.iter (f x) l;
+      iter_couple f l
+
+(** [iter_couple_2 f l1 l2] calls f for all x in [l1] and y in [l2].  *)
+let iter_couple_2 f l1 l2 =
+  List.iter (fun v1 -> List.iter (f v1) l2) l1
+
+(** [index p l] returns the idx of the first element in l
+    that satisfies predicate p.*)
+let index p l =
+  let rec aux i = function
+    | [] -> -1
+    | v::l -> if p v then i else aux (i+1) l
+  in
+    aux 0 l

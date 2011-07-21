@@ -15,6 +15,7 @@ open Misc
 open Names
 open Idents
 open Types
+open Linearity
 open Signature
 open Location
 
@@ -88,6 +89,7 @@ and block =
 and var_dec =
     { v_ident : var_ident;
       v_type : ty;
+      v_linearity : linearity;
       v_mutable : bool;
       v_loc : location }
 
@@ -114,7 +116,8 @@ type class_def =
       cd_objs  : obj_dec list;
       cd_params : param list;
       cd_methods: method_def list;
-      cd_loc : location }
+      cd_loc : location;
+      cd_mem_alloc : (ty * Interference_graph.ivar list) list; }
 
 
 type program =

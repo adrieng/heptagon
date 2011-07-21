@@ -76,6 +76,7 @@ val option_compare : ('a -> 'a -> int) -> 'a option -> 'a option -> int
 
 (** Mapfold *)
 val mapfold: ('acc -> 'b -> 'c * 'acc) -> 'acc -> 'b list -> 'c list * 'acc
+val mapfold2: ('acc -> 'b -> 'd -> 'c * 'acc) -> 'acc -> 'b list -> 'd list -> 'c list * 'acc
 
 (** Mapfold, right version. *)
 val mapfold_right
@@ -102,6 +103,14 @@ val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->
   'a list -> 'b list -> 'c list -> 'd list
 val fold_righti : (int -> 'a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 
+(** [iter_couple f l] calls f for all x and y distinct in [l].  *)
+val iter_couple : ('a -> 'a -> unit) -> 'a list -> unit
+(** [iter_couple_2 f l1 l2] calls f for all x in [l1] and y in [l2].  *)
+val iter_couple_2 : ('a -> 'a -> unit) -> 'a list -> 'a list -> unit
+(** [index p l] returns the idx of the first element in l
+    that satisfies predicate p.*)
+val index : ('a -> bool) -> 'a list -> int
+
 (** Functions to decompose a list into a tuple *)
 val assert_empty : 'a list -> unit
 val assert_1 : 'a list -> 'a
@@ -127,3 +136,10 @@ val internal_error : string -> 'a
 
 (** Unsupported : Is used when something should work but is not currently supported *)
 val unsupported : string -> 'a
+
+(** Memoize the result of the function [f]*)
+val memoize : ('a -> 'b) -> ('a -> 'b)
+
+(** Memoize the result of the function [f], taht should expect a
+   tuple as input and be reflexive (f (x,y) = f (y,x)) *)
+val memoize_couple : (('a * 'a) -> 'b) -> (('a * 'a) -> 'b)

@@ -4,6 +4,7 @@ open Signature
 open Location
 open Names
 open Types
+open Linearity
 open Hept_parsetree
 
 
@@ -47,6 +48,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP MAPI FOLD FOLDI MAPFOLD
+%token AT INIT SPLIT
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -106,6 +108,10 @@ optsnlist(S,x) :
   | x=x                    {[x]}
   | x=x S                  {[x]}
   | x=x S r=optsnlist(S,x) {x::r}
+/* Separated list with delimiter, even for empty list*/
+adelim_slist(S, L, R, x) :
+  | L R                    {[]}
+  | L l=snlist(S, x) R      {l}
 
 %inline tuple(x)           : LPAREN h=x COMMA t=snlist(COMMA,x) RPAREN { h::t }
 %inline soption(P,x):
@@ -194,8 +200,9 @@ nonmt_params:
 ;
 
 param:
-  | idl=ident_list COLON ty=ty_ident ck=ck_annot
-      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
+  | idl=ident_list COLON ty_lin=located_ty_ident ck=ck_annot
+      { List.map (fun id -> mk_var_dec ~linearity:(snd ty_lin)
+        id (fst ty_lin) ck Var (Loc($startpos,$endpos))) idl }
 ;
 
 out_params:
@@ -253,17 +260,27 @@ loc_params:
 
 
 var_last:
-  | idl=ident_list COLON ty=ty_ident ck=ck_annot
-      { List.map (fun id -> mk_var_dec id ty ck Var (Loc($startpos,$endpos))) idl }
-  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot EQUAL e=exp
-      { [ mk_var_dec id ty ck (Last(Some(e))) (Loc($startpos,$endpos)) ] }
-  | LAST id=IDENT COLON ty=ty_ident ck=ck_annot
-      { [ mk_var_dec id ty ck (Last(None)) (Loc($startpos,$endpos)) ] }
+  | idl=ident_list COLON ty_lin=located_ty_ident ck=ck_annot
+      { List.map (fun id -> mk_var_dec ~linearity:(snd ty_lin) id (fst ty_lin)
+        ck Var (Loc($startpos,$endpos))) idl }
+  | LAST id=IDENT COLON ty_lin=located_ty_ident ck=ck_annot EQUAL e=exp
+      { [ mk_var_dec ~linearity:(snd ty_lin) id (fst ty_lin)
+            ck (Last(Some(e))) (Loc($startpos,$endpos)) ] }
+  | LAST id=IDENT COLON ty_lin=located_ty_ident ck=ck_annot
+      { [ mk_var_dec ~linearity:(snd ty_lin) id (fst ty_lin)
+            ck (Last(None)) (Loc($startpos,$endpos)) ] }
 ;
 
 ident_list:
   | IDENT  { [$1] }
   | IDENT COMMA ident_list { $1 :: $3 }
+;
+
+located_ty_ident:
+  | ty_ident
+      { $1, Ltop }
+  | ty_ident AT IDENT
+      { $1, Lat $3 }
 ;
 
 ty_ident:
@@ -321,7 +338,7 @@ sblock(S) :
 equ:
   | eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
 _equ:
-  | pat EQUAL exp { Eeq($1, $3) }
+  | pat=pat EQUAL e=exp { Eeq(fst pat, snd pat, e) }
   | AUTOMATON automaton_handlers END
       { Eautomaton(List.rev $2) }
   | SWITCH exp opt_bar switch_handlers END
@@ -407,14 +424,12 @@ present_handlers:
 ;
 
 pat:
-  | IDENT             {Evarpat $1}
-  | LPAREN ids RPAREN {Etuplepat $2}
-;
-
-ids:
-  |               {[]}
-  | pat COMMA pat {[$1; $3]}
-  | pat COMMA ids {$1 :: $3}
+  | id=IDENT             { Evarpat id, Lno_init }
+  | INIT DOUBLE_LESS r=IDENT DOUBLE_GREATER id=IDENT { Evarpat id, Linit_var r }
+  | pat_init_list=adelim_slist(COMMA, LPAREN, RPAREN, pat)
+      { let pat_list, init_list = List.split pat_init_list in
+          Etuplepat pat_list, Linit_tuple init_list
+      }
 ;
 
 nonmtexps:
@@ -458,6 +473,8 @@ _exp:
   /* node call*/
   | n=qualname p=call_params LPAREN args=exps RPAREN
       { Eapp(mk_app (Enode n) p , args) }
+  | SPLIT n=ident LPAREN e=exp RPAREN
+      { Esplit(n, e) }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp
@@ -660,8 +677,8 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
-  | ty_ident ck=ck_annot { mk_arg None $1 ck }
+  | IDENT COLON located_ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
+  | located_ty_ident ck=ck_annot { mk_arg None $1 ck }
 ;
 
 %%

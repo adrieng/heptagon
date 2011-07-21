@@ -1,0 +1,26 @@
+const n:int = 100
+
+fun f(a:int^n at r) returns (o:int^n at r)
+let
+  o = [ a with [0] = 0 ]
+tel
+
+fun g(a:int^n at r) returns (o:int^n at r)
+let
+  o = [ a with [n-1] = 0 ]
+tel
+
+node autom(a:int^n at r) returns (o:int^n at r)
+let
+  automaton
+    state S1
+    do
+      o = f(a)
+    until true then S2
+
+    state S2
+    do
+      o = g(a)
+    until false then S1
+  end
+tel

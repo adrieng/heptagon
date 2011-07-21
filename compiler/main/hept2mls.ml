@@ -45,9 +45,9 @@ struct
 end
 
 
-let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty;
+let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; Heptagon.v_linearity = linearity;
                     Heptagon.v_loc = loc; Heptagon.v_clock = ck } =
-  mk_var_dec ~loc:loc n ty ck
+  mk_var_dec ~loc:loc ~linearity:linearity n ty ck
 
 let translate_reset = function
   | Some { Heptagon.e_desc = Heptagon.Evar n } -> Some n
@@ -83,7 +83,9 @@ let translate_app app =
     ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
 
 let rec translate_extvalue e =
-  let mk_extvalue = mk_extvalue ~loc:e.Heptagon.e_loc ~ty:e.Heptagon.e_ty in
+  let mk_extvalue =
+    mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity ~ty:e.Heptagon.e_ty
+  in
   match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue (Wconst c)
     | Heptagon.Evar x -> mk_extvalue (Wvar x)
@@ -97,8 +99,9 @@ let rec translate_extvalue e =
           mk_extvalue (Wfield (translate_extvalue e, fn))
     | _ -> Error.message e.Heptagon.e_loc Error.Enormalization
 
-let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_level_ck = b_ck;
-                 Heptagon.e_ct_annot = a_ct; Heptagon.e_loc = loc } as e) =
+let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
+                 Heptagon.e_level_ck = b_ck; Heptagon.e_linearity = linearity;
+                 Heptagon.e_ct_annot = a_ct; Heptagon.e_loc = loc;  } as e) =
   let desc = match desc with
     | Heptagon.Econst _
     | Heptagon.Evar _
@@ -126,15 +129,15 @@ let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_leve
                     List.map translate_extvalue pe_list,
                     List.map translate_extvalue e_list,
                     translate_reset reset)
-    | Heptagon.Efby _
+    | Heptagon.Efby _ | Heptagon.Esplit _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct
     | Heptagon.Emerge (x, c_e_list) ->
         Emerge (x, List.map (fun (c,e)-> c, translate_extvalue e) c_e_list)
   in
   match a_ct with
-    | None -> mk_exp b_ck ty ~loc:loc desc
-    | Some ct -> mk_exp b_ck ty ~ct:ct ~loc:loc desc
+    | None -> mk_exp b_ck ty ~loc:loc ~linearity:linearity desc
+    | Some ct -> mk_exp b_ck ty ~ct:ct ~loc:loc ~linearity:linearity desc
 
 
 
@@ -175,7 +178,8 @@ let node n =
     n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
-    n_param_constraints = n.Heptagon.n_param_constraints }
+    n_param_constraints = n.Heptagon.n_param_constraints;
+    n_mem_alloc = [] }
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =

@@ -1,0 +1,43 @@
+const n:int = 100
+const m:int = 3
+
+fun swap<<s:int>>(i,j:int; a:float^s) returns (o:float^s)
+var u,v:float; a1:float^s;
+let
+  u = a.[i] default 0.0;
+  v = a.[j] default 0.0;
+  a1 = [ a with [i] = v ];
+  o = [ a1 with [j] = v];
+tel
+
+node shuffle(i_arr, j_arr:int^m; q:int)
+  returns (v : float)
+var t,t_next:float^n;
+let
+  t_next = fold<<m>> (swap<<n>>)(i_arr, j_arr, t);
+  t = (0.0^n) fby t_next;
+  v = t_next.[q] default 0.0;
+tel
+
+node p(a,b:int^n) returns (o:int^n)
+var x:int^n;
+let
+  x = map<<n>> (+) (a, b);
+  o = map<<n>> (-) (x, b)
+tel
+
+fun clocked(x:bool; i,j:int; a:float^n) returns (o:float^n)
+var a1,a2:float^n;
+let
+  a1 = [ (a when true(x)) with [i when true(x)] = 0.0 ];
+  a2 = [ (a when false(x)) with [j when false(x)] = 0.0 ];
+  o = merge x (true -> a1) (false -> a2);
+tel
+
+node clocked_reg(x:bool; i,j:int; a:float^n) returns (o:float^n)
+var a1,a2:float^n;
+let
+  o = merge x (true -> a1) (false -> a2);
+  a1 = (0.0^n) fby [ a1 with [i when true(x)] = 0.0 ];
+  a2 = (0.0^n) fby [ a2 with [j when false(x)] = 0.0 ];
+tel

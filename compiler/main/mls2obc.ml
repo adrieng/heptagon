@@ -201,8 +201,8 @@ let rec translate_pat map ty pat = match pat, ty with
   | Minils.Etuplepat _, _ -> Misc.internal_error "Ill-typed pattern"
 
 let translate_var_dec l =
-  let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
-    mk_var_dec ~loc:loc x t
+  let one_var { Minils.v_ident = x; Minils.v_type = t; Minils.v_linearity = lin; v_loc = loc } =
+    mk_var_dec ~loc:loc ~linearity:lin x t
   in
   List.map one_var l
 
@@ -665,6 +665,7 @@ let translate_node
     ({ Minils.n_name = f; Minils.n_input = i_list; Minils.n_output = o_list;
       Minils.n_local = d_list; Minils.n_equs = eq_list; Minils.n_stateful = stateful;
       Minils.n_contract = contract; Minils.n_params = params; Minils.n_loc = loc;
+      Minils.n_mem_alloc = mem_alloc
     } as n) =
   Idents.enter_node f;
   let mem_var_tys = Mls_utils.node_memory_vars n in
@@ -685,12 +686,12 @@ let translate_node
   let resetm = { m_name = Mreset; m_inputs = []; m_outputs = []; m_body = mk_block si } in
   if stateful
   then { cd_name = f; cd_stateful = true; cd_mems = m; cd_params = params;
-         cd_objs = j; cd_methods = [stepm; resetm]; cd_loc = loc; }
+         cd_objs = j; cd_methods = [stepm; resetm]; cd_loc = loc; cd_mem_alloc = mem_alloc }
   else (
     (* Functions won't have [Mreset] or memories,
        they still have [params] and instances (of functions) *)
     { cd_name = f; cd_stateful = false; cd_mems = []; cd_params = params;
-      cd_objs = j; cd_methods = [stepm]; cd_loc = loc; }
+      cd_objs = j; cd_methods = [stepm]; cd_loc = loc; cd_mem_alloc = mem_alloc }
   )
 
 let translate_ty_def { Minils.t_name = name; Minils.t_desc = tdesc;
