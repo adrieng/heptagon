@@ -115,6 +115,14 @@ let copname = function
 let cvar_of_vd vd =
   name vd.v_ident, ctype_of_otype vd.v_type
 
+let inputlist_of_ovarlist vl =
+  let cvar_of_ovar vd =
+    let ty = ctype_of_otype vd.v_type in
+    let ty = if Linearity.is_linear vd.v_linearity then pointer_to ty else ty in
+    name vd.v_ident, ty
+  in
+  List.map cvar_of_ovar vl
+
 (** @return the unaliased version of a type. *)
 let rec unalias_ctype cty = match cty with
   | Cty_id ty_name ->
@@ -583,7 +591,7 @@ let qn_append q suffix =
 
 (** Builds the argument list of step function*)
 let step_fun_args n md =
-  let args = List.map cvar_of_vd md.m_inputs in
+  let args = inputlist_of_ovarlist md.m_inputs in
   let out_arg = [("out", Cty_ptr (Cty_id (qn_append n "_out")))] in
   let context_arg =
     if is_stateful n then
