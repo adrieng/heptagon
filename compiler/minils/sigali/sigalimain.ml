@@ -2,8 +2,8 @@
 (*                                                  *)
 (*  Heptagon/BZR                                    *)
 (*                                                  *)
-(*  Author : GwenaÃ«l Delaval                        *)
-(*  Organization : INRIA Rennes, VerTeCs            *)
+(*  Author : Gwenaël Delaval                        *)
+(*  Organization : UJF, LIG                         *)
 (*                                                  *)
 (****************************************************)
 
@@ -62,26 +62,42 @@ let rec translate_ck pref e = function
 	    | "false" -> Snot(Svar(pref ^ (name var)))
 	    | _ -> assert false)
 
-(* [translate e = c] *)
-let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
+
+let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty } as e) =
   match desc with
-    | Minils.Econst(v) ->
+    | Minils.Wconst(v) ->
 	begin match (actual_ty ty) with
 	| Tbool -> Sconst(translate_static_exp v)
 	| Tint -> a_const (Sconst(translate_static_exp v))
 	| Tother -> failwith("Sigali: untranslatable type")
 	end
-    | Minils.Evar(n) -> Svar(prefix ^ (name n))
+    | Minils.Wvar(n) -> Svar(prefix ^ (name n))
+    | Minils.Wwhen(e, c, var) when ((actual_ty e.Minils.w_ty) = Tbool) -> 
+	let e = translate_ext prefix e in
+	Swhen(e,
+	      match (shortname c) with
+		"true" -> Svar(prefix ^ (name var))
+	      | "false" -> Snot(Svar(prefix ^ (name var)))
+	      | _ -> assert false)
+    | Minils.Wwhen(e, _c, _var) ->
+	translate_ext prefix e
+    | Minils.Wfield(_) ->
+	failwith("Sigali: structures not implemented")
+
+(* [translate e = c] *)
+let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
+  match desc with
+    | Minils.Eextvalue(ext) -> translate_ext prefix ext
     | Minils.Eapp (* pervasives binary or unary stateless operations *)
 	({ Minils.a_op = Minils.Efun({qual=Pervasives;name=n})},
 	 e_list, _) ->
 	begin
 	  match n, e_list with
-	  | "not", [e] -> Snot(translate prefix e)
-	  | "or", [e1;e2] -> Sor((translate prefix e1),(translate prefix e2))
-	  | "&", [e1;e2] -> Sand((translate prefix e1),(translate prefix e2))
-	      (* a_inf and a_sup : +1 to translate ideals to boolean
-		 polynomials *)
+	  | "not", [e] -> Snot(translate_ext prefix e)
+	  | "or", [e1;e2] -> Sor((translate_ext prefix e1),
+				 (translate_ext prefix e2))
+	  | "&", [e1;e2] -> Sand((translate_ext prefix e1),
+				 (translate_ext prefix e2))
 	  | ("<="|"<"|">="|">"), [e1;e2] ->
 	      let op,modv =
 		begin match n with
@@ -90,35 +106,31 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
 		| ">=" -> a_sup,0
 		| _    -> a_sup,1
 		end in
-	      let e1 = translate prefix e1 in
-	      begin match e2.Minils.e_desc with
-	      | Minils.Econst({se_desc = Sint(v)}) -> 
-		  let e = op e1 (Sconst(Cint(v+modv))) in
-		  Splus(e,Sconst(Ctrue))
-	      | _ ->
-		  let e2 = translate prefix e2 in
-		  let e = op (Sminus(e1,e2)) (Sconst(Cint(modv))) in
-		  Splus(e,Sconst(Ctrue))
-	      end
-	  | "+", [e1;e2] -> Splus((translate prefix e1),(translate prefix e2))
-	  | "-", [e1;e2] -> Sminus((translate prefix e1),(translate prefix e2))
-	  | "*", [e1;e2] -> Sprod((translate prefix e1),(translate prefix e2))
+	      let e1 = translate_ext prefix e1 in
+	      let sig_e =
+		begin match e2.Minils.w_desc with
+		| Minils.Wconst({se_desc = Sint(v)}) -> 
+		    op e1 (Sconst(Cint(v+modv)))
+		| _ ->
+		    let e2 = translate_ext prefix e2 in
+		    op (Sminus(e1,e2)) (Sconst(Cint(modv)))
+		end in
+	      (* a_inf and a_sup : +1 to translate ideals to boolean
+		 polynomials *)
+	      Splus(sig_e,Sconst(Ctrue))
+	  | "+", [e1;e2] -> Splus((translate_ext prefix e1),
+				  (translate_ext prefix e2))
+	  | "-", [e1;e2] -> Sminus((translate_ext prefix e1),
+				   (translate_ext prefix e2))
+	  | "*", [e1;e2] -> Sprod((translate_ext prefix e1),
+				  (translate_ext prefix e2))
 	  | ("=" 
 	    | "<>"),_ -> failwith("Sigali: '=' or '<>' not yet implemented")
 	  | _ -> assert false
 	end
-    | Minils.Ewhen(e, c, var) when ((actual_ty e.Minils.e_ty) = Tbool) -> 
-	let e = translate prefix e in
-	Swhen(e,
-	      match (shortname c) with
-		"true" -> Svar(prefix ^ (name var))
-	      | "false" -> Snot(Svar(prefix ^ (name var)))
-	      | _ -> assert false)
-    | Minils.Ewhen(e, _c, _var) ->
-	translate prefix e
     | Minils.Emerge(ck,[(c1,e1);(_c2,e2)]) ->
-	let e1 = translate prefix e1 in
-	let e2 = translate prefix e2 in
+	let e1 = translate_ext prefix e1 in
+	let e2 = translate_ext prefix e2 in
 	let e1,e2 =
 	  begin
 	    match (shortname c1) with
@@ -170,7 +182,7 @@ let rec translate_eq env f
 	       (Slist[Sequal(Svar(sn),Sconst(c))]))::acc_eqs,
 	    c::acc_init
       in
-      let e_next = translate prefix e in
+      let e_next = translate_ext prefix e in
       let e_next = translate_ck prefix e_next ck in
       acc_dep,
       sn::acc_states,
@@ -254,7 +266,7 @@ let rec translate_eq env f
 	     prefixed (s_prefix ^ s))
 	  g_p.proc_states in
       let e_states = List.map (fun hq -> Svar(hq)) new_states_list in
-      let e_list = List.map (translate prefix) e_list in
+      let e_list = List.map (translate_ext prefix) e_list in
       let e_outputs,acc_inputs = 
 	match inlined with
 	| true -> [],acc_inputs
@@ -414,7 +426,7 @@ let rec translate_eq env f
 	     prefixed (s_prefix ^ s))
 	  g_p.proc_states in
       let e_states = List.map (fun hq -> Svar(hq)) new_states_list in
-      let e_list = List.map (translate prefix) e_list in
+      let e_list = List.map (translate_ext prefix) e_list in
       let e_outputs,acc_inputs = 
 	match inlined with
 	| true -> [],acc_inputs
@@ -651,11 +663,14 @@ let translate_node env
 let program p =
   let _env,acc_proc =
     List.fold_left
-      (fun (env,acc) node ->
-	 let env,(proc,contract) = translate_node env node in
-	 env,contract::proc::acc)
+      (fun (env,acc) p_desc ->
+	 match p_desc with
+	 | Minils.Pnode(node) ->
+	     let env,(proc,contract) = translate_node env node in
+	     env,contract::proc::acc
+	 | _ -> env,acc)
       (NamesEnv.empty,[])
-      p.Minils.p_nodes in
+      p.Minils.p_desc in
   let procs = List.rev acc_proc in
   let filename = filename_of_name (modul_to_string p.Minils.p_modname) in
   let dirname = build_path (filename ^ "_z3z") in
