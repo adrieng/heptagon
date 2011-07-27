@@ -371,12 +371,17 @@ and translate_last = function
   | Last (None) -> Heptagon.Last None
   | Last (Some e) -> Heptagon.Last (Some (expect_static_exp e))
 
-let translate_contract env ct =
-  let b, _ = translate_block env ct.c_block in
-  { Heptagon.c_assume = translate_exp env ct.c_assume;
-    Heptagon.c_enforce = translate_exp env ct.c_enforce;
-    Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
-    Heptagon.c_block = b }
+let translate_contract env opt_ct =
+  match opt_ct with
+  | None -> None, env
+  | Some ct ->
+      let env' = Rename.append env ct.c_controllables in
+      let b, env = translate_block env ct.c_block in
+      Some 
+	{ Heptagon.c_assume = translate_exp env ct.c_assume;
+	  Heptagon.c_enforce = translate_exp env ct.c_enforce;
+	  Heptagon.c_controllables = translate_vd_list env' ct.c_controllables;
+	  Heptagon.c_block = b }, env'
 
 let params_of_var_decs =
   List.map (fun vd -> Signature.mk_param
@@ -396,10 +401,9 @@ let translate_node node =
   let params = params_of_var_decs node.n_params in
   let inputs = translate_vd_list env0 node.n_input in
   let outputs = translate_vd_list env0 node.n_output in
-  let b, env = translate_block env0 node.n_block in
-  let contract =
-    Misc.optional (translate_contract env) node.n_contract in
-  (* the env of the block is used in the contract translation *)
+  (* Enrich env with controllable variables (used in block) *)
+  let contract, env = translate_contract env0 node.n_contract in
+  let b, _ = translate_block env node.n_block in
   (* add the node signature to the environment *)
   let i = args_of_var_decs node.n_input in
   let o = args_of_var_decs node.n_output in

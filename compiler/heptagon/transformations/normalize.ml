@@ -284,7 +284,23 @@ let block funs _ b =
   let _, (v_acc, eq_acc) = Hept_mapfold.block funs ([],[]) b in
     { b with b_local = v_acc@b.b_local; b_equs = eq_acc}, ([], [])
 
+let contract funs context c =
+  let ({ c_block = b } as c), void_context =
+    Hept_mapfold.contract funs context c in 
+  (* Non-void context could mean lost equations *)
+  assert (void_context=([],[]));
+  let context, e_a = translate Any ([],[]) c.c_assume in
+  let context, e_e = translate Any context c.c_enforce in
+  let (d_list, eq_list) = context in
+  { c with
+      c_assume = e_a;
+      c_enforce = e_e;
+      c_block = { b with
+		    b_local = d_list@b.b_local;
+		    b_equs = eq_list@b.b_equs; }
+  }, void_context
+
 let program p =
-  let funs = { defaults with block = block; eq = eq } in
+  let funs = { defaults with block = block; eq = eq; contract = contract } in
   let p, _ = Hept_mapfold.program funs ([], []) p in
     p

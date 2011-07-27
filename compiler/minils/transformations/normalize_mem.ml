@@ -24,11 +24,15 @@ let eq _ (v, eqs) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
   | _, _ ->
       eq, (v, eq::eqs)
 
+(* Leave contract unchanged (no output defined in it) *)
+let contract funs acc c = c, acc
+
 let node funs acc nd =
   let nd, (v, eqs) = Mls_mapfold.node_dec funs (nd.n_local, []) nd in
     { nd with n_local = v; n_equs = eqs  }, acc
 
 let program p =
-  let funs = { Mls_mapfold.defaults with eq = eq; node_dec = node } in
+  let funs = { Mls_mapfold.defaults with 
+		 eq = eq; node_dec = node; contract = contract } in
   let p, _ = Mls_mapfold.program_it funs ([], []) p in
     p

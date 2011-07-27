@@ -585,12 +585,12 @@ let translate_contract map mem_var_tys =
 
 (** Returns a map, mapping variables names to the variables
     where they will be stored. *)
-let subst_map inputs outputs locals mem_tys =
+let subst_map inputs outputs controllables c_locals locals mem_tys =
   (* Create a map that simply maps each var to itself *)
   let map =
     List.fold_left
       (fun m { Minils.v_ident = x; Minils.v_type = ty } -> Env.add x (mk_pattern ty (Lvar x)) m)
-      Env.empty (inputs @ outputs @ locals)
+      Env.empty (inputs @ outputs @ controllables @ c_locals @ locals)
   in
   List.fold_left (fun map (x, x_ty) -> Env.add x (mk_pattern x_ty (Lmem x)) map) map mem_tys
 
@@ -601,7 +601,11 @@ let translate_node
     } as n) =
   Idents.enter_node f;
   let mem_var_tys = Mls_utils.node_memory_vars n in
-  let subst_map = subst_map i_list o_list d_list mem_var_tys in
+  let c_list, c_locals = 
+    match contract with
+    | None -> [], []
+    | Some c -> c.Minils.c_controllables, c.Minils.c_local in
+  let subst_map = subst_map i_list o_list c_list c_locals d_list mem_var_tys in
   let (v, si, j, s_list) = translate_eq_list subst_map empty_call_context eq_list in
   let (si', j', s_list', d_list') = translate_contract subst_map mem_var_tys contract in
   let i_list = translate_var_dec i_list in

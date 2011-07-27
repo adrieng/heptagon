@@ -1025,14 +1025,14 @@ let typing_contract const_env h contract =
               c_assume = e_a;
               c_enforce = e_g;
               c_controllables = c }) ->
-        let typed_b, defined_names, _ = typing_block const_env h b in
+        let typed_b, defined_names, h' = typing_block const_env h b in
           (* check that the equations do not define other unexpected names *)
           included_env defined_names Env.empty;
 
         (* assumption *)
-        let typed_e_a = expect const_env h (Tid Initial.pbool) e_a in
+        let typed_e_a = expect const_env h' (Tid Initial.pbool) e_a in
         (* property *)
-        let typed_e_g = expect const_env h (Tid Initial.pbool) e_g in
+        let typed_e_g = expect const_env h' (Tid Initial.pbool) e_g in
 
         let typed_c, (c_names, h) = build const_env h c in
 
