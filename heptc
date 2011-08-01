@@ -3,7 +3,7 @@
 
 RUN_DIR="`pwd`"
 
-SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+SCRIPT_DIR=`dirname $(readlink -f $0)`
 
 COMPILER_DIR="$SCRIPT_DIR/compiler"
 COMPILER=heptc.byte
