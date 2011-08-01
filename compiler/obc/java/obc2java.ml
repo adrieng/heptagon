@@ -372,7 +372,7 @@ let create_async_classe async base_classe =
     let id = base_classe.o_ident in
     mk_field ~protection:Pprotected t id, t, id, mk_var id, mk_var_dec id t
   in
-  
+
 
   (* [result] : field used to stock the asynchronous result (only for threadpool)*)
   let field_result, ty_aresult, ty_result, id_result, var_result =
@@ -383,7 +383,7 @@ let create_async_classe async base_classe =
     let result_id = Idents.gen_var "obc2java" "result" in
     mk_field ~protection:Pprotected aty result_id, aty, ty_result, result_id, mk_var result_id
   in
-      
+
 
   (* [node] : field used to store the current asyncnode (only for asyncnode)*)
   let field_node, ty_node, ty_result, aty_result, id_node =
@@ -398,11 +398,11 @@ let create_async_classe async base_classe =
     let id_node = Idents.gen_var "obc2java" "node" in
     mk_field ~protection:Pprotected ty_node id_node, ty_node, ty_result, aty_result, id_node
   in
-      
+
   let fields =
     if !Compiler_options.java_queue_size = 0
     then field_inst::field_result::fields_params
-    else field_inst::field_node::fields_params    
+    else field_inst::field_node::fields_params
   in
 
   (* [step] arguments *)
