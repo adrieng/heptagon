@@ -113,7 +113,8 @@ let program p =
             Obc2java.fresh_for exp_step main_for_loop;
             Aexp (Emethod_call(out, "printf",
               [ Sstring "time : %d\\n";
-                Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]))
+                Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]));
+            Aexp(Emethod_call(jsys, "exit", [Sint 0]))
           ]
         in
         mk_block ~locals:[vd_step] acts
