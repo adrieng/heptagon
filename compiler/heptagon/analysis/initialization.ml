@@ -86,7 +86,10 @@ struct
   type v = init
   include (Map.Make (struct type t = k let compare = compare end))
 
+  (* find a variable *)
   let find_var x h = find (Var x) h
+  (* find the last of a variable,
+     note that a variable may be initialized in find_var but not here *)
   let find_last x h = find (Last x) h
 
   let find_var_typ x h = leaf (find_var x h)
@@ -104,7 +107,9 @@ struct
       | Heptagon.Last (Some _) ->
           add_last vd.v_ident izero h (* last is initialized *)
 
+  (* Add an initialized variable from declaration (taking care of lasts) *)
   let add_initd_var_dec h vd = _add_var_dec izero h vd
+  (* Add a variable from declaration (taking car of lasts) *)
   let add_var_dec h vd = _add_var_dec (new_var ()) h vd
 end
 
@@ -328,7 +333,7 @@ and typing_automaton h state_handlers =
     let env_update x h =
       try
         let xl = IEnv.find_last x h in (* it's a last in the env, good. *)
-        IEnv.add_last x (max xl (IEnv.find_var x h)) h
+        IEnv.add_last x (imax xl (IEnv.find_var x h)) h
       with Not_found -> h (* nothing to do *) in
     Env.fold (fun x _ h -> env_update x h) l h in
 
