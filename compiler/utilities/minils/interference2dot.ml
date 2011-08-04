@@ -9,7 +9,8 @@ module DotG = struct
   let name = ref ""
 
   let color_to_graphviz_color i =
-    (i * 8364263947 + 855784368)
+    (* (i * 8364263947 + 855784368) *)
+    (i * 2 + 1)
 
   (*Functions for printing the graph *)
   let default_vertex_attributes _ = []

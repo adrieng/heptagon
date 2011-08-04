@@ -44,6 +44,16 @@ struct
     raise Errors.Error
 end
 
+let fresh = Idents.gen_fresh "hept2mls" 
+              (function Heptagon.Enode f -> (shortname f) 
+		 | _ -> "n")
+
+(* add an equation *)
+let equation locals eqs e =
+  let n = Idents.gen_var "hept2mls" "ck" in
+  n,
+  (mk_var_dec n e.e_ty) :: locals,
+  (mk_equation (Evarpat n) e):: eqs
 
 let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; Heptagon.v_linearity = linearity;
                     Heptagon.v_loc = loc; Heptagon.v_clock = ck } =
@@ -80,7 +90,9 @@ let rec translate_op = function
 
 let translate_app app =
   mk_app ~params:app.Heptagon.a_params
-    ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
+    ~unsafe:app.Heptagon.a_unsafe
+    ~id:(Some (fresh app.Heptagon.a_op))
+    (translate_op app.Heptagon.a_op)
 
 let rec translate_extvalue e =
   let mk_extvalue =
@@ -174,12 +186,14 @@ let node n =
     n_input = List.map translate_var n.Heptagon.n_input;
     n_output = List.map translate_var n.Heptagon.n_output;
     n_contract = translate_contract n.Heptagon.n_contract;
+    n_controller_call = ([],[]);
     n_local = List.map translate_var n.Heptagon.n_block.Heptagon.b_local;
     n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
     n_param_constraints = n.Heptagon.n_param_constraints;
     n_mem_alloc = [] }
+
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =

@@ -87,7 +87,7 @@ and edesc =
   | Emerge of var_name * (constructor_name * exp) list
   | Esplit of var_name * exp
 
-and app = { a_op: op; a_params: exp list; }
+and app = { a_op: op; a_params: exp list; a_inlined: bool }
 
 and op =
   | Etuple
@@ -234,17 +234,17 @@ and interface_desc =
 let mk_exp desc ?(ct_annot = None) loc =
   { e_desc = desc; e_ct_annot = ct_annot; e_loc = loc }
 
-let mk_app op params =
-  { a_op = op; a_params = params; }
+let mk_app op params inlined =
+  { a_op = op; a_params = params; a_inlined = inlined }
 
-let mk_call ?(params=[]) op exps =
-  Eapp (mk_app op params, exps)
+let mk_call ?(params=[]) ?(inlined=false) op exps =
+  Eapp (mk_app op params inlined, exps)
 
 let mk_op_call ?(params=[]) s exps =
   mk_call ~params:params (Efun (Q (Names.pervasives_qn s))) exps
 
 let mk_iterator_call it ln params n_list pexps exps =
-  Eiterator (it, mk_app (Enode ln) params, n_list, pexps, exps)
+  Eiterator (it, mk_app (Enode ln) params false, n_list, pexps, exps)
 
 let mk_static_exp desc loc =
   { se_desc = desc; se_loc = loc }

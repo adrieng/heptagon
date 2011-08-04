@@ -100,6 +100,8 @@ let main () =
         "-c", Arg.Set create_object_file, doc_object_file;
         "-s", Arg.String set_simulation_node, doc_sim;
         "-hepts", Arg.Set hepts_simulation, doc_hepts;
+        "-bool", Arg.Set boolean, doc_boolean;
+        "-deadcode", Arg.Set deadcode, doc_deadcode;
         "-tomato", Arg.Set tomato, doc_tomato;
         "-tomanode", read_qualname add_tomato_node, doc_tomato;
         "-tomacheck", read_qualname add_tomato_check, "";

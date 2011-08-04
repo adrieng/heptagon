@@ -40,7 +40,7 @@ let compile_program p =
   let p =
     pass "Automata minimization checks" true Tomato.tomato_checks p pp in
 *)
-
+  
   (* Scheduling *)
   let p =
     if !Compiler_options.use_interf_scheduler then

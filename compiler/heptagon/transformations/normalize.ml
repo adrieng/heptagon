@@ -82,13 +82,13 @@ let equation (d_list, eq_list) e =
             (d_list, eq_list), Evar n
 
 (* [(e1,...,ek) when C(n) = (e1 when C(n),...,ek when C(n))] *)
-let rec whenc context e c n =
+let rec whenc context e c n e_orig =
   let when_on_c c n e =
-    { e with e_desc = Ewhen(e, c, n) }
+    { e_orig with e_desc = Ewhen(e, c, n); }
   in
     if is_list e then (
       let e_list = List.map (when_on_c c n) (e_to_e_list e) in
-          context, { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
+          context, { e_orig with e_desc = Eapp(mk_app Etuple, e_list, None) }
     ) else
       context, when_on_c c n e
 
@@ -131,7 +131,7 @@ let rec translate kind context e =
           context, { e with e_desc = Estruct l }
     | Ewhen(e1, c, n) ->
         let context, e1 = translate kind context e1 in
-          whenc context e1 c n
+          whenc context e1 c n e
     | Emerge(n, tag_e_list) ->
         merge context e n tag_e_list
     | Eapp({ a_op = Eifthenelse }, [e1; e2; e3], _) ->
@@ -226,24 +226,43 @@ and merge context e x c_e_list =
       let context, e = translate ExtValue context e in
         (tag, e), context
     in
-    let mk_merge x c_list e_list =
-      let ty = (List.hd e_list).e_ty in
-      let t_e_list = List.map2 (fun t e -> (t,e)) c_list e_list in
-        mk_exp ~loc:e.e_loc (Emerge(x, t_e_list)) ty
+    let rec mk_merge x c_list e_lists =
+      let ty = (List.hd (List.hd e_lists)).e_ty in
+      let rec build_c_e_list c_list e_lists =
+	match c_list, e_lists with
+	| [], [] -> [], []
+	| c::c_l, (e::e_l)::e_ls ->
+	    let c_e_list, e_lists = build_c_e_list c_l e_ls in
+	    (c,e)::c_e_list, e_l::e_lists
+	| _ -> assert false in
+      let rec build_merge_list c_list e_lists =
+	match e_lists with
+	  [] -> assert false
+	| []::_ -> []
+	| _ ::_ ->
+	    let c_e_list, e_lists = build_c_e_list c_list e_lists in
+	    let e_merge = mk_exp ~loc:e.e_loc (Emerge(x, c_e_list)) ty in
+	    let e_merge_list = build_merge_list c_list e_lists in
+	    e_merge::e_merge_list in
+      build_merge_list c_list e_lists
     in
     let c_e_list, context = mapfold translate_tag context c_e_list in
       match c_e_list with
         | [] -> assert false
-        | (_,e)::_ ->
-            if is_list e then (
+        | (_,e1)::_ ->
+            if is_list e1 then (
               let c_list = List.map (fun (t,_) -> t) c_e_list in
               let e_lists = List.map (fun (_,e) -> e_to_e_list e) c_e_list in
               let e_lists, context =
-                mapfold (fun context e_list -> add_list context ExtValue e_list) context e_lists in
-              let e_list = List.map (mk_merge x c_list) e_lists in
-                context, { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
+                mapfold 
+		  (fun context e_list -> add_list context ExtValue e_list) 
+		  context e_lists in
+              let e_list = mk_merge x c_list e_lists in
+                context, { e with
+			     e_desc = Eapp(mk_app Etuple, e_list, None) }
             ) else
-              context, { e with e_desc = Emerge(x, c_e_list) }
+              context, { e with
+			   e_desc = Emerge(x, c_e_list) }
 
 (* applies distribution rules *)
 (* [(p1,...,pn) = (e1,...,en)] into [p1 = e1;...;pn = en] *)
@@ -293,7 +312,23 @@ let block funs _ b =
   let _, (v_acc, eq_acc) = Hept_mapfold.block funs ([],[]) b in
     { b with b_local = v_acc@b.b_local; b_equs = eq_acc}, ([], [])
 
+let contract funs context c =
+  let ({ c_block = b } as c), void_context =
+    Hept_mapfold.contract funs context c in 
+  (* Non-void context could mean lost equations *)
+  assert (void_context=([],[]));
+  let context, e_a = translate ExtValue ([],[]) c.c_assume in
+  let context, e_e = translate ExtValue context c.c_enforce in
+  let (d_list, eq_list) = context in
+  { c with
+      c_assume = e_a;
+      c_enforce = e_e;
+      c_block = { b with
+		    b_local = d_list@b.b_local;
+		    b_equs = eq_list@b.b_equs; }
+  }, void_context
+
 let program p =
-  let funs = { defaults with block = block; eq = eq } in
+  let funs = { defaults with block = block; eq = eq; contract = contract } in
   let p, _ = Hept_mapfold.program funs ([], []) p in
     p

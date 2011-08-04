@@ -30,9 +30,9 @@ let rec print_pat ff = function
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
 
 let print_vd ff { v_ident = n; v_type = ty; v_linearity = lin; v_clock = ck } =
- (* if !Compiler_options.full_type_info then*)
+ if !Compiler_options.full_type_info then
     fprintf ff "%a : %a%a :: %a" print_ident n print_type ty print_linearity lin print_ck ck
-  (*else fprintf ff "%a : %a" print_ident n print_type ty*)
+  else fprintf ff "%a : %a" print_ident n print_type ty
 
 let print_local_vars ff = function
   | [] -> ()
@@ -195,7 +195,7 @@ let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
 let print_contract ff { c_local = l; c_eq = eqs;
                         c_assume = e_a; c_enforce = e_g;
       c_controllables = c;} =
-  fprintf ff "@[<v2>contract@\n%a%a@ assume %a@ enforce %a@ with (%a)@]"
+  fprintf ff "@[<v2>contract@\n%a%a@ assume %a@ enforce %a@ with %a@\n@]"
     print_local_vars l
     print_eqs eqs
     print_extvalue e_a

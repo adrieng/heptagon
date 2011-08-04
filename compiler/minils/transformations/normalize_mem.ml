@@ -33,6 +33,9 @@ let eq _ (outputs, eqs, env) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
   | _, _ ->
       eq, (outputs, eq::eqs, env)
 
+(* Leave contract unchanged (no output defined in it) *)
+let contract funs acc c = c, acc
+
 let node funs acc nd =
   let nd, (_, eqs, env) = Mls_mapfold.node_dec funs (nd.n_output, [], Env.empty) nd in
   let v = Env.fold
@@ -46,6 +49,7 @@ let node funs acc nd =
   { nd with n_local = v; n_equs = List.rev eqs; n_output = o }, acc
 
 let program p =
-  let funs = { Mls_mapfold.defaults with eq = eq; node_dec = node } in
+  let funs = { Mls_mapfold.defaults with 
+		 eq = eq; node_dec = node; contract = contract } in
   let p, _ = Mls_mapfold.program_it funs ([], [], Env.empty) p in
     p

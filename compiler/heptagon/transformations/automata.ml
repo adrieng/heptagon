@@ -76,7 +76,7 @@ let no_strong_transition state_handlers =
 
 
 let translate_automaton v eq_list handlers =
-  let type_name = Modules.fresh_type "automata" "state" in
+  let type_name = Modules.fresh_type "automata" "st" in
   (* the state env associate a name to a qualified constructor *)
   let state_env =
     List.fold_left

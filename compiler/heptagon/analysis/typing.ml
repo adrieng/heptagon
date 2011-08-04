@@ -1112,14 +1112,14 @@ let typing_contract cenv h contract =
               c_assume = e_a;
               c_enforce = e_g;
               c_controllables = c }) ->
-        let typed_b, defined_names, _ = typing_block cenv h b in
+        let typed_b, defined_names, h' = typing_block cenv h b in
           (* check that the equations do not define other unexpected names *)
           included_env defined_names Env.empty;
 
         (* assumption *)
-        let typed_e_a = expect cenv h (Tid Initial.pbool) e_a in
+        let typed_e_a = expect cenv h' (Tid Initial.pbool) e_a in
         (* property *)
-        let typed_e_g = expect cenv h (Tid Initial.pbool) e_g in
+        let typed_e_g = expect cenv h' (Tid Initial.pbool) e_g in
 
         let typed_c, (c_names, h) = build cenv h c in
 

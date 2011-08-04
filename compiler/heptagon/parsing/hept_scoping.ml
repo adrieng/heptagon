@@ -165,8 +165,11 @@ struct
 end
 
 
-let mk_app ?(params=[]) ?(unsafe=false) op =
-  { Heptagon.a_op = op; Heptagon.a_params = params; Heptagon.a_unsafe = unsafe }
+let mk_app ?(params=[]) ?(unsafe=false) ?(inlined = false) op =
+  { Heptagon.a_op = op; 
+    Heptagon.a_params = params;
+    Heptagon.a_unsafe = unsafe;
+    Heptagon.a_inlined = inlined }
 
 let mk_signature name ins outs stateful params constraints loc =
   { Heptagon.sig_name = name;
@@ -287,10 +290,10 @@ and translate_desc loc env = function
         List.map (fun (f,e) -> qualify_field f, translate_exp env e)
           f_e_list in
       Heptagon.Estruct f_e_list
-  | Eapp ({ a_op = op; a_params = params; }, e_list) ->
+  | Eapp ({ a_op = op; a_params = params; a_inlined = inl }, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
       let params = List.map (expect_static_exp) params in
-      let app = mk_app ~params:params (translate_op op) in
+      let app = mk_app ~params:params ~inlined:inl (translate_op op) in
       Heptagon.Eapp (app, e_list, None)
 
   | Eiterator (it, { a_op = op; a_params = params }, n_list, pe_list, e_list) ->
@@ -420,12 +423,17 @@ and translate_last = function
   | Last (None) -> Heptagon.Last None
   | Last (Some e) -> Heptagon.Last (Some (expect_static_exp e))
 
-let translate_contract env ct =
-  let b, _ = translate_block env ct.c_block in
-  { Heptagon.c_assume = translate_exp env ct.c_assume;
-    Heptagon.c_enforce = translate_exp env ct.c_enforce;
-    Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
-    Heptagon.c_block = b }
+let translate_contract env opt_ct =
+  match opt_ct with
+  | None -> None, env
+  | Some ct ->
+      let env' = Rename.append env ct.c_controllables in
+      let b, env = translate_block env ct.c_block in
+      Some 
+	{ Heptagon.c_assume = translate_exp env ct.c_assume;
+	  Heptagon.c_enforce = translate_exp env ct.c_enforce;
+	  Heptagon.c_controllables = translate_vd_list env' ct.c_controllables;
+	  Heptagon.c_block = b }, env'
 
 let params_of_var_decs env p_l =
   let pofvd env vd =
@@ -461,9 +469,9 @@ let translate_node node =
   (* Inputs and outputs define the initial local env *)
   let env0 = Rename.append env node.n_output in
   let outputs = translate_vd_list env0 node.n_output in
-  let b, env = translate_block env0 node.n_block in
-  (* the env of the block is used in the contract translation *)
-  let contract = Misc.optional (translate_contract env) node.n_contract in
+  (* Enrich env with controllable variables (used in block) *)
+  let contract, env = translate_contract env0 node.n_contract in
+  let b, _ = translate_block env node.n_block in
   (* add the node signature to the environment *)
   let nnode = { Heptagon.n_name = n;
                Heptagon.n_stateful = node.n_stateful;

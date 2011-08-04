@@ -283,7 +283,7 @@ let rec print_type_def ff { t_name = name; t_desc = tdesc } =
 let print_contract ff { c_block = b;
                         c_assume = e_a; c_enforce = e_g;
       c_controllables = c} =
-  fprintf ff "@[<v2>contract@\n%a@ assume %a@ enforce %a@ with (%a)@]"
+  fprintf ff "@[<v2>contract@\n%a@ assume %a@ enforce %a@ with (%a)@\n@]"
     print_block b
     print_exp e_a
     print_exp e_g
@@ -311,6 +311,8 @@ let print_open_module ff name = fprintf ff "open %s@." (modul_to_string name)
 
 let print oc { p_opened = po; p_desc = pd; } =
   let ff = Format.formatter_of_out_channel oc in
+  fprintf ff "@[<v>";
   List.iter (print_open_module ff) po;
   List.iter (print_pdesc ff) pd;
+  fprintf ff "@]";
   fprintf ff "@?"

@@ -77,7 +77,11 @@ and edesc =
                  * extvalue list * extvalue list * var_ident option
                        (** map f <<n>> <(extvalue)> (extvalue) reset ident *)
 
-and app = { a_op: op; a_params: static_exp list; a_unsafe: bool }
+and app = { a_op: op; 
+	    a_params: static_exp list;
+	    a_unsafe: bool;
+	    a_id: ident option;
+	    a_inlined: bool }
     (** Unsafe applications could have side effects
         and be delicate about optimizations, !be careful! *)
 
@@ -126,6 +130,8 @@ type node_dec = {
   n_input  : var_dec list;
   n_output : var_dec list;
   n_contract : contract option;
+  (* GD: inglorious hack for controller call *)
+  mutable n_controller_call : string list * string list;
   n_local  : var_dec list;
   n_equs   : eq list;
   n_loc    : location;
@@ -173,7 +179,8 @@ let mk_equation ?(loc = no_location) pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
 
 let mk_node
-    ?(input = []) ?(output = []) ?(contract = None) ?(local = []) ?(eq = [])
+    ?(input = []) ?(output = []) ?(contract = None) ?(pinst = ([],[]))
+    ?(local = []) ?(eq = [])
     ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
     ?(mem_alloc=[])
     name =
@@ -182,6 +189,7 @@ let mk_node
     n_input = input;
     n_output = output;
     n_contract = contract;
+    n_controller_call = pinst;
     n_local = local;
     n_equs = eq;
     n_loc = loc;
@@ -195,6 +203,7 @@ let mk_type_dec type_desc name loc =
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
-let mk_app ?(params=[]) ?(unsafe=false) op =
-  { a_op = op; a_params = params; a_unsafe = unsafe }
+let mk_app ?(params=[]) ?(unsafe=false) ?(id=None) ?(inlined=false) op =
+  { a_op = op; a_params = params; a_unsafe = unsafe;
+    a_id = id; a_inlined = inlined }
 

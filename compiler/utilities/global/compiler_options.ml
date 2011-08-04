@@ -60,10 +60,13 @@ let hepts_simulation = ref false
 
 let create_object_file = ref false
 
+let boolean = ref false
+
 (* Target languages list for code generation *)
 let target_languages : string list ref = ref []
 
 let add_target_language s =
+  if s = "z3z" then boolean := true;
   target_languages := s :: !target_languages
 
 (* Optional path for generated files (C or Java) *)
@@ -83,6 +86,8 @@ let inline : qualname list ref = ref []
 let add_inlined_node s = inline := s :: !inline
 
 let flatten = ref false
+
+let deadcode = ref false
 
 let tomato = ref false
 
@@ -121,6 +126,8 @@ and doc_full_name = "\t\t\tPrint full variable name information"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
   ^ " cleaned)"
+and doc_boolean = "\t\tTranslate enumerated values towards boolean vectors"
+and doc_deadcode = "\t\tDeadcode removal"
 and doc_nocaus = "\t\tDisable causality analysis"
 and doc_noinit = "\t\tDisable initialization analysis"
 and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"

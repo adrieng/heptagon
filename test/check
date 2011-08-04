@@ -17,13 +17,16 @@ coption=-memalloc
 CAMLC=ocamlc
 JAVAC=javac
 LUSTREC=lustre
-CC="gcc -std=c99 -I../../../lib/c"
+CC="gcc -std=c99 -I../../../lib/c -I../t1_c"
 
 # par defaut : pas de test de generation de code
 
 tomato=0
 java=0
+lustre=0
 c=0
+minils=0
+vhdl=0
 
 score=0
 max=0
@@ -94,7 +97,7 @@ launch_check () {
   done
   echo
   echo "Tests goods"
-  for f in ../good/*.ept ../image_filters/*.ept; do
+  for f in ../good/*.ept; do
     echec=0
     if [ $verbose = 0 ]; then
       echo -n "."
@@ -115,18 +118,26 @@ launch_check () {
       fi
     fi
     # Compil. java ?
-    #if [[ ($echec == 0) && ($java == 1) ]]; then
-    #  pushd "${base_f}_java" > /dev/null
-    #  for java_file in *.java ; do
-    #    if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null
-    #    then
-    #      echec=0
-    #    else
-    #      echec=3
-    #    fi
-    #  done
-    #  popd > /dev/null
-    #fi
+    if [[ ($echec == 0) && ($java == 1) ]]; then
+      pushd "${base_f}" > /dev/null
+      for java_file in *.java ; do
+        if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null
+        then
+          echec=0
+        else
+          echec=3
+        fi
+      done
+      popd > /dev/null
+    fi
+    # Compil. caml ?
+    if [[ ($echec == 0) && ($caml == 1) ]]; then
+      if $CAMLC -c ${base_f}.ml > /dev/null; then
+        echec=0
+      else
+        echec=4
+      fi
+    fi
     # Compil. c ?
     if [[ ($echec == 0) && ($c == 1) ]]; then
         pushd ${base_f}_c >/dev/null
@@ -163,6 +174,18 @@ launch_check () {
         fi
         popd >/dev/null
     fi
+    # Compil. VHDL ?
+    if [[ ($echec == 0) && ($vhdl == 1) ]]; then
+      pushd ${base_f}_vhdl > /dev/null
+      for vhdl_file in *.vhd; do
+        if $VHDLC -a ${vhdl_file} && $VHDLC -e ${vhdl_file} > /dev/null 2>&1
+        then
+          echec=${echec}
+        else
+          echec=8
+        fi
+      done
+    fi
 
     if [[ $echec == 0 ]]; then
       score=`expr $score + 1`;
@@ -172,8 +195,12 @@ launch_check () {
       case $echec in
         1 )
           echo "Compilation failed.";;
+        2 )
+          echo "Compilation to Minils failed.";;
         3 )
-          echo "Java compilation failed.";;
+          echo "Compilation to Java failed.";;
+        4 )
+          echo "Compilation to Caml failed.";;
         5 )
           echo "C compilation failed.";;
         6 )
@@ -203,6 +230,16 @@ activate_java () {
   coption="$coption -target java"
 }
 
+activate_caml () {
+    caml=1
+    coption="$coption -target caml"
+}
+
+activate_vhdl () {
+    vhdl=1
+    coption="$coption -target vhdl"
+}
+
 activate_c () {
   c=1
   coption="$coption -target c"
@@ -216,6 +253,14 @@ activate_tomato () {
 activate_all () {
   activate_java
   activate_c
+}
+
+activate_boolean () {
+    coption="$coption -bool"
+}
+
+activate_deadcode () {
+    coption="$coption -deadcode"
 }
 
 while [ $# -gt 0 ]; do
@@ -235,17 +280,35 @@ while [ $# -gt 0 ]; do
     "-c" )
       activate_c
       shift;;
+    "-caml" )
+      activate_caml
+      shift;;
+    "-vhdl" )
+      activate_vhdl
+      shift;;
     "-mls" )
       activate_minils
       shift;;
     "-tomato" )
       activate_tomato
       shift;;
+    "-bool" )
+      activate_boolean
+      shift;;
+    "-deadcode" )
+      activate_deadcode
+      shift;;
     "-h" )
       echo "usage : $0 <options> <compilo>"
       echo "options : "
       echo "-clean    : clean build dir"
       echo "-java     : test of code generation (java code)"
+      echo "-caml     : test of code generation (caml code)"
+      echo "-lustre   : test of code generation (lustre code)"
+      echo "-vhdl     : test of code generation (vhdl)"
+      echo "-bool     : test of boolean translation"
+      echo "-deadcode : test of deadcode removal"
+      echo "-tomato   : test of automata minimization"
       echo "-c        : test of code generation (c code)"
       echo "-all      : test all"
       echo "-v        : verbose"

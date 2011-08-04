@@ -30,7 +30,7 @@ type iterator_type =
 type exp = {
   e_desc      : desc;
   e_ty        : ty;
-  e_ct_annot  : ct option; (* exists when a source annotation exists *)
+  mutable e_ct_annot  : ct option; (* exists when a source annotation exists *)
   e_level_ck  : ck; (* set by the switch pass, represents the activation base of the expression *)
   mutable e_linearity : linearity;
   e_loc       : location }
@@ -55,7 +55,8 @@ and desc =
 and app = {
   a_op     : op;
   a_params : static_exp list;
-  a_unsafe : bool }
+  a_unsafe : bool;
+  a_inlined : bool }
 
 and op =
   | Etuple

@@ -25,8 +25,8 @@ let mk_exp desc ?(linearity = Ltop) ?(level_ck = Cbase) ?(ct_annot = None) ?(loc
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot; e_linearity = linearity;
     e_level_ck = level_ck; e_loc = loc; }
 
-let mk_app ?(params=[]) ?(unsafe=false) op =
-  { a_op = op; a_params = params; a_unsafe = unsafe }
+let mk_app ?(params=[]) ?(unsafe=false) ?(inlined=false) op =
+  { a_op = op; a_params = params; a_unsafe = unsafe; a_inlined = inlined }
 
 let mk_op_app ?(params=[]) ?(unsafe=false) ?(reset=None) op args =
   Eapp(mk_app ~params:params ~unsafe:unsafe op, args, reset)

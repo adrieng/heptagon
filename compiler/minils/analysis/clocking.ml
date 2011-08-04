@@ -182,7 +182,8 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
     e.e_base_ck <- base;
     (try unify ct e.e_ct
      with Unify ->
-       eprintf "Incoherent clock annotation.@\n";
+       eprintf "Incoherent clock annotation for exp %a.@\n"
+       Mls_printer.print_exp e;
        error_message e.e_loc (Etypeclash (ct,e.e_ct)));
     e.e_ct <- ct;
     ct, base
