@@ -1,0 +1,5 @@
+node f(x:int;c:bool) returns (y:int)
+let
+  y = (x :: .) when c;
+tel
+
