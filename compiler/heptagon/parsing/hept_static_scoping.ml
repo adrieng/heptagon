@@ -67,9 +67,14 @@ let const_dec funs local_const cd =
   add_const c_name (Signature.mk_const_def Types.Tinvalid (Initial.mk_static_string "invalid"));
   cd, local_const
 
+let interface_desc _ local_const id = match id with
+  | Iopen n -> open_module n; id, local_const
+  | _ -> raise Errors.Fallback
+
 let program p =
   let funs = { Hept_parsetree_mapfold.defaults
                with node_dec = node; exp = exp; static_exp = static_exp; const_dec = const_dec } in
+  List.iter open_module p.p_opened;
   let p, _ = Hept_parsetree_mapfold.program_it funs Names.NamesSet.empty p in
   p
 

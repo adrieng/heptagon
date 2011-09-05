@@ -532,7 +532,6 @@ let translate_program p =
     | Ptype t -> Heptagon.Ptype (translate_typedec t)
     | Pnode n -> Heptagon.Pnode (translate_node n)
   in
-  List.iter open_module p.p_opened;
   let desc = List.map translate_program_desc p.p_desc in
   { Heptagon.p_modname = Names.modul_of_string p.p_modname;
     Heptagon.p_opened = p.p_opened;
