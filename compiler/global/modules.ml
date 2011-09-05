@@ -288,7 +288,8 @@ exception Undefined_type of qualname
 
 (** @return the unaliased version of a type. @raise Undefined_type *)
 let rec unalias_type t = match t with
-  | Tid ty_name ->
+  | Tid ({ qual = q } as ty_name) ->
+    _load_module q;
       (try
         match find_type ty_name with
           | Talias ty -> unalias_type ty
