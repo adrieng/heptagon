@@ -28,8 +28,12 @@ let compile_interface modname source_f =
 
   try
   (* Process the [lexbuf] to an Heptagon AST *)
-    let _ = Hept_parser_scoper.parse_interface modname lexbuf in
+    let p = Hept_parser_scoper.parse_interface modname lexbuf in
     if !print_types then Global_printer.print_interface Format.std_formatter;
+
+    (* Process the interface *)
+    let _ = Hept_compiler.compile_interface p in
+
   (* Output the .epci *)
     output_value epci_c (Modules.current_module ());
     close_all_files ()

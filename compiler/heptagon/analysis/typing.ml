@@ -1197,6 +1197,15 @@ let typing_typedec td =
   in
     { td with t_desc = tydesc }
 
+let typing_signature s =
+  let typing_arg cenv a =
+    { a with a_type = check_type cenv a.a_type }
+  in
+  let typed_params, cenv = build_node_params QualEnv.empty s.sig_params in
+  { s with sig_params = typed_params;
+    sig_inputs = List.map (typing_arg cenv) s.sig_inputs;
+    sig_outputs = List.map (typing_arg cenv) s.sig_outputs; }
+
 let program p =
   let program_desc pd = match pd with
     | Pnode n -> Pnode (node n)
@@ -1204,3 +1213,15 @@ let program p =
     | Ptype t -> Ptype (typing_typedec t)
   in
   { p with p_desc = List.map program_desc p.p_desc }
+
+let interface i =
+  let interface_decl i =
+    let desc = match i.interf_desc with
+      | Iconstdef c -> Iconstdef (typing_const_dec c)
+      | Itypedef t -> Itypedef (typing_typedec t)
+      | Isignature i -> Isignature (typing_signature i)
+      | id -> id
+    in
+    { i with interf_desc = desc }
+  in
+  List.map interface_decl i

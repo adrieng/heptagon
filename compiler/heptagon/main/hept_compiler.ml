@@ -71,3 +71,6 @@ let compile_program p =
   p
 
 
+let compile_interface i =
+  let i = silent_pass "Typing" true Typing.interface i in
+  i
