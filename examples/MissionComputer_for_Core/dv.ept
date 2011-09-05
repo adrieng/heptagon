@@ -1,4 +1,5 @@
 open TypeArray
+open TypeTracks
 open CstArrayInit
 open Mc_TypeSensors
 open Mc
@@ -27,7 +28,7 @@ fun dv_tracknumberexist(missiontrack : TypeTracks.tmissiontrack;
 var l36 : bool;
 let
     l36 =
-      fold dv_sametracknumber <<ksizemissiontracksarray>>(
+      fold<<ksizemissiontracksarray>> dv_sametracknumber(
         missiontrack^ksizemissiontracksarray, missiontracks, false);
     accout = accin or l36;
 tel
@@ -48,7 +49,7 @@ fun dv_proof2(ifftracks : TypeArray.tifftracksarray;
 var l33 : bool;
 let
     l33 =
-      fold dv_detectedbyiff <<ksizemissiontracksarray>>(missiontracks, true);
+      fold<<ksizemissiontracksarray>> dv_detectedbyiff(missiontracks, true);
     proof2 = Verif.implies(ifftracks = kinitifftrackarray, l33);
 tel
 
@@ -58,7 +59,7 @@ fun dv_proof3(missiontracks : TypeArray.tmissiontracksarray)
 var l33 : bool;
 let
     l33 =
-      fold dv_tracknumberexist <<ksizemissiontracksarray>>(
+      fold<<ksizemissiontracksarray>> dv_tracknumberexist(
         missiontracks, missiontracks^ksizemissiontracksarray, false);
     proof3 = not l33;
 tel

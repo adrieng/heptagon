@@ -113,9 +113,9 @@ var
     l30 : TypeTracks.trdrtrack^ksizerdrtracksarray;
 let
     rdrtracks = if st = TState_ON then l30 else kinitrdrtrackarray;
-    l30 = map Trackslib.elaboraterdrtrack <<ksizerdrtracksarray>>(l22);
+    l30 = map<<ksizerdrtracksarray>> Trackslib.elaboraterdrtrack(l22);
     l22 =
-      map Trackslib.selectdetectedtrack <<ksizerdrtracksarray>>(
+      map<<ksizerdrtracksarray>> Trackslib.selectdetectedtrack(
         rdrdetectedtracks, tracks^ksizerdrtracksarray,
         CstTracksInit.kinittrack^ksizerdrtracksarray);
 tel
@@ -171,10 +171,10 @@ var l34 : TypeTracks.ttrack^TypeArray.ksizeifftracksarray;
     l40 : TypeArray.tifftracksarray;
 let
     l34 =
-      map Trackslib.selectdetectedtrack <<ksizeifftracksarray>>(
+      map<<ksizeifftracksarray>> Trackslib.selectdetectedtrack(
         iffdetectedtracks, tracks^ksizeifftracksarray,
         CstTracksInit.kinittrack^ksizeifftracksarray);
-    l40 = map ifftrack_of_track <<ksizeifftracksarray>>(l34);
+    l40 = map<<ksizeifftracksarray>> ifftrack_of_track(l34);
     ifftracks = if st = TState_ON then l40 else kinitifftrackarray;
   tel
 
@@ -250,10 +250,7 @@ tel
 node createtracks_rand(res : bool)
     returns (tracks : TypeArray.ttracksarray)
 let
-    tracks =
-      map
-        createtracks_createonetrack_rand
-        <<ksizetracksarray>>(res^ksizetracksarray);
+    tracks = map<<ksizetracksarray>> createtracks_createonetrack_rand(res^ksizetracksarray);
 tel
 
 node createalltracks(res : bool)
@@ -309,7 +306,7 @@ fun mc_tracks_fusion_onerdrwithifftracks(rdrtrack : TypeTracks.tmissiontrack;
             fusionnedifftracks : TypeTracks.tmissiontrack^ksizeifftracksarray)
 let
     (fusionnedifftracks, fusionnedrdrtrack) =
-      mapfold fusionrdrifftracks <<ksizeifftracksarray>>(ifftracks, rdrtrack);
+      mapfold<<ksizeifftracksarray>> fusionrdrifftracks(ifftracks, rdrtrack);
 tel
 
 (* merge tracks data received from both radar and iff sensors *)
@@ -324,16 +321,9 @@ var
 let
     missiontracks = mergedrdrtracks @ mergedifftracks;
     (mergedrdrtracks, mergedifftracks) =
-      mapfold mc_tracks_fusion_onerdrwithifftracks <<ksizerdrtracksarray>>(
-        l140, l139);
-    l140 =
-      map
-        Trackslib.convertrdrtracktomissiontrack
-        <<ksizerdrtracksarray>>(rdrtracks);
-    l139 =
-      map
-        Trackslib.convertifftracktomissiontrack
-        <<ksizeifftracksarray>>(ifftracks);
+      mapfold<<ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks(l140, l139);
+    l140 = map<<ksizerdrtracksarray>> Trackslib.convertrdrtracktomissiontrack(rdrtracks);
+    l139 = map<<ksizeifftracksarray>> Trackslib.convertifftracktomissiontrack(ifftracks);
 tel
 
 
@@ -358,7 +348,7 @@ let
       not Trackslib.trackalowerprioritythanb(missiontrack,
         accprioritymissiontrack);
     missiontracknotinpriorittiesarray =
-      fold prio_tracknumbernotinarray <<4>>(missiontrack.m_tracknumber^4,
+      fold<<4>> prio_tracknumbernotinarray(missiontrack.m_tracknumber^4,
         prioritiesarray, true);
     prioritymissiontrack =
       if missiontracknotinpriorittiesarray & missiontrackhashigherprioritythanacc
@@ -379,9 +369,7 @@ let
      [ prioritiesarray with [indexpriority] =
           missiontrackwithhighestpriority.m_tracknumber ];
     missiontrackwithhighestpriority =
-      fold
-        prio_selecthighestprioritynotinpriorityarray
-        <<ksizemissiontracksarray>>(
+      fold<<ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray(
         missiontracks,
         prioritiesarray^ksizemissiontracksarray, CstTracksInit.kinitmissiontrack);
 tel
@@ -402,7 +390,7 @@ fun prio_setpriorityinmissiontrackarray(priorityarray : Mc_TypeLists.tpriorityLi
     returns (missiontrackwithprio : TypeTracks.tmissiontrack)
 let
     missiontrackwithprio =
-      foldi prio_setpriorityinmissiontrack <<4>>(priorityarray, missiontrack);
+      foldi<<4>> prio_setpriorityinmissiontrack(priorityarray, missiontrack);
 tel
 
 
@@ -426,7 +414,7 @@ node mc_tracks_prio(missiontracks : TypeArray.tmissiontracksarray)
 var prioritytracknumbers : Mc_TypeLists.tpriorityList;
 let
     missiontrackswithprio =
-      map prio_setpriorityinmissiontrackarray <<ksizemissiontracksarray>>(
+      map<<ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray(
         prioritytracknumbers^ksizemissiontracksarray, missiontracks);
     prioritytracknumbers =
       prio_selectprioritarymissiontracks(missiontracks,
@@ -442,10 +430,8 @@ node mc_tracks_tracknumber(withouttracknb : TypeArray.tmissiontracksarray)
 var l81 : int;
 let
     (withtracknumber, l81) =
-      mapfold
-        Trackslib.calculatemissiontracknumber
-        <<ksizemissiontracksarray>>((kinitmissiontrackarray ->
-           pre withtracknumber)^ksizemissiontracksarray,
+      mapfold<<ksizemissiontracksarray>> Trackslib.calculatemissiontracknumber
+          ((kinitmissiontrackarray -> pre withtracknumber)^ksizemissiontracksarray,
            withouttracknb, 0 -> pre l81);
 tel
 
@@ -474,7 +460,7 @@ node mc(currentrdrstate : tsensorstate;
           currentiffstate : tsensorstate;
           ifftracks : TypeArray.tifftracksarray)
     returns (rdronoffcmd, rdrmodecmd : bool;
-             missiontracks : Typearray.tmissiontracksarray;
+             missiontracks : TypeArray.tmissiontracksarray;
              iffonoffcmd : bool)
 let
     missiontracks = mc_tracks(rdrtracks, ifftracks);

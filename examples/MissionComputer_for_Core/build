@@ -1,0 +1,29 @@
+HEPTC=../../compiler/heptc.byte
+HEPTC_OPTIONS=
+
+VERBOSE=1
+
+interfaces=(typeBase.epi typeTracks.epi typeArray.epi cstArrayInit.epi cstBaseInit.epi cstPhysics.epi cstTracksInit.epi mc_TypeInputs.epi mc_TypeLists.epi mc_TypeSensors.epi)
+ext_libs=(mc_ext.epi mathext.epi)
+sources=(math.ept trackslib.ept digital.ept mc.ept dv.ept verif.ept debug.ept)
+
+for f in ${interfaces[@]}; do
+    if [ $VERBOSE ] ; then
+        echo "**** Compiling interface: $f *******"
+    fi
+    $HEPTC $f
+done
+
+for f in ${ext_libs[@]}; do
+    if [ $VERBOSE ] ; then
+        echo "**** Compiling external lib: $f *******"
+    fi
+    $HEPTC $f
+done
+
+for f in ${sources[@]}; do
+    if [ $VERBOSE ] ; then
+        echo "**** Compiling source file: $f *******"
+    fi
+    $HEPTC -target c $f
+done

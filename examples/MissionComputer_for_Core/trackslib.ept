@@ -224,7 +224,7 @@ let
     newtracknumber =
       if setnewtracknumber then currenttracknumber + 1 else currenttracknumber;
     previoustracknumber =
-      fold missiontrackexist <<TypeArray.ksizemissiontracksarray>>
+      fold <<TypeArray.ksizemissiontracksarray>> missiontrackexist
       (missiontrack^TypeArray.ksizemissiontracksarray,
       previousmissiontracks, 0);
     newmissiontrack =
@@ -239,7 +239,7 @@ fun calculatetracktargettypefromid(id : int)
 let
   targettype =
       if 0 = id
-      then Typebase.Ttargettype_unknown
+      then TypeBase.Ttargettype_unknown
       else if id <= 500
       then TypeBase.Ttargettype_friend
       else TypeBase.Ttargettype_foe;
@@ -247,15 +247,15 @@ tel
 
 (* calculate the derivative of a value x(n) according to its
    ante-previous value x(n-2) *)
-node myderivative(in, period : float) returns (out : float)
+node myderivative(inv, period : float) returns (out : float)
 var l2 : float;
 let
- (* l2 = fby (in; 2; 0.0);  *)
-  l2 = 0.0 fby (0.0 fby in);
+ (* l2 = fby (inv; 2; 0.0);  *)
+  l2 = 0.0 fby (0.0 fby inv);
   out =
-      if Math.abs(l2) <. 0.1 or Math.abs(in) <. 0.1
+      if Math.abs(l2) <. 0.1 or Math.abs(inv) <. 0.1
       then 0.0
-      else 0.0 -> (in -. l2) /. (2.0 *. period);
+      else 0.0 -> (inv -. l2) /. (2.0 *. period);
   tel
 
 (* calculate a track speed vector according to the position vector *)
