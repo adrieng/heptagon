@@ -206,7 +206,7 @@ let main_def_of_class_def cd =
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
       let (stm, vars) =
-        write_lhs_of_ty (Cfield (Cvar "res",
+        write_lhs_of_ty (Cfield (Cvar "_res",
                                  local_qn (name vd.v_ident))) vd.v_type in
       if !Compiler_options.hepts_simulation then
   (stm, vars)
@@ -217,7 +217,7 @@ let main_def_of_class_def cd =
   let printf_calls = List.concat printf_calls in
 
   let cinp = inputlist_of_ovarlist stepm.m_inputs in
-  let cout = ["res", (Cty_id (qn_append cd.cd_name "_out"))] in
+  let cout = ["_res", (Cty_id (qn_append cd.cd_name "_out"))] in
 
   let varlist =
     (if cd.cd_stateful
@@ -234,7 +234,7 @@ let main_def_of_class_def cd =
     let funcall =
       let args =
         map (fun vd -> Cvar (name vd.v_ident)) stepm.m_inputs
-        @ (Caddrof (Cvar "res")
+        @ (Caddrof (Cvar "_res")
            :: if cd.cd_stateful then [Caddrof (Cvar "mem")] else []) in
       Cfun_call ((cname_of_qn cd.cd_name) ^ "_step", args) in
     concat scanf_calls

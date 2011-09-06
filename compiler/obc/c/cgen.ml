@@ -154,7 +154,7 @@ let rec assoc_type_lhs lhs var_env = match lhs with
     | Cty_ptr ty -> ty
     | _ -> Error.message no_location Error.Ederef_not_pointer)
   | CLfield(CLderef (CLvar "self"), { name = x }) -> assoc_type x var_env
-  | CLfield(CLderef (CLvar "out"), { name = x }) -> assoc_type x var_env
+  | CLfield(CLderef (CLvar "_out"), { name = x }) -> assoc_type x var_env
   | CLfield(x, f) ->
     let ty = assoc_type_lhs x var_env in
     let n = struct_name ty in
@@ -282,7 +282,7 @@ and clhs_of_pattern out_env var_env l = match l.pat_desc with
       let n = name v in
       let n_lhs =
         if IdentSet.mem v out_env
-        then CLfield (CLderef (CLvar "out"), local_qn n)
+        then CLfield (CLderef (CLvar "_out"), local_qn n)
         else CLvar n
       in
 
@@ -311,7 +311,7 @@ and cexpr_of_pattern out_env var_env l = match l.pat_desc with
       let n = name v in
       let n_lhs =
         if IdentSet.mem v out_env
-        then Cfield (Cderef (Cvar "out"), local_qn n)
+        then Cfield (Cderef (Cvar "_out"), local_qn n)
         else Cvar n
       in
 
@@ -338,7 +338,7 @@ and cexpr_of_ext_value out_env var_env w = match w.w_desc with
     let n = name v in
     let n_lhs =
       if IdentSet.mem v out_env
-      then Cfield (Cderef (Cvar "out"), local_qn n)
+      then Cfield (Cderef (Cvar "_out"), local_qn n)
       else Cvar n
     in
 
@@ -593,7 +593,7 @@ let qn_append q suffix =
 (** Builds the argument list of step function*)
 let step_fun_args n md =
   let args = inputlist_of_ovarlist md.m_inputs in
-  let out_arg = [("out", Cty_ptr (Cty_id (qn_append n "_out")))] in
+  let out_arg = [("_out", Cty_ptr (Cty_id (qn_append n "_out")))] in
   let context_arg =
     if is_stateful n then
       [("self", Cty_ptr (Cty_id (qn_append n "_mem")))]
