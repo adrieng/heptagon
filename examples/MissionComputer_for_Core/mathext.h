@@ -8,11 +8,11 @@
   \
   void FNAME ## _step(TY_IN, FNAME ## _out *)
 
-WRAP_FUN_DECL(atanr, float, float);
-WRAP_FUN_DECL(acosr, float, float);
-WRAP_FUN_DECL(cosr, float, float);
-WRAP_FUN_DECL(asinr, float, float);
-WRAP_FUN_DECL(sinr, float, float);
-WRAP_FUN_DECL(sqrtr, float, float);
+WRAP_FUN_DECL(Mathext__atanr, float, float);
+WRAP_FUN_DECL(Mathext__acosr, float, float);
+WRAP_FUN_DECL(Mathext__cosr, float, float);
+WRAP_FUN_DECL(Mathext__asinr, float, float);
+WRAP_FUN_DECL(Mathext__sinr, float, float);
+WRAP_FUN_DECL(Mathext__sqrtr, float, float);
 
 #endif

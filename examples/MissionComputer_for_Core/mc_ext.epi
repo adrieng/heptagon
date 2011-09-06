@@ -11,4 +11,4 @@ val fun mc_tracks_prio_sorttracks(inputtrack1 : TypeTracks.tmissiontrack;
 
 val fun int_of_float(a:float) returns (o:int)
 val fun float_of_int(a:int) returns (o:float)
-val fun rand() returns (output1 : float)
+val fun rand() returns (o : float)

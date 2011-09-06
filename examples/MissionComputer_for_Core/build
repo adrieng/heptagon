@@ -1,5 +1,9 @@
+#!/bin/bash
 HEPTC=../../compiler/heptc.byte
 HEPTC_OPTIONS=
+
+GCC=gcc
+GCC_OPTIONS="-std=c99 -I ../../../lib/c"
 
 VERBOSE=1
 
@@ -11,19 +15,38 @@ for f in ${interfaces[@]}; do
     if [ $VERBOSE ] ; then
         echo "**** Compiling interface: $f *******"
     fi
-    $HEPTC $f
+    $HEPTC $HEPTC_OPTIONS -target c $f
 done
 
 for f in ${ext_libs[@]}; do
     if [ $VERBOSE ] ; then
         echo "**** Compiling external lib: $f *******"
     fi
-    $HEPTC $f
+    $HEPTC $HEPTC_OPTIONS $f
 done
 
 for f in ${sources[@]}; do
     if [ $VERBOSE ] ; then
         echo "**** Compiling source file: $f *******"
     fi
-    $HEPTC -target c $f
+    $HEPTC $HEPTC_OPTIONS -target c $f
 done
+
+source_dirs=(debug_c dv_c digital_c math_c mc_c trackslib_c verif_c typeBase_c typeTracks_c typeArray_c cstArrayInit_c cstBaseInit_c cstPhysics_c cstTracksInit_c mc_TypeInputs_c mc_TypeLists_c mc_TypeSensors_c)
+other_files=(mathext.c mathext.h mc_ext.c mc_ext.h)
+if [ -d _build ]; then
+   rm -r _build
+fi
+mkdir _build
+cd _build
+
+for f in ${source_dirs[@]}; do
+    cp ../$f/* .
+done
+for f in ${other_files[@]}; do
+    cp ../$f .
+done
+
+$GCC $GCC_OPTIONS *.c
+
+cd ..

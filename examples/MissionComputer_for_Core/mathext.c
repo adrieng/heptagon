@@ -6,9 +6,9 @@
     out->o = CNAME(a); \
   }
 
-WRAP_FUN_DEF(atanr, atan, float, float)
-WRAP_FUN_DEF(acosr, acos, float, float)
-WRAP_FUN_DEF(cosr, cos, float, float)
-WRAP_FUN_DEF(asinr, asin, float, float)
-WRAP_FUN_DEF(sinr, sin, float, float)
-WRAP_FUN_DEF(sqrtr, sqrt, float, float)
+WRAP_FUN_DEF(Mathext__atanr, atan, float, float)
+WRAP_FUN_DEF(Mathext__acosr, acos, float, float)
+WRAP_FUN_DEF(Mathext__cosr, cos, float, float)
+WRAP_FUN_DEF(Mathext__asinr, asin, float, float)
+WRAP_FUN_DEF(Mathext__sinr, sin, float, float)
+WRAP_FUN_DEF(Mathext__sqrtr, sqrt, float, float)

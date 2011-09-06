@@ -247,12 +247,12 @@ tel
 
 (* calculate the derivative of a value x(n) according to its
    ante-previous value x(n-2) *)
-node myderivative(inv, period : float) returns (out : float)
+node myderivative(inv, period : float) returns (o : float)
 var l2 : float;
 let
  (* l2 = fby (inv; 2; 0.0);  *)
   l2 = 0.0 fby (0.0 fby inv);
-  out =
+  o =
       if Math.abs(l2) <. 0.1 or Math.abs(inv) <. 0.1
       then 0.0
       else 0.0 -> (inv -. l2) /. (2.0 *. period);
@@ -310,6 +310,16 @@ let
     newa = if l25 then b else a;
 tel
 
+fun position_equal(p1, p2 : TypeBase.tposition) returns (res:bool)
+let
+  res = (p1.x = p2.x) & (p1.y = p2.y)
+tel
+
+fun speed_equal(s1, s2 : TypeBase.tspeed) returns (res:bool)
+let
+  res = (s1.sx = s2.sx) & (s1.sy = s2.sy)
+tel
+
 (* convert an iff track (position + identifier) into a mission
    track (position + speed + distance + rate of closing +
    detected by radar/iff + tracknumber + target type) *)
@@ -318,7 +328,7 @@ node convertifftracktomissiontrack(ifftrack : TypeTracks.tifftrack)
 let
   missiontrack =
       { m_pos             = ifftrack.i_pos;
-        m_speed           = if CstBaseInit.kInitPosition = ifftrack.i_pos
+        m_speed           = if position_equal(CstBaseInit.kInitPosition, ifftrack.i_pos)
         then CstBaseInit.kInitSpeed
         else calculatetrackspeedfrompos(ifftrack.i_pos);
         m_id              = ifftrack.i_id;
@@ -327,7 +337,7 @@ let
         m_sabs            = 0.0;
         m_sr              = 0.0;
         m_detectedbyradar = false;
-        m_detectedbyiff   = not (ifftrack.i_pos = CstBaseInit.kInitPosition &
+        m_detectedbyiff   = not (position_equal(ifftrack.i_pos, CstBaseInit.kInitPosition) &
          ifftrack.i_id = 0);
         m_tracknumber     = 0;
         m_targettype      = calculatetracktargettypefromid(ifftrack.i_id);
@@ -350,8 +360,8 @@ let
         m_d               = rdrtrack.r_d;
         m_sabs            = rdrtrack.r_sabs;
         m_sr              = rdrtrack.r_sr;
-        m_detectedbyradar = not (rdrtrack.r_pos = CstBaseInit.kInitPosition &
-         rdrtrack.r_s = CstBaseInit.kInitSpeed &
+        m_detectedbyradar = not (position_equal(rdrtrack.r_pos, CstBaseInit.kInitPosition) &
+         speed_equal(rdrtrack.r_s, CstBaseInit.kInitSpeed) &
          rdrtrack.r_d = 0.0 &
          rdrtrack.r_sabs = 0.0 &
          rdrtrack.r_sr = 0.0);
