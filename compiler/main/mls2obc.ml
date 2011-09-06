@@ -158,7 +158,7 @@ let mk_plus_one e = match e.e_desc with
 
 (** Creates the action list that copies [src] to [dest],
     updating the value at index [idx_list] with the value [v]. *)
-let rec update_array dest src idx_list v = match dest.pat_ty, idx_list with
+let rec update_array dest src idx_list v = match Modules.unalias_type dest.pat_ty, idx_list with
   | Tarray (t, n), idx::idx_list ->
       (*Body of the copy loops*)
       let copy i =
