@@ -316,18 +316,14 @@ and interface_desc_it funs acc id =
   try funs.interface_desc funs acc id
   with Fallback -> interface_desc funs acc id
 and interface_desc funs acc id = match id with
-  | Iopen _ -> id, acc
   | Itypedef t -> let t, acc = type_dec_it funs acc t in Itypedef t, acc
   | Iconstdef c -> let c, acc = const_dec_it funs acc c in Iconstdef c, acc
   | Isignature s -> let s, acc = signature_it funs acc s in Isignature s, acc
 
 and interface_it funs acc i = funs.interface funs acc i
 and interface funs acc i =
-  let decl acc id =
-    let idc, acc = interface_desc_it funs acc id.interf_desc in
-    { id with interf_desc = idc }, acc
-  in
-  mapfold decl acc i
+  let desc, acc = mapfold (interface_desc_it funs) acc i.i_desc in
+  { i with i_desc = desc }, acc
 
 and signature_it funs acc s = funs.signature funs acc s
 and signature funs acc s =

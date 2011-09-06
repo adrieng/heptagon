@@ -151,6 +151,10 @@ struct
     | Module _ | QualModule _ -> ModulSet.add qn.qual deps
     | _ -> deps
 
+  let deps_ty funs deps ty = match ty with
+    | Tid ln -> ty, deps_longname deps ln
+    | _ -> raise Errors.Fallback
+
   let deps_static_exp_desc funs deps sedesc =
     let (sedesc, deps) = Global_mapfold.static_exp_desc funs deps sedesc in
     match sedesc with
@@ -192,7 +196,8 @@ struct
   let deps_program p =
     let funs = { Obc_mapfold.defaults with
       global_funs = { Global_mapfold.defaults with
-                        static_exp_desc = deps_static_exp_desc; };
+                        static_exp_desc = deps_static_exp_desc;
+                        ty = deps_ty };
       lhsdesc = deps_lhsdesc;
       edesc = deps_edesc;
       act = deps_act;
@@ -200,6 +205,15 @@ struct
     } in
     let (_, deps) = Obc_mapfold.program funs ModulSet.empty p in
     ModulSet.remove p.p_modname deps
+
+  let deps_interface i =
+    let funs = { Obc_mapfold.defaults with
+      global_funs = { Global_mapfold.defaults with
+                        static_exp_desc = deps_static_exp_desc;
+                        ty = deps_ty };
+    } in
+    let (_, deps) = Obc_mapfold.interface funs ModulSet.empty i in
+    ModulSet.remove i.i_modname deps
 end
 
 (** Creates a new for loop. Expects the size of the iteration
@@ -237,6 +251,13 @@ let program_classes p =
     | _ -> acc
   in
     List.fold_right add_class p.p_desc []
+
+let interface_types i =
+  let add_type id acc = match id with
+    | Itypedef ty -> ty :: acc
+    | _ -> acc
+  in
+    List.fold_right add_type i.i_desc []
 
 let rec ext_value_of_pattern patt =
   let desc = match patt.pat_desc with

@@ -107,7 +107,7 @@ let copname = function
   | "="  -> "==" | "<>" -> "!=" | "&"  -> "&&" | "or" -> "||" | "+" -> "+"
   | "-" -> "-" | "*" -> "*" | "/" -> "/" | "*." -> "*" | "/." -> "/"
   | "+." -> "+" | "-." -> "-" | "<"  -> "<" | ">"  -> ">" | "<=" -> "<="
-  | ">=" -> ">="
+  | ">=" -> ">=" | "<=." -> "<=" | "<." -> "<" | ">=." -> ">=" | ">." -> ">"
   | "~-" -> "-" | "not" -> "!" | "%" -> "%"
   | op   -> op
 
@@ -225,10 +225,11 @@ let rec cexpr_of_static_exp se =
           (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n)))
                      (cexpr_of_static_exp c) n_list)
     | Svar ln ->
-        (try
+        (* (try
           let cd = find_const ln in
           cexpr_of_static_exp (Static.simplify QualEnv.empty cd.c_value)
-        with Not_found -> assert false)
+        with Not_found -> assert false) *)
+      Cvar (cname_of_qn ln)
     | Sop _ ->
         let se' = Static.simplify QualEnv.empty se in
           if se = se' then
@@ -258,14 +259,14 @@ and cexprs_of_exps out_env var_env exps =
 and cop_of_op_aux op_name cexps = match op_name with
     | { qual = Pervasives; name = op } ->
         begin match op,cexps with
-          | "~-", [e] -> Cuop ("-", e)
+          | ("~-" | "~-."), [e] -> Cuop ("-", e)
           | "not", [e] -> Cuop ("!", e)
           | (
               "=" | "<>"
             | "&" | "or"
             | "+" | "-" | "*" | "/"
             | "*." | "/." | "+." | "-." | "%"
-            | "<" | ">" | "<=" | ">="), [el;er] ->
+            | "<" | ">" | "<=" | ">=" | "<=." | "<." | ">=." | ">."), [el;er] ->
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
         end
@@ -775,20 +776,21 @@ let cdefs_and_cdecls_of_type_decl otd =
         let decl = Cdecl_struct (name, decls) in
         ([], [decl])
 
-(** [cfile_list_of_oprog oprog] translates the Obc program [oprog] to a list of
-    C source and header files. *)
-let cfile_list_of_oprog_ty_decls name oprog =
-  let types = Obc_utils.program_types oprog in
-  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_type_decl types in
+let cdefs_and_cdecls_of_const_decl cd =
+  let name = cname_of_qn cd.c_name in
+  let v = cexpr_of_static_exp cd.Obc.c_value in
+  let cty = ctype_of_otype cd.Obc.c_type in
+  [], [Cdecl_constant (name, cty, v)]
 
-  let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
-  let filename_types = name ^ "_types" in
-  let types_h = (filename_types ^ ".h",
-                 Cheader (["stdbool"; "assert"; "pervasives"],
-                          List.concat cty_decls)) in
-  let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
+let cdefs_and_cdecls_of_interface_decl id = match id with
+  | Itypedef td -> cdefs_and_cdecls_of_type_decl td
+  | Iconstdef cd -> cdefs_and_cdecls_of_const_decl cd
+  | _ -> [], []
 
-  filename_types, [types_h; types_c]
+let cdefs_and_cdecls_of_program_decl id = match id with
+  | Ptype td -> cdefs_and_cdecls_of_type_decl td
+  | Pconst cd -> cdefs_and_cdecls_of_const_decl cd
+  | _ -> [], []
 
 let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
@@ -800,10 +802,33 @@ let global_file_header name prog =
   let decls = List.concat decls
   and defs = List.concat defs in
 
-  let (ty_fname, ty_files) = cfile_list_of_oprog_ty_decls name prog in
+  let filename_types = name ^ "_types" in
+  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_program_decl prog.p_desc in
+
+  let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
+  let types_h = (filename_types ^ ".h",
+                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies,
+                          List.concat cty_decls)) in
+  let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
   let header =
-    (name ^ ".h", Cheader (ty_fname :: dependencies, decls))
+    (name ^ ".h", Cheader (filename_types :: dependencies, decls))
   and source =
     (name ^ ".c", Csource defs) in
-  [header; source] @ ty_files
+  [header; source; types_h; types_c]
+
+
+let interface_header name i =
+  let dependencies = ModulSet.elements (Obc_utils.Deps.deps_interface i) in
+  let dependencies =
+    List.map (fun m -> String.uncapitalize (modul_to_string m)) dependencies in
+
+  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_interface_decl i.i_desc in
+
+  let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
+  let types_h = (name ^ ".h",
+                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies,
+                          List.concat cty_decls)) in
+  let types_c = (name ^ ".c", Csource (concat cty_defs)) in
+
+  [types_h; types_c]

@@ -44,8 +44,8 @@ struct
     raise Errors.Error
 end
 
-let fresh = Idents.gen_fresh "hept2mls" 
-              (function Heptagon.Enode f -> (shortname f) 
+let fresh = Idents.gen_fresh "hept2mls"
+              (function Heptagon.Enode f -> (shortname f)
 		 | _ -> "n")
 
 (* add an equation *)
@@ -224,3 +224,22 @@ let program
     p_format_version = minils_format_version;
     p_opened = modules;
     p_desc = List.map program_desc desc_list }
+
+let signature s =
+  { sig_name = s.Heptagon.sig_name;
+    sig_inputs = s.Heptagon.sig_inputs;
+    sig_stateful = s.Heptagon.sig_stateful;
+    sig_outputs = s.Heptagon.sig_outputs;
+    sig_params = s.Heptagon.sig_params;
+    sig_param_constraints = s.Heptagon.sig_param_constraints;
+    sig_loc = s.Heptagon.sig_loc }
+
+let interface i =
+  let interface_decl id = match id with
+    | Heptagon.Itypedef td -> Itypedef (typedec td)
+    | Heptagon.Iconstdef cd -> Iconstdef (const_dec cd)
+    | Heptagon.Isignature s -> Isignature (signature s)
+  in
+  { i_modname = i.Heptagon.i_modname;
+    i_opened = i.Heptagon.i_opened;
+    i_desc = List.map interface_decl i.Heptagon.i_desc }

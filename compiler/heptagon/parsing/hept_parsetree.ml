@@ -217,14 +217,12 @@ type signature =
     sig_param_constraints : exp list;
     sig_loc         : location }
 
-type interface = interface_decl list
-
-and interface_decl =
-  { interf_desc : interface_desc;
-    interf_loc  : location }
+type interface =
+    { i_modname : dec_name;
+      i_opened : module_name list;
+      i_desc : interface_desc list }
 
 and interface_desc =
-  | Iopen of module_name
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
@@ -260,9 +258,6 @@ let mk_type_dec name desc loc =
 
 let mk_equation desc loc =
   { eq_desc = desc; eq_loc = loc }
-
-let mk_interface_decl desc loc =
-  { interf_desc = desc; interf_loc = loc }
 
 let mk_var_dec ?(linearity=Linearity.Ltop) name ty ck last loc =
   { v_name = name; v_type = ty; v_linearity = linearity;

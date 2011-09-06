@@ -130,3 +130,22 @@ and program_desc =
   | Pconst of const_dec
   | Ptype of type_dec
 
+
+type signature = {
+  sig_name              : qualname;
+  sig_inputs            : arg list;
+  sig_stateful          : bool;
+  sig_outputs           : arg list;
+  sig_params            : param list;
+  sig_param_constraints : constrnt list;
+  sig_loc               : location }
+
+type interface =
+    { i_modname : modul;
+      i_opened : modul list;
+      i_desc : interface_desc list }
+
+and interface_desc =
+  | Itypedef of type_dec
+  | Iconstdef of const_dec
+  | Isignature of signature

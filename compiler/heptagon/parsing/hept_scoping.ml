@@ -166,7 +166,7 @@ end
 
 
 let mk_app ?(params=[]) ?(unsafe=false) ?(inlined = false) op =
-  { Heptagon.a_op = op; 
+  { Heptagon.a_op = op;
     Heptagon.a_params = params;
     Heptagon.a_unsafe = unsafe;
     Heptagon.a_inlined = inlined }
@@ -429,7 +429,7 @@ let translate_contract env opt_ct =
   | Some ct ->
       let env' = Rename.append env ct.c_controllables in
       let b, env = translate_block env ct.c_block in
-      Some 
+      Some
 	{ Heptagon.c_assume = translate_exp env ct.c_assume;
 	  Heptagon.c_enforce = translate_exp env ct.c_enforce;
 	  Heptagon.c_controllables = translate_vd_list env' ct.c_controllables;
@@ -560,15 +560,12 @@ let translate_signature s =
 
 
 let translate_interface_desc = function
-  | Iopen n -> open_module n; Heptagon.Iopen n
   | Itypedef tydec -> Heptagon.Itypedef (translate_typedec tydec)
   | Iconstdef const_dec -> Heptagon.Iconstdef (translate_const_dec const_dec)
   | Isignature s -> Heptagon.Isignature (translate_signature s)
 
-let translate_interface_decl idecl =
-  let desc = translate_interface_desc idecl.interf_desc in
-  { Heptagon.interf_desc = desc;
-    Heptagon.interf_loc = idecl.interf_loc }
-
-let translate_interface i = List.map translate_interface_decl i
-
+let translate_interface i =
+  let desc = List.map translate_interface_desc i.i_desc in
+  { Heptagon.i_modname = Names.modul_of_string i.i_modname;
+    Heptagon.i_opened = i.i_opened;
+    Heptagon.i_desc = desc; }

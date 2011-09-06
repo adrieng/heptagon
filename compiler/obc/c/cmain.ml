@@ -344,3 +344,11 @@ let program p =
   let dir = clean_dir dirname in
   let c_ast = translate filename p in
     C.output dir c_ast
+
+let interface i =
+  let filename =
+    filename_of_name (cname_of_name (modul_to_string i.i_modname)) in
+  let dirname = build_path (filename ^ "_c") in
+  let dir = clean_dir dirname in
+  let c_ast = interface_header (Filename.basename filename) i in
+    C.output dir c_ast

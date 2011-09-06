@@ -77,7 +77,7 @@ and edesc =
                  * extvalue list * extvalue list * var_ident option
                        (** map f <<n>> <(extvalue)> (extvalue) reset ident *)
 
-and app = { a_op: op; 
+and app = { a_op: op;
 	    a_params: static_exp list;
 	    a_unsafe: bool;
 	    a_id: ident option;
@@ -155,6 +155,26 @@ and program_desc =
   | Pnode of node_dec
   | Pconst of const_dec
   | Ptype of type_dec
+
+type signature = {
+  sig_name              : qualname;
+  sig_inputs            : arg list;
+  sig_stateful          : bool;
+  sig_outputs           : arg list;
+  sig_params            : param list;
+  sig_param_constraints : constrnt list;
+  sig_loc               : location }
+
+type interface =
+    { i_modname : modul;
+      i_opened : modul list;
+      i_desc : interface_desc list }
+
+and interface_desc =
+  | Itypedef of type_dec
+  | Iconstdef of const_dec
+  | Isignature of signature
+
 
 (*Helper functions to build the AST*)
 

@@ -183,14 +183,12 @@ type signature = {
   sig_param_constraints : constrnt list;
   sig_loc               : location }
 
-type interface = interface_decl list
-
-and interface_decl = {
-  interf_desc : interface_desc;
-  interf_loc  : location }
+type interface =
+    { i_modname : modul;
+      i_opened : modul list;
+      i_desc : interface_desc list }
 
 and interface_desc =
-  | Iopen of modul
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature

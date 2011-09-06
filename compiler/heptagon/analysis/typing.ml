@@ -1215,13 +1215,9 @@ let program p =
   { p with p_desc = List.map program_desc p.p_desc }
 
 let interface i =
-  let interface_decl i =
-    let desc = match i.interf_desc with
+  let interface_desc id = match id with
       | Iconstdef c -> Iconstdef (typing_const_dec c)
       | Itypedef t -> Itypedef (typing_typedec t)
       | Isignature i -> Isignature (typing_signature i)
-      | id -> id
-    in
-    { i with interf_desc = desc }
   in
-  List.map interface_decl i
+  { i with i_desc = List.map interface_desc i.i_desc }

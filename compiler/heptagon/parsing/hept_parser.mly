@@ -645,20 +645,13 @@ infx:
 ;
 
 interface:
-  | interface_decls EOF { List.rev $1 }
+  | o=list(opens) i=list(interface_desc) EOF
+    { { i_modname = ""; i_opened = o; i_desc = i } }
 ;
 
-interface_decls:
-  | /* empty */ { [] }
-  | interface_decls interface_decl { $2 :: $1 }
-;
-
-interface_decl:
-  | id=_interface_decl { mk_interface_decl id (Loc($startpos,$endpos)) }
-_interface_decl:
+interface_desc:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
-  | OPEN modul { Iopen $2 }
   | VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
     RETURNS LPAREN o=params_signature RPAREN
     { Isignature({ sig_name = f;

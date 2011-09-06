@@ -687,7 +687,7 @@ let translate_node
     } as n) =
   Idents.enter_node f;
   let mem_var_tys = Mls_utils.node_memory_vars n in
-  let c_list, c_locals = 
+  let c_list, c_locals =
     match contract with
     | None -> [], []
     | Some c -> c.Minils.c_controllables, c.Minils.c_local in
@@ -749,3 +749,22 @@ let program { Minils.p_modname = p_modname; Minils.p_opened = p_o; Minils.p_desc
     p_opened = p_o;
     p_desc = p_desc }
 
+
+let signature s =
+  { sig_name = s.Minils.sig_name;
+    sig_inputs = s.Minils.sig_inputs;
+    sig_stateful = s.Minils.sig_stateful;
+    sig_outputs = s.Minils.sig_outputs;
+    sig_params = s.Minils.sig_params;
+    sig_param_constraints = s.Minils.sig_param_constraints;
+    sig_loc = s.Minils.sig_loc }
+
+let interface i =
+  let interface_decl id = match id with
+    | Minils.Itypedef td -> Itypedef (translate_ty_def td)
+    | Minils.Iconstdef cd -> Iconstdef (translate_const_def cd)
+    | Minils.Isignature s -> Isignature (signature s)
+  in
+  { i_modname = i.Minils.i_modname;
+    i_opened = i.Minils.i_opened;
+    i_desc = List.map interface_decl i.Minils.i_desc }

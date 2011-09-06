@@ -32,10 +32,13 @@ let compile_interface modname source_f =
     if !print_types then Global_printer.print_interface Format.std_formatter;
 
     (* Process the interface *)
-    let _ = Hept_compiler.compile_interface p in
-
-  (* Output the .epci *)
+    let p = Hept_compiler.compile_interface p in
+    (* Output the .epci *)
     output_value epci_c (Modules.current_module ());
+    (* Translate to Obc *)
+    let p = Hept2mls.interface p in
+    (* Generate the sequential code *)
+    Mls2seq.interface p;
     close_all_files ()
   with
     | x -> close_all_files (); raise x
