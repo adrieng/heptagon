@@ -771,7 +771,7 @@ let cdefs_and_cdecls_of_type_decl otd =
           cdecl_of_cfundef of_string_fun;
           cdecl_of_cfundef to_string_fun])
     | Type_struct fl ->
-        let decls = List.map (fun f -> cname_of_qn f.Signature.f_name,
+        let decls = List.map (fun f -> cname_of_name f.Signature.f_name.name,
                                 ctype_of_otype f.Signature.f_type) fl in
         let decl = Cdecl_struct (name, decls) in
         ([], [decl])

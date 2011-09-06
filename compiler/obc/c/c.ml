@@ -112,6 +112,8 @@ type cdecl =
   | Cdecl_struct of string * (string * cty) list
     (** C function declaration. *)
   | Cdecl_function of string * cty * (string * cty) list
+    (** C constant declaration (alias, name)*)
+  | Cdecl_constant of string * cty * cexpr
 
 (** C function definitions *)
 type cfundef = {
@@ -169,6 +171,9 @@ let cname_of_qn qn =
 
 let pp_qualname fmt q =
   pp_string fmt (cname_of_qn q)
+
+let pp_shortname fmt q =
+  pp_string fmt q.name
 
 let rec pp_cty fmt cty = match cty with
   | Cty_int -> fprintf fmt "int"
@@ -245,15 +250,22 @@ and pp_cexpr fmt ce = match ce with
   | Cconst c -> pp_cconst fmt c
   | Cvar s -> pp_string fmt s
   | Cderef e -> fprintf fmt "*%a" pp_cexpr e
-  | Cfield (Cderef e, f) -> fprintf fmt "%a->%a" pp_cexpr e pp_qualname f
-  | Cfield (e, f) -> fprintf fmt "%a.%a" pp_cexpr e pp_qualname f
+  | Cfield (Cderef e, f) -> fprintf fmt "%a->%a" pp_cexpr e pp_shortname f
+  | Cfield (e, f) -> fprintf fmt "%a.%a" pp_cexpr e pp_shortname f
   | Carray (e1, e2) -> fprintf fmt "%a[%a]" pp_cexpr e1 pp_cexpr e2
+
+and pp_cconst_expr fmt ce = match ce with
+  | Cstructlit (_, el) ->
+      fprintf fmt "{@[%a@]}" (pp_list1 pp_cconst_expr ",") el
+  | Carraylit el ->
+      fprintf fmt "{@[%a@]}" (pp_list1 pp_cconst_expr ",") el
+  | _ -> pp_cexpr fmt ce
 
 and pp_clhs fmt clhs = match clhs with
   | CLvar s -> pp_string fmt s
   | CLderef lhs' -> fprintf fmt "*%a" pp_clhs lhs'
-  | CLfield (CLderef lhs, f) -> fprintf fmt "%a->%a" pp_clhs lhs  pp_qualname f
-  | CLfield (lhs, f) -> fprintf fmt "%a.%a" pp_clhs lhs  pp_qualname f
+  | CLfield (CLderef lhs, f) -> fprintf fmt "%a->%a" pp_clhs lhs  pp_shortname f
+  | CLfield (lhs, f) -> fprintf fmt "%a.%a" pp_clhs lhs  pp_shortname f
   | CLarray (lhs, e) ->
       fprintf fmt "%a[%a]"
         pp_clhs lhs
@@ -281,6 +293,9 @@ let pp_cdecl fmt cdecl = match cdecl with
   | Cdecl_function (n, retty, args) ->
       fprintf fmt "@[<v>%a %a(@[<hov>%a@]);@ @]@\n"
         pp_cty retty  pp_string n  pp_param_list args
+  | Cdecl_constant (n, cty, ce) ->
+      fprintf fmt "@[<v>const %a %a = %a;@ @]@\n"
+        pp_cty cty  pp_string n  pp_cconst_expr ce
 
 let pp_cdef fmt cdef = match cdef with
   | Cfundef cfd ->
