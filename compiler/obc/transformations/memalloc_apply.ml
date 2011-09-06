@@ -18,6 +18,11 @@ let rec ivar_of_pat l = match l.pat_desc with
   | Lfield(l, f) -> Ifield (ivar_of_pat l, f)
   | _ -> assert false
 
+let rec ivar_of_ext_value w = match w.w_desc with
+  | Wvar x -> Ivar x
+  | Wfield(w, f) -> Ifield (ivar_of_ext_value w, f)
+  | _ -> assert false
+
 let rec repr_from_ivar env iv =
   try
     let lhs = IvarEnv.find iv env in lhs.pat_desc
@@ -95,6 +100,19 @@ let lhs funs (env, mut, j) l = match l.pat_desc with
         with
           | Not_found -> Obc_mapfold.lhs funs (env, mut, j) l
 
+let extvalue funs (env, mut, j) w = match w.w_desc with
+  | Wmem _ | Wconst _ -> w, (env, mut, j)
+  | Warray _ -> Obc_mapfold.extvalue funs (env, mut, j) w
+  | Wvar _ | Wfield _ ->
+      (* replace with representative *)
+      let iv = ivar_of_ext_value w in
+        try
+          let w =
+            ext_value_of_pattern (mk_pattern Types.invalid_type (repr_from_ivar env iv)) in
+          { w with w_desc = w.w_desc }, (env, mut, j)
+        with
+          | Not_found -> Obc_mapfold.extvalue funs (env, mut, j) w
+
 let act funs (env,mut,j) a = match a with
   | Acall(pat, o, Mstep, e_list) ->
       let desc = Obc_utils.find_obj (obj_ref_name o) j in
@@ -161,6 +179,6 @@ let class_def funs acc cd =
 
 let program p =
   let funs = { Obc_mapfold.defaults with class_def = class_def; var_decs = var_decs;
-    act = act; lhs = lhs } in
+    act = act; lhs = lhs; extvalue = extvalue } in
   let p, _ = Obc_mapfold.program_it funs (IvarEnv.empty, IdentSet.empty, []) p in
     p
