@@ -126,7 +126,7 @@ let types_of_param_list l = List.map (fun p -> p.p_type) l
 
 let linearities_of_arg_list l = List.map (fun ad -> ad.a_linearity) l
 
-let mk_arg ?(linearity = Ltop) name ty ck =
+let mk_arg name ty linearity ck =
   { a_type = ty; a_linearity = linearity; a_name = name; a_clock = ck }
 
 let mk_param name ty = { p_name = name; p_type = ty }
