@@ -1,9 +1,9 @@
 #!/bin/bash
 HEPTC=../../compiler/heptc.byte
-HEPTC_OPTIONS=
+HEPTC_OPTIONS=-memalloc
 
 GCC=gcc
-GCC_OPTIONS="-std=c99 -I ../../../lib/c"
+GCC_OPTIONS="-g -O2 -std=c99 -I ../../../lib/c"
 
 VERBOSE=1
 

@@ -239,7 +239,7 @@ let
         0., 0., 0., 0., 0))(); *)
   (sloperad, speedt, x0, y0, id) =
     if res then createtracks_createonetrack_init_rand()
-             else  (0.0, 0.0, 0.0, 0.0, 0) -> pre (sloperad, speedt, x0, y0, id);
+             else (0.0, 0.0, 0.0, 0.0, 0) fby (sloperad, speedt, x0, y0, id);
   l18 = y0 -> Mathext.sinr(sloperad) *. speedt +. (y0 -> pre l18);
   l9 = x0 -> (x0 -> pre l9) +. speedt *. Mathext.cosr(sloperad);
   track = { t_pos = { x = l9; y = l18 }; t_id  = id };

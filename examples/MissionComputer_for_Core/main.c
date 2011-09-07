@@ -11,6 +11,11 @@ void print_mission_track(TypeArray__tmissiontracksarray mt) {
   }
 }
 
+/* fighterdebug(res, rdronoffclicked, iffonoffclicked)
+   res est le reset: mettre a 1 le premier coup puis a 0
+
+ */
+
 int main(int argc, char** argv) {
   int step_c;
   int step_max;
@@ -29,9 +34,26 @@ int main(int argc, char** argv) {
   };
   Debug__fighterdebug_reset(&_mem);
 
+  Debug__fighterdebug_step(true, false, false, &_res, &_mem);
+  Debug__fighterdebug_step(false, false, false, &_res, &_mem);
+  Debug__fighterdebug_step(false, true, false, &_res, &_mem);
+  Debug__fighterdebug_step(false, false, false, &_res, &_mem);
+  Debug__fighterdebug_step(false, false, false, &_res, &_mem);
+  Debug__fighterdebug_step(false, true, false, &_res, &_mem);
+  Debug__fighterdebug_step(false, false, true, &_res, &_mem);
+  Debug__fighterdebug_step(false, false, false, &_res, &_mem);
+  Debug__fighterdebug_step(false, false, true, &_res, &_mem);
+  Debug__fighterdebug_step(false, false, false, &_res, &_mem);
+
+  printf("init:\n");
+  printf("=> \n");
+  print_mission_track(_res.missiontracks);
+  fflush(stdout);
+
   while ((!(step_max)||(step_c<step_max))) {
     step_c = (step_c+1);
 
+    /*
     printf("res ? ");
     scanf("%d", &res);;
 
@@ -40,11 +62,12 @@ int main(int argc, char** argv) {
 
     printf("iffonoffclicked ? ");
     scanf("%d", &iffonoffclicked);;
+    */
+
     Debug__fighterdebug_step(res, rdronoffclicked, iffonoffclicked, &_res,
                                 &_mem);
     printf("=> \n");
     print_mission_track(_res.missiontracks);
-    puts("");
     fflush(stdout);
   };
   return 0;
