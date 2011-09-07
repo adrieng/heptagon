@@ -72,10 +72,10 @@ let ident_list_of_pat pat =
 (* typing the expression, returns ct, ck_base *)
 let rec typing h pat e =
   let ct,base = match e.e_desc with
-    | Econst _ -> 
+    | Econst _ ->
 	let ck = fresh_clock() in
 	Ck ck, ck
-    | Evar x -> 
+    | Evar x ->
 	let ck = ck_of_name h x in
 	Ck ck, ck
     | Efby (e1, e2) ->
@@ -143,7 +143,7 @@ let rec typing h pat e =
   in
   begin match e.e_ct_annot with
     None -> ()
-  | Some e_ct -> 
+  | Some e_ct ->
       try
 	unify ct e_ct
       with Unify ->
@@ -174,7 +174,7 @@ and typing_app h base pat op e_list = match op with
         | a::a_l, v::v_l -> (match a.a_name with
           | None -> build_env a_l v_l env
           | Some n -> build_env a_l v_l ((n,v)::env))
-        | _ -> 
+        | _ ->
 	    Printf.printf "Fun/node : %s\n" (Names.fullname f);
 	    Misc.internal_error "Clocking, non matching signature"
       in
@@ -240,17 +240,17 @@ let typing_contract h contract =
         expect h' (Etuplepat []) (Ck Cbase) e_g;
         append_env h c_list
 
-let args_of_var_decs =
- List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
-                                      vd.v_type (Signature.ck_to_sck vd.v_clock))
-
-let signature_of_node n =
-    { node_inputs = args_of_var_decs n.n_input;
-      node_outputs  = args_of_var_decs n.n_output;
-      node_stateful = n.n_stateful;
-      node_params = n.n_params;
-      node_param_constraints = n.n_param_constraints;
-      node_loc = n.n_loc }
+(* check signature causality and update it in the global env *)
+let update_signature h node =
+  let set_arg_clock vd ad =
+    { ad with a_clock = Signature.ck_to_sck (ck_repr (Env.find vd.v_ident h)) }
+  in
+  let sign = Modules.find_value node.n_name in
+  let sign =
+    { sign with node_inputs = List.map2 set_arg_clock node.n_input sign.node_inputs;
+                node_outputs = List.map2 set_arg_clock node.n_output sign.node_outputs } in
+  Signature.check_signature sign;
+  Modules.replace_value node.n_name sign
 
 let typing_node node =
   let h0 = append_env Env.empty node.n_input in
@@ -265,9 +265,7 @@ let typing_node node =
                          n_output = List.map set_clock node.n_output }
   in
   (* check signature causality and update it in the global env *)
-  let sign = signature_of_node node in
-  Signature.check_signature sign;
-  Modules.replace_value node.n_name sign;
+  update_signature h node;
   node
 
 let program p =
