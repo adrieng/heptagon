@@ -96,7 +96,7 @@ and eqdesc =
 and block = {
   b_local     : var_dec list;
   b_equs      : eq list;
-  b_defnames  : ty Env.t;
+  b_defnames  : var_dec Env.t;
   b_stateful : bool;
   b_loc       : location; }
 

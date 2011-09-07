@@ -27,7 +27,9 @@ let fresh = Idents.gen_fresh "reset" ~reset:true (fun () -> "r")
 (* get e and return r, var_dec_r, r = e *)
 let reset_var_from_exp e =
   let r = fresh() in
-  { e with e_desc = Evar r }, mk_var_dec r (Tid Initial.pbool), mk_equation (Eeq(Evarpat r, e))
+  { e with e_desc = Evar r },
+  mk_var_dec r (Tid Initial.pbool) ~linearity:Linearity.Ltop,
+  mk_equation (Eeq(Evarpat r, e))
 
 (** Merge two reset conditions *)
 let merge_resets res1 res2 =
@@ -40,7 +42,10 @@ let merge_resets res1 res2 =
 
 (** if res then e2 else e3 *)
 let ifres res e2 e3 =
-  let init loc = mk_exp (Epre (Some (mk_static_bool true), dfalse)) ~loc:loc (Tid Initial.pbool) in
+  let init loc =
+    mk_exp (Epre (Some (mk_static_bool true), dfalse))
+      ~loc:loc (Tid Initial.pbool) ~linearity:Linearity.Ltop
+  in
   match res with
     | None -> mk_op_app Eifthenelse [init e3.e_loc; e2; e3]
     | Some re -> mk_op_app Eifthenelse [re; e2; e3]

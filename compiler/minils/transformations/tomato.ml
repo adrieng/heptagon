@@ -184,8 +184,10 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let class_id_list = match rst with
           | None -> class_id_list
           | Some rst ->
-            class_ref_of_var is_input (mk_extvalue ~ty:Initial.tbool (Wvar rst)) rst
-            :: class_id_list in
+            class_ref_of_var is_input
+              (mk_extvalue ~ty:Initial.tbool ~linearity:Linearity.Ltop (Wvar rst)) rst
+            :: class_id_list
+        in
         Eapp (app, w_list, optional (fun _ -> dummy_var) rst), id, 0, class_id_list
 
       | Efby (seo, w) ->
@@ -195,13 +197,18 @@ let rec add_equation is_input (tenv : tom_env) eq =
       | Ewhen (e', cn, x) ->
         let ed, add_when, when_count, class_id_list = decompose e' in
         ed, (fun e' -> { e with e_desc = Ewhen (add_when e', cn, x) }), when_count + 1,
-        class_ref_of_var is_input (mk_extvalue ~clock:e'.e_base_ck ~ty:Initial.tbool (Wvar x)) x
+        class_ref_of_var is_input
+          (mk_extvalue ~clock:e'.e_base_ck ~ty:Initial.tbool
+                       ~linearity:Linearity.Ltop (Wvar x)) x
         :: class_id_list
 
       | Emerge (x, clause_list) ->
         let class_id_list, clause_list = mapfold_right add_clause clause_list [] in
         let x_id =
-          class_ref_of_var is_input (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool (Wvar x)) x in
+          class_ref_of_var is_input
+            (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool
+                         ~linearity:Linearity.Ltop (Wvar x)) x
+        in
         Emerge (dummy_var, clause_list), id, 0, x_id :: class_id_list
 
       | Eiterator (it, app, sel, partial_w_list, w_list, rst) ->
@@ -210,8 +217,10 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let class_id_list = match rst with
           | None -> class_id_list
           | Some rst ->
-            class_ref_of_var is_input (mk_extvalue ~ty:Initial.tbool (Wvar rst)) rst
-            :: class_id_list in
+            class_ref_of_var is_input
+              (mk_extvalue ~ty:Initial.tbool ~linearity:Linearity.Ltop (Wvar rst)) rst
+            :: class_id_list
+        in
         Eiterator (it, app, sel, partial_w_list, w_list, optional (fun _ -> dummy_var) rst),
         id, 0, class_id_list
 
@@ -246,7 +255,7 @@ and extvalue is_input w class_id_list =
         class_id_list, Wfield (w, f)
       | Wwhen (w, cn, x) ->
         (* Create the extvalue representing x *)
-        let w_x = mk_extvalue ~ty:Initial.tbool ~clock:w.w_ck (Wvar x) in
+        let w_x = mk_extvalue ~ty:Initial.tbool ~clock:w.w_ck ~linearity:w.w_linearity (Wvar x) in
         let class_id_list, w = decompose w (class_ref_of_var is_input w_x x :: class_id_list) in
         class_id_list, Wwhen (w, cn, dummy_var)
     in
@@ -419,7 +428,7 @@ and reconstruct_class_ref mapping cr = match cr with
   | Cr_input w -> w
   | Cr_plain x ->
     let Info (x', ty, ck, _) = Env.find x mapping in
-    mk_extvalue ~clock:ck ~ty:ty (Wvar x')
+    mk_extvalue ~clock:ck ~ty:ty ~linearity:Linearity.Ltop (Wvar x')
 
 and reconstruct_clock mapping ck = match ck_repr ck with
   | Con (ck, c, x) -> Con (reconstruct_clock mapping ck, c, new_name mapping x)
@@ -537,10 +546,11 @@ let rec fix_output_var_dec mapping vd (seen, equs, vd_list) =
     let new_clock = reconstruct_clock mapping vd.v_clock in
     let new_vd = { vd with v_ident = new_id; v_clock = new_clock } in
     let new_eq =
-      let w = mk_extvalue ~ty:vd.v_type ~clock:new_clock (Wvar x) in
+      let w = mk_extvalue ~ty:vd.v_type ~clock:new_clock ~linearity:Linearity.Ltop (Wvar x) in
       mk_equation
         (Evarpat new_id)
-        (mk_exp new_clock vd.v_type ~ct:(Ck new_clock) ~ck:new_clock (Eextvalue w))
+        (mk_exp new_clock vd.v_type ~ct:(Ck new_clock)
+           ~ck:new_clock ~linearity:Linearity.Ltop (Eextvalue w))
     in
     (seen, new_eq :: equs, new_vd :: vd_list)
   else

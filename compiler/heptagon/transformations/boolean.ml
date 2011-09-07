@@ -7,7 +7,7 @@
 (*                                                  *)
 (****************************************************)
 
-(* 
+(*
    Translate enumerated types (state variables) into boolean
 
    type t = A | B | C | D
@@ -28,7 +28,7 @@
    (e when A(x))
    -->
    (e when False(x1)) when False(x2_0)
-   
+
    ck on A(x)
    -->
    ck on False(x1) on False(x2_0)
@@ -68,7 +68,7 @@ let mk_tuple e_l =
   Eapp((mk_app Etuple),e_l,None)
 
 (* boolean decision tree ; left branch for true ; nodes are constructors *)
-type btree = Node of constructor_name option | Tree of btree * btree 
+type btree = Node of constructor_name option | Tree of btree * btree
 
 (* Debug
 let print_indent n =
@@ -78,7 +78,7 @@ let print_indent n =
 
 let rec print_btree indent bt =
   match bt with
-  | Node(None) -> 
+  | Node(None) ->
       print_indent indent;
       Printf.printf "None\n"
   | Node(Some c) ->
@@ -111,8 +111,8 @@ let rec print_bl bl =
 
 let print_enuminfo info =
   Printf.printf "{ ty_nb_var = %d;\n  ty_assoc = " info.ty_nb_var;
-  QualEnv.fold 
-    (fun c l () -> 
+  QualEnv.fold
+    (fun c l () ->
        Printf.printf "(%s : " (fullname c);
        print_bl l;
        Printf.printf "), ")
@@ -123,7 +123,7 @@ let print_enuminfo info =
 
 (* ty_nb_var = n : var x of enum type will be represented by
    boolean variables x_1,...,x_n
-   
+
    ty_assoc(A) = [b_1,...,b_n] : constant A will be represented by
    x_1,...,x_n where x_i = b_i
 
@@ -142,12 +142,12 @@ let print_enuminfo info =
    x2_0 being on clock False(x1)
    x2_1 being on clock True(x1)
  *)
-type var_tree = Vempty | VNode of var_ident * var_tree * var_tree 
+type var_tree = Vempty | VNode of var_ident * var_tree * var_tree
 
 (*
 let rec print_var_tree indent t =
   match t with
-  | Vempty -> 
+  | Vempty ->
       print_indent indent;
       Printf.printf "Empty\n"
   | VNode(v,t1,t2) ->
@@ -190,13 +190,13 @@ let print_enum_types () =
     ) !enum_types ()
 *)
 
-let get_enum name = 
+let get_enum name =
   QualEnv.find name !enum_types
 
 (* split2 k [x1;...;xn] = ([x1;...;xk],[xk+1;...;xn]) *)
 let split2 n l =
   let rec splitaux k acc l =
-    if k = 0 then (acc,l) else 
+    if k = 0 then (acc,l) else
       begin
 	match l with
 	| x::t -> splitaux (k-1) (x::acc) t
@@ -212,10 +212,10 @@ let rec var_list clist =
   match clist with
   | [] -> (0,QualEnv.empty,Node(None))
   | [c] -> (1, QualEnv.add c [false] QualEnv.empty, Tree(Node(Some c),Node(None)))
-  | [c1;c2] -> (1, 
+  | [c1;c2] -> (1,
 		QualEnv.add c1 [false] (QualEnv.add c2 [true] QualEnv.empty),
 		Tree(Node(Some c1),Node(Some c2)))
-  | l -> 
+  | l ->
       let n = List.length l in
       let n1 = n asr 1 in
       let l1,l2 = split2 n1 l in
@@ -239,11 +239,11 @@ let rec var_list clist =
 (* 	  | Some n -> n *)
 (* 	end in *)
 (*       assert (nt2 = nv2); *)
-      let vl = 
+      let vl =
 	QualEnv.fold (fun c l m -> QualEnv.add c (true::l) m) vl2
-	  (QualEnv.fold 
-	     (if nv1 = nv2 
-	      then (fun c l m -> QualEnv.add c (false::l) m) 
+	  (QualEnv.fold
+	     (if nv1 = nv2
+	      then (fun c l m -> QualEnv.add c (false::l) m)
 	      else (fun c l m -> QualEnv.add c (false::false::l) m))
 	     vl1
 	     QualEnv.empty) in
@@ -263,7 +263,7 @@ let translate_pat env pat =
   let rec trans = function
     | Evarpat(name) ->
 	begin
-	  try 
+	  try
 	    let info = Env.find name env in
 	    match info.var_enum.ty_nb_var with
 	    | 1 ->
@@ -287,7 +287,7 @@ let translate_ty ty =
 	    begin match info with
 	    | Type(_) -> ty
 	    | Enum { ty_nb_var = 1 } -> ty_bool
-	    | Enum { ty_nb_var = n } -> 
+	    | Enum { ty_nb_var = n } ->
 		let strlist = nvar_list "" n in
 		Tprod(List.map (fun _ -> ty_bool) strlist)
 	    end
@@ -312,7 +312,7 @@ let rec translate_ck env ck =
   | Cbase -> Cbase
   | Cvar {contents = Clink(ck)} -> translate_ck env ck
   | Cvar {contents = Cindex(_)} -> ck
-  | Con(ck,c,n) -> 
+  | Con(ck,c,n) ->
       let ck = translate_ck env ck in
       begin
 	try
@@ -335,22 +335,22 @@ let translate_const c ty e =
   | Sconstructor(cname),Tid(tname) ->
       begin
 	try
-	  begin 
+	  begin
 	    match (get_enum tname) with
 	    | Type _ -> Econst(c)
 	    | Enum { ty_assoc = assoc } ->
 		let bl = QualEnv.find cname assoc in
 		let b_list = List.map (fun b -> Econst(sbool b)) bl in
-		begin 
-		  match b_list with 
+		begin
+		  match b_list with
 		  | [] -> assert false
 		  | [b] -> b
 		  | _::_ ->
 		      mk_tuple
 			(List.map
-			   (fun b -> {e with 
+			   (fun b -> {e with
 					e_desc = b;
-					e_ty = ty_bool }) 
+					e_ty = ty_bool })
 			   b_list)
 		end
 	  end
@@ -364,7 +364,7 @@ let new_var_list d_list ty ck n =
     | n ->
 	let v = fresh "bool" in
 	let acc = v :: acc in
-	let d_list = (mk_var_dec ~clock:ck v ty) :: d_list in
+	let d_list = (mk_var_dec ~clock:ck v ty ~linearity:Linearity.Ltop) :: d_list in
 	varl acc d_list (n-1) in
   varl [] d_list n
 
@@ -373,13 +373,13 @@ let assert_ck = function
   | _ -> assert false
 
 let intro_tuple context e =
-  let n = 
+  let n =
     match e.e_ty with
-    | Tprod(l) -> List.length l 
+    | Tprod(l) -> List.length l
     | _ -> assert false in
   match e.e_desc with
     Eapp({a_op=Etuple},e_l,None) -> context,e_l
-  | _ -> 
+  | _ ->
       let (d_list,eq_list) = context in
       (* e is not a tuple, therefore e.e_ct_annot = Ck(ck) *)
       let ck = assert_ck e.e_ct_annot in
@@ -404,7 +404,7 @@ let rec when_list e bl vtree =
 
 let rec when_ck desc li ty ck =
   match ck with
-  | Cbase | Cvar _ -> 
+  | Cbase | Cvar _ ->
       { e_desc = desc;
 	e_level_ck = ck;
 	e_ct_annot = Some(Ck(ck));
@@ -423,11 +423,11 @@ let rec when_ck desc li ty ck =
 
 let rec base_value ck li ty =
   match ty with
-  | Tid({qual = Pervasives; name = "int" }) -> 
+  | Tid({qual = Pervasives; name = "int" }) ->
       when_ck (Econst(mk_static_exp ty (Sint(0)))) li ty ck
   | Tid({qual = Pervasives; name = "float"}) ->
       when_ck (Econst(mk_static_exp ty (Sfloat(0.)))) li ty ck
-  | Tid({qual = Pervasives; name = "bool" }) ->  
+  | Tid({qual = Pervasives; name = "bool" }) ->
       when_ck (Econst(strue)) li ty ck
   | Tid(sname) ->
       begin
@@ -439,17 +439,17 @@ let rec base_value ck li ty =
 	    | Type(Type_abs) -> failwith("Abstract types not implemented")
 	    | Type(Type_alias aty) -> base_value ck li aty
 	    | Type(Type_enum(l)) ->
-		when_ck 
-		  (Econst(mk_static_exp ty (Sconstructor(List.hd l)))) 
+		when_ck
+		  (Econst(mk_static_exp ty (Sconstructor(List.hd l))))
 		  li ty ck
 	    | Type(Type_struct(l)) ->
 		let fields =
-		  List.map 
-		    (fun {f_name = name; f_type = ty} -> 
-		       name,(base_value ck li ty)) 
+		  List.map
+		    (fun {f_name = name; f_type = ty} ->
+		       name,(base_value ck li ty))
 		    l in
 		when_ck (Estruct(fields)) li ty ck
-	    | Enum { ty_nb_var = 1 } -> 
+	    | Enum { ty_nb_var = 1 } ->
 		when_ck (Econst(strue)) li ty_bool ck
 	    | Enum { ty_nb_var = n } ->
 		let e = when_ck (Econst(strue)) li ty_bool ck in
@@ -486,7 +486,7 @@ let rec base_value ck li ty =
 	e_loc = no_location;
       }
   | Tinvalid -> failwith("Boolean: invalid type")
-  
+
 let rec merge_tree ck ty li e_map btree vtree =
   match btree, vtree with
   | Node(None), _ -> base_value ck li ty
@@ -509,7 +509,7 @@ let rec merge_tree ck ty li e_map btree vtree =
 
 let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e) =
   let ct = Misc.optional (translate_ct env) ct in
-  let context,desc = 
+  let context,desc =
     match desc with
     | Econst(c) ->
 	context, translate_const c ty e
@@ -521,8 +521,8 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
 	      Evar(List.nth info.var_list 0)
 	    else
 	      let ident_list = info.var_list in
-	      mk_tuple (List.map 
-			  (fun v -> { e with 
+	      mk_tuple (List.map
+			  (fun v -> { e with
 					e_ty = ty_bool;
 					e_ct_annot = ct;
 					e_desc = Evar(v); })
@@ -550,17 +550,17 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
 				    | _ -> assert false) e_c_l in
 	      context,
 	      mk_tuple
-		(List.map2 
-		   (fun c e -> { e with 
+		(List.map2
+		   (fun c e -> { e with
 				   e_ty = ty_bool;
 				   e_desc = Epre(Some c,e)})
 		   c_l e_l)
 	  | _ -> assert false
 	end
-    | Eapp(app, e_list, r) -> 
+    | Eapp(app, e_list, r) ->
 	let context,e_list = translate_list env context e_list in
 	context, Eapp(app, e_list, r)
-    | Ewhen(e,c,ck) -> 
+    | Ewhen(e,c,ck) ->
 	let context,e = translate env context e in
 	begin
 	  try
@@ -573,18 +573,18 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
 	    context,Ewhen(e,c,ck)
 	end
     | Emerge(ck,l) (* of name * (longname * exp) list *)
-      -> 
+      ->
 	begin
 	  try
 	    let info = Env.find ck env in
-	    let context,e_map = List.fold_left 
-	      (fun (context,e_map) (n,e) -> 
+	    let context,e_map = List.fold_left
+	      (fun (context,e_map) (n,e) ->
 		 let context,e = translate env context e in
-		 context,QualEnv.add n e e_map)  
+		 context,QualEnv.add n e e_map)
 	      (context,QualEnv.empty) l in
-	    let e_merge = 
-	      merge_tree (assert_ck ct) ty e.e_linearity e_map 
-		info.var_enum.ty_tree 
+	    let e_merge =
+	      merge_tree (assert_ck ct) ty e.e_linearity e_map
+		info.var_enum.ty_tree
 		info.clocked_var in
 	    context,e_merge.e_desc
 	  with Not_found ->
@@ -601,32 +601,32 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
 	let context,e1 = translate env context e1 in
 	let context,e2 = translate env context e2 in
 	context,Esplit(e1,e2)
-    | Estruct(l) -> 
-	let context,acc = 
-	  List.fold_left 
-	    (fun (context,acc) (c,e) -> 
+    | Estruct(l) ->
+	let context,acc =
+	  List.fold_left
+	    (fun (context,acc) (c,e) ->
 	       let context,e = translate env context e in
-	       (context,(c,e)::acc)) 
+	       (context,(c,e)::acc))
 	    (context,[]) l in
 	context,Estruct(List.rev acc)
     | Eiterator(it,app,se,pe_list,e_list,r) ->
 	let context,pe_list = translate_list env context pe_list in
 	let context,e_list = translate_list env context e_list in
 	context,Eiterator(it,app,se,pe_list,e_list,r)
-    | Elast _ -> 
+    | Elast _ ->
 	failwith("Boolean: not supported expression (abstract tree should be normalized)")
   in
   context,{ e with
 	      e_desc = desc;
 	      e_ty = translate_ty ty;
 	      e_ct_annot = ct}
-    
-and translate_list env context e_list = 
-  let context,acc_e = 
-    List.fold_left 
-      (fun (context,acc_e) e -> 
+
+and translate_list env context e_list =
+  let context,acc_e =
+    List.fold_left
+      (fun (context,acc_e) e ->
 	 let context,e = translate env context e in
-	 (context,e::acc_e)) 
+	 (context,e::acc_e))
       (context,[]) e_list in
   context,List.rev acc_e
 
@@ -636,14 +636,14 @@ and translate_list env context e_list =
    - equations of these added variables
 *)
 let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
-  
+
   (* when_ck [v3_1_0;v2_1;v1] (ck on True(v1) on False(v2_1) on True(v3_1_0)) v4
      = ((v4 when True(v1)) when False(v2_1)) when True(v3_1_0)
      -> builds v4_1_0_1
   *)
   let rec when_ck ckvar_list ck var =
     match ckvar_list,ck with
-    | [], _ -> 
+    | [], _ ->
 	{ e_desc = Evar(var);
 	  e_level_ck = ck;
 	  e_ct_annot = Some(Ck(ck));
@@ -667,14 +667,14 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 
   (* From v, build of v1...vn *)
   let rec varl acc_vd k =
-    if k>n 
+    if k>n
     then acc_vd
     else
       begin
 	let var_prefix = prefix ^ "_" ^ (string_of_int k) in
 	let var = fresh var_prefix in
 	(* addition of var_k *)
-	let acc_vd = { var_from with 
+	let acc_vd = { var_from with
 			 v_ident = var;
 			 v_type = ty_bool } :: acc_vd in
 	varl acc_vd (k+1)
@@ -683,10 +683,10 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
   let vd_list = varl [] 1 in
   (* v_list = [vn;...;v1] *)
   let acc_vd = List.rev_append vd_list acc_vd in
-  
+
   let v_list = List.rev_map (fun vd -> vd.v_ident) vd_list in
 
-  (* From v1...vn, build clocked tree 
+  (* From v1...vn, build clocked tree
      ( vi_(0|1)* on ... on (True|False) (v1) ) *)
   let rec clocked_tree (acc_loc,acc_eq) acc_var suffix v_list ck =
     begin match v_list, acc_var with
@@ -698,10 +698,10 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 	(* Build left son (ck on False(vi_...)) *)
 	let ck_0 = Con(ck,cfalse,v1) in
 	let acc_loc,acc_eq,t0 =
-	  clocked_tree 
+	  clocked_tree
 	    (acc_loc,acc_eq)
 	    ([v1])
-	    ("_0") 
+	    ("_0")
 	    v_list ck_0 in
 	(* Build right son (ck on True(vi_...))*)
 	let ck_1 = Con(ck,ctrue,v1) in
@@ -709,7 +709,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 	  clocked_tree
 	    (acc_loc,acc_eq)
 	    ([v1])
-	    ("_1") 
+	    ("_1")
 	    v_list ck_1 in
 	acc_loc,acc_eq,VNode(v1,t0,t1)
     | vi::v_list, _ ->
@@ -730,10 +730,10 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 	(* Build left son (ck on False(vi_...)) *)
 	let ck_0 = Con(ck,cfalse,id) in
 	let acc_loc,acc_eq,t0 =
-	  clocked_tree 
+	  clocked_tree
 	    (acc_loc,acc_eq)
 	    (id::acc_var)
-	    (suffix ^ "_0") 
+	    (suffix ^ "_0")
 	    v_list ck_0 in
 	(* Build right son (ck on True(vi_...))*)
 	let ck_1 = Con(ck,ctrue,id) in
@@ -741,12 +741,12 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
 	  clocked_tree
 	    (acc_loc,acc_eq)
 	    (id::acc_var)
-	    (suffix ^ "_1") 
+	    (suffix ^ "_1")
 	    v_list ck_1 in
 	acc_loc,acc_eq,VNode(id,t0,t1)
-    end 
+    end
   in
-  
+
   let acc_loc,acc_eq,t =
     clocked_tree (acc_loc,acc_eq) [] "" v_list var_from.v_clock in
 
@@ -768,8 +768,8 @@ let buildenv_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
 		  match (get_enum tname) with
 		  | Type _ -> v::acc_vd, acc_loc, acc_eq ,env
 		  | Enum(info) ->
-		      let (acc_vd,acc_loc,acc_eq,vl,t) = 
-			var_dec_list 
+		      let (acc_vd,acc_loc,acc_eq,vl,t) =
+			var_dec_list
 			  (acc_vd,acc_loc,acc_eq)
 			  v info.ty_nb_var in
 		      let vi = { var_enum = info;
@@ -806,12 +806,12 @@ let rec translate_block env add_locals add_eqs ({ b_local = v;
   let eq_list = eq_list@v_eq@add_eqs in
   let context = translate_eqs env eq_list in
   let d_list,eq_list = context in
-  { b with 
+  { b with
       b_local = v@d_list;
       b_equs = eq_list }, env
 
 and translate_eq env context ({eq_desc = desc} as eq) =
-  let desc,(d_list,eq_list) = 
+  let desc,(d_list,eq_list) =
     match desc with
     | Eblock block ->
 	let block, _ = translate_block env [] [] block in
@@ -829,7 +829,7 @@ and translate_eq env context ({eq_desc = desc} as eq) =
 and translate_eqs env eq_list =
   List.fold_left
     (fun context eq ->
-       translate_eq env context eq) ([],[]) eq_list 
+       translate_eq env context eq) ([],[]) eq_list
 
 let translate_contract env contract =
   match contract with
@@ -846,7 +846,7 @@ let translate_contract env contract =
       let context, e_a = translate env' (v,eqs) e_a in
       let context, e_g = translate env' context e_g in
       let (d_list,eq_list) = context in
-      Some { c_block = { b with 
+      Some { c_block = { b with
 			   b_local = d_list;
 			   b_equs = eq_list };
 	     c_assume = e_a;
@@ -864,7 +864,7 @@ let node ({ n_input = inputs;
   let add_locals = in_loc@out_loc in
   let add_eqs = in_eq@out_eq in
   let b,_ = translate_block env add_locals add_eqs b in
-  { n with 
+  { n with
       n_input = List.rev inputs;
       n_output = List.rev outputs;
       n_contract = contract;
@@ -874,12 +874,12 @@ let program_desc p_desc =
   match p_desc with
   | Pnode(n) -> Pnode(node n)
   | _ -> p_desc
-      
+
 let build p_desc =
   match p_desc with
   | Ptype(type_dec) ->
       begin
-	let tenv = 
+	let tenv =
 	  match type_dec.t_desc with
 	  | Type_enum clist ->
 	      let (n,env,t) = var_list clist in

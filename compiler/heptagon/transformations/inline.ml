@@ -82,7 +82,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
         fst (Hept_mapfold.node_dec funs () ni) in
 
       let mk_input_equ vd e = mk_equation (Eeq (Evarpat vd.v_ident, e)) in
-      let mk_output_exp vd = mk_exp (Evar vd.v_ident) vd.v_type in
+      let mk_output_exp vd = mk_exp (Evar vd.v_ident) vd.v_type ~linearity:vd.v_linearity in
 
       let newvars = ni.n_input @ ni.n_block.b_local @ ni.n_output @ newvars
       and newequs =
@@ -95,7 +95,8 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
         | [o] -> mk_output_exp o
         | _ ->
             mk_exp (Eapp ({ op with a_op = Etuple; },
-                          List.map mk_output_exp ni.n_output, None)) exp.e_ty in
+                          List.map mk_output_exp ni.n_output, None)) exp.e_ty
+                   ~linearity:exp.e_linearity in
       (res_e, (env, newvars, newequs))
   | _ -> Hept_mapfold.exp funs (env, newvars, newequs) exp
 

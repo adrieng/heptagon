@@ -25,10 +25,11 @@ let fresh = Idents.gen_fresh "automata"
   (function S -> "s" | NS -> "ns" | R -> "r" | NR -> "nr" | PNR -> "pnr")
 
 let mk_var_exp n ty =
-  mk_exp (Evar n) ty
+  mk_exp (Evar n) ty ~linearity:Linearity.Ltop
 
 let mk_pair e1 e2 =
   mk_exp (mk_op_app Etuple [e1;e2]) (Tprod [e1.e_ty; e2.e_ty])
+    ~linearity:(Linearity.Ltuple [Linearity.Ltop; Linearity.Ltop])
 
 let mk_reset_equation eq_list e =
   mk_equation (Ereset (mk_block eq_list, e))
@@ -38,7 +39,7 @@ let mk_switch_equation e l =
 
 let mk_exp_fby_false e =
   mk_exp (Epre (Some (mk_static_bool false), e))
-    (Tid Initial.pbool)
+    (Tid Initial.pbool) ~linearity:Linearity.Ltop
 
 let mk_constructor constr ty =
   mk_static_exp ty (Sconstructor constr)
@@ -95,7 +96,9 @@ let translate_automaton v eq_list handlers =
   let pre_next_resetname = fresh PNR in
 
   let name n = NamesEnv.find n state_env in
-  let state n = mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype in
+  let state n =
+    mk_exp (Econst (mk_constructor (name n) tstatetype)) tstatetype ~linearity:Linearity.Ltop
+  in
   let statevar n = mk_var_exp n tstatetype in
   let boolvar n = mk_var_exp n (Tid Initial.pbool) in
 
@@ -107,8 +110,10 @@ let translate_automaton v eq_list handlers =
   in
 
   let strong { s_state = n; s_unless = su } =
-    let defnames = Env.add resetname (Tid Initial.pbool) Env.empty in
-    let defnames = Env.add statename tstatetype defnames in
+    let rst_vd = mk_var_dec resetname (Tid Initial.pbool) Linearity.Ltop in
+    let defnames = Env.add resetname rst_vd Env.empty in
+    let state_vd = mk_var_dec statename tstatetype Linearity.Ltop in
+    let defnames = Env.add statename state_vd defnames in
     let st_eq = mk_simple_equation
       (Etuplepat[Evarpat(statename); Evarpat(resetname)])
       (escapes n su (boolvar pre_next_resetname)) in
@@ -117,8 +122,10 @@ let translate_automaton v eq_list handlers =
   in
 
   let weak { s_state = n; s_block = b; s_until = su } =
-    let defnames = Env.add next_resetname (Tid Initial.pbool) b.b_defnames in
-    let defnames = Env.add next_statename tstatetype defnames in
+    let nextrst_vd = mk_var_dec next_resetname (Tid Initial.pbool) Linearity.Ltop in
+    let defnames = Env.add next_resetname nextrst_vd b.b_defnames in
+    let nextstate_vd = mk_var_dec next_statename tstatetype Linearity.Ltop in
+    let defnames = Env.add next_statename nextstate_vd defnames in
     let ns_eq = mk_simple_equation
       (Etuplepat[Evarpat(next_statename); Evarpat(next_resetname)])
       (escapes n su dfalse) in
@@ -130,10 +137,10 @@ let translate_automaton v eq_list handlers =
   in
 
   let v =
-    (mk_var_dec next_statename tstatetype) ::
-      (mk_var_dec resetname (Tid Initial.pbool)) ::
-      (mk_var_dec next_resetname (Tid Initial.pbool)) ::
-      (mk_var_dec pre_next_resetname (Tid Initial.pbool)) :: v in
+    (mk_var_dec next_statename tstatetype ~linearity:Linearity.Ltop) ::
+      (mk_var_dec resetname (Tid Initial.pbool) ~linearity:Linearity.Ltop) ::
+      (mk_var_dec next_resetname (Tid Initial.pbool) ~linearity:Linearity.Ltop) ::
+      (mk_var_dec pre_next_resetname (Tid Initial.pbool) ~linearity:Linearity.Ltop) :: v in
   if no_strong_transition handlers
   then (* Only weak transitions : a Moore automaton. *)
     let switch_e = mk_exp_fby_state initial (statevar next_statename) in
@@ -150,7 +157,7 @@ let translate_automaton v eq_list handlers =
     v, switch_eq :: nr_eq :: pnr_eq :: eq_list
   else (* General case,
           two switch to generate statename variable used and defined *)
-    let v = (mk_var_dec statename tstatetype) :: v in
+    let v = (mk_var_dec statename tstatetype ~linearity:Linearity.Ltop) :: v in
     let ns_switch_e = mk_exp_fby_state initial (statevar next_statename) in
     let ns_switch_handlers =
       List.map (fun ({ s_state = n } as case) ->

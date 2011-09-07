@@ -45,19 +45,12 @@ struct
 end
 
 let fresh = Idents.gen_fresh "hept2mls"
-              (function Heptagon.Enode f -> (shortname f)
-		 | _ -> "n")
-
-(* add an equation *)
-let equation locals eqs e =
-  let n = Idents.gen_var "hept2mls" "ck" in
-  n,
-  (mk_var_dec n e.e_ty) :: locals,
-  (mk_equation (Evarpat n) e):: eqs
+  (function Heptagon.Enode f -> (shortname f)
+    | _ -> "n")
 
 let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; Heptagon.v_linearity = linearity;
                     Heptagon.v_loc = loc; Heptagon.v_clock = ck } =
-  mk_var_dec ~loc:loc ~linearity:linearity n ty ck
+  mk_var_dec ~loc:loc n ty linearity ck
 
 let translate_reset = function
   | Some { Heptagon.e_desc = Heptagon.Evar n } -> Some n

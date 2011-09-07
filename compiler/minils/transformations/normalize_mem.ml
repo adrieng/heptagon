@@ -22,9 +22,13 @@ let eq _ (outputs, eqs, env) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
   | Evarpat x, Efby _ ->
       if Mls_utils.vd_mem x outputs then
         let ty = eq.eq_rhs.e_ty in
+        let lin = eq.eq_rhs.e_linearity in
         let ck = eq.eq_rhs.e_base_ck in
         let x_copy = Idents.gen_var "normalize_mem" ("out_"^(Idents.name x)) in
-        let exp_x = mk_exp ck ~ck:ck ~ct:(Clocks.Ck ck) ty (Eextvalue (mk_extvalue ~clock:ck ~ty:ty (Wvar x))) in
+        let exp_x =
+          mk_exp ck ~ck:ck ~ct:(Clocks.Ck ck) ty ~linearity:lin
+            (Eextvalue (mk_extvalue ~clock:ck ~ty:ty ~linearity:lin (Wvar x)))
+        in
         let eq_copy = { eq with eq_lhs = Evarpat x_copy; eq_rhs = exp_x } in
         let env = Env.add x x_copy env in
           eq, (outputs, eq::eq_copy::eqs, env)
@@ -49,7 +53,7 @@ let node funs acc nd =
   { nd with n_local = v; n_equs = List.rev eqs; n_output = o }, acc
 
 let program p =
-  let funs = { Mls_mapfold.defaults with 
+  let funs = { Mls_mapfold.defaults with
 		 eq = eq; node_dec = node; contract = contract } in
   let p, _ = Mls_mapfold.program_it funs ([], [], Env.empty) p in
     p

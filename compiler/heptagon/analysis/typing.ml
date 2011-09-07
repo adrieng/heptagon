@@ -23,7 +23,7 @@ open Hept_mapfold
 open Pp_tools
 open Format
 
-type value = { ty: ty; mutable last: bool }
+type value = { vd: var_dec; mutable last: bool }
 
 type error =
   | Emissing of name
@@ -235,7 +235,13 @@ let kind f ty_desc =
 
 let typ_of_name h x =
   try
-    let { ty = ty } = Env.find x h in ty
+    let { vd = vd } = Env.find x h in vd.v_type
+  with
+      Not_found -> error (Eundefined(name x))
+
+let vd_of_name h x =
+  try
+    let { vd = vd } = Env.find x h in vd
   with
       Not_found -> error (Eundefined(name x))
 
@@ -258,11 +264,11 @@ let rec subst_type_vars m = function
   | Tprod l -> Tprod (List.map (subst_type_vars m) l)
   | t -> t
 
-let add_distinct_env id ty env =
+let add_distinct_env id vd env =
   if Env.mem id env then
     error (Ealready_defined(name id))
   else
-    Env.add id ty env
+    Env.add id vd env
 
 let add_distinct_qualset n acc =
   if QualSet.mem n acc then
@@ -309,8 +315,8 @@ let rec merge local_names_list =
   let two s1 s2 =
     let total, partial = Env.partition (fun elt -> Env.mem elt s2) s1 in
     let partial =
-      Env.fold (fun elt ty env ->
-                  if not (Env.mem elt total) then Env.add elt ty env
+      Env.fold (fun elt vd env ->
+                  if not (Env.mem elt total) then Env.add elt vd env
                   else env)
         s2 partial in
     total, partial in
@@ -951,9 +957,9 @@ and typing_node_params cenv params_sig params =
 
 let rec typing_pat h acc = function
   | Evarpat(x) ->
-      let ty = typ_of_name h x in
-      let acc = add_distinct_env x ty acc in
-      acc, ty
+      let vd = vd_of_name h x in
+      let acc = add_distinct_env x vd acc in
+      acc, vd.v_type
   | Etuplepat(pat_list) ->
       let acc, ty_list =
         List.fold_right
@@ -1097,8 +1103,8 @@ and build cenv h dec =
       if Env.mem vd.v_ident h then
         error (Ealready_defined(name vd.v_ident));
 
-      let acc_defined = Env.add vd.v_ident ty acc_defined in
-      let h = Env.add vd.v_ident { ty = ty; last = last vd.v_last } h in
+      let acc_defined = Env.add vd.v_ident vd acc_defined in
+      let h = Env.add vd.v_ident { vd = vd; last = last vd.v_last } h in
       { vd with v_last = last_dec; v_type = ty }, (acc_defined, h)
     with
         TypingError(kind) -> message vd.v_loc kind

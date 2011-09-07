@@ -15,6 +15,7 @@ open Hept_utils
 open Hept_mapfold
 open Types
 open Clocks
+open Linearity
 open Format
 
 (** Normalization pass
@@ -36,7 +37,7 @@ end
 
 let exp_list_of_static_exp_list se_list =
   let mk_one_const se =
-    mk_exp (Econst se) se.se_ty
+    mk_exp (Econst se) se.se_ty ~linearity:Ltop
   in
     List.map mk_one_const se_list
 
@@ -61,23 +62,29 @@ let flatten_e_list l =
 (** Creates a new equation x = e, adds x to d_list
     and the equation to eq_list. *)
 let equation (d_list, eq_list) e =
-  let add_one_var ty d_list =
+  let add_one_var ty lin d_list =
     let n = Idents.gen_var "normalize" "v" in
-    let d_list = (mk_var_dec n ty) :: d_list in
+    let d_list = (mk_var_dec n ty lin) :: d_list in
       n, d_list
   in
     match e.e_ty with
       | Tprod ty_list ->
+          let lin_list =
+            (match e.e_linearity with
+              | Ltuple l -> l
+              | Ltop -> Misc.repeat_list Ltop (List.length ty_list)
+              | _ -> assert false)
+          in
           let var_list, d_list =
-            mapfold (fun d_list ty -> add_one_var ty d_list) d_list ty_list in
+            mapfold2 (fun d_list ty lin -> add_one_var ty lin d_list) d_list ty_list lin_list in
           let pat_list = List.map (fun n -> Evarpat n) var_list in
           let eq_list = (mk_equation (Eeq (Etuplepat pat_list, e))) :: eq_list in
-          let e_list = List.map2
-            (fun n ty -> mk_exp (Evar n) ty) var_list ty_list in
+          let e_list = Misc.map3
+            (fun n ty lin -> mk_exp (Evar n) ty lin) var_list ty_list lin_list in
           let e = Eapp(mk_app Etuple, e_list, None) in
             (d_list, eq_list), e
       | _ ->
-          let n, d_list = add_one_var e.e_ty d_list in
+          let n, d_list = add_one_var e.e_ty e.e_linearity d_list in
           let eq_list = (mk_equation (Eeq (Evarpat n, e))) :: eq_list in
             (d_list, eq_list), Evar n
 
@@ -172,9 +179,9 @@ and translate_list kind context e_list =
 
 and fby kind context e v e1 =
   let mk_fby c e =
-    mk_exp ~loc:e.e_loc (Epre(Some c, e)) e.e_ty in
+    mk_exp ~loc:e.e_loc (Epre(Some c, e)) e.e_ty ~linearity:Ltop in
   let mk_pre e =
-    mk_exp ~loc:e.e_loc (Epre(None, e)) e.e_ty in
+    mk_exp ~loc:e.e_loc (Epre(None, e)) e.e_ty ~linearity:Ltop in
   let context, e1 = translate ExtValue context e1 in
   match e1.e_desc, v with
     | Eapp({ a_op = Etuple } as app, e_list, r),
@@ -207,7 +214,7 @@ and ifthenelse context e e1 e2 e3 =
   let mk_ite_list e2_list e3_list =
     let mk_ite e'2 e'3 =
       mk_exp ~loc:e.e_loc
-        (Eapp (mk_app Eifthenelse, [e1; e'2; e'3], None)) e'2.e_ty
+        (Eapp (mk_app Eifthenelse, [e1; e'2; e'3], None)) e'2.e_ty ~linearity:e'2.e_linearity
     in
     let e_list = List.map2 mk_ite e2_list e3_list in
       { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
@@ -228,6 +235,7 @@ and merge context e x c_e_list =
     in
     let rec mk_merge x c_list e_lists =
       let ty = (List.hd (List.hd e_lists)).e_ty in
+      let lin = (List.hd (List.hd e_lists)).e_linearity in
       let rec build_c_e_list c_list e_lists =
 	match c_list, e_lists with
 	| [], [] -> [], []
@@ -241,7 +249,7 @@ and merge context e x c_e_list =
 	| []::_ -> []
 	| _ ::_ ->
 	    let c_e_list, e_lists = build_c_e_list c_list e_lists in
-	    let e_merge = mk_exp ~loc:e.e_loc (Emerge(x, c_e_list)) ty in
+	    let e_merge = mk_exp ~loc:e.e_loc (Emerge(x, c_e_list)) ty ~linearity:lin in
 	    let e_merge_list = build_merge_list c_list e_lists in
 	    e_merge::e_merge_list in
       build_merge_list c_list e_lists
@@ -254,8 +262,8 @@ and merge context e x c_e_list =
               let c_list = List.map (fun (t,_) -> t) c_e_list in
               let e_lists = List.map (fun (_,e) -> e_to_e_list e) c_e_list in
               let e_lists, context =
-                mapfold 
-		  (fun context e_list -> add_list context ExtValue e_list) 
+                mapfold
+		  (fun context e_list -> add_list context ExtValue e_list)
 		  context e_lists in
               let e_list = mk_merge x c_list e_lists in
                 context, { e with
@@ -314,7 +322,7 @@ let block funs _ b =
 
 let contract funs context c =
   let ({ c_block = b } as c), void_context =
-    Hept_mapfold.contract funs context c in 
+    Hept_mapfold.contract funs context c in
   (* Non-void context could mean lost equations *)
   assert (void_context=([],[]));
   let context, e_a = translate ExtValue ([],[]) c.c_assume in

@@ -111,6 +111,7 @@ let rec typing h pat e =
 			    (Econst (Initial.mk_static_int 0))
 			    ~ct_annot:(Some(Ck(base_ck)))
 			    Initial.tint
+          ~linearity:Linearity.Ltop
 			 ) nl
               in
               typing_app h base_ck pat op (pargs@args@il)
@@ -126,6 +127,7 @@ let rec typing h pat e =
 			    (Econst (Initial.mk_static_int 0))
 			    ~ct_annot:(Some(Ck(base_ck)))
 			    Initial.tint
+          ~linearity:Linearity.Ltop
 			 ) nl
               in
               let rec insert_i args = match args with

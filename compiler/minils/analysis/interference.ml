@@ -471,10 +471,10 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
 let add_init_return_eq f =
    (** a_1,..,a_p = __init__  *)
   let eq_init = mk_equation (Mls_utils.pat_from_dec_list f.n_input)
-    (mk_extvalue_exp Cbase Initial.tint (Wconst (Initial.mk_static_int 0))) in
+    (mk_extvalue_exp Cbase Initial.tint Ltop (Wconst (Initial.mk_static_int 0))) in
     (** __return__ = o_1,..,o_q *)
   let eq_return = mk_equation (Etuplepat [])
-    (mk_exp Cbase Tinvalid (Mls_utils.tuple_from_dec_list f.n_output)) in
+    (mk_exp Cbase Tinvalid Ltop (Mls_utils.tuple_from_dec_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
 
 

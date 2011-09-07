@@ -10,7 +10,7 @@ let
   o = [ a with [n-1] = 0 ]
 tel
 
-node autom(a:int^n at r) returns (o:int^n at r)
+node autom(a:int^n at r) returns (o:int^n at r; u:int)
 let
   automaton
     state S1
@@ -22,5 +22,24 @@ let
     do
       o = g(a)
     until false then S1
-  end
+  end;
+  u = a[0]
 tel
+
+node autom_last() returns (u:int)
+var a:int^n at r; last o : int^n at r;
+let
+  init<<r>> a = 1^n;
+  automaton
+    state S1
+    do
+    until true then S2
+
+    state S2
+    do
+      o = g(a)
+    until false then S1
+  end;
+  u = a[0]
+tel
+

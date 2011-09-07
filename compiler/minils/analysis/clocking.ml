@@ -154,7 +154,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
                 typing_app h base_ck pat op (pargs@args)
             | Imapi -> (* clocking the node with the extra i input on [ck_r] *)
                 let il (* stubs i as 0 *) =
-                  List.map (fun x -> mk_extvalue ~ty:Initial.tint
+                  List.map (fun x -> mk_extvalue ~ty:Initial.tint ~linearity:Linearity.Ltop
                     ~clock:base_ck (Wconst (Initial.mk_static_int 0))) nl
                 in
                 typing_app h base_ck pat op (pargs@args@il)
@@ -165,7 +165,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
                 ct
             | Ifoldi -> (* clocking the node with the extra i and last in/out constraints *)
                 let il (* stubs i as 0 *) =
-                  List.map (fun x -> mk_extvalue ~ty:Initial.tint
+                  List.map (fun x -> mk_extvalue ~ty:Initial.tint ~linearity:Linearity.Ltop
                     ~clock:base_ck (Wconst (Initial.mk_static_int 0))) nl
                 in
                 let rec insert_i args = match args with
