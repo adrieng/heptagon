@@ -74,6 +74,9 @@ val list_compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
 
 val option_compare : ('a -> 'a -> int) -> 'a option -> 'a option -> int
 
+(** [list_diff l dl] returns [l] without the elements belonging to [dl].*)
+val list_diff : 'a list -> 'a list -> 'a list
+
 (** Mapfold *)
 val mapfold: ('acc -> 'b -> 'c * 'acc) -> 'acc -> 'b list -> 'c list * 'acc
 val mapfold2: ('acc -> 'b -> 'd -> 'c * 'acc) -> 'acc -> 'b list -> 'd list -> 'c list * 'acc
@@ -97,6 +100,8 @@ val fold_left4 :
   ('a -> 'b -> 'c -> 'd -> 'e -> 'a) -> 'a -> 'b list -> 'c list -> 'd list -> 'e list -> 'a
 
 (** Mapi *)
+val map3: ('a -> 'b -> 'c -> 'd) ->
+  'a list -> 'b list -> 'c list -> 'd list
 val mapi: (int -> 'a -> 'b) -> 'a list -> 'b list
 val mapi2: (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val mapi3: (int -> 'a -> 'b -> 'c -> 'd) ->

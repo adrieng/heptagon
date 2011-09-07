@@ -154,6 +154,12 @@ let rec assocd value = function
       else
         assocd value l
 
+(** [list_diff l dl] returns [l] without the elements belonging to [dl].*)
+let rec list_diff l dl = match l with
+    | [] -> []
+    | x::l ->
+      let l = list_diff l dl in
+      if List.mem x dl then l else x::l
 
 (** { 3 Compiler iterators } *)
 
@@ -223,6 +229,11 @@ let fold_righti f l acc =
     | [] -> acc
     | h :: l -> f i h (aux (i + 1) l acc) in
   aux 0 l acc
+
+let rec map3 f l1 l2 l3 = match l1, l2, l3 with
+  | [], [], [] -> []
+  | v1::l1, v2::l2, v3::l3 -> (f v1 v2 v3)::(map3 f l1 l2 l3)
+  | _ -> invalid_arg "Misc.map3"
 
 exception Assert_false
 let internal_error passe =
