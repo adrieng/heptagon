@@ -118,7 +118,7 @@ let cvar_of_vd vd =
 let inputlist_of_ovarlist vl =
   let cvar_of_ovar vd =
     let ty = ctype_of_otype vd.v_type in
-    let ty = if Linearity.is_linear vd.v_linearity then pointer_to ty else ty in
+    let ty = if vd.v_mutable then pointer_to ty else ty in
     name vd.v_ident, ty
   in
   List.map cvar_of_ovar vl

@@ -242,6 +242,8 @@ and pp_cexpr fmt ce = match ce with
   | Cbop (s, l, r) -> fprintf fmt "(%a%s%a)" pp_cexpr l s pp_cexpr r
   | Cfun_call (s, el) ->
       fprintf fmt "%a(@[%a@])"  pp_string s  (pp_list1 pp_cexpr ",") el
+  | Caddrof (Cderef e) -> pp_cexpr fmt e
+  | Cderef (Caddrof e) -> pp_cexpr fmt e
   | Caddrof e -> fprintf fmt "&%a" pp_cexpr e
   | Cstructlit (s, el) ->
       fprintf fmt "(%a){@[%a@]}" pp_string s (pp_list1 pp_cexpr ",") el
