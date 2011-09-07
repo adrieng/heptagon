@@ -24,6 +24,9 @@ struct
     let cr = Global_compare.type_compare w1.w_ty w2.w_ty in
     if cr <> 0 then cr
     else
+      let cr = Linearity.linearity_compare w1.w_linearity w2.w_linearity in
+      if cr <> 0 then cr
+      else
       match w1.w_desc, w2.w_desc with
       | Wconst se1, Wconst se2 -> Global_compare.static_exp_compare se1 se2
       | Wvar vi1, Wvar vi2 -> ident_compare vi1 vi2
@@ -50,6 +53,9 @@ struct
     let cr = Global_compare.type_compare e1.e_ty e2.e_ty in
     if cr <> 0 then cr
     else
+      let cr = Linearity.linearity_compare e1.e_linearity e2.e_linearity in
+      if cr <> 0 then cr
+      else
       let cr = C.clock_compare e1.e_base_ck e2.e_base_ck in
       if cr <> 0 then cr
       else

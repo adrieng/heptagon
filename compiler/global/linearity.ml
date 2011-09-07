@@ -95,3 +95,18 @@ let rec lin_to_string = function
 let print_linearity ff l =
   fprintf ff " %s" (lin_to_string l)
 
+let rec linearity_compare l1 l2 = match l1, l2 with
+  | Ltop, Ltop -> 0
+  | Lvar v1, Lvar v2 -> compare v1 v2
+  | Lat v1, Lat v2 -> compare v1 v2
+  | Ltuple l1, Ltuple l2 -> list_compare linearity_compare l1 l2
+
+  | Ltop, _ -> 1
+
+  | Lvar _, Ltop -> -1
+  | Lvar _, _ -> 1
+
+  | Lat _ , (Ltop | Lvar _) -> -1
+  | Lat _ , _ -> 1
+
+  | Ltuple _, _ -> -1
