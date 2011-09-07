@@ -15,6 +15,7 @@ module type READ =
 sig
   type equation
   val read: equation -> ident list
+  val linear_read : equation -> ident list
   val def: ident list -> equation -> ident list
   val antidep: equation -> bool
 end
@@ -44,6 +45,7 @@ struct
             let node_env = nametograph_env g (Read.def [] eq) node_env in
             let n_to_graph = nametograph g (Read.def [] eq)
               (Read.antidep eq) n_to_graph in
+            let n_to_graph = nametograph g (Read.linear_read eq) true n_to_graph in
             init_graph eqs (g :: g_list) n_to_graph node_env
     in
 

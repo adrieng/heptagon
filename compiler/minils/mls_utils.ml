@@ -162,6 +162,22 @@ struct
   let memory_vars ({ eq_lhs = _; eq_rhs = e } as eq) = match e.e_desc with
     | Efby(_, _) -> def [] eq
     | _ -> []
+
+  let linear_read e =
+    let extvalue funs acc w = match w.w_desc with
+      | Wvar x ->
+        let w, acc = Mls_mapfold.extvalue funs acc w in
+        let acc =
+          (match w.w_linearity with
+            | Linearity.Lat _ -> add x acc
+            | _ -> acc)
+        in
+        w, acc
+      | _ -> Mls_mapfold.extvalue funs acc w
+    in
+    let funs = { Mls_mapfold.defaults with extvalue = extvalue } in
+    let _, acc = Mls_mapfold.exp_it funs [] e in
+    acc
 end
 
 (* Assumes normal form, all fby are solo rhs *)
@@ -182,6 +198,7 @@ module DataFlowDep = Dep.Make
   (struct
      type equation = eq
      let read eq = Vars.read true eq
+     let linear_read eq = Vars.linear_read eq.eq_rhs
      let def = Vars.def
      let antidep = Vars.antidep
    end)
@@ -191,6 +208,7 @@ module AllDep = Dep.Make
   (struct
      type equation = eq
      let read eq = Vars.read false eq
+     let linear_read eq = Vars.linear_read eq.eq_rhs
      let def = Vars.def
      let antidep _ = false
    end)
