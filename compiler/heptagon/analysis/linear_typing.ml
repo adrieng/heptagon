@@ -321,6 +321,7 @@ let build env vds =
 let build_ids env vds =
   List.fold_left (fun env vd -> IdentSet.add vd.v_ident env) env vds
 
+(* Linear inputs are considered initialised *)
 let build_location env vds =
   let add_one env vd =
     match vd.v_linearity with
@@ -328,6 +329,15 @@ let build_location env vds =
       | _ -> env
   in
     List.fold_left add_one env vds
+
+(* Linear variables with last: last x is initialised and x is used *)
+let build_last_location (used_vars, init_vars) vds =
+  let add_one (used_vars, init_vars) vd =
+    match vd.v_last, vd.v_linearity with
+      | Last _, Lat r -> IdentSet.add vd.v_ident used_vars, LocationSet.add r init_vars
+      | _ -> used_vars, init_vars
+  in
+    List.fold_left add_one (used_vars, init_vars) vds
 
 (** [extract_lin_exp args_lin e_list] returns the linearities
     and expressions from e_list that are not yet set to Lat r.*)
@@ -392,7 +402,7 @@ let rec typing_exp env e =
   let l, env = match e.e_desc with
     | Econst _ -> lin_skeleton Ltop e.e_ty, env
     | Evar x -> lin_of_ident x env, env
-    | Elast _ -> Ltop, env
+    | Elast x -> lin_of_ident x env, env
     | Epre (_, e) ->
       let lin = (not_linear_for_exp e) in
       let env = safe_expect env lin e in
@@ -680,7 +690,8 @@ and typing_eq env eq =
   match eq.eq_desc with
     | Eautomaton(state_handlers) ->
         let typing_state (u, i) h =
-          let _, u1, i1 = typing_state_handler env h in
+          let (top_env, top_u, _) = env in
+          let _, u1, i1 = typing_state_handler (top_env, top_u, i) h in
             IdentSet.union u u1, LocationSet.union i i1
         in
         let env, u, i = env in
@@ -688,7 +699,8 @@ and typing_eq env eq =
           env, u, i
     | Eswitch(e, switch_handlers) ->
         let typing_switch (u, i) h =
-          let _, u1, i1 = typing_switch_handler env h in
+          let (top_env, top_u, _) = env in
+          let _, u1, i1 = typing_switch_handler (top_env, top_u, i) h in
             IdentSet.union u u1, LocationSet.union i i1
         in
         let env, u, i = safe_expect env Ltop e in
@@ -702,6 +714,13 @@ and typing_eq env eq =
         let env, u, i = safe_expect env Ltop e in
         let _, u, i =  typing_block (env, u, i) b in
           env, u, i
+    (*TODO: faire la meme chose si on a un tuple *)
+    (* for init<<r>> y = v fby x, we expect a linear type for x *)
+    | Eeq(Evarpat y, { e_desc = Efby(e_1, e_2) }) ->
+        let lin = lin_of_ident y env in
+        let _, env = check_init env eq.eq_loc eq.eq_inits lin in
+        safe_expect env Ltop e_1;
+        safe_expect env lin e_2
     | Eeq(pat, e) ->
         let lin_pat = typing_pat env pat in
         let lin_pat, env = check_init env eq.eq_loc eq.eq_inits lin_pat in
@@ -721,6 +740,7 @@ and typing_escape env esc =
 
 and typing_block (env,u,i) block =
   let env = build env block.b_local in
+  let u, i = build_last_location (u, i) block.b_local in
     List.fold_left typing_eq (env, u, i) block.b_equs
 
 and typing_switch_handler (env, u, i) sh =

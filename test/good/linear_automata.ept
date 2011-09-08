@@ -27,9 +27,8 @@ let
 tel
 
 node autom_last() returns (u:int)
-var a:int^n at r; last o : int^n at r;
+var last o : int^n at r = 0^n;
 let
-  init<<r>> a = 1^n;
   automaton
     state S1
     do
@@ -37,9 +36,8 @@ let
 
     state S2
     do
-      o = g(a)
+      o = g(last o)
     until false then S1
   end;
-  u = a[0]
+  u = o[0]
 tel
-
