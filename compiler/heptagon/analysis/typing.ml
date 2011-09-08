@@ -609,7 +609,7 @@ let rec typing cenv h e =
             Misc.split_at (List.length pe_list) expected_ty_list in
           let typed_pe_list = typing_args cenv h p_ty_list pe_list in
           (*typing of other arguments*)
-          let ty, typed_e_list = typing_iterator cenv h it n_list
+          let ty, typed_e_list = typing_iterator cenv h it typed_n_list
             expected_ty_list result_ty_list e_list in
           let typed_params = typing_node_params cenv
             ty_desc.node_params params in
@@ -1103,9 +1103,10 @@ and build cenv h dec =
       if Env.mem vd.v_ident h then
         error (Ealready_defined(name vd.v_ident));
 
+      let vd = { vd with v_last = last_dec; v_type = ty } in
       let acc_defined = Env.add vd.v_ident vd acc_defined in
       let h = Env.add vd.v_ident { vd = vd; last = last vd.v_last } h in
-      { vd with v_last = last_dec; v_type = ty }, (acc_defined, h)
+      vd, (acc_defined, h)
     with
         TypingError(kind) -> message vd.v_loc kind
   in
