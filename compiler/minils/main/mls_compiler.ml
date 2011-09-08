@@ -40,7 +40,10 @@ let compile_program p =
   let p =
     pass "Automata minimization checks" true Tomato.tomato_checks p pp in
 *)
-  
+
+  (* Normalize memories*)
+  let p = pass "Normalize memories" true Normalize_mem.program p pp in
+
   (* Scheduling *)
   let p =
     if !Compiler_options.use_interf_scheduler then
@@ -48,9 +51,6 @@ let compile_program p =
     else
       pass "Scheduling" true Schedule.program p pp
   in
-
-  (* Normalize memories*)
-  let p = pass "Normalize memories" true Normalize_mem.program p pp in
 
   (* Memory allocation *)
   let p = pass "memory allocation" !do_mem_alloc Interference.program p pp in
