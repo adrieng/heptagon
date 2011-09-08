@@ -361,6 +361,8 @@ let rec fuse_args_lin args_lin collect_lins =
     | args_lin, [] -> args_lin
     | (Lat r)::args_lin, collect_lins ->
       (Lat r)::(fuse_args_lin args_lin collect_lins)
+    | (Lvar r)::args_lin, x::collect_lins ->
+      (Lvar r)::(fuse_args_lin args_lin collect_lins)
     | _::args_lin, x::collect_lins ->
       x::(fuse_args_lin args_lin collect_lins)
 
