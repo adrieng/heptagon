@@ -1,0 +1,429 @@
+ (* calculate arctan(y/x)  *)
+open TypeBase
+open TypeTracks
+
+  node myarctan(y, x : float) returns (atan : float)
+  var l6 : float; l4 : bool; l1 : float;
+  let
+    atan =
+      if l4
+      then if x <. 0.0 then CstPhysics.pi +. l1 else l1
+      else CstPhysics.pi /. 2.0 *. Math.sign(y);
+  (*  l6 = (activate div every l4 initial default 0.0)(y, x);  *)
+    l6 = if l4 then y /. x else 0.0 -> pre l6;
+    l4 = Math.abs(x) >. 0.1;
+    l1 = Mathext.atanr(l6);
+  tel
+
+(* compute if a given track is equal to one of the mission tracks
+   belonging to the mission track array at the previous tick *)
+fun missiontrackequalsprevious(previousone, actualone : TypeTracks.tmissiontrack)
+    returns (equal : bool)
+let
+    equal =
+      0 <> previousone.m_id & previousone.m_id = actualone.m_id or
+      Math.abs(previousone.m_pos.x -. actualone.m_pos.x) <. 100.0 &
+      Math.abs(previousone.m_pos.y -. actualone.m_pos.y) <. 100.0 &
+      not (Math.abs(previousone.m_pos.x) <. 0.1 &
+       Math.abs(previousone.m_pos.y) <. 0.1 &
+       Math.abs(actualone.m_pos.x) <. 0.1 &
+       Math.abs(actualone.m_pos.y) <. 0.1 )
+tel
+
+  (* compute track visibility (appearance on radar screen)
+     according to track position and speed  *)
+fun calctrackvisible1(position : TypeBase.tposition;
+                             speed : TypeBase.tspeed)
+    returns (trackvisible : bool)
+let
+  trackvisible =
+      not (Math.abs(position.x) <. 0.001 & Math.abs(position.y) <. 0.001 &
+       Math.abs(speed.sx) <. 0.001 &
+       Math.abs(speed.sy) <. 0.001);
+tel
+
+fun missiontrackexist1(acc_tracknumber : int;
+                              missiontrack,
+                              previousmissiontrack : TypeTracks.tmissiontrack)
+  returns (tracknumbertoset : int)
+let
+    tracknumbertoset =
+      if missiontrackequalsprevious(missiontrack, previousmissiontrack) &
+      0 <> previousmissiontrack.m_tracknumber
+      then previousmissiontrack.m_tracknumber
+      else acc_tracknumber;
+tel
+
+(* compute if a given track is equal to one of the mission tracks
+   belonging to the mission track array at the previous tick *)
+fun missiontrackequalsprevious_orig(previousone, actualone : TypeTracks.tmissiontrack)
+    returns (equal : bool)
+var l43 : bool;
+let
+    l43 = previousone.m_tracknumber <> 0;
+    equal =
+      l43 &
+      (l43 & 0 <> previousone.m_id & previousone.m_id = actualone.m_id or
+       Math.abs(previousone.m_pos.x -. actualone.m_pos.x) <. 100.0 &
+       Math.abs(previousone.m_pos.y -. actualone.m_pos.y) <. 100.0 &
+       not (Math.abs(previousone.m_pos.x) <. 0.1 &
+        Math.abs(previousone.m_pos.y) <. 0.1 &
+        Math.abs(actualone.m_pos.x) <. 0.1 &
+        Math.abs(actualone.m_pos.y) <. 0.1));
+tel
+
+fun util_radtodeg(input1 : float) returns (output1 : float)
+let
+  output1 = input1 /. (2.0 *. CstPhysics.pi) *. 360.0;
+tel
+
+fun util_degtorad(input1 : float) returns (output1 : float)
+let
+  output1 = 2.0 *. CstPhysics.pi *. input1 /. 360.0;
+tel
+
+(* if speedabs is small (speed.x and speed.y are also small), trackangle is set to 0.
+   otherwise, trackangle is computed to be in the range [-180, 180]
+    degrees thanks to the acosr; sign is given, from the asinr. *)
+fun calctrackangle(speed : TypeBase.tspeed; speedabs : TypeBase.tmetresseconde)
+    returns (trackangle : float)
+var l51 : bool; l48, l47 : float;
+let
+    trackangle =
+      util_radtodeg(if l51 then 0.0 else Mathext.acosr(l47) *. l48) *.
+      (l48 *.
+       Math.sign(Mathext.asinr(speed.sy /. (if l51 then 1.0 else speedabs))));
+    l51 = speedabs <. 0.01;
+    l48 = Math.sign(l47);
+    l47 = speed.sx /. (if l51 then 1.0 else speedabs);
+tel
+
+(* compute track visibility (appearance on radar screen)
+   according to track position *)
+fun calctrackvisible(position : TypeBase.tposition)
+    returns (trackvisible : bool)
+let
+ trackvisible =
+      not (Math.abs(position.x) <. 0.001 & Math.abs(position.y) <. 0.001);
+tel
+
+fun missiontrackexist( missiontrack,
+                       previousmissiontrack : TypeTracks.tmissiontrack;
+                       acc_tracknumber : int)
+    returns (tracknumbertoset : int)
+let
+    tracknumbertoset =
+      if missiontrackequalsprevious(missiontrack, previousmissiontrack)
+      then previousmissiontrack.m_tracknumber
+      else acc_tracknumber;
+tel
+
+(* calculate: result = rate of closing / distance *)
+node calculatevrdivd(vr, d : float) returns (result : float)
+var l13 : float; l11 : bool;
+let
+  result = if l11 then l13 else 0.0;
+(*    l13 = (activate div every l11 initial default 0.0)(vr, d);  *)
+  l13 = if l11 then vr /. d else 0.0 -> pre l13;
+  l11 = d >. 0.1;
+tel
+
+(* sort two mission tracks according to:
+  1) their (rate of closing / distance) ratio
+  2) target type
+  3) detection or not by the radar *)
+node trackalowerprioritythanb(a, b : TypeTracks.tmissiontrack)
+  returns (prioritary : bool)
+let
+  prioritary =
+      a.m_targettype = TypeBase.Ttargettype_friend or not a.m_detectedbyradar or
+      a.m_detectedbyradar &
+      calculatevrdivd(a.m_sr, a.m_d) <. calculatevrdivd(b.m_sr, b.m_d) &
+      b.m_detectedbyradar;
+tel
+
+(* compute if two tracks speeds are equal *)
+fun comparespeeds(speed1, speed2 : TypeBase.tspeed)
+    returns (equal : bool)
+let
+  equal =
+      Math.abs(speed1.sx -. speed2.sx) <. 1.0 &
+      Math.abs(speed1.sy -. speed2.sy) <. 1.0;
+tel
+
+(* compute a "prioritized" track number according to its
+   priority and target type *)
+fun calculateprioritizedtracknb(missiontrack : TypeTracks.tmissiontrack)
+    returns (prioritizedtracknb : int)
+let
+  prioritizedtracknb =
+      if missiontrack.m_targettype <> TypeBase.Ttargettype_friend &
+      missiontrack.m_priority <> 0
+      then missiontrack.m_tracknumber
+      else 0;
+tel
+
+(* sort two real inputs *)
+fun sortreals(a, b : float) returns (newa, newb : float)
+var l2 : bool;
+let
+  l2 = a <. b;
+  newb = if l2 then a else b;
+  newa = if l2 then b else a;
+tel
+
+(* compute if two tracks positions are equal *)
+fun comparepositions(pos1, pos2 : TypeBase.tposition)
+    returns (equal : bool)
+let
+    equal =
+      Math.abs(pos1.x -. pos2.x) <. 0.1 & Math.abs(pos1.y -. pos2.y) <. 0.1;
+tel
+
+(* compute if two tracks are equal (according to their position
+   and speed)  *)
+fun comparetracks(pos1, pos2 : TypeBase.tposition;
+                         v1, v2 : TypeBase.tspeed)
+  returns (equal : bool)
+let
+    equal = comparepositions(pos1, pos2) & comparespeeds(v1, v2);
+tel
+
+
+(* set the track number of a mission track *)
+fun setmissiontracknumber(missiontrack : TypeTracks.tmissiontrack at r; number : int)
+    returns (newmissiontrack : TypeTracks.tmissiontrack at r)
+let
+    newmissiontrack = { missiontrack with .m_tracknumber = number };
+tel
+
+(* compute if a mission track is null (or empty) according to
+   its position and speed *)
+fun missiontrackisnull(missiontrack : TypeTracks.tmissiontrack)
+    returns (isnull : bool)
+let
+    isnull =
+      comparetracks(missiontrack.m_pos, CstBaseInit.kInitPosition,
+        missiontrack.m_speed, CstBaseInit.kInitSpeed);
+tel
+
+(* calculate the new track number for a mission track, according to:
+  1) the mission track data
+  2) the previous mission tracks array
+  3) the current (highest) track number *)
+fun calculatemissiontracknumber(
+               previousmissiontracks : TypeArray.tmissiontracksarray;
+               missiontrack : TypeTracks.tmissiontrack at r;
+               currenttracknumber : int)
+    returns (newmissiontrack : TypeTracks.tmissiontrack at r;
+             newtracknumber : int)
+var setnewtracknumber : bool; previoustracknumber : int;
+let
+    setnewtracknumber =
+      previoustracknumber = 0 & not missiontrackisnull(missiontrack);
+    newtracknumber =
+      if setnewtracknumber then currenttracknumber + 1 else currenttracknumber;
+    previoustracknumber =
+      fold <<TypeArray.ksizemissiontracksarray>> missiontrackexist
+      <(missiontrack)>
+      (previousmissiontracks, 0);
+    newmissiontrack =
+      setmissiontracknumber(missiontrack, if setnewtracknumber
+        then newtracknumber
+        else previoustracknumber);
+tel
+
+(* compute a mission track target type according to its identifier *)
+fun calculatetracktargettypefromid(id : int)
+    returns (targettype : TypeBase.ttargettype)
+let
+  targettype =
+      if 0 = id
+      then TypeBase.Ttargettype_unknown
+      else if id <= 500
+      then TypeBase.Ttargettype_friend
+      else TypeBase.Ttargettype_foe;
+tel
+
+(* calculate the derivative of a value x(n) according to its
+   ante-previous value x(n-2) *)
+node myderivative(inv, period : float) returns (o : float)
+var l2 : float;
+let
+ (* l2 = fby (inv; 2; 0.0);  *)
+  l2 = 0.0 fby (0.0 fby inv);
+  o =
+      if Math.abs(l2) <. 0.1 or Math.abs(inv) <. 0.1
+      then 0.0
+      else 0.0 -> (inv -. l2) /. (2.0 *. period);
+  tel
+
+(* calculate a track speed vector according to the position vector *)
+node calculatetrackspeedfrompos(position : TypeBase.tposition)
+    returns (speed : TypeBase.tspeed)
+let
+  speed =
+      { sx = myderivative(position.x, CstPhysics.t);
+        sy = myderivative(position.y, CstPhysics.t) };
+tel
+
+(* generate the (up to 2) tracks detected by a sensor (radar
+   or iff) from the environment (made of 4 tracks)  *)
+fun selectdetectedtrack(index : int;
+                        tracks : TypeArray.ttracksarray;
+                        defaulttrack : TypeTracks.ttrack)
+    returns (trackselected : TypeTracks.ttrack)
+let
+  trackselected = tracks.[index] default defaulttrack;
+tel
+
+(* set the priority of a mission track *)
+fun setmissiontrackpriority(missiontrack : TypeTracks.tmissiontrack at r;
+                                   priority : int)
+    returns (newmissiontrack : TypeTracks.tmissiontrack at r)
+let
+  newmissiontrack =
+   { missiontrack with .m_priority =
+               if missiontrack.m_detectedbyradar then priority else 0 }
+tel
+
+(* invert two mission tracks if the first one is null (or empty)  *)
+fun sortblockmissiontrack(a, b : TypeTracks.tmissiontrack)
+    returns (newa, newb : TypeTracks.tmissiontrack)
+var l7 : bool;
+let
+  l7 = missiontrackisnull(a);
+  newb = if l7 then a else b;
+  newa = if l7 then b else a;
+tel
+
+(* sort two mission tracks according to:
+   1) their (rate of closing / distance) ratio
+   2) target type
+   3) detection or not by the radar *)
+node sortblockpriorities(a, b : TypeTracks.tmissiontrack)
+  returns (newa, newb : TypeTracks.tmissiontrack)
+var l25 : bool;
+let
+    l25 = trackalowerprioritythanb(a, b);
+    newb = if l25 then a else b;
+    newa = if l25 then b else a;
+tel
+
+fun position_equal(p1, p2 : TypeBase.tposition) returns (res:bool)
+let
+  res = (p1.x = p2.x) & (p1.y = p2.y)
+tel
+
+fun speed_equal(s1, s2 : TypeBase.tspeed) returns (res:bool)
+let
+  res = (s1.sx = s2.sx) & (s1.sy = s2.sy)
+tel
+
+(* convert an iff track (position + identifier) into a mission
+   track (position + speed + distance + rate of closing +
+   detected by radar/iff + tracknumber + target type) *)
+node convertifftracktomissiontrack(ifftrack : TypeTracks.tifftrack)
+  returns (missiontrack : TypeTracks.tmissiontrack)
+let
+  missiontrack =
+      { m_pos             = ifftrack.i_pos;
+        m_speed           = if position_equal(CstBaseInit.kInitPosition, ifftrack.i_pos)
+        then CstBaseInit.kInitSpeed
+        else calculatetrackspeedfrompos(ifftrack.i_pos);
+        m_id              = ifftrack.i_id;
+        m_priority        = 0;
+        m_d               = 0.0;
+        m_sabs            = 0.0;
+        m_sr              = 0.0;
+        m_detectedbyradar = false;
+        m_detectedbyiff   = not (position_equal(ifftrack.i_pos, CstBaseInit.kInitPosition) &
+         ifftrack.i_id = 0);
+        m_tracknumber     = 0;
+        m_targettype      = calculatetracktargettypefromid(ifftrack.i_id);
+        m_isvisible       = calctrackvisible(ifftrack.i_pos);
+        m_angle           = 0.0 };
+tel
+
+(* convert an radar track (position + speed + distance +
+   rate of closing) into a mission track (position + speed +
+   distance + rate of closing + detected by radar/iff +
+   tracknumber + target type)  *)
+fun convertrdrtracktomissiontrack(rdrtrack : TypeTracks.trdrtrack)
+    returns (missiontrack : TypeTracks.tmissiontrack)
+let
+    missiontrack =
+      { m_pos             = rdrtrack.r_pos;
+        m_speed           = rdrtrack.r_s;
+        m_id              = 0;
+        m_priority        = 0;
+        m_d               = rdrtrack.r_d;
+        m_sabs            = rdrtrack.r_sabs;
+        m_sr              = rdrtrack.r_sr;
+        m_detectedbyradar = not (position_equal(rdrtrack.r_pos, CstBaseInit.kInitPosition) &
+         speed_equal(rdrtrack.r_s, CstBaseInit.kInitSpeed) &
+         rdrtrack.r_d = 0.0 &
+         rdrtrack.r_sabs = 0.0 &
+         rdrtrack.r_sr = 0.0);
+        m_detectedbyiff   = false;
+        m_tracknumber     = 0;
+        m_targettype      = TypeBase.Ttargettype_unknown;
+        m_isvisible       = calctrackvisible(rdrtrack.r_pos);
+        m_angle           = calctrackangle(rdrtrack.r_s, rdrtrack.r_sabs) };
+tel
+
+(* calculate the magnitude of a vector (2d)  *)
+fun vectnorme(a, b : float) returns (c : float)
+let
+  c = Mathext.sqrtr(a *. a +. b *. b);
+tel
+
+(* extract the x and y (position) values from a track (ttrack type) *)
+fun extracttrackposxy(track : TypeTracks.ttrack)
+    returns (x, y : TypeBase.tmetres)
+let
+  y = track.t_pos.y;
+  x = track.t_pos.x;
+tel
+
+(* elaborate radar track data (position, speed, distance, rate of closing)
+  according to an environment track (position only)  *)
+node elaboraterdrtrack(track : TypeTracks.ttrack)
+    returns (rdrtrack : TypeTracks.trdrtrack)
+var d, v, vr, vx, vy, x, y : float; l142 : TypeBase.tspeed;
+let
+    (*activate ifblock1 if d = 0.0
+      then vr = 0.0;
+      else var xnorm, ynorm : real;
+      let
+        ynorm = y / d;
+        xnorm = x / d;
+        vr = - (vx * xnorm + vy * ynorm);
+      tel
+    returns vr;*)
+    switch d = 0.0
+      | true do  vr = 0.0
+      | false
+        var xnorm, ynorm : float;
+        do
+          ynorm = y /. d;
+          xnorm = x /. d;
+          vr = -. (vx *. xnorm +. vy *. ynorm);
+    end;
+
+    (x, y) = extracttrackposxy(track);
+    rdrtrack =
+      { r_pos  = { x = x;
+                 y = y };
+        r_s    = { sx = vx;
+                 sy = vy };
+        r_d    = d;
+        r_sabs = v;
+        r_sr   = vr };
+    v = vectnorme(vx, vy);
+    d = vectnorme(x, y);
+    vy = l142.sy;
+    vx = l142.sx;
+    l142 = calculatetrackspeedfrompos({ x = x; y = y });
+tel
+

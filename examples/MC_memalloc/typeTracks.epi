@@ -1,0 +1,27 @@
+type trdrtrack = {
+      r_pos : TypeBase.tposition;
+      r_s : TypeBase.tspeed;
+      r_d : TypeBase.tmetres;
+      r_sabs : TypeBase.tmetresseconde;
+      r_sr : TypeBase.tmetresseconde
+    }
+
+type tifftrack = { i_pos : TypeBase.tposition; i_id : TypeBase.tid }
+
+type ttrack = { t_pos : TypeBase.tposition; t_id : TypeBase.tid }
+
+type tmissiontrack = {
+      m_pos : TypeBase.tposition;
+      m_speed : TypeBase.tspeed;
+      m_id : TypeBase.tid;
+      m_priority : TypeBase.tpriority;
+      m_d : TypeBase.tmetres;
+      m_sabs : TypeBase.tmetresseconde;
+      m_sr : TypeBase.tmetresseconde;
+      m_detectedbyradar : bool;
+      m_detectedbyiff : bool;
+      m_tracknumber : int;
+      m_targettype : TypeBase.ttargettype;
+      m_isvisible : bool;
+      m_angle : float
+    }

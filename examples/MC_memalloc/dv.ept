@@ -1,0 +1,83 @@
+open TypeArray
+open TypeTracks
+open CstArrayInit
+open Mc_TypeSensors
+open Mc
+
+fun dv_detectedbyiff(missiontrack : TypeTracks.tmissiontrack; accin : bool)
+    returns (accout : bool)
+let
+   accout = accin & not (missiontrack.m_tracknumber <> 0);
+tel
+
+fun dv_sametracknumber(missiontrack1,
+                       missiontrack2 : TypeTracks.tmissiontrack;
+                       accin : bool)
+    returns (accout : bool)
+let
+  accout =
+      accin or
+      missiontrack1.m_tracknumber = missiontrack2.m_tracknumber &
+      missiontrack2.m_tracknumber <> 0;
+tel
+
+fun dv_tracknumberexist(missiontrack : TypeTracks.tmissiontrack;
+                        missiontracks : TypeArray.tmissiontracksarray;
+                        accin : bool)
+    returns (accout : bool)
+var l36 : bool;
+let
+    l36 =
+      fold<<ksizemissiontracksarray>> dv_sametracknumber(
+        missiontrack^ksizemissiontracksarray, missiontracks, false);
+    accout = accin or l36;
+tel
+
+node dv_proof1(currentrdrstate : tsensorstate;
+                 rdronoffbutton, rdronoffcmd : bool)
+    returns (proof1 : bool)
+let
+  proof1 =
+      Verif.implies(Digital.risingEdge(rdronoffbutton) &
+        currentrdrstate = TState_FAIL, rdronoffcmd =
+        (false -> pre rdronoffcmd));
+tel
+
+fun dv_proof2(ifftracks : TypeArray.tifftracksarray;
+                     missiontracks : TypeArray.tmissiontracksarray)
+    returns (proof2 : bool)
+var l33 : bool;
+let
+    l33 =
+      fold<<ksizemissiontracksarray>> dv_detectedbyiff(missiontracks, true);
+    proof2 = Verif.implies(ifftracks = kinitifftrackarray, l33);
+tel
+
+(* verifiy that all non null tracknumbers are different *)
+fun dv_proof3(missiontracks : TypeArray.tmissiontracksarray)
+    returns (proof3 : bool)
+var l33 : bool;
+let
+    l33 =
+      fold<<ksizemissiontracksarray>> dv_tracknumberexist(
+        missiontracks, missiontracks^ksizemissiontracksarray, false);
+    proof3 = not l33;
+tel
+
+node dv_observer(currentrdrstate : tsensorstate;
+                   currentrdrmode : trdrmode;
+                   rdrtracks : TypeArray.trdrtracksarray;
+                   rdronoffbutton, rdrmodebutton, iffonoffbutton : bool;
+                   currentiffstate : tsensorstate;
+                   ifftracks : TypeArray.tifftracksarray)
+    returns (proof1, proof2, proof3 : bool)
+var l3 : TypeArray.tmissiontracksarray; l1,l4,l5 : bool;
+let
+    proof3 = dv_proof3(l3);
+    proof2 = dv_proof2(ifftracks, l3);
+    proof1 = dv_proof1(currentrdrstate, rdronoffbutton, l1);
+    (l1, l4, l3, l5) =
+      mc(currentrdrstate, currentrdrmode, rdrtracks, rdronoffbutton,
+        rdrmodebutton, iffonoffbutton, currentiffstate, ifftracks);
+tel
+

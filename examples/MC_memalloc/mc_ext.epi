@@ -1,0 +1,14 @@
+(* compute each detected track priority, and sort tracks
+   according to their priority *)
+val fun mc_tracks_prio_sorttracks(inputtrack1 : TypeTracks.tmissiontrack;
+                                  inputtrack2 : TypeTracks.tmissiontrack;
+                                  inputtrack3 : TypeTracks.tmissiontrack;
+                                  inputtrack4 : TypeTracks.tmissiontrack)
+    returns (outputtrack1 : TypeTracks.tmissiontrack;
+             outputtrack2 : TypeTracks.tmissiontrack;
+             outputtrack3 : TypeTracks.tmissiontrack;
+             outputtrack4 : TypeTracks.tmissiontrack)
+
+val fun int_of_float(a:float) returns (o:int)
+val fun float_of_int(a:int) returns (o:float)
+val fun rand() returns (o : float)

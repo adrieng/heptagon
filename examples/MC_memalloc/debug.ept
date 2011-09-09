@@ -1,0 +1,44 @@
+open Mc
+open Mc_TypeSensors
+
+(* Top node of the Mission Computer SCADE model.
+   The Fighter (MC + Radar + Iff), its environment
+   (CreateTracks) and links to the graphical interface (GUI)
+   are constituting this model. *)
+node fighterdebug(res, rdronoffclicked, iffonoffclicked : bool)
+    returns (missiontracks : TypeArray.tmissiontracksarray)
+var
+    l4 : TypeArray.trdrtracksarray;
+    l3 : trdrmode;
+    l6 : TypeArray.tifftracksarray;
+    l5 : tsensorstate;
+    l12, l11, l10 : bool;
+    l172 : tsensorstate;
+    l179 : TypeArray.ttracksarray;
+    l200, l201:bool; (*TODO*)
+let
+    l179 = createalltracks(res);
+    (l10, l11, missiontracks, l12) =
+      mc(l172, l3, l4, rdronoffclicked, false, iffonoffclicked, l5, l6);
+    (l5, l6, l200) = iff(l179, false, [1, 2, 3], false -> pre l12);
+    (l201, l172, l3, l4) =
+      radar(false -> pre l10, false -> pre l11, false, [0, 1, 2, 3, 4],
+        l179);
+tel
+
+(* top node of the mission computer scade model.
+   the fighter (mc + radar + iff), its environment
+   (createtracks) and links to the graphical interface (gui)
+   are constituting this model. *)
+node dv_fighterdebug(res, rdronoffclicked, iffonoffclicked : bool)
+    returns (proof3 : bool)
+let
+  proof3 =
+      Dv.dv_proof3(fighterdebug(res, rdronoffclicked, iffonoffclicked));
+tel
+
+fun dv_debug(missiontracks : TypeArray.tmissiontracksarray)
+    returns (proof3 : bool)
+let
+  proof3 = Dv.dv_proof3(missiontracks);
+tel
