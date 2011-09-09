@@ -156,6 +156,7 @@ let add_other_vars md cd =
   in
   let envs = List.fold_left add_one (LinListEnv.empty, LocationEnv.empty) md.m_inputs in
   let envs = List.fold_left add_one envs md.m_outputs in
+  let envs = List.fold_left add_one envs md.m_body.b_locals in
   let env, ty_env = List.fold_left add_one envs cd.cd_mems in
     LinListEnv.fold (fun r x acc -> (LocationEnv.find r ty_env, x)::acc) env []
 
