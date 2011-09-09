@@ -107,9 +107,9 @@ let extvalue funs (env, mut, j) w = match w.w_desc with
       (* replace with representative *)
       let iv = ivar_of_ext_value w in
         try
-          let w =
+          let neww =
             ext_value_of_pattern (mk_pattern Types.invalid_type (repr_from_ivar env iv)) in
-          { w with w_desc = w.w_desc }, (env, mut, j)
+          { w with w_desc = neww.w_desc }, (env, mut, j)
         with
           | Not_found -> Obc_mapfold.extvalue funs (env, mut, j) w
 
