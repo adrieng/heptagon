@@ -345,13 +345,6 @@ let output_cfile dir (filen, cfile_desc) =
 let output dir cprog =
   List.iter (output_cfile dir) cprog
 
-(** Returns the type of a pointer to a type, except for
-    types which are already pointers. *)
-let pointer_to ty =
-  match ty with
-    | Cty_arr _ | Cty_ptr _ -> ty
-    | _ -> Cty_ptr ty
-
 (** Returns whether a type is a pointer. *)
 let is_pointer_type = function
   | Cty_arr _ | Cty_ptr _ -> true

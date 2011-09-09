@@ -115,10 +115,24 @@ let copname = function
 let cvar_of_vd vd =
   name vd.v_ident, ctype_of_otype vd.v_type
 
+(** Returns the type of a pointer to a type, except for
+    types which are already pointers. *)
+let pointer_type ty cty =
+  match Modules.unalias_type ty with
+    | Tarray _ -> cty
+    | _ -> Cty_ptr cty
+
+(** Returns the expression to use e as an argument of
+    a function expecting a pointer as argument. *)
+let address_of ty e =
+  match Modules.unalias_type ty with
+    | Tarray _ -> e
+    | _ -> Caddrof e
+
 let inputlist_of_ovarlist vl =
   let cvar_of_ovar vd =
     let ty = ctype_of_otype vd.v_type in
-    let ty = if vd.v_mutable then pointer_to ty else ty in
+    let ty = if vd.v_mutable then pointer_type vd.v_type ty else ty in
     name vd.v_ident, ty
   in
   List.map cvar_of_ovar vl
@@ -196,13 +210,6 @@ and create_affect_stm dest src ty =
               List.fold_right2 create_affect (find_struct ln) ce_list []
           | _ -> [Caffect (dest, src)])
     | _ -> [Caffect (dest, src)]
-
-(** Returns the expression to use e as an argument of
-    a function expecting a pointer as argument. *)
-let address_of ty e =
-  match ty with
-    | Tarray _ -> e
-    | _ -> Caddrof e
 
 let rec cexpr_of_static_exp se =
   match se.se_desc with
