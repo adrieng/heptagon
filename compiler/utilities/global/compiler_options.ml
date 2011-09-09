@@ -104,6 +104,11 @@ let do_iterator_fusion = ref false
 let do_scalarize = ref false
 
 let do_mem_alloc = ref false
+let do_linear_typing = ref false
+
+let do_mem_alloc_and_typing () =
+  do_mem_alloc := true;
+  do_linear_typing := true
 
 let use_interf_scheduler = ref false
 
@@ -134,5 +139,7 @@ and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
 and doc_inline = "<node>\t\tInline node <node>"
 and doc_itfusion = "\t\tEnable iterator fusion."
 and doc_tomato = "\t\tEnable automata minimization."
-and doc_memalloc = "\t\tEnable memory allocation"
+and doc_memalloc = "\t\tEnable memory allocation and linear annotations"
+and doc_memalloc_only = "\t\tEnable memory allocation"
+and doc_linear_only = "\t\tEnable linear annotations"
 and doc_interf_scheduler = "\t\tUse a scheduler that tries to minimise interferences"

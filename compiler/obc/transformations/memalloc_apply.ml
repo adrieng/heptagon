@@ -146,7 +146,12 @@ let var_decs _ (env, mutables,j) vds =
 
 let add_other_vars md cd =
   let add_one (env, ty_env) vd =
-    if is_linear vd.v_linearity && not (Interference.World.is_optimized_ty vd.v_type) then
+    let should_add_var =
+      is_linear vd.v_linearity &&
+        (not !Compiler_options.do_mem_alloc
+         || not (Interference.World.is_optimized_ty vd.v_type))
+    in
+    if should_add_var then
       let r = location_name vd.v_linearity in
       let env = LinListEnv.add_element r (Ivar vd.v_ident) env in
       let ty_env = LocationEnv.add r vd.v_type ty_env in
@@ -168,7 +173,13 @@ let class_def funs acc cd =
   let outputs = ivars_of_vds md.m_outputs in
   let mems = ivars_of_vds cd.cd_mems in
   (*add linear variables not taken into account by memory allocation*)
-  let mem_alloc = (add_other_vars md cd) @ cd.cd_mem_alloc in
+  let mem_alloc =
+    if !Compiler_options.do_linear_typing then
+      add_other_vars md cd
+    else
+      []
+  in
+  let mem_alloc = mem_alloc @ cd.cd_mem_alloc in
   let env, mutables = memalloc_subst_map inputs outputs mems mem_alloc in
   let cd, _ = Obc_mapfold.class_def funs (env, mutables, cd.cd_objs) cd in
   (* remove unnecessary outputs*)

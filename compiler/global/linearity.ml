@@ -87,7 +87,7 @@ let rec unify_lin expected_lin lin =
     | _, _ -> raise UnifyFailed
 
 let check_linearity lin =
-  if is_linear lin && not !Compiler_options.do_mem_alloc then
+  if is_linear lin && not !Compiler_options.do_linear_typing then
     Ltop
   else
     lin

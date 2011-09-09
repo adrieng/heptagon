@@ -198,7 +198,7 @@ let message loc kind =
     | Eenable_memalloc ->
       eprintf
         "%aThis function was compiled with linear types. \
-               Enable memory allocation to call it.@."
+               Enable linear typing to call it.@."
           print_location loc
   end;
   raise Errors.Error
@@ -235,7 +235,7 @@ let flatten_ty_list l =
 
 let kind f ty_desc =
   let ty_of_arg v =
-    if Linearity.is_linear v.a_linearity && not !Compiler_options.do_mem_alloc then
+    if Linearity.is_linear v.a_linearity && not !Compiler_options.do_linear_typing then
       error Eenable_memalloc;
     v.a_type
   in

@@ -123,7 +123,9 @@ let main () =
         "-fti", Arg.Set full_type_info, doc_full_type_info;
         "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
-        "-memalloc", Arg.Set do_mem_alloc, doc_memalloc;
+        "-memalloc", Arg.Unit do_mem_alloc_and_typing, doc_memalloc;
+        "-only-memalloc", Arg.Set do_mem_alloc, doc_memalloc_only;
+        "-only-linear", Arg.Set do_linear_typing, doc_linear_only;
         "-sch-interf", Arg.Set use_interf_scheduler, doc_interf_scheduler
       ]
         compile errmsg;
