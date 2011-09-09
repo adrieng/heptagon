@@ -409,7 +409,7 @@ and translate_var_dec env vd =
   (* env is initialized with the declared vars before their translation *)
     { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
       Heptagon.v_type = translate_type vd.v_loc vd.v_type;
-      Heptagon.v_linearity = vd.v_linearity;
+      Heptagon.v_linearity = Linearity.check_linearity vd.v_linearity;
       Heptagon.v_last = translate_last vd.v_last;
       Heptagon.v_clock = translate_some_clock vd.v_loc env vd.v_clock;
       Heptagon.v_loc = vd.v_loc }

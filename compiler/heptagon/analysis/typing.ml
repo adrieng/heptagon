@@ -56,6 +56,7 @@ type error =
   | Estatic_constraint of constrnt
   | Esplit_enum of ty
   | Esplit_tuple of ty
+  | Eenable_memalloc
 
 exception Unify
 exception TypingError of error
@@ -194,6 +195,11 @@ let message loc kind =
                be a tuple (found: %a).@."
           print_location loc
           print_type ty
+    | Eenable_memalloc ->
+      eprintf
+        "%aThis function was compiled with linear types. \
+               Enable memory allocation to call it.@."
+          print_location loc
   end;
   raise Errors.Error
 
@@ -228,7 +234,11 @@ let flatten_ty_list l =
     (fun arg args -> match arg with Tprod l -> l@args | a -> a::args ) l []
 
 let kind f ty_desc =
-  let ty_of_arg v = v.a_type in
+  let ty_of_arg v =
+    if Linearity.is_linear v.a_linearity && not !Compiler_options.do_mem_alloc then
+      error Eenable_memalloc;
+    v.a_type
+  in
   let op = if ty_desc.node_stateful then Enode f else Efun f in
     op, List.map ty_of_arg ty_desc.node_inputs,
   List.map ty_of_arg ty_desc.node_outputs

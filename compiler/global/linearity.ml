@@ -86,6 +86,12 @@ let rec unify_lin expected_lin lin =
     | Lat r, Lvar _ -> Lat r
     | _, _ -> raise UnifyFailed
 
+let check_linearity lin =
+  if is_linear lin && not !Compiler_options.do_mem_alloc then
+    Ltop
+  else
+    lin
+
 let rec lin_to_string = function
   | Ltop -> "at T"
   | Lat r -> "at "^r
