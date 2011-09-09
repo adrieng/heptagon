@@ -245,7 +245,7 @@ and signature funs acc s =
   let sig_params, acc = mapfold (param_it funs.global_funs) acc s.sig_params in
   let sig_inputs, acc = mapfold (arg_it funs.global_funs) acc s.sig_inputs in
   let sig_outputs, acc = mapfold (arg_it funs.global_funs) acc s.sig_outputs in
-  { s with sig_params = sig_params; sig_inputs = sig_inputs; sig_outputs }, acc
+  { s with sig_params = sig_params; sig_inputs = sig_inputs; sig_outputs = sig_outputs }, acc
 
 
 let defaults = {
