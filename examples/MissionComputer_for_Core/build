@@ -1,5 +1,5 @@
 #!/bin/bash
-HEPTC=../../compiler/heptc.byte
+HEPTC=../../heptc
 HEPTC_OPTIONS=-memalloc
 
 GCC=gcc
