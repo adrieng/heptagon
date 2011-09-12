@@ -56,7 +56,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
         (Hept_printer.iterator_to_string it) (fullname nn);
       (exp, (env, newvars, newequs))
 
-  | Eapp ({ a_op = Enode nn; } as op, argl, rso) when to_be_inlined nn ->
+  | Eapp ({ a_op = (Enode nn | Efun nn); } as op, argl, rso) when to_be_inlined nn ->
       let add_reset eq = match rso with
         | None -> eq
         | Some x -> mk_equation (Ereset (mk_block [eq], x)) in
@@ -107,7 +107,6 @@ let block funs (env, newvars, newequs) blk =
    (env, [], []))
 
 let node_dec funs (env, newvars, newequs) nd =
-  Idents.enter_node nd.n_name;
   let nd, (env, newvars, newequs) =
     Hept_mapfold.node_dec funs (env, newvars, newequs) nd in
   ({ nd with n_block =
