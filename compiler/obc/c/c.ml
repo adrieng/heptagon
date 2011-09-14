@@ -296,8 +296,8 @@ let pp_cdecl fmt cdecl = match cdecl with
       fprintf fmt "@[<v>%a %a(@[<hov>%a@]);@ @]@\n"
         pp_cty retty  pp_string n  pp_param_list args
   | Cdecl_constant (n, cty, ce) ->
-      fprintf fmt "@[<v>static const %a %a = %a;@ @]@\n"
-        pp_cty cty  pp_string n  pp_cconst_expr ce
+      fprintf fmt "@[<v>static const %a = %a;@ @]@\n"
+        pp_vardecl (n, cty)  pp_cconst_expr ce
 
 let pp_cdef fmt cdef = match cdef with
   | Cfundef cfd ->
