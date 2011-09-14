@@ -57,6 +57,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
       (exp, (env, newvars, newequs))
 
   | Eapp ({ a_op = (Enode nn | Efun nn); } as op, argl, rso) when to_be_inlined nn ->
+    begin try
       let add_reset eq = match rso with
         | None -> eq
         | Some x -> mk_equation (Ereset (mk_block [eq], x)) in
@@ -98,6 +99,10 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
                           List.map mk_output_exp ni.n_output, None)) exp.e_ty
                    ~linearity:exp.e_linearity in
       (res_e, (env, newvars, newequs))
+
+    with
+      | Not_found -> exp, (env, newvars, newequs)
+    end
   | _ -> Hept_mapfold.exp funs (env, newvars, newequs) exp
 
 let block funs (env, newvars, newequs) blk =
