@@ -9,7 +9,7 @@ VERBOSE=1
 
 interfaces=(mctypes.epi)
 ext_libs=(mc_ext.epi mathext.epi)
-sources=()
+sources=(mcinlined.ept)
 
 for f in ${interfaces[@]}; do
     if [ $VERBOSE ] ; then
@@ -32,9 +32,9 @@ for f in ${sources[@]}; do
     $HEPTC $HEPTC_OPTIONS -target c $f
 done
 
-$HEPTC $HEPTC_OPTIONS -target c -s dv_fighterdebug mcinlined.ept
+#$HEPTC $HEPTC_OPTIONS -target c -s dv_fighterdebug mcinlined.ept
 
-source_dirs=(mctypes_c mc_c)
+source_dirs=(mctypes_c mcinlined_c)
 other_files=(main.c mathext.c mathext.h mc_ext.c mc_ext.h)
 if [ -d _build ]; then
    rm -r _build
