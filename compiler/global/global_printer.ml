@@ -77,7 +77,7 @@ let rec print_static_exp_desc ff sed = match sed with
   | Sarray_power (se, n_list) ->
       fprintf ff "%a^%a" print_static_exp se (print_list print_static_exp """^""") n_list
   | Sarray se_list ->
-      fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "["";""]") se_list
+      fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "["",""]") se_list
   | Stuple se_list -> print_static_exp_tuple ff se_list
   | Srecord f_se_list ->
       print_record (print_couple print_qualname

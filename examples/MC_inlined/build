@@ -1,6 +1,6 @@
 #!/bin/bash
 HEPTC=../../heptc
-HEPTC_OPTIONS="-flatten"
+HEPTC_OPTIONS=""
 
 GCC=gcc
 GCC_OPTIONS="-g -O2 -std=c99 -I ../../../lib/c"
@@ -9,7 +9,7 @@ VERBOSE=1
 
 interfaces=(mctypes.epi)
 ext_libs=(mc_ext.epi mathext.epi)
-sources=(mc.ept)
+sources=()
 
 for f in ${interfaces[@]}; do
     if [ $VERBOSE ] ; then
@@ -32,7 +32,7 @@ for f in ${sources[@]}; do
     $HEPTC $HEPTC_OPTIONS -target c $f
 done
 
-#$HEPTC $HEPTC_OPTIONS -target c -s dv_fighterdebug mc.ept
+$HEPTC $HEPTC_OPTIONS -target c -s dv_fighterdebug mcinlined.ept
 
 source_dirs=(mctypes_c mc_c)
 other_files=(main.c mathext.c mathext.h mc_ext.c mc_ext.h)

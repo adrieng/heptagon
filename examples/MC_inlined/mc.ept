@@ -239,8 +239,8 @@ let
       if setnewtracknumber then currenttracknumber + 1 else currenttracknumber;
     previoustracknumber =
       fold <<ksizemissiontracksarray>> missiontrackexist
-      (missiontrack^ksizemissiontracksarray,
-      previousmissiontracks, 0);
+      <(missiontrack)>
+      (previousmissiontracks, 0);
     newmissiontrack =
       setmissiontracknumber(missiontrack, if setnewtracknumber
         then newtracknumber
@@ -448,8 +448,6 @@ node risingEdge(re_Input : bool) returns (re_Output : bool)
 let
   re_Output = not (re_Input -> pre re_Input) & re_Input;
 tel
-
-const trackarrayinit : bool = false
 
 (* safe state machine for the computing of radar or iff state
    state ident: state.0  *)
@@ -858,8 +856,8 @@ node mc_tracks_prio(missiontracks : tmissiontracksarray)
 var prioritytracknumbers : tpriorityList;
 let
     missiontrackswithprio =
-      map<<ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray(
-        prioritytracknumbers^ksizemissiontracksarray, missiontracks);
+      map<<ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+        <(prioritytracknumbers)> (missiontracks);
     prioritytracknumbers =
       prio_selectprioritarymissiontracks(missiontracks,
         prio_selectprioritarymissiontracks(missiontracks,
@@ -875,8 +873,8 @@ var l81 : int;
 let
     (withtracknumber, l81) =
       mapfold<<ksizemissiontracksarray>> calculatemissiontracknumber
-          ((kinitmissiontrackarray -> pre withtracknumber)^ksizemissiontracksarray,
-           withouttracknb, 0 -> pre l81);
+          <(kinitmissiontrackarray -> pre withtracknumber)>
+           (withouttracknb, 0 -> pre l81);
 tel
 
 (* 1) merge tracks data received from both radar and iff sensors
