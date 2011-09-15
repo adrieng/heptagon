@@ -87,7 +87,10 @@ and print_exp_tuple ff l =
   fprintf ff "@[<2>(%a)@]" (print_list_r print_exp """,""") l
 
 and print_vd_tuple ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_vd "("";"")") l
+  match l with
+    | [] -> fprintf ff "()"
+    | _ ->
+      fprintf ff "@[<2>%a@]" (print_list_r print_vd "("";"")") l
 
 and print_index ff idx =
   fprintf ff "@[<2>%a@]" (print_list print_static_exp "[""][""]") idx
@@ -122,14 +125,26 @@ and print_exp_desc ff = function
         print_app (app, args) print_every reset
   | Estruct(f_e_list) ->
       print_record (print_couple print_qualname print_exp """ = """) ff f_e_list
-  | Eiterator (it, f, params, pargs, args, reset) ->
-      fprintf ff "@[<2>(%s (%a)%a)@,(%a)%a@]%a"
-        (iterator_to_string it)
-        print_app (f, [])
-        (print_list_r print_static_exp "<<"","">>") params
-        print_exp_tuple pargs
-        print_exp_tuple args
-        print_every reset
+  | Eiterator (it, { a_op = (Efun f | Enode f); a_params =f_params },
+               params, pargs, args, reset) ->
+    (match f_params with
+      | [] ->
+        fprintf ff "@[<2>%s%a %a@,<%a>%a@]%a"
+          (iterator_to_string it)
+          (print_list_r print_static_exp "<<"","">>") params
+          print_qualname f
+          print_exp_tuple pargs
+          print_exp_tuple args
+          print_every reset
+      | _ ->
+        fprintf ff "@[<2>%s%a (%a%a)@,<%a>%a@]%a"
+          (iterator_to_string it)
+          (print_list_r print_static_exp "<<"","">>") params
+          print_qualname f print_params f_params
+          print_exp_tuple pargs
+          print_exp_tuple args
+          print_every reset)
+  | Eiterator _ -> assert false
   | Ewhen (e, c, x) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"
         print_exp e print_qualname c print_ident x
@@ -152,6 +167,9 @@ and print_every ff reset =
 and print_app ff (app, args) =
   match app.a_op with
     | Etuple -> print_exp_tuple ff args
+    | Efun { name = n } when (n = "*" or n = "*.") ->
+      let a1, a2 = assert_2 args in
+      fprintf ff "@[%a@, %s@, %a@]" print_exp a1  n  print_exp a2
     | Efun f | Enode f ->
         fprintf ff "@[%a@,%a@,%a@]"
           print_qualname f print_params app.a_params  print_exp_tuple args
@@ -168,7 +186,7 @@ and print_app ff (app, args) =
       let f = assert_1 app.a_params in
         fprintf ff "@[<2>{%a with .%a =@ %a}@]"
           print_exp r print_static_exp f print_exp e
-    | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["";""]") args
+    | Earray -> fprintf ff "@[<2>%a@]" (print_list_r print_exp "["",""]") args
     | Earray_fill ->
       let e = assert_1 args in
         fprintf ff "%a@[<2>%a@]" print_exp e (print_list print_static_exp "^""^""") app.a_params
@@ -182,14 +200,14 @@ and print_app ff (app, args) =
           print_exp e  print_static_exp idx1  print_static_exp idx2
     | Eselect_dyn ->
       let r, d, e = assert_2min args in
-        fprintf ff "%a%a default %a"
+        fprintf ff "%a.%a default %a"
           print_exp r  print_dyn_index e  print_exp d
     | Eselect_trunc ->
       let e, idx_list = assert_1min args in
         fprintf ff "%a%a" print_exp e print_trunc_index idx_list
     | Eupdate ->
       let e1, e2, idx = assert_2min args in
-          fprintf ff "@[<2>(%a with %a =@ %a)@]"
+          fprintf ff "@[<2>[%a with %a =@ %a]@]"
             print_exp e1 print_dyn_index idx print_exp e2
     | Econcat ->
       let e1, e2 = assert_2 args in
@@ -206,7 +224,7 @@ let rec print_eq ff eq =
       fprintf ff "@[<v>@[<hv 2>automaton @ %a@]@,end@]"
         print_state_handler_list state_handler_list
     | Eswitch(e, switch_handler_list) ->
-      fprintf ff "@[<v>@[<hv 2>switch (%a) {@ %a@]@,}@]"
+      fprintf ff "@[<v>@[<hv 2>switch (%a) @ %a@]@,end@]"
         print_exp e
         print_switch_handler_list switch_handler_list
     | Epresent(present_handler_list, b) ->
@@ -215,16 +233,16 @@ let rec print_eq ff eq =
         print_default b
     | Ereset(b, e) ->
       fprintf ff "@[<v>@[<hv 2>reset @ %a@]@,every %a@]"
-        print_block b   print_exp e
+        (print_sblock " in ") b   print_exp e
     | Eblock b ->
-      fprintf ff "@[<v>do@[<v>@ @[%a@]@]@ done@]" print_block b
+      fprintf ff "@[<v>do@[<v>@ @[%a@]@]@ done@]" (print_sblock " in ") b
 
 and print_state_handler_list ff tag_act_list =
   print_list
     (fun ff sh ->
-       fprintf ff "@[<v 2>state %a:@ %a%a%a@]"
+       fprintf ff "@[<v 2>state %a@ %a%a%a@]"
          print_name sh.s_state
-         print_block sh.s_block
+         (print_block " do ") sh.s_block
          (print_escape_list "until") sh.s_until
          (print_escape_list "unless") sh.s_unless)
     "" "" "" ff tag_act_list
@@ -243,31 +261,41 @@ and print_escape_list unless ff esc_list = match esc_list with
 and print_switch_handler_list ff tag_act_list =
   print_list
     (fun ff sh ->
-       fprintf ff "@[<v 2>| %a:@ %a@]"
+       fprintf ff "@[<v 2>| %a @ %a@]"
          print_qualname sh.w_name
-         print_block sh.w_block)
+         (print_block " do ") sh.w_block)
     "" "" "" ff tag_act_list
 
 and print_present_handler_list ff present_act_list =
   print_list
     (fun ff ph ->
-       fprintf ff "@[<v 2>| %a:@ %a@]"
+       fprintf ff "@[<v 2>| %a @ %a@]"
          print_exp ph.p_cond
-         print_block ph.p_block)
+         (print_block " do ") ph.p_block)
     "" "" "" ff present_act_list
 
 and print_default ff b =
   match b.b_equs with
     | [] -> ()
-    | _ -> fprintf ff "@[<v 2>default@,%a@]" print_block  b
+    | _ -> fprintf ff "@[<v 2>default@,%a@]" (print_block " do ")  b
 
 and print_eq_list ff = function
   | [] -> ()
   | l -> print_list_r print_eq """;""" ff l
 
-and print_block ff { b_local = v_list; b_equs = eqs } =
-  fprintf ff "@[<v>%a%a@]" (print_local_vars " in") v_list print_eq_list eqs
+and print_block sep ff { b_local = v_list; b_equs = eqs } =
+  match v_list with
+    | [] ->
+      fprintf ff "@[<v>%s@,%a@]" sep print_eq_list eqs
+    | _ ->
+      fprintf ff "@[<v>%a@,%a@]" (print_local_vars sep) v_list print_eq_list eqs
 
+and print_sblock sep ff { b_local = v_list; b_equs = eqs } =
+  match v_list with
+    | [] ->
+      fprintf ff "@[<v>%a@]"  print_eq_list eqs
+    | _ ->
+      fprintf ff "@[<v>%a@,%a@]" (print_local_vars sep) v_list print_eq_list eqs
 
 
 let rec print_type_def ff { t_name = name; t_desc = tdesc } =
@@ -284,7 +312,7 @@ let print_contract ff { c_block = b;
                         c_assume = e_a; c_enforce = e_g;
       c_controllables = c} =
   fprintf ff "@[<v2>contract@\n%a@ assume %a@ enforce %a@ with (%a)@\n@]"
-    print_block b
+    (print_block " do ") b
     print_exp e_a
     print_exp e_g
     print_vd_tuple c

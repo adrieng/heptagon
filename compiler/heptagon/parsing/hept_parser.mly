@@ -372,14 +372,14 @@ automaton_handlers:
 
 opt_until_escapes:
   | { [] }
-  | UNTIL escapes
-      { List.rev $2 }
+  | UNTIL opt_bar escapes
+      { List.rev $3 }
 ;
 
 opt_unless_escapes:
   | { [] }
-  | UNLESS escapes
-      { List.rev $2 }
+  | UNLESS opt_bar escapes
+      { List.rev $3 }
 ;
 
 escape:

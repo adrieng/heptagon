@@ -99,7 +99,9 @@ let rec lin_to_string = function
   | Ltuple l_list -> String.concat ", " (List.map lin_to_string l_list)
 
 let print_linearity ff l =
-  fprintf ff " %s" (lin_to_string l)
+  match l with
+    | Ltop -> ()
+    | _ -> fprintf ff " %s" (lin_to_string l)
 
 let rec linearity_compare l1 l2 = match l1, l2 with
   | Ltop, Ltop -> 0

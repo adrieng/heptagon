@@ -70,7 +70,7 @@ let rec print_static_exp_desc ff sed = match sed with
       if is_infix (shortname op)
       then
         let e1,e2 = Misc.assert_2 se_list in
-        fprintf ff "(@[%a@ %a %a@])" print_static_exp e1 print_qualname op print_static_exp e2
+        fprintf ff "(@[%a@ %s %a@])" print_static_exp e1  (shortname op)  print_static_exp e2
       else
         fprintf ff "@[<2>%a@,%a@]"
           print_qualname op  print_static_exp_tuple se_list
