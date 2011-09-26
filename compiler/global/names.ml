@@ -93,8 +93,7 @@ open Format
 
 let print_name ff n =
   let n = if is_infix n
-  then "(" ^ (n ^ ")") (* do not remove the space around n, since for example
-                            "(*" would create bugs *)
+  then "(" ^ (n ^ ")") (* printers should have a special case to print '*' infix *)
   else n
   in fprintf ff "%s" n
 
