@@ -237,31 +237,31 @@ let rec map3 f l1 l2 l3 = match l1, l2, l3 with
 
 exception Assert_false
 let internal_error passe =
-  Format.eprintf "@.---------@\n
-                  Internal compiler error@\n
-                  Passe : %s@\n
+  Format.eprintf "@.---------@\n\
+                  Internal compiler error@\n\
+                  Passe : %s@\n\
                   ----------@." passe;
   raise Assert_false
 
 exception Unsupported
 let unsupported passe =
-  Format.eprintf "@.---------@\n
-                  Unsupported feature, please report it@\n
-                  Passe : %s@\n
-                  ----------@." passe;
+  Format.eprintf "@.---------@\n\
+Unsupported feature, please report it@\n\
+Passe : %s@\n\
+----------@." passe;
   raise Unsupported
 
 (* Functions to decompose a list into a tuple *)
 let _arity_error i l =
-  Format.eprintf "@.---------@\n
-                  Internal compiler error: wrong list size (found %d, expected %d).@\n
-                  ----------@." (List.length l) i;
+  Format.eprintf "@.---------@\n\
+Internal compiler error: wrong list size (found %d, expected %d).@\n\
+----------@." (List.length l) i;
   raise Assert_false
 
 let _arity_min_error i l =
-  Format.eprintf "@.---------@\n
-                  Internal compiler error: wrong list size (found %d, expected %d at least).@\n
-                  ----------@." (List.length l) i;
+  Format.eprintf "@.---------@\n\
+Internal compiler error: wrong list size (found %d, expected %d at least).@\n\
+----------@." (List.length l) i;
   raise Assert_false
 
 let assert_empty = function

@@ -75,7 +75,7 @@ let is_modified_handlers j e handlers =
     List.exists (fun x -> is_modified_handlers j x handlers) vars
 
 let fuse_blocks b1 b2 =
-  { b1 with b_locals = b1.b_locals @ b2.b_locals;
+  { b_locals = b1.b_locals @ b2.b_locals;
       b_body = b1.b_body @ b2.b_body }
 
 let rec find c = function

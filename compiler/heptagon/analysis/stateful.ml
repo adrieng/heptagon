@@ -81,7 +81,7 @@ let present_handler funs acc ph =
     if stateful then
       message ph.p_cond.e_loc Eexp_should_be_stateless;
   let p_block, acc = Hept_mapfold.block_it funs acc ph.p_block in
-    { ph with p_cond = p_cond; p_block = p_block }, acc
+    { p_cond = p_cond; p_block = p_block }, acc
 
 
 (* Funs with states are rejected, nodes without state are set as funs *)

@@ -217,7 +217,7 @@ and present_handler_it funs acc ph = funs.present_handler funs acc ph
 and present_handler funs acc ph =
   let p_cond, acc = exp_it funs acc ph.p_cond in
   let p_block, acc = block_it funs acc ph.p_block in
-  { ph with p_cond = p_cond; p_block = p_block }, acc
+  { p_cond = p_cond; p_block = p_block }, acc
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
@@ -242,8 +242,7 @@ and contract funs acc c =
   let c_enforce, acc = exp_it funs acc c.c_enforce in
   let c_block, acc = block_it funs acc c.c_block in
   let c_controllables, acc = mapfold (var_dec_it funs) acc c.c_controllables in
-  { c with
-    c_assume = c_assume;
+  { c_assume = c_assume;
     c_enforce = c_enforce;
     c_block = c_block;
     c_controllables = c_controllables },

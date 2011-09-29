@@ -241,14 +241,14 @@ module Printer =
       | Attractivity(_) -> failwith("Attractivity verification not allowed")
 
     let sigali_head = "
-set_reorder(2);
-
-read(\"Property.lib\");
-read(\"Synthesis.lib\");
-read(\"Verif_Determ.lib\");
-read(\"Simul.lib\");
-read(\"Synthesis_Partial_order.lib\");
-read(\"Orbite.lib\");
+set_reorder(2);\
+\
+read(\"Property.lib\");\
+read(\"Synthesis.lib\");\
+read(\"Verif_Determ.lib\");\
+read(\"Simul.lib\");\
+read(\"Synthesis_Partial_order.lib\");\
+read(\"Orbite.lib\");\
 "
 
     let sigali_foot = ""

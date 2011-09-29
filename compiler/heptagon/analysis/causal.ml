@@ -204,8 +204,7 @@ let build ac =
         | Atuple l ->
             (try
                 node_for_tuple l
-              with Not_found
-                  _ -> make ac)
+              with Not_found -> make ac)
         | _ -> make ac
     in
 

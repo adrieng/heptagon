@@ -140,7 +140,7 @@ and block_it funs acc b = funs.block funs acc b
 and block funs acc b =
   let b_locals, acc = var_decs_it funs acc b.b_locals in
   let b_body, acc = mapfold (act_it funs) acc b.b_body in
-  { b with b_locals = b_locals; b_body = b_body }, acc
+  { b_locals = b_locals; b_body = b_body }, acc
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
