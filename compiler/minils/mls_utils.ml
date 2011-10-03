@@ -215,10 +215,19 @@ module AllDep = Dep.Make
 
 let eq_find id = List.find (fun eq -> List.mem id (Vars.def [] eq))
 
-
 let ident_list_of_pat pat =
   let rec f acc pat = match pat with
     | Evarpat id -> id::acc
     | Etuplepat pat_l -> List.fold_left f acc pat_l
   in
   List.rev (f [] pat)
+
+let remove_eqs_from_node nd ids =
+  let walk_vd vd vd_list = if IdentSet.mem vd.v_ident ids then vd_list else vd :: vd_list in
+  let walk_eq eq eq_list =
+    let defs = ident_list_of_pat eq.eq_lhs in
+    if List.for_all (fun v -> IdentSet.mem v ids) defs then eq_list else eq :: eq_list
+  in
+  let vd_list = List.fold_right walk_vd nd.n_local [] in
+  let eq_list = List.fold_right walk_eq nd.n_equs [] in
+  { nd with n_local = vd_list; n_equs = eq_list; }

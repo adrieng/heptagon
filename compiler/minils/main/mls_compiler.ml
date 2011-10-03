@@ -34,6 +34,7 @@ let compile_program p =
 
   let p =
     let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
+    let p = pass "Extended value inlining" call_tomato Inline_extvalues.program p pp in
     pass "Data-flow minimization" call_tomato Tomato.program p pp in
 
 (** TODO: re enable when ported to the new AST
