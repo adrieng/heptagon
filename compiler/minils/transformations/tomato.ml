@@ -392,8 +392,8 @@ and reconstruct_exp_desc mapping headd children =
     let rst, children = match rst_dummy with
       | None -> None, children
       | Some _ -> Some (reconstruct_class_ref mapping (List.hd children)), List.tl children in
-    let total_w_list = reconstruct_extvalues mapping (partial_w_list @ w_list) children in
-    let partial_w_list, w_list = split_at (List.length partial_w_list) total_w_list in
+    let total_w_list = reconstruct_extvalues mapping (w_list @ partial_w_list) children in
+    let w_list, partial_w_list = split_at (List.length w_list) total_w_list in
     Eiterator (it, app, sel, partial_w_list, w_list, optional extract_name rst)
 
 and reconstruct_extvalues mapping w_list children =
