@@ -389,7 +389,9 @@ fun prio_setpriorityinmissiontrack(prioritytracknumber : int;
                                    priorityindex : int;
                                    missiontrack : TypeTracks.tmissiontrack at r)
     returns (missiontrackwithprio : TypeTracks.tmissiontrack at r)
+  var missiontrack_copy : TypeTracks.tmissiontrack;
   let
+    missiontrack_copy = missiontrack;
     missiontrackwithprio =
       if prioritytracknumber = missiontrack.m_tracknumber
       then Trackslib.setmissiontrackpriority(missiontrack, priorityindex + 1)
