@@ -36,6 +36,8 @@ module TyEnv =
     end)
 
 module InterfRead = struct
+  exception Const_extvalue
+
   let rec vars_ck acc = function
     | Con(_, _, n) -> IvarSet.add (Ivar n) acc
     | Cbase | Cvar { contents = Cindex _ } -> acc
@@ -45,16 +47,18 @@ module InterfRead = struct
     | Wvar x -> Ivar x
     | Wfield(w, f) -> Ifield (ivar_of_extvalue w, f)
     | Wwhen(w, _, _) -> ivar_of_extvalue w
-    | Wconst _ -> assert false
+    | Wconst _ -> raise Const_extvalue
 
   let ivar_of_pat p = match p with
     | Evarpat x -> Ivar x
     | _ -> assert false
 
   let ivars_of_extvalues wl =
-    let tr_one acc w = match w.w_desc with
-      | Wconst _ -> acc
-      | _ -> (ivar_of_extvalue w)::acc
+    let tr_one acc w =
+      try
+        (ivar_of_extvalue w)::acc
+      with
+        | Const_extvalue -> acc
     in
       List.fold_left tr_one [] wl
 
@@ -62,9 +66,10 @@ module InterfRead = struct
     (* recursive call *)
     let _, acc = Mls_mapfold.extvalue funs acc w in
     let acc =
-      match w.w_desc with
-        | Wconst _ -> acc
-        | _ -> IvarSet.add (ivar_of_extvalue w) acc
+      try
+        IvarSet.add (ivar_of_extvalue w) acc
+      with
+        | Const_extvalue -> acc
     in
       w, vars_ck acc w.w_ck
 
@@ -456,14 +461,16 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
           (*affinity between inputs and outputs*)
           List.iter (fun inv -> List.iter (add_affinity_link_from_ivar inv) outvars) invars
     | Evarpat x, Efby(_, w) -> (* x  = _ fby y *)
-        (match w.w_desc with
-          | Wconst _ -> ()
-          | _ -> add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
+      (try
+         add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
+       with
+         | InterfRead.Const_extvalue -> ())
     | Evarpat x, Eextvalue w ->
       (* Add links between variables with the same value *)
-        (match w.w_desc with
-          | Wconst _ -> ()
-          | _ -> add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x) )
+      (try
+        add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
+       with
+         | InterfRead.Const_extvalue -> ())
     | _ -> () (* do nothing *)
 
 (** Add the special init and return equations to the dependency graph

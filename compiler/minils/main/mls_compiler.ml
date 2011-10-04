@@ -53,6 +53,6 @@ let compile_program p =
   in
 
   (* Memory allocation *)
-  let p = pass "memory allocation" !do_mem_alloc Interference.program p pp in
+  let p = pass "Memory allocation" !do_mem_alloc Interference.program p pp in
 
   p
