@@ -1,6 +1,6 @@
 #!/bin/bash
 HEPTC=../../heptc
-HEPTC_OPTIONS=""
+HEPTC_OPTIONS="-tomato"
 
 GCC=gcc
 GCC_OPTIONS="-g -O2 -std=c99 -I ../../../lib/c"

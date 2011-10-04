@@ -9,7 +9,7 @@ VERBOSE=1
 
 interfaces=(typeBase.epi typeTracks.epi typeArray.epi cstArrayInit.epi cstBaseInit.epi cstPhysics.epi cstTracksInit.epi mc_TypeInputs.epi mc_TypeLists.epi mc_TypeSensors.epi)
 ext_libs=(mc_ext.epi mathext.epi)
-sources=(math.ept trackslib.ept digital.ept mc.ept dv.ept verif.ept debug.ept)
+sources=(math.ept trackslib.ept digital.ept mc.ept verif.ept dv.ept debug.ept)
 
 exit_if_failed() {
   if [ $? != 0 ]; then

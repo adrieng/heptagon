@@ -1,6 +1,6 @@
 #!/bin/bash
 HEPTC=../../heptc
-HEPTC_OPTIONS=-memalloc
+HEPTC_OPTIONS=""
 
 GCC=gcc
 GCC_OPTIONS="-g -O2 -std=c99 -I ../../../lib/c"
@@ -11,11 +11,18 @@ interfaces=(typeBase.epi typeTracks.epi typeArray.epi cstArrayInit.epi cstBaseIn
 ext_libs=(mc_ext.epi mathext.epi)
 sources=(math.ept trackslib.ept digital.ept mc.ept dv.ept verif.ept debug.ept)
 
+exit_if_failed() {
+  if [ $? != 0 ]; then
+     exit $?
+  fi
+}
+
 for f in ${interfaces[@]}; do
     if [ $VERBOSE ] ; then
         echo "**** Compiling interface: $f *******"
     fi
     $HEPTC $HEPTC_OPTIONS -target c $f
+   exit_if_failed
 done
 
 for f in ${ext_libs[@]}; do
@@ -23,6 +30,7 @@ for f in ${ext_libs[@]}; do
         echo "**** Compiling external lib: $f *******"
     fi
     $HEPTC $HEPTC_OPTIONS $f
+    exit_if_failed
 done
 
 for f in ${sources[@]}; do
@@ -30,6 +38,7 @@ for f in ${sources[@]}; do
         echo "**** Compiling source file: $f *******"
     fi
     $HEPTC $HEPTC_OPTIONS -target c $f
+    exit_if_failed
 done
 
 #$HEPTC $HEPTC_OPTIONS -target c -s dv_fighterdebug debug.ept
@@ -50,6 +59,7 @@ for f in ${other_files[@]}; do
 done
 
 $GCC $GCC_OPTIONS *.c -o mission_control
+exit_if_failed
 
 cp mission_control ..
 
