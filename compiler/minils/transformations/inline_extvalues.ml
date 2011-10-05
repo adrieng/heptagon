@@ -32,10 +32,31 @@ open Mls_compare
   4. If no new extended value was formed, stop ; else, go back to 1.
 *)
 
+
 let gather_extvalues_node nd =
+  let ty_env =
+    let add env vd = Env.add vd.v_ident vd.v_type env in
+    let add_l env vd_list = List.fold_left add env vd_list in
+    (add_l (add_l (add_l Env.empty nd.n_output) nd.n_local) nd.n_input)
+  in
+
+  let changed_type w =
+    let rec var_of_extvalue w = match w.w_desc with
+      | Wvar _ -> Some w
+      | Wfield(w, _) -> var_of_extvalue w
+      | Wwhen(w, _, _) -> var_of_extvalue w
+      | Wconst _ -> None
+    in
+    match var_of_extvalue w with
+      | Some { w_ty = ty; w_desc = Wvar x; } ->
+        let ty' = Env.find x ty_env in
+        Global_compare.type_compare ty' ty = 0
+      | _ -> false
+  in
+
   let gather_extvalues_eq _ env eq =
     let env = match eq.eq_lhs, eq.eq_rhs.e_desc with
-      | Evarpat x, Eextvalue w -> Env.add x w env
+      | Evarpat x, Eextvalue w when not (changed_type w) -> Env.add x w env
       | _ -> env
     in
     eq, env
