@@ -101,7 +101,7 @@ let rec joinlist j l =
       | s1::s2::l ->
           match s1, s2 with
             | Acase(e1, h1),
-              Acase(e2, h2) when e1.e_desc = e2.e_desc ->
+              Acase(e2, h2) when Obc_compare.exp_compare e1 e2 = 0 ->
                 if is_modified_handlers j e1 h1 then
                   s1::(joinlist j (s2::l))
                 else
