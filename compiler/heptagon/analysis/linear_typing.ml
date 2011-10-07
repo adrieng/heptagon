@@ -774,8 +774,9 @@ and expect env lin e =
   let l, env = match e.e_desc with
     | Evar x ->
       let actual_lin = lin_of_ident x env in
-      let env = check_linearity_exp env e lin in
-        unify_lin lin actual_lin, env
+      let found_lin = unify_lin lin actual_lin in
+      let env = check_linearity_exp env e found_lin in
+        found_lin, env
 
     | Emerge (_, c_e_list) ->
         let env = List.fold_left (fun env (_, e) -> safe_expect env lin e) env c_e_list in

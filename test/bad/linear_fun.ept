@@ -1,0 +1,20 @@
+const n:int = 100
+
+type tab = float^n
+
+node f(x : tab at r) returns (o : tab at r)
+let
+  o = x;
+tel
+
+node main() returns (o:float)
+var u : tab at r;
+    z1 : tab; z2 : tab at r;
+let
+  init<<r>> u = (0.0)^n;
+
+  z1 = f(u);
+  z2 = f(u);
+
+  o = 0.0;
+tel
