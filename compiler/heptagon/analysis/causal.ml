@@ -115,14 +115,20 @@ let rec cand nc1 nc2 =
     | nc1, Aor(nc2, nc22) -> Aor(cand nc1 nc2, cand nc1 nc22)
     | Aac(ac1), Aac(ac2) -> Aac(Aand(ac1, ac2))
 
+let mk_tuple l = match l with
+  | [] -> Aempty
+  | [ac] -> Aac ac
+  | _ -> Aac (Atuple l)
+
 let rec ctuple l =
   let rec norm_or l res = match l with
-    | [] -> Aac (Atuple (List.rev res))
+    | [] -> mk_tuple (List.rev res)
     | Aempty::l -> norm_or l res
     | Aor (Aempty, nc2)::l -> norm_or (nc2::l) res
     | Aor (nc1, Aempty)::l -> norm_or (nc1::l) res
     | Aor(nc1, nc2)::l ->
         Aor(norm_or (nc1::l) res, norm_or (nc2::l) res)
+    | (Aac (Atuple l1))::l -> norm_or l (l1@res)
     | (Aac ac)::l -> norm_or l (ac::res)
   in
     norm_or l []
@@ -137,6 +143,8 @@ and norm = function
   | Clinread(n) -> Aac(Alinread(n))
   | Clastread(n) -> Aac(Alastread(n))
   | _ -> Aempty
+
+exception Self_dependency
 
 (* building a dependence graph from a scheduling constraint *)
 let build ac =
@@ -172,19 +180,27 @@ let build ac =
   let make_graph ac n_to_graph lin_map =
     let attach node n =
       try
-        let g = Env.find n n_to_graph in add_depends node g
+        let g = Env.find n n_to_graph in
+        if g.g_tag = node.g_tag then
+          raise Self_dependency
+        else
+          add_depends node g
       with
         | Not_found -> () in
 
     let attach_lin node n =
       try
-        let g = Env.find n lin_map in add_depends g node
+        let g = Env.find n lin_map in
+        if g.g_tag = node.g_tag then
+          raise Self_dependency
+        else
+          add_depends g node
       with
         | Not_found -> () in
 
     let rec add_dependence g = function
       | Aread(n) -> attach g n; attach_lin g n
-      | Alinread(n) -> attach g n; attach_lin g n
+      | Alinread(n) -> attach g n
       | _ -> ()
     in
 
@@ -205,7 +221,7 @@ let build ac =
             (try
                 node_for_tuple l
               with Not_found -> make ac)
-        | _ -> make ac
+        | _ -> raise Not_found
     in
 
     let rec make_graph ac =
@@ -226,17 +242,8 @@ let build ac =
         | Aread(n) ->let g = make ac in attach g n; attach_lin g n; [g], [g]
         | Alinread(n) -> let g = Env.find n lin_map in attach g n; [g], [g]
         | Atuple(l) ->
-            let make_graph_tuple ac =
-              match ac with
-                | Aand _ | Atuple _ -> make_graph ac
-                | _ -> [], []
-            in
             let g = node_for_ac ac in
-            List.iter (add_dependence g) l;
-           (* let top_l, bot_l = List.split (List.map make_graph_tuple l) in
-            let top_l = List.flatten top_l in
-            let bot_l = List.flatten bot_l in
-              g::top_l, g::bot_l *) [g], [g]
+            List.iter (add_dependence g) l; [g], [g]
         | _ -> [], []
 
     in
@@ -250,10 +257,15 @@ let build ac =
 (* the main entry. *)
 let check loc c =
   let check_ac ac =
-    let { g_bot = g_list } = build ac in
-    match cycle g_list with
-      | None -> ()
-      | Some _ -> error (Ecausality_cycle ac) in
+    try
+      (let { g_bot = g_list } = build ac in
+      match cycle g_list with
+        | None -> ()
+        | Some _ -> error (Ecausality_cycle ac))
+    with
+      | Self_dependency -> error (Ecausality_cycle ac)
+  in
+
 
   let rec check = function
     | Aempty -> ()

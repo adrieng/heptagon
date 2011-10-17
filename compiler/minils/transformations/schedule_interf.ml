@@ -118,7 +118,10 @@ let schedule eq_list inputs node_list =
   let uses = Interference.compute_uses eq_list in
   let rec schedule_aux rem_eqs sched_eqs node_list ck costs =
     match rem_eqs with
-      | [] -> sched_eqs
+      | [] ->
+        if List.length node_list <> 0 then
+          Misc.internal_error "Node is unschedulable";
+        sched_eqs
       | _ ->
         (* First choose the next equation to schedule depending on costs*)
         let eq = Cost.next_equation rem_eqs ck costs in
