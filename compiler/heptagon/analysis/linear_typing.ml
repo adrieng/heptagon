@@ -130,6 +130,10 @@ struct
             UnifyFailed -> find_candidate c lins
 end
 
+let flatten_lin_list l =
+  List.fold_right
+    (fun arg args -> match arg with Ltuple l -> l@args | a -> a::args ) l []
+
 let lin_of_ident x (env, _, _) =
   Env.find x env
 
@@ -573,6 +577,7 @@ and expect_app env expected_lin op e_list = match op with
       (* and check that it works *)
     (* type the inputs *)
     let result_lins, env = expect_args env inputs_lins e_list in
+    let result_lins = flatten_lin_list result_lins in
     (* and apply the result to the outputs *)
     let m = snd ( List.fold_left2 subst_from_lin
                     (NamesSet.empty, NamesEnv.empty) inputs_lins result_lins) in
