@@ -423,6 +423,12 @@ let rec typing_exp env e =
 (** Returns the possible linearities of an expression. *)
 and collect_exp env e =
   match e.e_desc with
+    | Evar x ->
+      let _, u, _ = env in
+      if IdentSet.mem x u then
+        VarsCollection.empty
+      else
+         VarsCollection.var_collection_of_lin (lin_of_ident x env)
     | Eapp ({ a_op = Etuple }, e_list, _) ->
       VarsCollection.prod (List.map (collect_exp env) e_list)
     | Eapp({ a_op = op }, e_list, _) -> collect_app env op e_list
