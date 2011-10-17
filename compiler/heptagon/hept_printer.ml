@@ -216,6 +216,8 @@ and print_app ff (app, args) =
     | Earrow ->
       let e1, e2 = assert_2 args in
         fprintf ff "@[<2>%a ->@ %a@]" print_exp e1  print_exp e2
+    | Ereinit ->
+        fprintf ff "@[split@,%a@]" print_exp_tuple args
 
 let rec print_eq ff eq =
   match eq.eq_desc with

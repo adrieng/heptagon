@@ -46,6 +46,7 @@ let gather_extvalues_node nd =
       | Wfield(w, _) -> var_of_extvalue w
       | Wwhen(w, _, _) -> var_of_extvalue w
       | Wconst _ -> None
+      | Wreinit (_, w) -> var_of_extvalue w
     in
     match var_of_extvalue w with
       | Some { w_ty = ty; w_desc = Wvar x; } ->

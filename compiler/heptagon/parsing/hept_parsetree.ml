@@ -105,6 +105,7 @@ and op =
   | Eselect_slice
   | Eupdate
   | Econcat
+  | Ereinit
 
 and pat =
   | Etuplepat of pat list

@@ -339,6 +339,7 @@ and translate_op = function
   | Eselect_trunc -> Heptagon.Eselect_trunc
   | Efun ln -> Heptagon.Efun (qualify_value ln)
   | Enode ln -> Heptagon.Enode (qualify_value ln)
+  | Ereinit -> Heptagon.Ereinit
 
 and translate_pat loc env = function
   | Evarpat x -> Heptagon.Evarpat (Rename.var loc env x)

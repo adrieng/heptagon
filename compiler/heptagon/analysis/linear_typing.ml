@@ -558,7 +558,7 @@ and typing_app env op e_list = match op with
     let env = safe_expect env Ltop e in
       Ltop, env
   | Eifthenelse | Efun _ | Enode _ | Etuple
-  | Eupdate | Efield_update -> assert false (*already done in expect_app*)
+  | Eupdate | Efield_update | Ereinit -> assert false (*already done in expect_app*)
 
 (** Check that the application of op to e_list can have the linearity
     expected_lin. *)
@@ -609,6 +609,11 @@ and expect_app env expected_lin op e_list = match op with
       let env = safe_expect env Ltop e2 in
       let env = List.fold_left (fun env -> safe_expect env Ltop) env idx in
         expect env expected_lin e1
+
+    | Ereinit ->
+      let e1, e2 = assert_2 e_list in
+      let env = safe_expect env Ltop e2 in
+      expect env expected_lin e1
 
     | _ ->
       let actual_lin, env = typing_app env op e_list in

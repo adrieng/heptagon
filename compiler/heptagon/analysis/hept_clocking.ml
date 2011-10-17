@@ -165,7 +165,7 @@ and typing_app h base pat op e_list = match op with
   | Earrow
   | Efun _ (* stateless functions: inputs and outputs on the same clock *)
   | Earray_fill | Eselect | Eselect_dyn | Eselect_trunc | Eupdate
-  | Eselect_slice | Econcat | Earray | Efield | Efield_update | Eifthenelse ->
+  | Eselect_slice | Econcat | Earray | Efield | Efield_update | Eifthenelse | Ereinit ->
       List.iter (expect h pat (Ck base)) e_list;
       Ck base
   | Enode f ->

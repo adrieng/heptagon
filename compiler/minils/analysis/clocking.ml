@@ -67,6 +67,11 @@ let rec typing_extvalue h w =
         Con (ck_n, c, n)
     | Wfield (w1, _) ->
         typing_extvalue h w1
+    | Wreinit (w1, w2) ->
+      let t1 = typing_extvalue h w1 in
+      let t2 = typing_extvalue h w2 in
+      unify_ck t1 t2;
+      t1
   in
   w.w_ck <- ck;
   ck

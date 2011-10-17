@@ -847,7 +847,11 @@ and typing_app cenv h app e_list =
           mk_static_int_op (mk_pervasives "+") [array_size t1; array_size t2] in
         Tarray (element_type t1, n), app, [typed_e1; typed_e2]
 
-
+      | Ereinit ->
+        let e1, e2 = assert_2 e_list in
+        let typed_e1, ty = typing cenv h e1 in
+        let typed_e2 = expect cenv h ty e2 in
+        ty, app, [typed_e1; typed_e2]
 
 and typing_iterator cenv h
     it n_list args_ty_list result_ty_list e_list =

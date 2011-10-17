@@ -38,6 +38,9 @@ struct
       | Wfield (w1, f1), Wfield(w2, f2) ->
         let cr = compare f1 f2 in
         if cr <> 0 then cr else extvalue_compare w1 w2
+      | Wreinit (w1, ww1), Wreinit (w2, ww2) ->
+        let cr = extvalue_compare w1 w2 in
+        if cr <> 0 then cr else extvalue_compare ww1 ww2
 
       | Wconst _, _ -> 1
 
@@ -47,7 +50,10 @@ struct
       | Wwhen _, (Wconst _ | Wvar _) -> -1
       | Wwhen _, _ -> 1
 
-      | Wfield _, _ -> -1
+      | Wfield _, (Wconst _ | Wvar _ | Wwhen _) -> -1
+      | Wfield _, Wreinit _ -> 1
+
+      | Wreinit _, _ -> -1
 
   let rec exp_compare e1 e2 =
     let cr = Global_compare.type_compare e1.e_ty e2.e_ty in

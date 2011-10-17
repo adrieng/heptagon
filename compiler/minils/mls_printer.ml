@@ -32,7 +32,7 @@ let rec print_pat ff = function
 let print_vd ff { v_ident = n; v_type = ty; v_linearity = lin; v_clock = ck } =
  if !Compiler_options.full_type_info then
     fprintf ff "%a : %a%a :: %a" print_ident n print_type ty print_linearity lin print_ck ck
-  else fprintf ff "%a : %a" print_ident n print_type ty
+  else fprintf ff "%a : %a%a" print_ident n print_type ty print_linearity lin
 
 let print_local_vars ff = function
   | [] -> ()
@@ -94,6 +94,8 @@ and print_extvalue_desc ff = function
   | Wfield (w,f) -> fprintf ff "%a.%a" print_extvalue w print_qualname f
   | Wwhen (w, c, n) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]" print_extvalue w print_qualname c print_ident n
+  | Wreinit (w1, w2) ->
+      fprintf ff "@[reinit@,(%a, %a)@]" print_extvalue w1  print_extvalue w2
 
 and print_exp_desc ff = function
   | Eextvalue w -> print_extvalue ff w

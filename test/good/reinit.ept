@@ -1,0 +1,9 @@
+const n:int = 100
+const t_0:int^n = 1^n
+
+node f(a:int^n at r; c:bool) returns (o:int^n at r)
+var a1, a2:int^n at r;
+let
+  (a1, a2) = split c (a);
+  o = merge c (true -> reinit (a1, t_0)) (false -> [ a2 with [0] = 0 ])
+tel

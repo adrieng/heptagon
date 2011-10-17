@@ -49,7 +49,7 @@ open Hept_parsetree
 %token AROBASE
 %token DOUBLE_LESS DOUBLE_GREATER
 %token MAP MAPI FOLD FOLDI MAPFOLD
-%token AT INIT SPLIT
+%token AT INIT SPLIT REINIT
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -479,6 +479,8 @@ _exp:
       { Eapp(n, args) }
   | SPLIT n=ident LPAREN e=exp RPAREN
       { Esplit(n, e) }
+  | REINIT LPAREN e1=exp COMMA e2=exp RPAREN
+      { mk_call Ereinit [e1; e2] }
   | NOT exp
       { mk_op_call "not" [$2] }
   | exp INFIX4 exp

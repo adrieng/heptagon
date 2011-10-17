@@ -106,8 +106,8 @@ let add context expected_kind e =
   let up = match e.e_desc, expected_kind with
      (* static arrays should be normalized to simplify code generation *)
     | Econst { se_desc = Sarray _ }, ExtValue -> true
-    | (Evar _ | Eapp ({ a_op = Efield }, _, _) | Ewhen _
-      | Eapp ({ a_op = Etuple }, _, _) | Econst _) , ExtValue -> false
+    | (Evar _ | Eapp ({ a_op = Efield | Etuple | Ereinit }, _, _) | Ewhen _
+          | Econst _) , ExtValue -> false
     | _ , ExtValue -> true
     | _ -> false in
   if up then

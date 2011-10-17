@@ -80,6 +80,7 @@ let rec translate_op = function
   | Heptagon.Earray -> Earray
   | Heptagon.Etuple -> Misc.internal_error "hept2mls Etuple"
   | Heptagon.Earrow -> assert false
+  | Heptagon.Ereinit -> assert false
 
 let translate_app app =
   mk_app ~params:app.Heptagon.a_params
@@ -102,6 +103,9 @@ let rec translate_extvalue e =
         let f = assert_1 params in
         let fn = match f.se_desc with Sfield fn -> fn | _ -> assert false in
           mk_extvalue (Wfield (translate_extvalue e, fn))
+    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Ereinit }, e_list, _) ->
+        let e1, e2 = assert_2 e_list in
+          mk_extvalue (Wreinit (translate_extvalue e1, translate_extvalue e2))
     | _ -> Error.message e.Heptagon.e_loc Error.Enormalization
 
 let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
@@ -110,7 +114,7 @@ let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
   let desc = match desc with
     | Heptagon.Econst _
     | Heptagon.Evar _
-    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield }, _, _) ->
+    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield | Heptagon.Ereinit }, _, _) ->
         let w = translate_extvalue e in
         Eextvalue w
     | Heptagon.Ewhen (e,c,x) -> Ewhen (translate e, c, x)
