@@ -231,7 +231,7 @@ let build ac =
                 | Aand _ | Atuple _ -> make_graph ac
                 | _ -> [], []
             in
-            let g = make ac in
+            let g = node_for_ac ac in
             List.iter (add_dependence g) l;
            (* let top_l, bot_l = List.split (List.map make_graph_tuple l) in
             let top_l = List.flatten top_l in

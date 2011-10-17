@@ -28,10 +28,12 @@ let cand c1 c2 =
 let rec candlist l =
   match l with
     | [] -> Cempty
+    | [c] -> c
     | c1 :: l -> cand c1 (candlist l)
 
-let ctuplelist l =
-  Ctuple l
+let ctuplelist l = match l with
+  | [c] -> c
+  | _ -> Ctuple l
 
 let cor c1 c2 =
   match c1, c2 with
