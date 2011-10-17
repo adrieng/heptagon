@@ -272,16 +272,25 @@ fun fusionrdrifftracks(iffmissiontrack : TypeTracks.tmissiontrack at r1;
                       rdrmissiontrack : TypeTracks.tmissiontrack at r2)
     returns (newiffmissiontrack : TypeTracks.tmissiontrack at r1;
              newrdrmissiontrack : TypeTracks.tmissiontrack at r2)
-var l90 : bool;
+var l90 : bool; rdrmissiontrack_true, rdrmissiontrack_false : TypeTracks.tmissiontrack at r2;
+iffmissiontrack_true, iffmissiontrack_false : TypeTracks.tmissiontrack at r1;
 let
+    l90 =
+      Trackslib.comparetracks(rdrmissiontrack.m_pos, iffmissiontrack.m_pos,
+        rdrmissiontrack.m_speed, iffmissiontrack.m_speed);
+    (rdrmissiontrack_true, rdrmissiontrack_false) = split l90 (rdrmissiontrack);
+    (iffmissiontrack_true, iffmissiontrack_false) = split l90 (iffmissiontrack);
     newrdrmissiontrack =
-      if l90
-      then
-       { ({ ({ ({ rdrmissiontrack with .m_id = iffmissiontrack.m_id })
-                            with .m_detectedbyiff = iffmissiontrack.m_detectedbyiff })
+      merge l90
+       (true -> { ({ ({ ({ rdrmissiontrack_true with .m_id = iffmissiontrack_true.m_id })
+                            with .m_detectedbyiff = iffmissiontrack_true.m_detectedbyiff })
                             with .m_tracknumber = 0 })
-                            with .m_targettype = iffmissiontrack.m_targettype }
-      else rdrmissiontrack;
+                            with .m_targettype = iffmissiontrack_true.m_targettype } )
+      (false -> rdrmissiontrack_false);
+    newiffmissiontrack =
+      merge l90
+      (true -> reinit(iffmissiontrack_true, CstTracksInit.kinitmissiontrack))
+      (false -> iffmissiontrack_false);
 (*
     newrdrmissiontrack =
       if l90
@@ -300,13 +309,6 @@ let
              m_angle           = rdrmissiontrack.m_angle }
       else rdrmissiontrack;
 *)
-    l90 =
-      Trackslib.comparetracks(rdrmissiontrack.m_pos, iffmissiontrack.m_pos,
-        rdrmissiontrack.m_speed, iffmissiontrack.m_speed);
-    newiffmissiontrack =
-      if l90
-      then CstTracksInit.kinitmissiontrack
-      else iffmissiontrack;
 tel
 
 (* merge tracks data received from both radar and iff sensors *)
@@ -389,13 +391,15 @@ fun prio_setpriorityinmissiontrack(prioritytracknumber : int;
                                    priorityindex : int;
                                    missiontrack : TypeTracks.tmissiontrack at r)
     returns (missiontrackwithprio : TypeTracks.tmissiontrack at r)
-  var missiontrack_copy : TypeTracks.tmissiontrack;
+var missiontrack_true, missiontrack_false : TypeTracks.tmissiontrack at r;
+    c : bool;
   let
-    missiontrack_copy = missiontrack;
+    c = prioritytracknumber = missiontrack.m_tracknumber;
+    (missiontrack_true, missiontrack_false) = split c (missiontrack);
     missiontrackwithprio =
-      if prioritytracknumber = missiontrack.m_tracknumber
-      then Trackslib.setmissiontrackpriority(missiontrack, priorityindex + 1)
-      else missiontrack;
+      merge c
+       (true -> Trackslib.setmissiontrackpriority(missiontrack_true, (priorityindex when c) + 1))
+       (false -> missiontrack_false);
   tel
 
 fun prio_setpriorityinmissiontrackarray(priorityarray : Mc_TypeLists.tpriorityList;
