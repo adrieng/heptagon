@@ -465,6 +465,12 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
          add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
        with
          | InterfRead.Const_extvalue -> ())
+    | Evarpat x, Eapp({ a_op = Eupdate | Efield_update }, args, _) ->
+      let w,  _ = Misc.assert_1min args in
+      (try
+        add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
+       with
+         | InterfRead.Const_extvalue -> ())
     | Evarpat x, Eextvalue w ->
       (* Add links between variables with the same value *)
       (try
