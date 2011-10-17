@@ -70,7 +70,7 @@ struct
             let names = Read.read (containt node) in
             List.iter (attach names_to_graph node) names;
             let reads = Misc.list_diff names (Read.linear_read (containt node)) in
-            List.iter (attach lin_map node) names;
+            List.iter (attach lin_map node) reads;
             make_graph g_list names_to_graph lin_map
     in
 
