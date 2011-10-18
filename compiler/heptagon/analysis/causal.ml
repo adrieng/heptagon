@@ -121,17 +121,16 @@ let mk_tuple l = match l with
   | _ -> Aac (Atuple l)
 
 let rec ctuple l =
-  let rec norm_or l res = match l with
-    | [] -> mk_tuple (List.rev res)
-    | Aempty::l -> norm_or l res
-    | Aor (Aempty, nc2)::l -> norm_or (nc2::l) res
-    | Aor (nc1, Aempty)::l -> norm_or (nc1::l) res
-    | Aor(nc1, nc2)::l ->
-        Aor(norm_or (nc1::l) res, norm_or (nc2::l) res)
-    | (Aac (Atuple l1))::l -> norm_or l (l1@res)
-    | (Aac ac)::l -> norm_or l (ac::res)
+  let rec norm_tuple l before newl = match l with
+    | [] -> cseq before (mk_tuple newl)
+    | Aempty::l -> norm_tuple l before newl
+    | (Aac ((Awrite _ | Aread _ | Alinread _ | Alastread _) as ac))::l ->
+      norm_tuple l before (ac::newl)
+    | ((Aac _) as ac)::l ->
+      norm_tuple l (cand before ac) newl
+    | (Aor _)::l -> assert false
   in
-    norm_or l []
+  norm_tuple l Aempty []
 
 and norm = function
   | Cor(c1, c2) -> cor (norm c1) (norm c2)
