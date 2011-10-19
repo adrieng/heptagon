@@ -11,6 +11,15 @@ open Mls_mapfold
        o = mem_o
 *)
 
+let memory_vars_vds nd =
+  let build env l =
+    List.fold_left (fun env vd -> Env.add vd.v_ident vd env) env l
+  in
+  let env = build Env.empty nd.n_output in
+  let env = build env nd.n_local in
+  let mem_var_tys = Mls_utils.node_memory_vars nd in
+  List.map (fun (x, _) -> Env.find x env) mem_var_tys
+
 let eq _ (outputs, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
   | Evarpat x, Efby _ ->
       if Mls_utils.vd_mem x outputs then
@@ -33,7 +42,8 @@ let eq _ (outputs, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
 let contract funs acc c = c, acc
 
 let node funs acc nd =
-  let nd, (_, v, eqs) = Mls_mapfold.node_dec funs (nd.n_output, nd.n_local, []) nd in
+  let outputs_mems = nd.n_output @ memory_vars_vds nd in
+  let nd, (_, v, eqs) = Mls_mapfold.node_dec funs (outputs_mems, nd.n_local, []) nd in
   (* return updated node *)
   { nd with n_local = v; n_equs = List.rev eqs }, acc
 
