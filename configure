@@ -3046,8 +3046,8 @@ $as_echo "not found" >&6; }
 
 
  if test "$OCAML_PKG_lablgtk2" = "no"; then
-   enable_simulator = no
-   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Could not find 'lablgtk2'. The simulator will not be built" >&5
+    enable_simulator=no
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Could not find 'lablgtk2'. The simulator will not be built" >&5
 $as_echo "$as_me: WARNING: Could not find 'lablgtk2'. The simulator will not be built" >&2;}
  fi
 
