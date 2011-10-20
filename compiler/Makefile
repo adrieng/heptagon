@@ -1,24 +1,49 @@
+include ../config
 
-BUILD:= _build
-OCAMLBUILD:=ocamlbuild
-COMPILER:=heptc
+ifeq ($(ENABLE_SIMULATOR), yes)
+BIN:=heptc.$(TARGET) hepts.$(TARGET)
+else
+BIN:=heptc.$(TARGET)
+endif
 
-TARGET:=byte
-
-.PHONY: all opt byte debug profile clean
+.PHONY: all clean opt byte clean debug install
 
 all: $(TARGET)
 
 opt:
+ifeq ($(ENABLE_SIMULATOR), yes)
+	$(OCAMLBUILD) $(COMPILER).native $(SIMULATOR).native
+else
 	$(OCAMLBUILD) $(COMPILER).native
+endif
+
 byte:
+ifeq ($(ENABLE_SIMULATOR), yes)
+	$(OCAMLBUILD) $(COMPILER).byte $(SIMULATOR).byte
+else
 	$(OCAMLBUILD) $(COMPILER).byte
+endif
 
 debug:
+ifeq ($(ENABLE_SIMULATOR), yes)
+	$(OCAMLBUILD) $(COMPILER).d.byte $(SIMULATOR).d.byte
+else
 	$(OCAMLBUILD) $(COMPILER).d.byte
-profile:
-	$(OCAMLBUILD) $(COMPILER).p.native
+endif
 
+profile:
+ifeq ($(ENABLE_SIMULATOR), yes)
+	$(OCAMLBUILD) $(COMPILER).p.native $(SIMULATOR).p.native
+else
+	$(OCAMLBUILD) $(COMPILER).p.native
+endif
+
+install: all
+	$(INSTALL) -d $(INSTALL_BINDIR)
+	$(INSTALL) $(COMPILER).$(TARGET) $(INSTALL_BINDIR)/$(COMPILER)
+ifeq ($(ENABLE_SIMULATOR), yes)
+	$(INSTALL) $(COMPILER).$(TARGET) $(INSTALL_BINDIR)/$(SIMULATOR)
+endif
 
 clean:
-	$(OCAMLBUILD).native -clean
+	$(OCAMLBUILD) -clean

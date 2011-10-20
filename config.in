@@ -1,0 +1,22 @@
+srcdir      = @srcdir@
+top_srcdir  = @top_srcdir@
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+bindir      = @bindir@
+libdir      = @libdir@
+
+INSTALL= @INSTALL@
+MAKE= @MAKE@
+
+BUILD= _build
+COMPILER=heptc
+SIMULATOR=hepts
+
+INSTALL_BINDIR=$(bindir)
+INSTALL_LIBDIR=$(libdir)/heptagon
+STDLIB_DIR=@stdlib_dir@
+
+OCAMLBUILD=STDLIB=$(STDLIB_DIR) @OCAMLBUILD@
+
+TARGET=byte
+ENABLE_SIMULATOR=@enable_simulator@

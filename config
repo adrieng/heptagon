@@ -1,0 +1,22 @@
+srcdir      = .
+top_srcdir  = .
+prefix      = /opt/local
+exec_prefix = ${prefix}
+bindir      = ${exec_prefix}/bin
+libdir      = ${exec_prefix}/lib
+
+INSTALL= /usr/bin/install -c
+MAKE= @MAKE@
+
+BUILD= _build
+COMPILER=heptc
+SIMULATOR=hepts
+
+INSTALL_BINDIR=$(bindir)
+INSTALL_LIBDIR=$(libdir)/heptagon
+STDLIB_DIR=${exec_prefix}/lib/heptagon
+
+OCAMLBUILD=STDLIB=$(STDLIB_DIR) ocamlbuild
+
+TARGET=byte
+ENABLE_SIMULATOR=yes
