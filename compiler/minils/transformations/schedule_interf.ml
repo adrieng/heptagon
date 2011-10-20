@@ -6,11 +6,6 @@ open Mls_utils
 open Misc
 open Sgraph
 
-module EqMap =
-  Map.Make (
-    struct type t = eq
-           let compare = compare
-    end)
 
 let eq_clock eq =
   eq.eq_rhs.e_base_ck
@@ -20,24 +15,7 @@ struct
   open Interference_graph
   open Interference
 
-  (** Returns the minimum of the values in the map.
-      Picks an equation with the clock ck if possible. *)
-  let min_map ck m =
-    let one_min k d (v,eq,same_ck) =
-      match eq with
-        | None -> (d, Some k, eq_clock k = ck)
-        | Some eq ->
-          if d < v then
-            (d, Some k, eq_clock eq = ck)
-          else if d = v & not same_ck & eq_clock eq = ck then
-            (v, Some k, true)
-          else
-            (v, Some eq, same_ck)
-    in
-    let _, eq, _ = EqMap.fold one_min m (0, None, false) in
-      match eq with
-        | None -> assert false
-        | Some eq -> eq
+
 
   (** Remove from the elements the elements whose value is zero or negative. *)
   let remove_null m =
@@ -58,16 +36,6 @@ struct
     in
       IvarSet.fold is_killed (all_ivars_set (InterfRead.read eq)) 0
 
-  (** Compute the cost of all the equations in rem_eqs using var_uses.
-      So far, it uses only the number of killed and defined variables. *)
-  let compute_costs env rem_eqs =
-    let cost eq =
-      let nb_killed_vars = killed_vars eq env in
-      let nb_def_vars = IvarSet.cardinal (all_ivars_set (InterfRead.def eq)) in
-        nb_def_vars - nb_killed_vars
-    in
-      List.fold_left (fun m eq -> EqMap.add eq (cost eq) m) EqMap.empty rem_eqs
-
   (** Initialize the costs data structure. *)
   let init_cost uses inputs =
     let env = IvarSet.fold (add_uses uses) !World.memories IvarEnv.empty in
@@ -84,8 +52,23 @@ struct
 
   (** Returns the next equation, chosen from the list of equations rem_eqs *)
   let next_equation rem_eqs ck env =
-    let eq_cost = compute_costs env rem_eqs in
-      min_map ck eq_cost
+    let cost eq =
+      let nb_killed_vars = killed_vars eq env in
+      let nb_def_vars = IvarSet.cardinal (all_ivars_set (InterfRead.def eq)) in
+        nb_def_vars - nb_killed_vars
+    in
+    let eqs_wcost = List.map (fun eq -> (eq, cost eq)) rem_eqs in
+    let compare_eqs_wcost (_,c1) (_,c2) = compare c1 c2 in
+    let sorted_eqs_wcost = List.stable_sort compare_eqs_wcost eqs_wcost in
+    let rec min_same_ck sorted_eqs = match sorted_eqs with
+      | [] -> Misc.internal_error "no next equation to schedule"
+      | [(eq,_)] -> eq
+      | (eq1,c1)::(eq2,c2)::l ->
+        if (c2 > c1) || (Clocks.same_control (eq_clock eq1) ck)
+        then eq1 (* choosen since either the last with min cost or min and right clock *)
+        else min_same_ck ((eq2,c2)::l)
+    in
+    min_same_ck sorted_eqs_wcost
 end
 
 (** Returns the list of 'free' nodes in the dependency graph (nodes without
