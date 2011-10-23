@@ -10,7 +10,7 @@ shopt -s nullglob
 # script de test
 
 compilo=../../heptc
-coption=-memalloc
+coption="-memalloc"
 
 # compilateurs utilises pour les tests de gen. de code
 

@@ -47,7 +47,7 @@ let compile_program p =
 
   (* Scheduling *)
   let p =
-    if !Compiler_options.use_interf_scheduler then
+    if not !Compiler_options.use_old_scheduler then
       pass "Scheduling (with minimization of interferences)" true Schedule_interf.program p pp
     else
       pass "Scheduling" true Schedule.program p pp

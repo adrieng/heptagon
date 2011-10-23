@@ -126,7 +126,7 @@ let main () =
         "-memalloc", Arg.Unit do_mem_alloc_and_typing, doc_memalloc;
         "-only-memalloc", Arg.Set do_mem_alloc, doc_memalloc_only;
         "-only-linear", Arg.Set do_linear_typing, doc_linear_only;
-        "-sch-interf", Arg.Set use_interf_scheduler, doc_interf_scheduler
+        "-old-scheduler", Arg.Set use_old_scheduler, doc_interf_scheduler
       ]
         compile errmsg;
   with
