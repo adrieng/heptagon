@@ -208,9 +208,10 @@ and typing_automaton state_handlers =
   corlist (List.map handler state_handlers)
 
 and typing_block { b_local = dec; b_equs = eq_list; b_loc = loc } =
-  let teq = typing_eqs eq_list in
-  Causal.check loc teq;
-  clear (build dec) teq
+  (*let teq = typing_eqs eq_list in
+    Causal.check loc teq;
+    clear (build dec) teq *)
+  typing_eqs eq_list
 
 let typing_contract loc contract =
   match contract with
@@ -226,7 +227,8 @@ let typing_contract loc contract =
 let typing_node { n_contract = contract;
                   n_block = b; n_loc = loc } =
   let _ = typing_contract loc contract in
-    ignore (typing_block b)
+  let teq = typing_block b in
+    Causal.check loc teq
 
 let program ({ p_desc = pd } as p) =
   List.iter (function Pnode n -> typing_node n | _ -> ()) pd;
