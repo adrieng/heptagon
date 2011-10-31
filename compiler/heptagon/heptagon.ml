@@ -14,6 +14,7 @@ open Idents
 open Static
 open Signature
 open Types
+open Linearity
 open Clocks
 open Initial
 
@@ -29,8 +30,9 @@ type iterator_type =
 type exp = {
   e_desc      : desc;
   e_ty        : ty;
-  e_ct_annot  : ct option; (* exists when a source annotation exists *)
+  mutable e_ct_annot  : ct option; (* exists when a source annotation exists *)
   e_level_ck  : ck; (* set by the switch pass, represents the activation base of the expression *)
+  mutable e_linearity : linearity;
   e_loc       : location }
 
 and desc =
@@ -45,6 +47,7 @@ and desc =
     (** exp when Constructor(ident) *)
   | Emerge of var_ident * (constructor_name * exp) list
     (** merge ident (Constructor -> exp)+ *)
+  | Esplit of exp * exp
   | Eapp of app * exp list * exp option
   | Eiterator of iterator_type * app * static_exp list
                   * exp list * exp list * exp option
@@ -53,7 +56,8 @@ and app = {
   a_op     : op;
   a_params : static_exp list;
   a_async  : async_t option;
-  a_unsafe : bool }
+  a_unsafe : bool;
+  a_inlined : bool }
 
 and op =
   | Etuple
@@ -72,6 +76,7 @@ and op =
   | Eupdate
   | Econcat
   | Ebang
+  | Ereinit
 
 and pat =
   | Etuplepat of pat list
@@ -80,6 +85,7 @@ and pat =
 type eq = {
   eq_desc      : eqdesc;
   eq_stateful : bool;
+  eq_inits    : init;
   eq_loc       : location; }
 
 and eqdesc =
@@ -93,7 +99,7 @@ and eqdesc =
 and block = {
   b_local     : var_dec list;
   b_equs      : eq list;
-  b_defnames  : ty Env.t;
+  b_defnames  : var_dec Env.t;
   b_stateful : bool;
   b_loc       : location;
   b_async     : async_t option; }
@@ -120,6 +126,7 @@ and present_handler = {
 and var_dec = {
   v_ident : var_ident;
   v_type  : ty;
+  v_linearity : linearity;
   v_clock : ck;
   v_last  : last;
   v_loc   : location }
@@ -180,14 +187,12 @@ type signature = {
   sig_param_constraints : constrnt list;
   sig_loc               : location }
 
-type interface = interface_decl list
-
-and interface_decl = {
-  interf_desc : interface_desc;
-  interf_loc  : location }
+type interface =
+    { i_modname : modul;
+      i_opened : modul list;
+      i_desc : interface_desc list }
 
 and interface_desc =
-  | Iopen of modul
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature

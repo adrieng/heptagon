@@ -1,0 +1,66 @@
+#!/bin/bash
+HEPTC=../../heptc
+HEPTC_OPTIONS="-memalloc"
+
+GCC=gcc
+GCC_OPTIONS="-g -O2 -std=c99 -I ../../../lib/c"
+
+VERBOSE=1
+
+interfaces=(typeBase.epi typeTracks.epi typeArray.epi cstArrayInit.epi cstBaseInit.epi cstPhysics.epi cstTracksInit.epi mc_TypeInputs.epi mc_TypeLists.epi mc_TypeSensors.epi)
+ext_libs=(mc_ext.epi mathext.epi)
+sources=(math.ept trackslib.ept digital.ept mc.ept verif.ept dv.ept debug.ept)
+
+exit_if_failed() {
+  if [ $? != 0 ]; then
+     exit $?
+  fi
+}
+
+for f in ${interfaces[@]}; do
+    if [ $VERBOSE ] ; then
+        echo "**** Compiling interface: $f *******"
+    fi
+    $HEPTC $HEPTC_OPTIONS -target c $f
+   exit_if_failed
+done
+
+for f in ${ext_libs[@]}; do
+    if [ $VERBOSE ] ; then
+        echo "**** Compiling external lib: $f *******"
+    fi
+    $HEPTC $HEPTC_OPTIONS $f
+    exit_if_failed
+done
+
+for f in ${sources[@]}; do
+    if [ $VERBOSE ] ; then
+        echo "**** Compiling source file: $f *******"
+    fi
+    $HEPTC $HEPTC_OPTIONS -target c $f
+    exit_if_failed
+done
+
+#$HEPTC $HEPTC_OPTIONS -target c -s dv_fighterdebug debug.ept
+
+source_dirs=(debug_c dv_c digital_c math_c mc_c trackslib_c verif_c typeBase_c typeTracks_c typeArray_c cstArrayInit_c cstBaseInit_c cstPhysics_c cstTracksInit_c mc_TypeInputs_c mc_TypeLists_c mc_TypeSensors_c)
+other_files=(mathext.c mathext.h mc_ext.c mc_ext.h main.c)
+if [ -d _build ]; then
+   rm -r _build
+fi
+mkdir _build
+cd _build
+
+for f in ${source_dirs[@]}; do
+    cp ../$f/* .
+done
+for f in ${other_files[@]}; do
+    cp ../$f .
+done
+
+$GCC $GCC_OPTIONS *.c -o mission_control
+exit_if_failed
+
+cp mission_control ..
+
+cd ..

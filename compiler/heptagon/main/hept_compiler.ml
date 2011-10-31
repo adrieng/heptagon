@@ -18,6 +18,7 @@ let compile_program p =
   (* Typing *)
   let p = silent_pass "Statefulness check" true Stateful.program p in
   let p = pass "Typing" true Typing.program p pp in
+  let p = pass "Linear Typing" !do_linear_typing Linear_typing.program p pp in
 
   (* Causality check *)
   let p = silent_pass "Causality check" !causality Causality.program p in
@@ -57,6 +58,12 @@ let compile_program p =
   (* Normalization *)
   let p = pass "Normalization" true Normalize.program p pp in
 
+  (* Boolean pass *)
+  let p = pass "Clocking(Heptagon)" !boolean Hept_clocking.program p pp in
+  let p = pass "Boolean" !boolean Boolean.program p pp in
+  let p = pass "Normalization" !boolean Normalize.program p pp in
+
+
   (* Block flatten *)
   let p = pass "Block" true Block.program p pp in
 
@@ -64,3 +71,6 @@ let compile_program p =
   p
 
 
+let compile_interface i =
+  let i = silent_pass "Typing" true Typing.interface i in
+  i

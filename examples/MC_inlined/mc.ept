@@ -1,0 +1,1037 @@
+open Mctypes
+open Mc_ext
+open Mathext
+
+fun abs(a : float) returns (o : float)
+let
+  o = if 0.0 <=. a then a else -. a;
+tel
+
+(*  -- Returns 1.0 if input is greater than 0.0,
+  -- -1.0 if input is less than 0.0
+  -- and 0.0 if input is equal to 0.0 *)
+fun sign(a : float) returns (o : float)
+let
+  o = if a >. 0.0 then 1.0 else if 0.0 = a then 0.0 else -. 1.0;
+tel (* calculate arctan(y/x)  *)
+
+
+  node myarctan(y, x : float) returns (atan : float)
+  var l6 : float; l4 : bool; l1 : float;
+  let
+    atan =
+      if l4
+      then if x <. 0.0 then pi +. l1 else l1
+      else pi /. 2.0 *. sign(y);
+  (*  l6 = (activate div every l4 initial default 0.0)(y, x);  *)
+    l6 = if l4 then y /. x else 0.0 -> pre l6;
+    l4 = abs(x) >. 0.1;
+    l1 = Mathext.atanr(l6);
+  tel
+
+(* compute if a given track is equal to one of the mission tracks
+   belonging to the mission track array at the previous tick *)
+fun missiontrackequalsprevious(previousone, actualone : tmissiontrack)
+    returns (equal : bool)
+let
+    equal =
+      0 <> previousone.m_id & previousone.m_id = actualone.m_id or
+      abs(previousone.m_pos.x -. actualone.m_pos.x) <. 100.0 &
+      abs(previousone.m_pos.y -. actualone.m_pos.y) <. 100.0 &
+      not (abs(previousone.m_pos.x) <. 0.1 &
+       abs(previousone.m_pos.y) <. 0.1 &
+       abs(actualone.m_pos.x) <. 0.1 &
+       abs(actualone.m_pos.y) <. 0.1 )
+tel
+
+  (* compute track visibility (appearance on radar screen)
+     according to track position and speed  *)
+fun calctrackvisible1(position : tposition;
+                             speed : tspeed)
+    returns (trackvisible : bool)
+let
+  trackvisible =
+      not (abs(position.x) <. 0.001 & abs(position.y) <. 0.001 &
+       abs(speed.sx) <. 0.001 &
+       abs(speed.sy) <. 0.001);
+tel
+
+fun missiontrackexist1(acc_tracknumber : int;
+                              missiontrack,
+                              previousmissiontrack : tmissiontrack)
+  returns (tracknumbertoset : int)
+let
+    tracknumbertoset =
+      if missiontrackequalsprevious(missiontrack, previousmissiontrack) &
+      0 <> previousmissiontrack.m_tracknumber
+      then previousmissiontrack.m_tracknumber
+      else acc_tracknumber;
+tel
+
+(* compute if a given track is equal to one of the mission tracks
+   belonging to the mission track array at the previous tick *)
+fun missiontrackequalsprevious_orig(previousone, actualone : tmissiontrack)
+    returns (equal : bool)
+var l43 : bool;
+let
+    l43 = previousone.m_tracknumber <> 0;
+    equal =
+      l43 &
+      (l43 & 0 <> previousone.m_id & previousone.m_id = actualone.m_id or
+       abs(previousone.m_pos.x -. actualone.m_pos.x) <. 100.0 &
+       abs(previousone.m_pos.y -. actualone.m_pos.y) <. 100.0 &
+       not (abs(previousone.m_pos.x) <. 0.1 &
+        abs(previousone.m_pos.y) <. 0.1 &
+        abs(actualone.m_pos.x) <. 0.1 &
+        abs(actualone.m_pos.y) <. 0.1));
+tel
+
+fun util_radtodeg(input1 : float) returns (output1 : float)
+let
+  output1 = input1 /. (2.0 *. pi) *. 360.0;
+tel
+
+fun util_degtorad(input1 : float) returns (output1 : float)
+let
+  output1 = 2.0 *. pi *. input1 /. 360.0;
+tel
+
+(* if speedabs is small (speed.x and speed.y are also small), trackangle is set to 0.
+   otherwise, trackangle is computed to be in the range [-180, 180]
+    degrees thanks to the acosr; sign is given, from the asinr. *)
+fun calctrackangle(speed : tspeed; speedabs : tmetresseconde)
+    returns (trackangle : float)
+var l51 : bool; l48, l47 : float;
+let
+    trackangle =
+      util_radtodeg(if l51 then 0.0 else Mathext.acosr(l47) *. l48) *.
+      (l48 *.
+       sign(Mathext.asinr(speed.sy /. (if l51 then 1.0 else speedabs))));
+    l51 = speedabs <. 0.01;
+    l48 = sign(l47);
+    l47 = speed.sx /. (if l51 then 1.0 else speedabs);
+tel
+
+(* compute track visibility (appearance on radar screen)
+   according to track position *)
+fun calctrackvisible(position : tposition)
+    returns (trackvisible : bool)
+let
+ trackvisible =
+      not (abs(position.x) <. 0.001 & abs(position.y) <. 0.001);
+tel
+
+fun missiontrackexist( missiontrack,
+                       previousmissiontrack : tmissiontrack;
+                       acc_tracknumber : int)
+    returns (tracknumbertoset : int)
+let
+    tracknumbertoset =
+      if missiontrackequalsprevious(missiontrack, previousmissiontrack)
+      then previousmissiontrack.m_tracknumber
+      else acc_tracknumber;
+tel
+
+(* calculate: result = rate of closing / distance *)
+node calculatevrdivd(vr, d : float) returns (result : float)
+var l13 : float; l11 : bool;
+let
+  result = if l11 then l13 else 0.0;
+(*    l13 = (activate div every l11 initial default 0.0)(vr, d);  *)
+  l13 = if l11 then vr /. d else 0.0 -> pre l13;
+  l11 = d >. 0.1;
+tel
+
+(* sort two mission tracks according to:
+  1) their (rate of closing / distance) ratio
+  2) target type
+  3) detection or not by the radar *)
+node trackalowerprioritythanb(a, b : tmissiontrack)
+  returns (prioritary : bool)
+let
+  prioritary =
+      a.m_targettype = Ttargettype_friend or not a.m_detectedbyradar or
+      a.m_detectedbyradar &
+      calculatevrdivd(a.m_sr, a.m_d) <. calculatevrdivd(b.m_sr, b.m_d) &
+      b.m_detectedbyradar;
+tel
+
+(* compute if two tracks speeds are equal *)
+fun comparespeeds(speed1, speed2 : tspeed)
+    returns (equal : bool)
+let
+  equal =
+      abs(speed1.sx -. speed2.sx) <. 1.0 &
+      abs(speed1.sy -. speed2.sy) <. 1.0;
+tel
+
+(* compute a "prioritized" track number according to its
+   priority and target type *)
+fun calculateprioritizedtracknb(missiontrack : tmissiontrack)
+    returns (prioritizedtracknb : int)
+let
+  prioritizedtracknb =
+      if missiontrack.m_targettype <> Ttargettype_friend &
+      missiontrack.m_priority <> 0
+      then missiontrack.m_tracknumber
+      else 0;
+tel
+
+(* sort two real inputs *)
+fun sortreals(a, b : float) returns (newa, newb : float)
+var l2 : bool;
+let
+  l2 = a <. b;
+  newb = if l2 then a else b;
+  newa = if l2 then b else a;
+tel
+
+(* compute if two tracks positions are equal *)
+fun comparepositions(pos1, pos2 : tposition)
+    returns (equal : bool)
+let
+    equal =
+      abs(pos1.x -. pos2.x) <. 0.1 & abs(pos1.y -. pos2.y) <. 0.1;
+tel
+
+(* compute if two tracks are equal (according to their position
+   and speed)  *)
+fun comparetracks(pos1, pos2 : tposition;
+                         v1, v2 : tspeed)
+  returns (equal : bool)
+let
+    equal = comparepositions(pos1, pos2) & comparespeeds(v1, v2);
+tel
+
+
+(* set the track number of a mission track *)
+fun setmissiontracknumber(missiontrack : tmissiontrack; number : int)
+    returns (newmissiontrack : tmissiontrack)
+let
+    newmissiontrack = { missiontrack with .m_tracknumber = number };
+tel
+
+(* compute if a mission track is null (or empty) according to
+   its position and speed *)
+fun missiontrackisnull(missiontrack : tmissiontrack)
+    returns (isnull : bool)
+let
+    isnull =
+      comparetracks(missiontrack.m_pos, kInitPosition,
+        missiontrack.m_speed, kInitSpeed);
+tel
+
+(* calculate the new track number for a mission track, according to:
+  1) the mission track data
+  2) the previous mission tracks array
+  3) the current (highest) track number *)
+fun calculatemissiontracknumber(
+               previousmissiontracks : tmissiontracksarray;
+               missiontrack : tmissiontrack;
+               currenttracknumber : int)
+    returns (newmissiontrack : tmissiontrack;
+             newtracknumber : int)
+var setnewtracknumber : bool; previoustracknumber : int;
+let
+    setnewtracknumber =
+      previoustracknumber = 0 & not missiontrackisnull(missiontrack);
+    newtracknumber =
+      if setnewtracknumber then currenttracknumber + 1 else currenttracknumber;
+    previoustracknumber =
+      fold <<ksizemissiontracksarray>> missiontrackexist
+      <(missiontrack)>
+      (previousmissiontracks, 0);
+    newmissiontrack =
+      setmissiontracknumber(missiontrack, if setnewtracknumber
+        then newtracknumber
+        else previoustracknumber);
+tel
+
+(* compute a mission track target type according to its identifier *)
+fun calculatetracktargettypefromid(id : int)
+    returns (targettype : ttargettype)
+let
+  targettype =
+      if 0 = id
+      then Ttargettype_unknown
+      else if id <= 500
+      then Ttargettype_friend
+      else Ttargettype_foe;
+tel
+
+(* calculate the derivative of a value x(n) according to its
+   ante-previous value x(n-2) *)
+node myderivative(inv, period : float) returns (o : float)
+var l2 : float;
+let
+ (* l2 = fby (inv; 2; 0.0);  *)
+  l2 = 0.0 fby (0.0 fby inv);
+  o =
+      if abs(l2) <. 0.1 or abs(inv) <. 0.1
+      then 0.0
+      else 0.0 -> (inv -. l2) /. (2.0 *. period);
+  tel
+
+(* calculate a track speed vector according to the position vector *)
+node calculatetrackspeedfrompos(position : tposition)
+    returns (speed : tspeed)
+let
+  speed =
+      { sx = myderivative(position.x, t);
+        sy = myderivative(position.y, t) };
+tel
+
+(* generate the (up to 2) tracks detected by a sensor (radar
+   or iff) from the environment (made of 4 tracks)  *)
+fun selectdetectedtrack(index : int;
+                        tracks : ttracksarray;
+                        defaulttrack : ttrack)
+    returns (trackselected : ttrack)
+let
+  trackselected = tracks.[index] default defaulttrack;
+tel
+
+(* set the priority of a mission track *)
+fun setmissiontrackpriority(missiontrack : tmissiontrack;
+                                   priority : int)
+    returns (newmissiontrack : tmissiontrack)
+let
+  newmissiontrack =
+   { missiontrack with .m_priority =
+               if missiontrack.m_detectedbyradar then priority else 0 }
+tel
+
+(* invert two mission tracks if the first one is null (or empty)  *)
+fun sortblockmissiontrack(a, b : tmissiontrack)
+    returns (newa, newb : tmissiontrack)
+var l7 : bool;
+let
+  l7 = missiontrackisnull(a);
+  newb = if l7 then a else b;
+  newa = if l7 then b else a;
+tel
+
+(* sort two mission tracks according to:
+   1) their (rate of closing / distance) ratio
+   2) target type
+   3) detection or not by the radar *)
+node sortblockpriorities(a, b : tmissiontrack)
+  returns (newa, newb : tmissiontrack)
+var l25 : bool;
+let
+    l25 = trackalowerprioritythanb(a, b);
+    newb = if l25 then a else b;
+    newa = if l25 then b else a;
+tel
+
+fun position_equal(p1, p2 : tposition) returns (res:bool)
+let
+  res = (p1.x = p2.x) & (p1.y = p2.y)
+tel
+
+fun speed_equal(s1, s2 : tspeed) returns (res:bool)
+let
+  res = (s1.sx = s2.sx) & (s1.sy = s2.sy)
+tel
+
+(* convert an iff track (position + identifier) into a mission
+   track (position + speed + distance + rate of closing +
+   detected by radar/iff + tracknumber + target type) *)
+node convertifftracktomissiontrack(ifftrack : tifftrack)
+  returns (missiontrack : tmissiontrack)
+let
+  missiontrack =
+      { m_pos             = ifftrack.i_pos;
+        m_speed           = if position_equal(kInitPosition, ifftrack.i_pos)
+        then kInitSpeed
+        else calculatetrackspeedfrompos(ifftrack.i_pos);
+        m_id              = ifftrack.i_id;
+        m_priority        = 0;
+        m_d               = 0.0;
+        m_sabs            = 0.0;
+        m_sr              = 0.0;
+        m_detectedbyradar = false;
+        m_detectedbyiff   = not (position_equal(ifftrack.i_pos, kInitPosition) &
+         ifftrack.i_id = 0);
+        m_tracknumber     = 0;
+        m_targettype      = calculatetracktargettypefromid(ifftrack.i_id);
+        m_isvisible       = calctrackvisible(ifftrack.i_pos);
+        m_angle           = 0.0 };
+tel
+
+(* convert an radar track (position + speed + distance +
+   rate of closing) into a mission track (position + speed +
+   distance + rate of closing + detected by radar/iff +
+   tracknumber + target type)  *)
+fun convertrdrtracktomissiontrack(rdrtrack : trdrtrack)
+    returns (missiontrack : tmissiontrack)
+let
+    missiontrack =
+      { m_pos             = rdrtrack.r_pos;
+        m_speed           = rdrtrack.r_s;
+        m_id              = 0;
+        m_priority        = 0;
+        m_d               = rdrtrack.r_d;
+        m_sabs            = rdrtrack.r_sabs;
+        m_sr              = rdrtrack.r_sr;
+        m_detectedbyradar = not (position_equal(rdrtrack.r_pos, kInitPosition) &
+         speed_equal(rdrtrack.r_s, kInitSpeed) &
+         rdrtrack.r_d = 0.0 &
+         rdrtrack.r_sabs = 0.0 &
+         rdrtrack.r_sr = 0.0);
+        m_detectedbyiff   = false;
+        m_tracknumber     = 0;
+        m_targettype      = Ttargettype_unknown;
+        m_isvisible       = calctrackvisible(rdrtrack.r_pos);
+        m_angle           = calctrackangle(rdrtrack.r_s, rdrtrack.r_sabs) };
+tel
+
+(* calculate the magnitude of a vector (2d)  *)
+fun vectnorme(a, b : float) returns (c : float)
+let
+  c = Mathext.sqrtr(a *. a +. b *. b);
+tel
+
+(* extract the x and y (position) values from a track (ttrack type) *)
+fun extracttrackposxy(track : ttrack)
+    returns (x, y : tmetres)
+let
+  y = track.t_pos.y;
+  x = track.t_pos.x;
+tel
+
+(* elaborate radar track data (position, speed, distance, rate of closing)
+  according to an environment track (position only)  *)
+node elaboraterdrtrack(track : ttrack)
+    returns (rdrtrack : trdrtrack)
+var d, v, vr, vx, vy, x, y : float; l142 : tspeed;
+let
+    (*activate ifblock1 if d = 0.0
+      then vr = 0.0;
+      else var xnorm, ynorm : real;
+      let
+        ynorm = y / d;
+        xnorm = x / d;
+        vr = - (vx * xnorm + vy * ynorm);
+      tel
+    returns vr;*)
+    switch d = 0.0
+      | true do  vr = 0.0
+      | false
+        var xnorm, ynorm : float;
+        do
+          ynorm = y /. d;
+          xnorm = x /. d;
+          vr = -. (vx *. xnorm +. vy *. ynorm);
+    end;
+
+    (x, y) = extracttrackposxy(track);
+    rdrtrack =
+      { r_pos  = { x = x;
+                 y = y };
+        r_s    = { sx = vx;
+                 sy = vy };
+        r_d    = d;
+        r_sabs = v;
+        r_sr   = vr };
+    v = vectnorme(vx, vy);
+    d = vectnorme(x, y);
+    vy = l142.sy;
+    vx = l142.sx;
+    l142 = calculatetrackspeedfrompos({ x = x; y = y });
+tel
+
+(* Detects a rising edge (false to true transition ).
+   The output is true during the transition clock cycle.
+   The output is initialized to false. *)
+node risingEdge(re_Input : bool) returns (re_Output : bool)
+let
+  re_Output = not (re_Input -> pre re_Input) & re_Input;
+tel
+
+(* safe state machine for the computing of radar or iff state
+   state ident: state.0  *)
+node statecmd(onoffbuttonpressed : bool (*last = false*);
+                currentstate : tsensorstate)
+    returns (onoffcmd : bool)
+let
+    automaton
+      state Off
+        do  onoffcmd = false;
+        unless onoffbuttonpressed & currentstate = TState_OFF then On
+
+      state On
+        do  onoffcmd = true;
+        unless onoffbuttonpressed & currentstate = TState_ON then Off
+    end
+tel
+
+(* compute the new radar state each time on/off button
+   is pressed *)
+node mc_rdrstatecmd(rdronoffbutton : bool; currentrdrstate : tsensorstate)
+    returns (rdronoffcmd : bool)
+let
+  rdronoffcmd =
+      statecmd(risingEdge(rdronoffbutton), currentrdrstate);
+tel
+
+(* compute the new iff state each time on/off button
+   is pressed *)
+node mc_iffstatecmd(iffonoffbutton : bool; currentiffstate : tsensorstate)
+    returns (iffonoffcmd : bool)
+let
+  iffonoffcmd =
+      statecmd(risingEdge(iffonoffbutton), currentiffstate);
+tel
+
+(* safe state machine for the computing of radar mode
+   state ident: state.6  *)
+node rdrmodecmd(currentstate : tsensorstate;
+                  modebuttonpressed : bool(* last = false*);
+                  currentmode : trdrmode)
+    returns (modecmd : bool)
+let
+    automaton
+      state Wide
+        do  modecmd = false;
+        unless (modebuttonpressed &
+          (currentstate = TState_ON &
+           currentmode = TRdrMode_WIDE)) then Narrow
+
+      state Narrow
+        do  modecmd = true;
+        unless (modebuttonpressed &
+          (currentstate = TState_ON &
+           currentmode = TRdrMode_NARROW)) then Wide
+     end
+tel
+
+(* compute the new radar mode each time on/off button
+   is pressed *)
+node mc_rdrmodecmd(currentrdrstate : tsensorstate;
+                     rdrmodebutton : bool;
+                     currentrdrmode : trdrmode)
+    returns (rdrmodecmd : bool)
+let
+    rdrmodecmd =
+      rdrmodecmd(currentrdrstate, risingEdge(rdrmodebutton),
+        currentrdrmode);
+tel
+
+(* compute the radar mode, according to the corresponding
+   input command from the mission computer *)
+fun radar_mode(modecmd : bool) returns (mode : trdrmode)
+let
+  mode = if modecmd then TRdrMode_NARROW else TRdrMode_WIDE;
+tel
+
+(* compute the radar state, according to:
+   - the corresponding input command from the mission computer
+   - the failure state of the radar  *)
+node radar_state(onoffcmd, failure : bool)
+    returns (initializing : bool; st : tsensorstate)
+var x : bool;
+let
+   initializing = st = TState_OFF & onoffcmd;
+(* x = fby (onoffcmd; 5; false) *)
+   x = false fby false fby false fby false fby false fby onoffcmd;
+   st =
+      if failure
+      then TState_FAIL
+      else if (if onoffcmd then x else false)
+      then TState_ON
+      else TState_OFF;
+tel
+
+(* elaborate and generate the (up to 2) tracks detected
+   by the radar (position + speed + distance + rate of
+   closing) *)
+node radar_tracks(st : tsensorstate;
+                    tracks : ttracksarray;
+                    rdrdetectedtracks : tdetectedrdrtracksarray)
+    returns (rdrtracks : trdrtracksarray)
+var
+    l22 : ttrack^ksizerdrtracksarray;
+    l30 : trdrtrack^ksizerdrtracksarray;
+let
+    rdrtracks = if st = TState_ON then l30 else kinitrdrtrackarray;
+    l30 = map<<ksizerdrtracksarray>> elaboraterdrtrack(l22);
+    l22 =
+      map<<ksizerdrtracksarray>> selectdetectedtrack(
+        rdrdetectedtracks, tracks^ksizerdrtracksarray,
+        kinittrack^ksizerdrtracksarray);
+tel
+
+(* scade representation for the radar, generating:
+   1) the radar state
+   2) the radar mode
+   3) the (up to 2) tracks detected by the radar  *)
+node radar(onoffcmd, modecmd, failure : bool;
+             rdrdetectedtracks : tdetectedrdrtracksarray;
+             tracks : ttracksarray)
+  returns (initializing : bool;
+             st : tsensorstate;
+             mode : trdrmode;
+             rdrtracks : trdrtracksarray)
+let
+    rdrtracks = radar_tracks(st, tracks, rdrdetectedtracks);
+    mode = radar_mode(modecmd);
+    (initializing, st) = radar_state(onoffcmd, failure);
+tel
+
+(* compute the iff state, according to:
+   - the corresponding input command from the mission computer
+   - the failure state of the iff *)
+node iff_state(onoffcmd, failure : bool)
+    returns (initializing : bool; st : tsensorstate)
+var x : bool;
+let
+    initializing = st = TState_OFF & onoffcmd;
+(*  x = fby (onoffcmd; 5; false) *)
+    x = false fby false fby false fby false fby false fby onoffcmd;
+    st =
+      if failure
+      then TState_FAIL
+      else if (if onoffcmd then x else false)
+      then TState_ON
+      else TState_OFF;
+tel
+
+fun ifftrack_of_track(track : ttrack)
+    returns (ifftrack : tifftrack)
+let
+  ifftrack = { i_pos = track.t_pos; i_id = track.t_id };
+tel
+
+(* elaborate and generate the (up to 2) tracks detected
+   by the iff (position + identifier) *)
+fun iff_tracks(st : tsensorstate;
+                      tracks : ttracksarray;
+                      iffdetectedtracks : tdetectedifftracksarray)
+    returns (ifftracks : tifftracksarray)
+var l34 : ttrack^ksizeifftracksarray;
+    l40 : tifftracksarray;
+let
+    l34 =
+      map<<ksizeifftracksarray>> selectdetectedtrack(
+        iffdetectedtracks, tracks^ksizeifftracksarray,
+        kinittrack^ksizeifftracksarray);
+    l40 = map<<ksizeifftracksarray>> ifftrack_of_track(l34);
+    ifftracks = if st = TState_ON then l40 else kinitifftrackarray;
+  tel
+
+
+(* scade representation for the iff, generating:
+   1) the iff state
+   2) the (up to 2) tracks detected by the iff  *)
+node iff(tracks : ttracksarray;
+           failure : bool;
+           iffdetectedtracks : tdetectedifftracksarray;
+           onoffcmd : bool)
+    returns (st : tsensorstate;
+             ifftracks : tifftracksarray;
+             initializing : bool)
+let
+  ifftracks = iff_tracks(st, tracks, iffdetectedtracks);
+  (initializing, st) = iff_state(onoffcmd, failure);
+tel
+
+node advrandr(min, max : float) returns (output1 : float)
+let
+  output1 = (max -. min) *. rand() +. min;
+tel
+
+node advrandi(min, max, step : int) returns (output1 : int)
+var l8 : int;
+let
+  l8 = if 0 <> step then step else 1;
+  output1 = (int_of_float (float_of_int (max - min) *. rand())
+   + min) / (l8 * l8);
+tel
+
+(* for one given track, generate:
+   1) its new position according to:
+   - its previous position, the input speed and slope
+   if set/reset button not pressed
+   - the input initial position if set/reset button pressed
+   2) its identifier according to the input identifier  *)
+node createtracks_createonetrack_init_rand()
+    returns (sloperadinit, speedinit, xmeterinit, ymeterinit : float;
+             idinit : int)
+let
+    speedinit = advrandr(250.0, 1000.0) *. t;
+    ymeterinit = nm *. advrandr(-. 10.0, 10.0);
+    xmeterinit = advrandr(-. 10.0, 10.0) *. nm;
+    sloperadinit = 2.0 *. pi *. advrandr(0.0, 360.0) /. 360.0;
+    idinit = advrandi(0, 1000, 10);
+tel
+
+(* for one given track, generate:
+   1) its new position according to:
+   - its previous position, the input speed and slope
+   if set/reset button not pressed
+   - the input initial position if set/reset button pressed
+   2) its identifier according to the input identifier  *)
+node createtracks_createonetrack_rand(res : bool)
+    returns (track : ttrack)
+var id : int; sloperad, speedt, x0, y0, l9, l18 : float;
+let
+ (* (sloperad, speedt, x0, y0, id) =
+      (activate createtracks_createonetrack_init_rand every reset initial default (
+        0., 0., 0., 0., 0))(); *)
+  (sloperad, speedt, x0, y0, id) =
+    if res then createtracks_createonetrack_init_rand()
+             else (0.0, 0.0, 0.0, 0.0, 0) fby (sloperad, speedt, x0, y0, id);
+  l18 = y0 -> Mathext.sinr(sloperad) *. speedt +. (y0 -> pre l18);
+  l9 = x0 -> (x0 -> pre l9) +. speedt *. Mathext.cosr(sloperad);
+  track = { t_pos = { x = l9; y = l18 }; t_id  = id };
+tel
+
+(* generate up to 4 tracks (position + identifier) according
+   to the graphical track inputs panel. *)
+node createtracks_rand(res : bool)
+    returns (tracks : ttracksarray)
+let
+    tracks = map<<ksizetracksarray>> createtracks_createonetrack_rand(res^ksizetracksarray);
+tel
+
+node createalltracks(res : bool)
+  returns (tracks : ttracksarray)
+let
+(*  tracks = (restart createtracks_rand every res)(res); *)
+    reset
+      tracks = createtracks_rand(res);
+    every res
+tel
+
+
+(* merge a mission track detected by the radar with a
+   mission track detected by the iff if they have the same
+   position and speed.
+   in that case, newrdrmissiontrack is the merged track, and newiffmissiontrack is reset to "empty".
+   otherwise, outputs = inputs  *)
+fun fusionrdrifftracks(iffmissiontrack, rdrmissiontrack
+                               : tmissiontrack)
+    returns (newiffmissiontrack, newrdrmissiontrack
+              : tmissiontrack)
+var l90 : bool;
+let
+    newrdrmissiontrack =
+      if l90
+      then { m_pos             = rdrmissiontrack.m_pos;
+             m_speed           = rdrmissiontrack.m_speed;
+             m_id              = iffmissiontrack.m_id;
+             m_priority        = rdrmissiontrack.m_priority;
+             m_d               = rdrmissiontrack.m_d;
+             m_sabs            = rdrmissiontrack.m_sabs;
+             m_sr              = rdrmissiontrack.m_sr;
+             m_detectedbyradar = rdrmissiontrack.m_detectedbyradar;
+             m_detectedbyiff   = iffmissiontrack.m_detectedbyiff;
+             m_tracknumber     = 0;
+             m_targettype      = iffmissiontrack.m_targettype;
+             m_isvisible       = rdrmissiontrack.m_isvisible;
+             m_angle           = rdrmissiontrack.m_angle }
+      else rdrmissiontrack;
+    l90 =
+      comparetracks(rdrmissiontrack.m_pos, iffmissiontrack.m_pos,
+        rdrmissiontrack.m_speed, iffmissiontrack.m_speed);
+    newiffmissiontrack =
+      if l90
+      then kinitmissiontrack
+      else iffmissiontrack;
+tel
+
+(* merge tracks data received from both radar and iff sensors *)
+fun mc_tracks_fusion_onerdrwithifftracks(rdrtrack : tmissiontrack;
+       ifftracks : tmissiontrack^ksizeifftracksarray)
+    returns (fusionnedrdrtrack : tmissiontrack;
+            fusionnedifftracks : tmissiontrack^ksizeifftracksarray)
+let
+    (fusionnedifftracks, fusionnedrdrtrack) =
+      mapfold<<ksizeifftracksarray>> fusionrdrifftracks(ifftracks, rdrtrack);
+tel
+
+(* merge tracks data received from both radar and iff sensors *)
+node mc_tracks_fusion(rdrtracks : trdrtracksarray;
+                        ifftracks : tifftracksarray)
+    returns (missiontracks : tmissiontracksarray)
+var
+    mergedrdrtracks : tmissiontrack^ksizerdrtracksarray;
+    mergedifftracks : tmissiontrack^ksizeifftracksarray;
+    l140 : tmissiontrack^ksizerdrtracksarray;
+    l139 : tmissiontrack^ksizeifftracksarray;
+let
+    missiontracks = mergedrdrtracks @ mergedifftracks;
+    (mergedrdrtracks, mergedifftracks) =
+      mapfold<<ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks(l140, l139);
+    l140 = map<<ksizerdrtracksarray>> convertrdrtracktomissiontrack(rdrtracks);
+    l139 = map<<ksizeifftracksarray>> convertifftracktomissiontrack(ifftracks);
+tel
+
+
+fun prio_tracknumbernotinarray(missiontracktracknumber,
+                               prioritytrack : int; acc : bool)
+    returns (notinarray : bool)
+let
+    notinarray = acc & missiontracktracknumber <> prioritytrack;
+tel
+
+(* replace the lowest priority track in priorityarray by missiontrack *)
+node prio_selecthighestprioritynotinpriorityarray(
+       missiontrack : tmissiontrack;
+       prioritiesarray : tpriorityList;
+       accprioritymissiontrack : tmissiontrack)
+    returns (prioritymissiontrack : tmissiontrack)
+var
+    missiontracknotinpriorittiesarray,
+    missiontrackhashigherprioritythanacc : bool;
+let
+    missiontrackhashigherprioritythanacc =
+      not trackalowerprioritythanb(missiontrack,
+        accprioritymissiontrack);
+    missiontracknotinpriorittiesarray =
+      fold<<4>> prio_tracknumbernotinarray(missiontrack.m_tracknumber^4,
+        prioritiesarray, true);
+    prioritymissiontrack =
+      if missiontracknotinpriorittiesarray & missiontrackhashigherprioritythanacc
+      then missiontrack
+      else accprioritymissiontrack;
+tel
+
+(* for each missiontrack
+   if priority higher than all in priorityarray and not in priorityarray
+   then, copy in priorityarray at index *)
+node prio_selectprioritarymissiontracks(missiontracks : tmissiontracksarray;
+                                          prioritiesarray : tpriorityList;
+                                          indexpriority : int)
+    returns (newprioritiesarray : tpriorityList)
+var missiontrackwithhighestpriority : tmissiontrack;
+let
+    newprioritiesarray =
+     [ prioritiesarray with [indexpriority] =
+          missiontrackwithhighestpriority.m_tracknumber ];
+    missiontrackwithhighestpriority =
+      fold<<ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray(
+        missiontracks,
+        prioritiesarray^ksizemissiontracksarray, kinitmissiontrack);
+tel
+
+fun prio_setpriorityinmissiontrack(prioritytracknumber : int;
+                                   priorityindex : int;
+                                   missiontrack : tmissiontrack)
+    returns (missiontrackwithprio : tmissiontrack)
+  let
+    missiontrackwithprio =
+      if prioritytracknumber = missiontrack.m_tracknumber
+      then setmissiontrackpriority(missiontrack, priorityindex + 1)
+      else missiontrack;
+  tel
+
+fun prio_setpriorityinmissiontrackarray(priorityarray : tpriorityList;
+                                        missiontrack : tmissiontrack)
+    returns (missiontrackwithprio : tmissiontrack)
+let
+    missiontrackwithprio =
+      foldi<<4>> prio_setpriorityinmissiontrack(priorityarray, missiontrack);
+tel
+
+
+
+(* set the priority in missiontracks:
+   1) set the highest prority
+   2) set the second priority=highest different from the previous
+   3) set the 3rd priority=highest different from the previous
+   3) set the 4th priority=highest different from the previous
+   => the 4 priority track should be in an array (initialized to "empty")
+   operator selectprioritymissiontracks inputs
+   - missiontracks
+   - prioritytrack set (to perform the "different from the previous")
+   *test for each missiontrack: the higest, and not already in prioritytracks.
+   *then, set the ith element of prioritytracks with the one found
+   for each missiontrack, if prioritary higher than the lowest 4 prioritary
+   old: compute each detected track priority, and sort tracks
+   according to their priority *)
+node mc_tracks_prio(missiontracks : tmissiontracksarray)
+    returns (missiontrackswithprio : tmissiontracksarray)
+var prioritytracknumbers : tpriorityList;
+let
+    missiontrackswithprio =
+      map<<ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+        <(prioritytracknumbers)> (missiontracks);
+    prioritytracknumbers =
+      prio_selectprioritarymissiontracks(missiontracks,
+        prio_selectprioritarymissiontracks(missiontracks,
+          prio_selectprioritarymissiontracks(missiontracks,
+            prio_selectprioritarymissiontracks(missiontracks, 0^4, 0), 1), 2),
+        3);
+tel
+
+(* associate a track number to each detected track *)
+node mc_tracks_tracknumber(withouttracknb : tmissiontracksarray)
+    returns (withtracknumber : tmissiontracksarray)
+var l81 : int;
+let
+    (withtracknumber, l81) =
+      mapfold<<ksizemissiontracksarray>> calculatemissiontracknumber
+          <(kinitmissiontrackarray -> pre withtracknumber)>
+           (withouttracknb, 0 -> pre l81);
+tel
+
+(* 1) merge tracks data received from both radar and iff sensors
+   2) associate a track number to each detected track
+  3) compute each detected track priority, and sort tracks
+   according to their priority  *)
+node mc_tracks(rdrtracks : trdrtracksarray;
+                 ifftracks : tifftracksarray)
+    returns (missiontracks : tmissiontracksarray)
+let
+    missiontracks =
+      mc_tracks_prio(mc_tracks_tracknumber(mc_tracks_fusion(rdrtracks,
+          ifftracks)));
+tel
+
+(* scade representation for the mission computer, computing:
+   - the new radar state
+   - the new radar mode
+   - the new iff state
+   - the (up to 4) tracks detected by the fighter *)
+node mc(currentrdrstate : tsensorstate;
+          currentrdrmode : trdrmode;
+          rdrtracks : trdrtracksarray;
+          rdronoffbutton, rdrmodebutton, iffonoffbutton : bool;
+          currentiffstate : tsensorstate;
+          ifftracks : tifftracksarray)
+    returns (rdronoffcmd, rdrmodecmd : bool;
+             missiontracks : tmissiontracksarray;
+             iffonoffcmd : bool)
+let
+    missiontracks = mc_tracks(rdrtracks, ifftracks);
+    iffonoffcmd = mc_iffstatecmd(iffonoffbutton, currentiffstate);
+    rdrmodecmd = mc_rdrmodecmd(currentrdrstate, rdrmodebutton, currentrdrmode);
+    rdronoffcmd = mc_rdrstatecmd(rdronoffbutton, currentrdrstate);
+tel
+
+(* This node implements the "implies" logical operator (not(A) or B). *)
+fun implies(a, b : bool) returns (c : bool)
+let
+  c = (not a) or b;
+tel
+
+fun dv_detectedbyiff(missiontrack : tmissiontrack; accin : bool)
+    returns (accout : bool)
+let
+   accout = accin & not (missiontrack.m_tracknumber <> 0);
+tel
+
+fun dv_sametracknumber(missiontrack1,
+                       missiontrack2 : tmissiontrack;
+                       accin : bool)
+    returns (accout : bool)
+let
+  accout =
+      accin or
+      missiontrack1.m_tracknumber = missiontrack2.m_tracknumber &
+      missiontrack2.m_tracknumber <> 0;
+tel
+
+fun dv_tracknumberexist(missiontrack : tmissiontrack;
+                        missiontracks : tmissiontracksarray;
+                        accin : bool)
+    returns (accout : bool)
+var l36 : bool;
+let
+    l36 =
+      fold<<ksizemissiontracksarray>> dv_sametracknumber(
+        missiontrack^ksizemissiontracksarray, missiontracks, false);
+    accout = accin or l36;
+tel
+
+node dv_proof1(currentrdrstate : tsensorstate;
+                 rdronoffbutton, rdronoffcmd : bool)
+    returns (proof1 : bool)
+let
+  proof1 =
+      implies(risingEdge(rdronoffbutton) &
+        currentrdrstate = TState_FAIL, rdronoffcmd =
+        (false -> pre rdronoffcmd));
+tel
+
+fun dv_proof2(ifftracks : tifftracksarray;
+                     missiontracks : tmissiontracksarray)
+    returns (proof2 : bool)
+var l33 : bool;
+let
+    l33 =
+      fold<<ksizemissiontracksarray>> dv_detectedbyiff(missiontracks, true);
+    proof2 = implies(ifftracks = kinitifftrackarray, l33);
+tel
+
+(* verifiy that all non null tracknumbers are different *)
+fun dv_proof3(missiontracks : tmissiontracksarray)
+    returns (proof3 : bool)
+var l33 : bool;
+let
+    l33 =
+      fold<<ksizemissiontracksarray>> dv_tracknumberexist(
+        missiontracks, missiontracks^ksizemissiontracksarray, false);
+    proof3 = not l33;
+tel
+
+node dv_observer(currentrdrstate : tsensorstate;
+                   currentrdrmode : trdrmode;
+                   rdrtracks : trdrtracksarray;
+                   rdronoffbutton, rdrmodebutton, iffonoffbutton : bool;
+                   currentiffstate : tsensorstate;
+                   ifftracks : tifftracksarray)
+    returns (proof1, proof2, proof3 : bool)
+var l3 : tmissiontracksarray; l1,l4,l5 : bool;
+let
+    proof3 = dv_proof3(l3);
+    proof2 = dv_proof2(ifftracks, l3);
+    proof1 = dv_proof1(currentrdrstate, rdronoffbutton, l1);
+    (l1, l4, l3, l5) =
+      mc(currentrdrstate, currentrdrmode, rdrtracks, rdronoffbutton,
+        rdrmodebutton, iffonoffbutton, currentiffstate, ifftracks);
+tel
+
+(* Top node of the Mission Computer SCADE model.
+   The Fighter (MC + Radar + Iff), its environment
+   (CreateTracks) and links to the graphical interface (GUI)
+   are constituting this model. *)
+node fighterdebug(res, rdronoffclicked, iffonoffclicked : bool)
+    returns (missiontracks : tmissiontracksarray)
+var
+    l4 : trdrtracksarray;
+    l3 : trdrmode;
+    l6 : tifftracksarray;
+    l5 : tsensorstate;
+    l12, l11, l10 : bool;
+    l172 : tsensorstate;
+    l179 : ttracksarray;
+    l200, l201:bool; (*TODO*)
+let
+    l179 = createalltracks(res);
+    (l10, l11, missiontracks, l12) =
+      mc(l172, l3, l4, rdronoffclicked, false, iffonoffclicked, l5, l6);
+    (l5, l6, l200) = iff(l179, false, [1, 2, 3], false -> pre l12);
+    (l201, l172, l3, l4) =
+      radar(false -> pre l10, false -> pre l11, false, [0, 1, 2, 3, 4],
+        l179);
+tel
+
+(* top node of the mission computer scade model.
+   the fighter (mc + radar + iff), its environment
+   (createtracks) and links to the graphical interface (gui)
+   are constituting this model. *)
+node dv_fighterdebug(res, rdronoffclicked, iffonoffclicked : bool)
+    returns (proof3 : bool)
+let
+  proof3 =
+      dv_proof3(fighterdebug(res, rdronoffclicked, iffonoffclicked));
+tel
+
+fun dv_debug(missiontracks : tmissiontracksarray)
+    returns (proof3 : bool)
+let
+  proof3 = dv_proof3(missiontracks);
+tel

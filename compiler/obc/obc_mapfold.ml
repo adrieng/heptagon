@@ -32,6 +32,9 @@ type 'a obc_it_funs = {
   tdesc:        'a obc_it_funs -> 'a -> Obc.tdesc -> Obc.tdesc * 'a;
   program:      'a obc_it_funs -> 'a -> Obc.program -> Obc.program * 'a;
   program_desc: 'a obc_it_funs -> 'a -> Obc.program_desc -> Obc.program_desc * 'a;
+  interface:    'a obc_it_funs -> 'a -> Obc.interface -> Obc.interface * 'a;
+  interface_desc:    'a obc_it_funs -> 'a -> Obc.interface_desc -> Obc.interface_desc * 'a;
+  signature:    'a obc_it_funs -> 'a -> Obc.signature -> Obc.signature * 'a;
   global_funs:  'a Global_mapfold.global_it_funs }
 
 
@@ -144,7 +147,7 @@ and block_it funs acc b = funs.block funs acc b
 and block funs acc b =
   let b_locals, acc = var_decs_it funs acc b.b_locals in
   let b_body, acc = mapfold (act_it funs) acc b.b_body in
-  { b with b_locals = b_locals; b_body = b_body }, acc
+  { b_locals = b_locals; b_body = b_body }, acc
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
@@ -209,6 +212,9 @@ and tdesc funs acc td = match td with
   | Type_struct s ->
       let s, acc = structure_it funs.global_funs acc s in
         Type_struct s, acc
+  | Type_alias ty ->
+    let ty, acc = ty_it funs.global_funs acc ty in
+    Type_alias ty, acc
   | _ -> td, acc
 
 
@@ -224,6 +230,30 @@ and program_desc funs acc pd = match pd with
   | Pconst cd -> let cd, acc = const_dec_it funs acc cd in Pconst cd, acc
   | Ptype td -> let td, acc = type_dec_it funs acc td in Ptype td, acc
   | Pclass n -> let n, acc = class_def_it funs acc n in Pclass n, acc
+
+
+and interface_it funs acc p = funs.interface funs acc p
+and interface funs acc p =
+  let i_desc, acc = mapfold (interface_desc_it funs) acc p.i_desc in
+  { p with i_desc = i_desc }, acc
+
+
+and interface_desc_it funs acc pd =
+  try funs.interface_desc funs acc pd
+  with Fallback -> interface_desc funs acc pd
+and interface_desc funs acc pd = match pd with
+  | Itypedef td -> let td, acc = type_dec_it funs acc td in Itypedef td, acc
+  | Iconstdef cd -> let cd, acc = const_dec_it funs acc cd in Iconstdef cd, acc
+  | Isignature s -> let s, acc = signature_it funs acc s in Isignature s, acc
+
+
+and signature_it funs acc s = funs.signature funs acc s
+and signature funs acc s =
+  let sig_params, acc = mapfold (param_it funs.global_funs) acc s.sig_params in
+  let sig_inputs, acc = mapfold (arg_it funs.global_funs) acc s.sig_inputs in
+  let sig_outputs, acc = mapfold (arg_it funs.global_funs) acc s.sig_outputs in
+  { s with sig_params = sig_params; sig_inputs = sig_inputs; sig_outputs = sig_outputs }, acc
+
 
 let defaults = {
   lhs = lhs;
@@ -245,4 +275,7 @@ let defaults = {
   tdesc = tdesc;
   program = program;
   program_desc = program_desc;
+  interface = interface;
+  interface_desc = interface_desc;
+  signature = signature;
   global_funs = Global_mapfold.defaults }

@@ -46,6 +46,7 @@ struct
     | Econst_variable_already_defined of name
     | Estatic_exp_expected
     | Eredefinition of qualname
+    | Elinear_type_no_memalloc
 
   let message loc kind =
     begin match kind with
@@ -80,6 +81,9 @@ struct
           eprintf "%aName %a was already defined.@."
             print_location loc
             print_qualname qualname
+      | Elinear_type_no_memalloc ->
+          eprintf "%aLinearity annotations cannot be used without memory allocation.@."
+            print_location loc
     end;
     raise Errors.Error
 
@@ -137,6 +141,9 @@ struct
       let id, last = find n env in
       if not last then message loc (Enot_last n) else id
     with Not_found -> message loc (Evar_unbound n)
+  (** Adds a name to the list of used names and idents. *)
+  let add_used_name env n =
+    add n (ident_of_name n, false) env
   (** Add a var *)
   let add_var loc env n =
     if mem n env then message loc (Evariable_already_defined n)
@@ -158,9 +165,12 @@ struct
 end
 
 
-let mk_app ?(async = None) ?(params=[]) ?(unsafe=false) op =
-  { Heptagon.a_op = op; Heptagon.a_params = params;
-    Heptagon.a_unsafe = unsafe; Heptagon.a_async = async }
+let mk_app ?(async = None) ?(params=[]) ?(unsafe=false) ?(inlined = false) op =
+  { Heptagon.a_op = op;
+    Heptagon.a_params = params;
+    Heptagon.a_unsafe = unsafe;
+    Heptagon.a_async = async;
+    Heptagon.a_inlined = inlined }
 
 let mk_signature name ins outs stateful params constraints loc =
   { Heptagon.sig_name = name;
@@ -261,6 +271,7 @@ let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
       Heptagon.e_ty = Types.invalid_type;
+      Heptagon.e_linearity = Linearity.Ltop;
       Heptagon.e_level_ck = Clocks.Cbase;
       Heptagon.e_ct_annot = Misc.optional (translate_ct e.e_loc env) e.e_ct_annot;
       Heptagon.e_loc = e.e_loc }
@@ -281,11 +292,11 @@ and translate_desc loc env = function
         List.map (fun (f,e) -> qualify_field f, translate_exp env e)
           f_e_list in
       Heptagon.Estruct f_e_list
-  | Eapp ({ a_op = op; a_params = params; a_async = async }, e_list) ->
+  | Eapp ({ a_op = op; a_params = params; a_async = async; a_inlined = inl }, e_list) ->
       let e_list = List.map (translate_exp env) e_list in
       let params = List.map (expect_static_exp) params in
       let async = Misc.optional (List.map expect_static_exp) async in
-      let app = mk_app ~params:params ~async:async (translate_op op) in
+      let app = mk_app ~params:params ~async:async ~inlined:inl (translate_op op) in
       Heptagon.Eapp (app, e_list, None)
 
   | Eiterator (it, { a_op = op; a_params = params; a_async = async }, n_list, pe_list, e_list) ->
@@ -311,7 +322,10 @@ and translate_desc loc env = function
           (c, e) in
         List.map fun_c_e c_e_list in
       Heptagon.Emerge (x, c_e_list)
-
+  | Esplit (x, e1) ->
+     let x = translate_exp env (mk_exp (Evar x) loc) in
+     let e1 = translate_exp env e1 in
+       Heptagon.Esplit(x, e1)
 
 and translate_op = function
   | Earrow -> Heptagon.Earrow
@@ -329,6 +343,7 @@ and translate_op = function
   | Eselect_trunc -> Heptagon.Eselect_trunc
   | Efun ln -> Heptagon.Efun (qualify_value ln)
   | Enode ln -> Heptagon.Enode (qualify_value ln)
+  | Ereinit -> Heptagon.Ereinit
   | Ebang -> Heptagon.Ebang
 
 and translate_pat loc env = function
@@ -336,8 +351,10 @@ and translate_pat loc env = function
   | Etuplepat l -> Heptagon.Etuplepat (List.map (translate_pat loc env) l)
 
 let rec translate_eq env eq =
+  let init = match eq.eq_desc with | Eeq(_, init, _) -> init | _ -> Linearity.Lno_init in
   { Heptagon.eq_desc = translate_eq_desc eq.eq_loc env eq.eq_desc ;
     Heptagon.eq_stateful = false;
+    Heptagon.eq_inits = init;
     Heptagon.eq_loc = eq.eq_loc; }
 
 and translate_eq_desc loc env = function
@@ -346,7 +363,7 @@ and translate_eq_desc loc env = function
         (translate_switch_handler loc env)
         switch_handlers in
       Heptagon.Eswitch (translate_exp env e, sh)
-  | Eeq(p, e) ->
+  | Eeq(p, _, e) ->
       Heptagon.Eeq (translate_pat loc env p, translate_exp env e)
   | Epresent (present_handlers, b) ->
       Heptagon.Epresent
@@ -400,6 +417,7 @@ and translate_var_dec env vd =
   (* env is initialized with the declared vars before their translation *)
     { Heptagon.v_ident = Rename.var vd.v_loc env vd.v_name;
       Heptagon.v_type = translate_type vd.v_loc vd.v_type;
+      Heptagon.v_linearity = Linearity.check_linearity vd.v_linearity;
       Heptagon.v_last = translate_last vd.v_last;
       Heptagon.v_clock = translate_some_clock vd.v_loc env vd.v_clock;
       Heptagon.v_loc = vd.v_loc }
@@ -413,34 +431,55 @@ and translate_last = function
   | Last (None) -> Heptagon.Last None
   | Last (Some e) -> Heptagon.Last (Some (expect_static_exp e))
 
-let translate_contract env ct =
-  let b, _ = translate_block env ct.c_block in
-  { Heptagon.c_assume = translate_exp env ct.c_assume;
-    Heptagon.c_enforce = translate_exp env ct.c_enforce;
-    Heptagon.c_controllables = translate_vd_list env ct.c_controllables;
-    Heptagon.c_block = b }
+let translate_contract env opt_ct =
+  match opt_ct with
+  | None -> None, env
+  | Some ct ->
+      let env' = Rename.append env ct.c_controllables in
+      let b, env = translate_block env ct.c_block in
+      Some
+	{ Heptagon.c_assume = translate_exp env ct.c_assume;
+	  Heptagon.c_enforce = translate_exp env ct.c_enforce;
+	  Heptagon.c_controllables = translate_vd_list env' ct.c_controllables;
+	  Heptagon.c_block = b }, env'
 
-let params_of_var_decs p_l =
-  let pofvd vd = Signature.mk_param vd.v_name (translate_type vd.v_loc vd.v_type) in
-  List.map pofvd p_l
+let params_of_var_decs env p_l =
+  let pofvd env vd =
+    let env = Rename.add_used_name env vd.v_name in
+    Signature.mk_param vd.v_name (translate_type vd.v_loc vd.v_type), env
+  in
+  Misc.mapfold pofvd env p_l
 
 
 let translate_constrnt e = expect_static_exp e
 
+(*
+let args_of_var_decs =
+  let arg_of_vd vd =
+    if Linearity.is_linear vd.v_linearity && not !Compiler_options.do_mem_alloc then
+      message vd.v_loc Elinear_type_no_memalloc
+    else
+      Signature.mk_arg ~linearity:vd.v_linearity
+        (Some vd.v_name)
+        (translate_type vd.v_loc vd.v_type)
+  in
+    List.map arg_of_vd
+*)
+
 let translate_node node =
   let n = current_qual node.n_name in
   Idents.enter_node n;
-  let params = params_of_var_decs node.n_params in
+  let params, env = params_of_var_decs Rename.empty node.n_params in
   let constraints = List.map translate_constrnt node.n_constraints in
-  let input_env = Rename.append Rename.empty (node.n_input) in
+  let env = Rename.append env (node.n_input) in
   (* inputs should refer only to inputs *)
-  let inputs = translate_vd_list input_env node.n_input in
+  let inputs = translate_vd_list env node.n_input in
   (* Inputs and outputs define the initial local env *)
-  let env0 = Rename.append input_env node.n_output in
+  let env0 = Rename.append env node.n_output in
   let outputs = translate_vd_list env0 node.n_output in
-  let b, env = translate_block env0 node.n_block in
-  (* the env of the block is used in the contract translation *)
-  let contract = Misc.optional (translate_contract env) node.n_contract in
+  (* Enrich env with controllable variables (used in block) *)
+  let contract, env = translate_contract env0 node.n_contract in
+  let b, _ = translate_block env node.n_block in
   (* add the node signature to the environment *)
   let nnode = { Heptagon.n_name = n;
                Heptagon.n_stateful = node.n_stateful;
@@ -501,7 +540,6 @@ let translate_program p =
     | Ptype t -> Heptagon.Ptype (translate_typedec t)
     | Pnode n -> Heptagon.Pnode (translate_node n)
   in
-  List.iter open_module p.p_opened;
   let desc = List.map translate_program_desc p.p_desc in
   { Heptagon.p_modname = Names.modul_of_string p.p_modname;
     Heptagon.p_opened = p.p_opened;
@@ -515,13 +553,14 @@ let translate_signature s =
   and translate_clock ck = match ck with
     | Cbase -> Signature.Cbase
     | Con(ck,c,x) -> Signature.Con(translate_clock ck, qualify_constrs c, x)
-  and translate_arg a = Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
-                                                  (translate_some_clock a.a_clock)
+  and translate_arg a =
+    Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
+      a.a_linearity (translate_some_clock a.a_clock)
   in
   let n = current_qual s.sig_name in
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
-  let p = params_of_var_decs s.sig_params in
+  let p, _ = params_of_var_decs Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
   let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful p in
   Signature.check_signature sig_node;
@@ -530,15 +569,12 @@ let translate_signature s =
 
 
 let translate_interface_desc = function
-  | Iopen n -> open_module n; Heptagon.Iopen n
   | Itypedef tydec -> Heptagon.Itypedef (translate_typedec tydec)
   | Iconstdef const_dec -> Heptagon.Iconstdef (translate_const_dec const_dec)
   | Isignature s -> Heptagon.Isignature (translate_signature s)
 
-let translate_interface_decl idecl =
-  let desc = translate_interface_desc idecl.interf_desc in
-  { Heptagon.interf_desc = desc;
-    Heptagon.interf_loc = idecl.interf_loc }
-
-let translate_interface i = List.map translate_interface_decl i
-
+let translate_interface i =
+  let desc = List.map translate_interface_desc i.i_desc in
+  { Heptagon.i_modname = Names.modul_of_string i.i_modname;
+    Heptagon.i_opened = i.i_opened;
+    Heptagon.i_desc = desc; }

@@ -1,0 +1,146 @@
+type tid = int
+type tpriority_v = int
+type tmetres = float
+type tmetresseconde = float
+type tposition = { x : tmetres; y : tmetres }
+type tspeed = { sx : tmetresseconde; sy : tmetresseconde }
+
+type ttargettype = Ttargettype_unknown | Ttargettype_friend | Ttargettype_foe
+type trdrtrack = {
+      r_pos : tposition;
+      r_s : tspeed;
+      r_d : tmetres;
+      r_sabs : tmetresseconde;
+      r_sr : tmetresseconde
+    }
+
+type tifftrack = { i_pos : tposition; i_id : tid }
+
+type ttrack = { t_pos : tposition; t_id : tid }
+
+type tmissiontrack = {
+      m_pos : tposition;
+      m_speed : tspeed;
+      m_id : tid;
+      m_priority : tpriority_v;
+      m_d : tmetres;
+      m_sabs : tmetresseconde;
+      m_sr : tmetresseconde;
+      m_detectedbyradar : bool;
+      m_detectedbyiff : bool;
+      m_tracknumber : int;
+      m_targettype : ttargettype;
+      m_isvisible : bool;
+      m_angle : float
+    }
+
+const ksizetracksarray : int = 10
+const ksizeifftracksarray : int = 3
+const ksizerdrtracksarray : int = 5
+const ksizemissiontracksarray : int =
+  ksizeifftracksarray + ksizerdrtracksarray
+
+
+type trdrtracksarray = trdrtrack^ksizerdrtracksarray
+
+type tifftracksarray = tifftrack^ksizeifftracksarray
+
+type tdetectedifftracksarray = int^ksizeifftracksarray
+
+type tdetectedrdrtracksarray = int^ksizerdrtracksarray
+
+type ttracksarray = ttrack^ksizetracksarray
+
+type tmissiontracksarray = tmissiontrack^ksizemissiontracksarray
+
+const kinitifftrackarray : tifftracksarray =
+      { i_pos = { x = 0.0; y = 0.0 }; i_id  = 0 } ^ ksizeifftracksarray
+
+    const kinitmissiontrackarray : tmissiontracksarray =
+      { m_pos             = { x = 0.0;
+                            y = 0.0 };
+        m_speed           = { sx = 0.0;
+                            sy = 0.0 };
+        m_id              = 0;
+        m_priority        = 0;
+        m_d               = 0.0;
+        m_sabs            = 0.0;
+        m_sr              = 0.0;
+        m_detectedbyradar = false;
+        m_detectedbyiff   = false;
+        m_tracknumber     = 0;
+        m_targettype      = Ttargettype_unknown;
+        m_isvisible       = false;
+        m_angle           = 0.0 } ^ ksizemissiontracksarray
+
+    const kinitrdrtrackarray : trdrtracksarray =
+     { r_pos  = { x = 0.0;
+                 y = 0.0 };
+        r_s    = { sx = 0.0;
+                 sy = 0.0 };
+        r_d    = 0.0;
+        r_sabs = 0.0;
+        r_sr   = 0.0 } ^  ksizerdrtracksarray
+
+    const kinittrackarray : ttracksarray =
+        { t_pos = { x = 0.0; y = 0.0 }; t_id  = 0 } ^  ksizetracksarray
+
+
+const kInitPosition : tposition = { x = 0.0; y = 0.0 }
+const kInitSpeed : tspeed = { sx = 0.0; sy = 0.0 }
+const nm : float = 1852.0
+const t : float = 0.01
+const pi : float = 3.141592
+
+const kinittrack : ttrack = { t_pos = { x = 0.0;
+                                                      y = 0.0 };
+                                              t_id  = 0 }
+
+    const kinitrdrtrack : trdrtrack = { r_pos  = { x = 0.0;
+                                                             y = 0.0 };
+                                                    r_s    = { sx = 0.0;
+                                                             sy = 0.0 };
+                                                    r_d    = 0.0;
+                                                    r_sabs = 0.0;
+                                                    r_sr   = 0.0 }
+
+    const kinitmissiontrack : tmissiontrack = { m_pos             = { x = 0.0;
+                                                                                y = 0.0 };
+                                                            m_speed           = { sx = 0.0;
+                                                                                sy = 0.0 };
+                                                            m_id              = 0;
+                                                            m_priority        = 0;
+                                                            m_d               = 0.0;
+                                                            m_sabs            = 0.0;
+                                                            m_sr              = 0.0;
+                                                            m_detectedbyradar = false;
+                                                            m_detectedbyiff   = false;
+                                                            m_tracknumber     = 0;
+                                                            m_targettype      = Ttargettype_unknown;
+                                                            m_isvisible       = false;
+                                                            m_angle           = 0.0 }
+
+    const kinitifftrack : tifftrack = { i_pos = { x = 0.0;
+                                                            y = 0.0 };
+                                                    i_id  = 0 }
+
+   type tinputspanel = {
+      p_slope : float;
+      p_speed : float;
+      p_id : int;
+      p_x0 : float;
+      p_y0 : float;
+      p_reset : bool
+    }
+
+type tinputspanelarray = tinputspanel^4
+type tpriority = { missionTrackIndex : int; trackNumber : int }
+
+(* TrackNumbers of the tracks with highest priority,
+   sorted from the highest priority *)
+type tpriorityList = int^4
+type trdrmode = TRdrMode_WIDE | TRdrMode_NARROW
+
+type tsensorstate =  TState_OFF | TState_ON | TState_FAIL
+
+const trackarrayinit:bool = false

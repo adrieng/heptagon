@@ -70,14 +70,14 @@ let rec print_static_exp_desc ff sed = match sed with
       if is_infix (shortname op)
       then
         let e1,e2 = Misc.assert_2 se_list in
-        fprintf ff "(@[%a@ %a %a@])" print_static_exp e1 print_qualname op print_static_exp e2
+        fprintf ff "(@[%a@ %s %a@])" print_static_exp e1  (shortname op)  print_static_exp e2
       else
         fprintf ff "@[<2>%a@,%a@]"
           print_qualname op  print_static_exp_tuple se_list
   | Sarray_power (se, n_list) ->
       fprintf ff "%a^%a" print_static_exp se (print_list print_static_exp """^""") n_list
   | Sarray se_list ->
-      fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "["";""]") se_list
+      fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "["",""]") se_list
   | Stuple se_list -> print_static_exp_tuple ff se_list
   | Srecord f_se_list ->
       print_record (print_couple print_qualname
@@ -163,12 +163,14 @@ let print_interface_value ff (name,node) =
 
 let print_interface ff =
   let m = Modules.current_module () in
+  Format.fprintf ff "@[<v>";
   NamesEnv.iter
     (fun key typdesc -> print_interface_type ff (key,typdesc)) m.m_types;
   NamesEnv.iter
     (fun key constdec -> print_interface_const ff (key,constdec)) m.m_consts;
   NamesEnv.iter
     (fun key sigtype -> print_interface_value ff (key,sigtype)) m.m_values;
+  Format.fprintf ff "@]";
   Format.fprintf ff "@."
 
 

@@ -63,6 +63,10 @@ and extvalue_desc funs acc wd = match wd with
   | Wwhen (w, c, v) ->
       let w, acc = extvalue_it funs acc w in
       Wwhen (w,c,v), acc
+  | Wreinit (w1, w2) ->
+      let w1, acc = extvalue_it funs acc w1 in
+      let w2, acc = extvalue_it funs acc w2 in
+      Wreinit (w1, w2), acc
 
 and edesc_it funs acc ed =
   try funs.edesc funs acc ed

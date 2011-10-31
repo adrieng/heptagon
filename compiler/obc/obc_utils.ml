@@ -12,12 +12,13 @@ open Idents
 open Location
 open Misc
 open Types
+open Linearity
 open Obc
 open Obc_mapfold
 open Global_mapfold
 
-let mk_var_dec ?(loc=no_location) ?(mut=false) ident ty =
-  { v_ident = ident; v_type = ty; v_mutable = mut; v_loc = loc }
+let mk_var_dec ?(loc=no_location) ?(linearity = Ltop) ?(mut=false) ident ty =
+  { v_ident = ident; v_type = ty; v_linearity = linearity; v_mutable = mut; v_loc = loc }
 
 let mk_ext_value ?(loc=no_location) ty desc =
   { w_desc = desc; w_ty = ty; w_loc = loc; }
@@ -110,10 +111,22 @@ let find_step_method cd =
 let find_reset_method cd =
   List.find (fun m -> m.m_name = Mreset) cd.cd_methods
 
+let replace_step_method st cd =
+  let f md = if md.m_name = Mstep then st else md in
+    { cd with cd_methods = List.map f cd.cd_methods }
+
 let obj_ref_name o =
   match o with
     | Oobj obj
     | Oarray (obj, _) -> obj
+
+let rec find_obj o j = match j with
+  | [] -> assert false
+  | obj::j ->
+    if o = obj.o_ident then
+      Modules.find_value obj.o_class
+    else
+      find_obj o j
 
 (** Input a block [b] and remove all calls to [Reset] method from it *)
 let remove_resets b =
@@ -138,6 +151,10 @@ struct
   let deps_longname deps qn = match qn.qual with
     | Module _ | QualModule _ -> ModulSet.add qn.qual deps
     | _ -> deps
+
+  let deps_ty funs deps ty = match ty with
+    | Tid ln -> ty, deps_longname deps ln
+    | _ -> raise Errors.Fallback
 
   let deps_static_exp_desc funs deps sedesc =
     let (sedesc, deps) = Global_mapfold.static_exp_desc funs deps sedesc in
@@ -180,7 +197,8 @@ struct
   let deps_program p =
     let funs = { Obc_mapfold.defaults with
       global_funs = { Global_mapfold.defaults with
-                        static_exp_desc = deps_static_exp_desc; };
+                        static_exp_desc = deps_static_exp_desc;
+                        ty = deps_ty };
       lhsdesc = deps_lhsdesc;
       edesc = deps_edesc;
       act = deps_act;
@@ -188,6 +206,15 @@ struct
     } in
     let (_, deps) = Obc_mapfold.program funs ModulSet.empty p in
     ModulSet.remove p.p_modname deps
+
+  let deps_interface i =
+    let funs = { Obc_mapfold.defaults with
+      global_funs = { Global_mapfold.defaults with
+                        static_exp_desc = deps_static_exp_desc;
+                        ty = deps_ty };
+    } in
+    let (_, deps) = Obc_mapfold.interface funs ModulSet.empty i in
+    ModulSet.remove i.i_modname deps
 end
 
 (** Creates a new for loop. Expects the size of the iteration
@@ -225,6 +252,13 @@ let program_classes p =
     | _ -> acc
   in
     List.fold_right add_class p.p_desc []
+
+let interface_types i =
+  let add_type id acc = match id with
+    | Itypedef ty -> ty :: acc
+    | _ -> acc
+  in
+    List.fold_right add_type i.i_desc []
 
 let rec ext_value_of_pattern patt =
   let desc = match patt.pat_desc with

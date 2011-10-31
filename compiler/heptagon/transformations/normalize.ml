@@ -15,6 +15,7 @@ open Hept_utils
 open Hept_mapfold
 open Types
 open Clocks
+open Linearity
 open Format
 
 (** Normalization pass
@@ -36,7 +37,7 @@ end
 
 let exp_list_of_static_exp_list se_list =
   let mk_one_const se =
-    mk_exp (Econst se) se.se_ty
+    mk_exp (Econst se) se.se_ty ~linearity:Ltop
   in
     List.map mk_one_const se_list
 
@@ -61,34 +62,40 @@ let flatten_e_list l =
 (** Creates a new equation x = e, adds x to d_list
     and the equation to eq_list. *)
 let equation (d_list, eq_list) e =
-  let add_one_var ty d_list =
+  let add_one_var ty lin d_list =
     let n = Idents.gen_var "normalize" "v" in
-    let d_list = (mk_var_dec n ty) :: d_list in
+    let d_list = (mk_var_dec n ty lin) :: d_list in
       n, d_list
   in
     match e.e_ty with
       | Tprod ty_list ->
+          let lin_list =
+            (match e.e_linearity with
+              | Ltuple l -> l
+              | Ltop -> Misc.repeat_list Ltop (List.length ty_list)
+              | _ -> assert false)
+          in
           let var_list, d_list =
-            mapfold (fun d_list ty -> add_one_var ty d_list) d_list ty_list in
+            mapfold2 (fun d_list ty lin -> add_one_var ty lin d_list) d_list ty_list lin_list in
           let pat_list = List.map (fun n -> Evarpat n) var_list in
           let eq_list = (mk_equation (Eeq (Etuplepat pat_list, e))) :: eq_list in
-          let e_list = List.map2
-            (fun n ty -> mk_exp (Evar n) ty) var_list ty_list in
+          let e_list = Misc.map3
+            (fun n ty lin -> mk_exp (Evar n) ty lin) var_list ty_list lin_list in
           let e = Eapp(mk_app Etuple, e_list, None) in
             (d_list, eq_list), e
       | _ ->
-          let n, d_list = add_one_var e.e_ty d_list in
+          let n, d_list = add_one_var e.e_ty e.e_linearity d_list in
           let eq_list = (mk_equation (Eeq (Evarpat n, e))) :: eq_list in
             (d_list, eq_list), Evar n
 
 (* [(e1,...,ek) when C(n) = (e1 when C(n),...,ek when C(n))] *)
-let rec whenc context e c n =
+let rec whenc context e c n e_orig =
   let when_on_c c n e =
-    { e with e_desc = Ewhen(e, c, n) }
+    { e_orig with e_desc = Ewhen(e, c, n); }
   in
     if is_list e then (
       let e_list = List.map (when_on_c c n) (e_to_e_list e) in
-          context, { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
+          context, { e_orig with e_desc = Eapp(mk_app Etuple, e_list, None) }
     ) else
       context, when_on_c c n e
 
@@ -99,8 +106,8 @@ let add context expected_kind e =
   let up = match e.e_desc, expected_kind with
      (* static arrays should be normalized to simplify code generation *)
     | Econst { se_desc = Sarray _ }, ExtValue -> true
-    | (Evar _ | Eapp ({ a_op = Efield }, _, _) | Ewhen _
-      | Eapp ({ a_op = Etuple }, _, _) | Econst _) , ExtValue -> false
+    | (Evar _ | Eapp ({ a_op = Efield | Etuple | Ereinit }, _, _) | Ewhen _
+          | Econst _) , ExtValue -> false
     | _ , ExtValue -> true
     | _ -> false in
   if up then
@@ -131,7 +138,7 @@ let rec translate kind context e =
           context, { e with e_desc = Estruct l }
     | Ewhen(e1, c, n) ->
         let context, e1 = translate kind context e1 in
-          whenc context e1 c n
+          whenc context e1 c n e
     | Emerge(n, tag_e_list) ->
         merge context e n tag_e_list
     | Eapp({ a_op = Eifthenelse }, [e1; e2; e3], _) ->
@@ -144,6 +151,20 @@ let rec translate kind context e =
         let context, e_list = translate_list ExtValue context e_list in
         context, { e with e_desc = Eiterator(it, app, n, flatten_e_list pe_list,
                                              flatten_e_list e_list, reset) }
+    | Esplit (x, e1) ->
+        let context, e1 = translate ExtValue context e1 in
+        let context, x = translate ExtValue context x in
+        let id = match x.e_desc with Evar x -> x | _ -> assert false in
+        let mk_when c = mk_exp ~linearity:e1.e_linearity (Ewhen (e1, c, id)) e1.e_ty in
+          (match x.e_ty with
+            | Tid t ->
+                (match Modules.find_type t with
+                  | Signature.Tenum cl ->
+                      let el = List.map mk_when cl in
+                        context, { e with e_desc = Eapp(mk_app Etuple, el, None) }
+                  | _ -> Misc.internal_error "normalize split")
+            | _ -> Misc.internal_error "normalize split")
+
     | Elast _ | Efby _ ->
         Error.message e.e_loc Error.Eunsupported_language_construct
   in add context kind e'
@@ -158,9 +179,9 @@ and translate_list kind context e_list =
 
 and fby kind context e v e1 =
   let mk_fby c e =
-    mk_exp ~loc:e.e_loc (Epre(Some c, e)) e.e_ty in
+    mk_exp ~loc:e.e_loc (Epre(Some c, e)) e.e_ty ~linearity:Ltop in
   let mk_pre e =
-    mk_exp ~loc:e.e_loc (Epre(None, e)) e.e_ty in
+    mk_exp ~loc:e.e_loc (Epre(None, e)) e.e_ty ~linearity:Ltop in
   let context, e1 = translate ExtValue context e1 in
   match e1.e_desc, v with
     | Eapp({ a_op = Etuple } as app, e_list, r),
@@ -193,7 +214,7 @@ and ifthenelse context e e1 e2 e3 =
   let mk_ite_list e2_list e3_list =
     let mk_ite e'2 e'3 =
       mk_exp ~loc:e.e_loc
-        (Eapp (mk_app Eifthenelse, [e1; e'2; e'3], None)) e'2.e_ty
+        (Eapp (mk_app Eifthenelse, [e1; e'2; e'3], None)) e'2.e_ty ~linearity:e'2.e_linearity
     in
     let e_list = List.map2 mk_ite e2_list e3_list in
       { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
@@ -212,24 +233,44 @@ and merge context e x c_e_list =
       let context, e = translate ExtValue context e in
         (tag, e), context
     in
-    let mk_merge x c_list e_list =
-      let ty = (List.hd e_list).e_ty in
-      let t_e_list = List.map2 (fun t e -> (t,e)) c_list e_list in
-        mk_exp ~loc:e.e_loc (Emerge(x, t_e_list)) ty
+    let rec mk_merge x c_list e_lists =
+      let ty = (List.hd (List.hd e_lists)).e_ty in
+      let lin = (List.hd (List.hd e_lists)).e_linearity in
+      let rec build_c_e_list c_list e_lists =
+	match c_list, e_lists with
+	| [], [] -> [], []
+	| c::c_l, (e::e_l)::e_ls ->
+	    let c_e_list, e_lists = build_c_e_list c_l e_ls in
+	    (c,e)::c_e_list, e_l::e_lists
+	| _ -> assert false in
+      let rec build_merge_list c_list e_lists =
+	match e_lists with
+	  [] -> assert false
+	| []::_ -> []
+	| _ ::_ ->
+	    let c_e_list, e_lists = build_c_e_list c_list e_lists in
+	    let e_merge = mk_exp ~loc:e.e_loc (Emerge(x, c_e_list)) ty ~linearity:lin in
+	    let e_merge_list = build_merge_list c_list e_lists in
+	    e_merge::e_merge_list in
+      build_merge_list c_list e_lists
     in
     let c_e_list, context = mapfold translate_tag context c_e_list in
       match c_e_list with
         | [] -> assert false
-        | (_,e)::_ ->
-            if is_list e then (
+        | (_,e1)::_ ->
+            if is_list e1 then (
               let c_list = List.map (fun (t,_) -> t) c_e_list in
               let e_lists = List.map (fun (_,e) -> e_to_e_list e) c_e_list in
               let e_lists, context =
-                mapfold (fun context e_list -> add_list context ExtValue e_list) context e_lists in
-              let e_list = List.map (mk_merge x c_list) e_lists in
-                context, { e with e_desc = Eapp(mk_app Etuple, e_list, None) }
+                mapfold
+		  (fun context e_list -> add_list context ExtValue e_list)
+		  context e_lists in
+              let e_list = mk_merge x c_list e_lists in
+                context, { e with
+			     e_desc = Eapp(mk_app Etuple, e_list, None) }
             ) else
-              context, { e with e_desc = Emerge(x, c_e_list) }
+              context, { e with
+			   e_desc = Emerge(x, c_e_list) }
 
 (* applies distribution rules *)
 (* [(p1,...,pn) = (e1,...,en)] into [p1 = e1;...;pn = en] *)
@@ -279,7 +320,23 @@ let block funs _ b =
   let _, (v_acc, eq_acc) = Hept_mapfold.block funs ([],[]) b in
     { b with b_local = v_acc@b.b_local; b_equs = eq_acc}, ([], [])
 
+let contract funs context c =
+  let ({ c_block = b } as c), void_context =
+    Hept_mapfold.contract funs context c in
+  (* Non-void context could mean lost equations *)
+  assert (void_context=([],[]));
+  let context, e_a = translate ExtValue ([],[]) c.c_assume in
+  let context, e_e = translate ExtValue context c.c_enforce in
+  let (d_list, eq_list) = context in
+  { c with
+      c_assume = e_a;
+      c_enforce = e_e;
+      c_block = { b with
+		    b_local = d_list@b.b_local;
+		    b_equs = eq_list@b.b_equs; }
+  }, void_context
+
 let program p =
-  let funs = { defaults with block = block; eq = eq } in
+  let funs = { defaults with block = block; eq = eq; contract = contract } in
   let p, _ = Hept_mapfold.program funs ([], []) p in
     p

@@ -1,0 +1,19 @@
+const n:int = 100
+
+node autom_init() returns (u:int)
+var o, a:int^n at r;
+let
+  automaton
+    state S1
+    do
+      init<<r>> o = 3^n
+    until true then S2
+
+    state S2
+    do
+      init<<r>> o = 4^n
+    until false then S1
+  end;
+  a = [ o with [0] = 0];
+  u = a[0]
+tel

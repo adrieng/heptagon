@@ -1,0 +1,11 @@
+const n:int = 100
+
+type st = On | Off
+
+node f(a:int^n at r; c:st) returns (o:int^n at r)
+var u,v,x:int^n at r;
+let
+  (u, v) = split c (a);
+  x = [ u with [0] = 0 ];
+  o = merge c (On -> x) (Off -> v)
+tel

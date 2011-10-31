@@ -1,0 +1,14 @@
+node f() returns (o:int^2)
+let
+  o = (2^2^3^4)[0][1]
+tel
+
+node plus_tab(a: int^2^10) returns (o:int^2^10)
+let
+  o = a
+tel
+
+node g() returns (o:int^2^10^3^4)
+let
+  o = map<<3,4>> plus_tab (2^2^10^3^4);
+tel

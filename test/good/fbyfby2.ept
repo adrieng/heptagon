@@ -1,0 +1,6 @@
+node f() returns (o:bool)
+var x:bool;
+let
+  o = x;
+  x = true fby false fby x;
+tel

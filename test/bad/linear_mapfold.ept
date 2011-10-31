@@ -1,0 +1,13 @@
+const n:int = 100
+const m:int = 4
+
+fun f(x:int^n at r1; acc_in : int^n) returns (y: int^n at r1; acc_out: int^n)
+let
+  y = [ x with [0] = 0 ];
+  acc_out = [acc_in with [0] = 0]
+tel
+
+fun g(tab:int^n^m; acc_in:int^n) returns (o:int^n^m; acc_out:int^n)
+let
+  (o, acc_out) = mapfold<<m>> f(tab, acc_in)
+tel

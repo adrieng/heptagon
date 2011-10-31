@@ -1,0 +1,2 @@
+#!/bin/sh
+rm -rf compiler/heptc.byte compiler/heptc.d.byte compiler/_build

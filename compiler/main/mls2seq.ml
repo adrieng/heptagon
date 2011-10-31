@@ -16,11 +16,27 @@ open Misc
 (** Definition of a target. A target starts either from
     dataflow code (ie Minils) or sequential code (ie Obc),
     with or without static parameters *)
-type target =
+type program_target =
   | Obc of (Obc.program -> unit)
   | Obc_no_params of (Obc.program -> unit)
   | Minils of (Minils.program -> unit)
   | Minils_no_params of (Minils.program -> unit)
+
+type interface_target =
+  | IObc of (Obc.interface -> unit)
+  | IMinils of (Minils.interface -> unit)
+
+type target =
+    { t_name : string;
+      t_program : program_target;
+      t_interface : interface_target;
+      t_load_conf : unit -> unit }
+
+let no_conf () = ()
+
+let mk_target ?(interface=IMinils ignore) ?(load_conf = no_conf) name pt =
+  { t_name = name; t_program = pt;
+    t_interface = interface; t_load_conf = load_conf }
 
 (** Writes a .epo file for program [p]. *)
 let write_object_file p =
@@ -38,21 +54,26 @@ let write_obc_file p =
     close_out obc;
     comment "Generation of Obc code"
 
-let no_conf () = ()
-let targets = [ "c",(Obc_no_params Cmain.program, no_conf);
-               "java", (Obc Java_main.program, no_conf);
-                "obc", (Obc write_obc_file, no_conf);
-                "obc_np", (Obc_no_params write_obc_file, no_conf);
-                "epo", (Minils write_object_file, no_conf) ]
+let targets =
+  [ mk_target ~interface:(IObc Cmain.interface) "c" (Obc_no_params Cmain.program);
+    mk_target "java" (Obc Java_main.program);
+    mk_target "z3z" (Minils_no_params Sigalimain.program);
+    mk_target "obc" (Obc write_obc_file);
+    mk_target "obc_np" (Obc_no_params write_obc_file);
+    mk_target "epo" (Minils write_object_file) ]
+
+let find_target s =
+  try
+    List.find (fun t -> t.t_name = s) targets
+  with
+      Not_found -> language_error s; raise Errors.Error
 
 let generate_target p s =
 (*  let print_unfolded p_list =
     comment "Unfolding";
     if !Compiler_options.verbose
     then List.iter (Mls_printer.print stderr) p_list in*)
-  let target =
-    (try fst (List.assoc s targets)
-     with Not_found -> language_error s; raise Errors.Error) in
+  let target = (find_target s).t_program in
   match target with
     | Minils convert_fun ->
         convert_fun p
@@ -69,15 +90,16 @@ let generate_target p s =
         let o_list = List.map Obc_compiler.compile_program o_list in
         List.iter convert_fun o_list
 
+let generate_interface i s =
+  let target = (find_target s).t_interface  in
+  match target with
+    | IObc convert_fun ->
+      let o = Mls2obc.interface i in
+      convert_fun o
+    | IMinils convert_fun -> convert_fun i
+
 let load_conf () =
-  let target_conf s =
-    try
-      let conf = snd (List.assoc s targets) in
-        conf ()
-    with
-        Not_found -> language_error s; raise Errors.Error
-  in
-    List.iter target_conf !target_languages
+  List.iter (fun s -> (find_target s).t_load_conf ()) !target_languages
 
 (** Translation into dataflow and sequential languages, defaults to obc. *)
 let program p =
@@ -86,3 +108,9 @@ let program p =
     | l -> l in
   let targets = if !create_object_file then "epo"::targets else targets in
   List.iter (generate_target p) targets
+
+let interface i =
+  let targets = match !target_languages with
+    | [] -> [] (* by default, generate obc file *)
+    | l -> l in
+  List.iter (generate_interface i) targets

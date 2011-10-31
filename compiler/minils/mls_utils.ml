@@ -58,6 +58,15 @@ let is_record_type ty = match ty with
 let is_op = function
   | { qual = Pervasives; name = _ } -> true | _ -> false
 
+let pat_from_dec_list decs =
+  Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) decs)
+
+let tuple_from_dec_list decs =
+  let aux vd =
+    mk_extvalue ~clock:vd.v_clock ~ty:vd.v_type ~linearity:vd.v_linearity (Wvar vd.v_ident)
+  in
+    Eapp(mk_app Earray, List.map aux decs, None)
+
 module Vars =
 struct
   let add x acc = if List.mem x acc then acc else x :: acc
@@ -153,18 +162,32 @@ struct
   let memory_vars ({ eq_lhs = _; eq_rhs = e } as eq) = match e.e_desc with
     | Efby(_, _) -> def [] eq
     | _ -> []
+
+  let linear_read e =
+    let extvalue funs acc w = match w.w_desc with
+      | Wvar x ->
+        let w, acc = Mls_mapfold.extvalue funs acc w in
+        let acc =
+          (match w.w_linearity with
+            | Linearity.Lat _ -> add x acc
+            | _ -> acc)
+        in
+        w, acc
+      | _ -> Mls_mapfold.extvalue funs acc w
+    in
+    let funs = { Mls_mapfold.defaults with extvalue = extvalue } in
+    let _, acc = Mls_mapfold.exp_it funs [] e in
+    acc
 end
 
 (* Assumes normal form, all fby are solo rhs *)
 let node_memory_vars n =
   let eq _ acc ({ eq_lhs = pat; eq_rhs = e } as eq) =
-    match e.e_desc with
-    | Efby(_, _) ->
-        let v_l = Vars.vars_pat [] pat in
-        let t_l = Types.unprod e.e_ty in
-        let acc = (List.combine v_l t_l) @ acc in
-        eq, acc
-    | _ -> eq, acc
+    match pat, e.e_desc with
+    | Evarpat x, Efby(_, _) ->
+        let acc = (x, e.e_ty) :: acc in
+          eq, acc
+    | _, _ -> eq, acc
   in
   let funs = { Mls_mapfold.defaults with eq = eq } in
   let _, acc = node_dec_it funs [] n in
@@ -175,6 +198,7 @@ module DataFlowDep = Dep.Make
   (struct
      type equation = eq
      let read eq = Vars.read true eq
+     let linear_read eq = Vars.linear_read eq.eq_rhs
      let def = Vars.def
      let antidep = Vars.antidep
    end)
@@ -184,12 +208,12 @@ module AllDep = Dep.Make
   (struct
      type equation = eq
      let read eq = Vars.read false eq
+     let linear_read eq = Vars.linear_read eq.eq_rhs
      let def = Vars.def
      let antidep _ = false
    end)
 
 let eq_find id = List.find (fun eq -> List.mem id (Vars.def [] eq))
-
 
 let ident_list_of_pat pat =
   let rec f acc pat = match pat with
@@ -198,15 +222,12 @@ let ident_list_of_pat pat =
   in
   List.rev (f [] pat)
 
-
-let args_of_var_decs =
- List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
-                                      vd.v_type (Signature.ck_to_sck vd.v_clock))
-
-let signature_of_node n =
-    { node_inputs = args_of_var_decs n.n_input;
-      node_outputs  = args_of_var_decs n.n_output;
-      node_stateful = n.n_stateful;
-      node_params = n.n_params;
-      node_param_constraints = n.n_param_constraints;
-      node_loc = n.n_loc }
+let remove_eqs_from_node nd ids =
+  let walk_vd vd vd_list = if IdentSet.mem vd.v_ident ids then vd_list else vd :: vd_list in
+  let walk_eq eq eq_list =
+    let defs = ident_list_of_pat eq.eq_lhs in
+    if List.for_all (fun v -> IdentSet.mem v ids) defs then eq_list else eq :: eq_list
+  in
+  let vd_list = List.fold_right walk_vd nd.n_local [] in
+  let eq_list = List.fold_right walk_eq nd.n_equs [] in
+  { nd with n_local = vd_list; n_equs = eq_list; }

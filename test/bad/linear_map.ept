@@ -1,0 +1,11 @@
+const n:int = 100
+
+fun f(a:int^n at r) returns (o:int^n at r)
+let
+  o = [ a with [0] = 0 ]
+tel
+
+fun g(a:int^n^n) returns (o:int^n^n)
+let
+  o = map<<n>> f (a)
+tel

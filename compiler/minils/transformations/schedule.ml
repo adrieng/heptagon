@@ -12,7 +12,7 @@
 open Misc
 open Minils
 open Mls_utils
-open Graph
+open Sgraph
 open Dep
 
 (* possible overlapping between clocks *)

@@ -2,6 +2,7 @@ open Idents
 open Signature
 open Minils
 open Mls_mapfold
+open Mls_utils
 
 (**  Adds an extra equation for outputs that are also memories.
      For instance, if o is an output, then:
@@ -9,43 +10,75 @@ open Mls_mapfold
      becomes
        mem_o = v fby e;
        o = mem_o
+
+     We also need to add one copy if two registers are defined by each other, eg:
+       x = v fby y;
+       y = v fby x;
+     becomes
+       mem_x = v fby y;
+       x = mem_x;
+       y = v fby x
 *)
 
-let fix_vd_ad env vd ad =
-  if Env.mem vd.v_ident env then
-    let x_copy = Env.find vd.v_ident env in
-      { vd with v_ident = x_copy }, { ad with a_name = Some (Idents.name x_copy) }
-  else
-    vd, ad
+let memory_vars_vds nd =
+  let build env l =
+    List.fold_left (fun env vd -> Env.add vd.v_ident vd env) env l
+  in
+  let env = build Env.empty nd.n_output in
+  let env = build env nd.n_local in
+  let mem_var_tys = Mls_utils.node_memory_vars nd in
+  List.map (fun (x, _) -> Env.find x env) mem_var_tys
 
-let eq _ (outputs, eqs, env) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
-  | Evarpat x, Efby _ ->
-      if Mls_utils.vd_mem x outputs then
-        let ty = eq.eq_rhs.e_ty in
-        let ck = eq.eq_rhs.e_base_ck in
-        let x_copy = Idents.gen_var "normalize_mem" ("out_"^(Idents.name x)) in
-        let exp_x = mk_exp ck ~ck:ck ~ct:(Clocks.Ck ck) ty (Eextvalue (mk_extvalue ~clock:ck ~ty:ty (Wvar x))) in
-        let eq_copy = { eq with eq_lhs = Evarpat x_copy; eq_rhs = exp_x } in
-        let env = Env.add x x_copy env in
-          eq, (outputs, eq::eq_copy::eqs, env)
-      else (* this memory is not an output *)
-        eq, (outputs, eq::eqs, env)
+let copies_done = ref []
+let add_copy x y =
+  copies_done := (x, y) :: !copies_done
+let clear_copies () =
+  copies_done := []
+let is_copy_done x y =
+  List.mem (x, y) !copies_done
+
+(* If x and y are both registers, only create one copy *)
+let should_be_normalized outputs mems x w = match w.w_desc with
+  | Wvar y ->
+    add_copy x y;
+    (vd_mem x outputs) or (vd_mem x mems && not (is_copy_done y x))
+  | _ ->
+    (vd_mem x outputs) or (vd_mem x mems)
+
+let find_vd x outputs mems =
+  if vd_mem x outputs then
+    vd_find x outputs
+  else
+    vd_find x mems
+
+let eq _ (outputs, mems, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
+  | Evarpat x, Efby (_, w) when should_be_normalized outputs mems x w ->
+        let vd = find_vd x outputs mems in
+        let x_mem = Idents.gen_var "normalize_mem" ("mem_"^(Idents.name x)) in
+        let vd_mem = { vd with v_ident = x_mem } in
+        let exp_mem_x = mk_extvalue_exp vd.v_clock vd.v_type
+          ~clock:vd.v_clock ~linearity:vd.v_linearity (Wvar x_mem) in
+        (* mem_o = v fby e *)
+        let eq_copy = { eq with eq_lhs = Evarpat x_mem } in
+        (* o = mem_o *)
+        let eq = { eq with eq_rhs = exp_mem_x } in
+        eq, (outputs, mems, vd_mem::v, eq::eq_copy::eqs)
   | _, _ ->
-      eq, (outputs, eq::eqs, env)
+      eq, (outputs, mems, v, eq::eqs)
+
+(* Leave contract unchanged (no output defined in it) *)
+let contract funs acc c = c, acc
 
 let node funs acc nd =
-  let nd, (_, eqs, env) = Mls_mapfold.node_dec funs (nd.n_output, [], Env.empty) nd in
-  let v = Env.fold
-    (fun x _ acc -> (Mls_utils.vd_find x nd.n_output)::acc) env nd.n_local in
-  (* update the signature of the node *)
-  let f = Modules.find_value nd.n_name in
-  let o, sig_o = List.split (List.map2 (fix_vd_ad env) nd.n_output f.node_outputs) in
-  let f = { f with node_outputs = sig_o } in
-  Modules.replace_value nd.n_name f;
+  clear_copies ();
+  let nd, (_, _, v, eqs) =
+    Mls_mapfold.node_dec funs (nd.n_output, memory_vars_vds nd, nd.n_local, []) nd
+  in
   (* return updated node *)
-  { nd with n_local = v; n_equs = List.rev eqs; n_output = o }, acc
+  { nd with n_local = v; n_equs = List.rev eqs }, acc
 
 let program p =
-  let funs = { Mls_mapfold.defaults with eq = eq; node_dec = node } in
-  let p, _ = Mls_mapfold.program_it funs ([], [], Env.empty) p in
+  let funs = { Mls_mapfold.defaults with
+    eq = eq; node_dec = node; contract = contract } in
+  let p, _ = Mls_mapfold.program_it funs ([], [], [], []) p in
     p

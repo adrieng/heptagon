@@ -137,9 +137,9 @@ struct
       if cr1 <> 0 then cr1 else
         let cr2 = ident_compare_modulo vi1 vi2 in
         if cr2 <> 0 then cr2 else clock_compare ck1 ck2
-    | Cbase _, _ -> 1
+    | Cbase , _ -> 1
 
-    | Cvar _, Cbase _ -> -1
+    | Cvar _, Cbase -> -1
     | Cvar _, _ -> 1
 
     | Con _, _ -> -1
@@ -184,8 +184,10 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let class_id_list = match rst with
           | None -> class_id_list
           | Some rst ->
-            class_ref_of_var is_input (mk_extvalue ~ty:Initial.tbool (Wvar rst)) rst
-            :: class_id_list in
+            class_ref_of_var is_input
+              (mk_extvalue ~ty:Initial.tbool ~linearity:Linearity.Ltop (Wvar rst)) rst
+            :: class_id_list
+        in
         Eapp (app, w_list, optional (fun _ -> dummy_var) rst), id, 0, class_id_list
 
       | Efby (seo, w) ->
@@ -195,13 +197,18 @@ let rec add_equation is_input (tenv : tom_env) eq =
       | Ewhen (e', cn, x) ->
         let ed, add_when, when_count, class_id_list = decompose e' in
         ed, (fun e' -> { e with e_desc = Ewhen (add_when e', cn, x) }), when_count + 1,
-        class_ref_of_var is_input (mk_extvalue ~clock:e'.e_base_ck ~ty:Initial.tbool (Wvar x)) x
+        class_ref_of_var is_input
+          (mk_extvalue ~clock:e'.e_base_ck ~ty:Initial.tbool
+                       ~linearity:Linearity.Ltop (Wvar x)) x
         :: class_id_list
 
       | Emerge (x, clause_list) ->
         let class_id_list, clause_list = mapfold_right add_clause clause_list [] in
         let x_id =
-          class_ref_of_var is_input (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool (Wvar x)) x in
+          class_ref_of_var is_input
+            (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool
+                         ~linearity:Linearity.Ltop (Wvar x)) x
+        in
         Emerge (dummy_var, clause_list), id, 0, x_id :: class_id_list
 
       | Eiterator (it, app, sel, partial_w_list, w_list, rst) ->
@@ -210,8 +217,10 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let class_id_list = match rst with
           | None -> class_id_list
           | Some rst ->
-            class_ref_of_var is_input (mk_extvalue ~ty:Initial.tbool (Wvar rst)) rst
-            :: class_id_list in
+            class_ref_of_var is_input
+              (mk_extvalue ~ty:Initial.tbool ~linearity:Linearity.Ltop (Wvar rst)) rst
+            :: class_id_list
+        in
         Eiterator (it, app, sel, partial_w_list, w_list, optional (fun _ -> dummy_var) rst),
         id, 0, class_id_list
 
@@ -246,9 +255,13 @@ and extvalue is_input w class_id_list =
         class_id_list, Wfield (w, f)
       | Wwhen (w, cn, x) ->
         (* Create the extvalue representing x *)
-        let w_x = mk_extvalue ~ty:Initial.tbool ~clock:w.w_ck (Wvar x) in
+        let w_x = mk_extvalue ~ty:Initial.tbool ~clock:w.w_ck ~linearity:w.w_linearity (Wvar x) in
         let class_id_list, w = decompose w (class_ref_of_var is_input w_x x :: class_id_list) in
         class_id_list, Wwhen (w, cn, dummy_var)
+      | Wreinit (w1, w2) ->
+        let class_id_list, w1 = decompose w1 class_id_list in
+        let class_id_list, w2 = decompose w2 class_id_list in
+        class_id_list, Wreinit (w1, w2)
     in
     class_id_list, { w with w_desc = wd; }
   in
@@ -268,11 +281,11 @@ let rec compute_classes tenv =
 (* Reconstruct a list of equation from a set of equivalence classes *)
 (********************************************************************)
 
-type info = Info of var_ident * ty * ck * int
+type info = Info of var_ident
 
 let new_name mapping x =
   try
-    let Info (x', _, _, _) = Env.find x mapping in
+    let Info x' = Env.find x mapping in
     x'
   with Not_found -> x
 
@@ -309,7 +322,7 @@ let construct_mapping (tenv, cenv) =
       (fun mapping x_list fused_x ty ck ->
         List.fold_left
           (fun mapping x ->
-            Env.add x (Info (fused_x, ty, ck, first.er_class)) mapping)
+            Env.add x (Info fused_x) mapping)
           mapping x_list)
       mapping
       idents_list
@@ -367,13 +380,13 @@ and reconstruct_exp_desc mapping headd children =
     let rst, children = match rst_dummy with
       | None -> None, children
       | Some _ -> Some (reconstruct_class_ref mapping (List.hd children)), List.tl children in
-    Eapp (app, reconstruct_extvalues mapping w_list children, optional extract_name rst)
+    Eapp (app, reconstruct_extvalues mapping w_list children, rst)
 
   | Ewhen _ -> assert false (* no Ewhen in exprs *)
 
   | Emerge (x_ref, clause_list) ->
     let x_ref, children = List.hd children, List.tl children in
-    Emerge (extract_name (reconstruct_class_ref mapping x_ref),
+    Emerge (reconstruct_class_ref mapping x_ref,
             reconstruct_clauses clause_list children)
 
   | Estruct field_val_list ->
@@ -384,23 +397,27 @@ and reconstruct_exp_desc mapping headd children =
     let rst, children = match rst_dummy with
       | None -> None, children
       | Some _ -> Some (reconstruct_class_ref mapping (List.hd children)), List.tl children in
-    let total_w_list = reconstruct_extvalues mapping (partial_w_list @ w_list) children in
-    let partial_w_list, w_list = split_at (List.length partial_w_list) total_w_list in
-    Eiterator (it, app, sel, partial_w_list, w_list, optional extract_name rst)
+    let total_w_list = reconstruct_extvalues mapping (w_list @ partial_w_list) children in
+    let w_list, partial_w_list = split_at (List.length w_list) total_w_list in
+    Eiterator (it, app, sel, partial_w_list, w_list, rst)
 
 and reconstruct_extvalues mapping w_list children =
   let rec reconstruct_extvalue w (children : class_ref list) = match w.w_desc with
     | Wconst _ -> w, children
     | Wvar _ ->
-      let w = reconstruct_class_ref mapping (List.hd children) in
+      let w = { w with w_desc = Wvar (reconstruct_class_ref mapping (List.hd children)); } in
       w, List.tl children
     | Wwhen (w', cn, _) ->
       let w_x = reconstruct_class_ref mapping (List.hd children) in
       let w', children = reconstruct_extvalue w' (List.tl children) in
-      { w with w_desc = Wwhen (w', cn, extract_name w_x) }, children
+      { w with w_desc = Wwhen (w', cn, w_x) }, children
     | Wfield (w', fn) ->
       let w', children = reconstruct_extvalue w' children in
       { w with w_desc = Wfield (w', fn); }, children
+    | Wreinit (w1, w2) ->
+      let w1, children = reconstruct_extvalue w1 children in
+      let w2, children = reconstruct_extvalue w2 children in
+      { w with w_desc = Wreinit (w1, w2); }, children
   in
 
   let consume w (children, result_w_list) =
@@ -412,15 +429,15 @@ and reconstruct_extvalues mapping w_list children =
   let (children, w_list) = List.fold_right consume w_list (List.rev children, []) in
   w_list
 
-and extract_name w = match w.w_desc with
-  | Wvar x -> x
-  | _ -> invalid_arg "extract_name: not a var"
+(* and extract_name w = match w.w_desc with *)
+(*   | Wvar x -> x *)
+(*   | _ -> invalid_arg "extract_name: not a var" *)
 
 and reconstruct_class_ref mapping cr = match cr with
-  | Cr_input w -> w
+  | Cr_input w -> (match w.w_desc with Wvar x -> x | _ -> assert false)
   | Cr_plain x ->
-    let Info (x', ty, ck, _) = Env.find x mapping in
-    mk_extvalue ~clock:ck ~ty:ty (Wvar x')
+    let Info x = Env.find x mapping in
+    x
 
 and reconstruct_clock mapping ck = match ck_repr ck with
   | Con (ck, c, x) -> Con (reconstruct_clock mapping ck, c, new_name mapping x)
@@ -519,7 +536,7 @@ let rec separate_classes tenv =
 (********************************************************************)
 
 let rec fix_local_var_dec mapping vd (seen, vd_list) =
-  let Info (x, _, _, _) = Env.find vd.v_ident mapping in
+  let Info x = Env.find vd.v_ident mapping in
   if IdentSet.mem x seen
   then (seen, vd_list)
   else
@@ -531,17 +548,18 @@ and fix_local_var_decs mapping vd_list =
 
 (* May add new local equations in the case of fused outputs *)
 let rec fix_output_var_dec mapping vd (seen, equs, vd_list) =
-  let Info (x, _, _, _) = Env.find vd.v_ident mapping in
+  let Info x = Env.find vd.v_ident mapping in
   if IdentSet.mem x seen
   then
     let new_id = vd.v_ident in
     let new_clock = reconstruct_clock mapping vd.v_clock in
     let new_vd = { vd with v_ident = new_id; v_clock = new_clock } in
     let new_eq =
-      let w = mk_extvalue ~ty:vd.v_type ~clock:new_clock (Wvar x) in
+      let w = mk_extvalue ~ty:vd.v_type ~clock:new_clock ~linearity:Linearity.Ltop (Wvar x) in
       mk_equation
         (Evarpat new_id)
-        (mk_exp new_clock vd.v_type ~ct:(Ck new_clock) ~ck:new_clock (Eextvalue w))
+        (mk_exp new_clock vd.v_type ~ct:(Ck new_clock)
+           ~ck:new_clock ~linearity:Linearity.Ltop (Eextvalue w))
     in
     (seen, new_eq :: equs, new_vd :: vd_list)
   else
@@ -552,6 +570,13 @@ and fix_output_var_decs tenv (equs, vd_list) =
   let (_, eq_list, vd_list) =
     List.fold_right (fix_output_var_dec tenv) vd_list (IdentSet.empty, equs, []) in
   eq_list, vd_list
+
+let update_node nd =
+  let change_name vd arg = { arg with a_name = Some (name vd.v_ident) } in
+  let sign = Modules.find_value nd.n_name in
+  let sign = { sign with node_outputs = List.map2 change_name nd.n_output sign.node_outputs } in
+  Signature.check_signature sign;
+  ignore (Modules.replace_value nd.n_name sign)
 
 let node nd =
   Idents.enter_node nd.n_name;
@@ -577,7 +602,9 @@ let node nd =
   let local = fix_local_var_decs mapping nd.n_local in
   let eq_list, output = fix_output_var_decs mapping (eq_list, nd.n_output) in
 
-  { nd with n_equs = eq_list; n_output = output; n_local = local; }
+  let nd = { nd with n_equs = eq_list; n_output = output; n_local = local; } in
+  update_node nd;
+  nd
 
 let program_desc pd pd_list = match pd with
   | Pnode nd -> Pnode (node nd) :: pd_list

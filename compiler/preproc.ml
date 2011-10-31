@@ -30,8 +30,12 @@ let date =
 
 (** [stdlib] is the location of the standard Heptagon library. *)
 let stdlib =
-  let wd = Unix.getcwd () in
-  Filename.concat (Filename.dirname (Filename.dirname wd)) "lib"
+  try
+    Unix.getenv "STDLIB"
+  with
+    | Not_found ->
+      let wd = Unix.getcwd () in
+      Filename.concat (Filename.dirname (Filename.dirname wd)) "lib"
 
 (** Association list defining bindings between constant and our "compile-time
     constants". *)

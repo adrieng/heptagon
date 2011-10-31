@@ -14,18 +14,19 @@ open Idents
 open Static
 open Signature
 open Types
+open Linearity
 open Clocks
 open Initial
 open Heptagon
 
 (* Helper functions to create AST. *)
 (* TODO : After switch, all mk_exp should take care of level_ck *)
-let mk_exp desc ?(level_ck = Cbase) ?(ct_annot = None) ?(loc = no_location) ty =
-  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot;
+let mk_exp desc ?(level_ck = Cbase) ?(ct_annot = None) ?(loc = no_location) ty ~linearity =
+  { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot; e_linearity = linearity;
     e_level_ck = level_ck; e_loc = loc; }
 
-let mk_app ?(async = None) ?(params=[]) ?(unsafe=false) op =
-  { a_op = op; a_params = params; a_unsafe = unsafe; a_async = async }
+let mk_app ?(async = None) ?(params=[]) ?(unsafe=false) ?(inlined=false) op =
+  { a_op = op; a_params = params; a_unsafe = unsafe; a_inlined = inlined; a_async = async }
 
 let mk_op_app ?(params=[]) ?(unsafe=false) ?(reset=None) op args =
   Eapp(mk_app ~params:params ~unsafe:unsafe op, args, reset)
@@ -37,10 +38,11 @@ let mk_equation ?(loc=no_location) desc =
   let _, s = Stateful.eqdesc Stateful.funs false desc in
   { eq_desc = desc;
     eq_stateful = s;
+    eq_inits = Lno_init;
     eq_loc = loc; }
 
-let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty =
-  { v_ident = name; v_type = ty; v_clock = clock;
+let mk_var_dec ?(last = Var) ?(clock = fresh_clock()) name ty ~linearity =
+  { v_ident = name; v_type = ty; v_linearity = linearity; v_clock = clock;
     v_last = last; v_loc = no_location }
 
 let mk_block ?(stateful = true) ?(async = None) ?(defnames = Env.empty) ?(locals = []) eqs =
@@ -48,9 +50,9 @@ let mk_block ?(stateful = true) ?(async = None) ?(defnames = Env.empty) ?(locals
     b_stateful = stateful; b_loc = no_location; b_async = async }
 
 let dfalse =
-  mk_exp (Econst (mk_static_bool false)) (Tid Initial.pbool)
+  mk_exp (Econst (mk_static_bool false)) (Tid Initial.pbool) ~linearity:Ltop
 let dtrue =
-  mk_exp (Econst (mk_static_bool true)) (Tid Initial.pbool)
+  mk_exp (Econst (mk_static_bool true)) (Tid Initial.pbool) ~linearity:Ltop
 
 let mk_ifthenelse e1 e2 e3 =
   { e3 with e_desc = mk_op_app Eifthenelse [e1; e2; e3] }
@@ -102,8 +104,9 @@ let rec vd_mem n = function
 
 let args_of_var_decs =
   (* before the clocking the clock is wrong in the signature *)
- List.map (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
-                                      vd.v_type Signature.Cbase)
+ List.map
+   (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
+   vd.v_type (Linearity.check_linearity vd.v_linearity) Signature.Cbase)
 
 let signature_of_node n =
     { node_inputs = args_of_var_decs n.n_input;

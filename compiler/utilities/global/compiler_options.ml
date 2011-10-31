@@ -60,10 +60,13 @@ let hepts_simulation = ref false
 
 let create_object_file = ref false
 
+let boolean = ref false
+
 (* Target languages list for code generation *)
 let target_languages : string list ref = ref []
 
 let add_target_language s =
+  if s = "z3z" then boolean := true;
   target_languages := s :: !target_languages
 
 (* Optional path for generated files (C or Java) *)
@@ -87,6 +90,8 @@ let add_inlined_node s = inline := s :: !inline
 
 let flatten = ref false
 
+let deadcode = ref false
+
 let tomato = ref false
 
 let tomato_nodes : qualname list ref = ref []
@@ -101,12 +106,21 @@ let do_iterator_fusion = ref false
 
 let do_scalarize = ref false
 
+let do_mem_alloc = ref false
+let do_linear_typing = ref false
+
+let do_mem_alloc_and_typing () =
+  do_mem_alloc := true;
+  do_linear_typing := true
+
+let use_old_scheduler = ref false
+
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
 and doc_print_types = "\t\t\tPrint types"
 and doc_include = "<dir>\t\tAdd <dir> to the list of include directories"
 and doc_stdlib = "<dir>\t\tDirectory for the standard library"
-and doc_object_file = "\t\tOnly generate a .epo object file"
+and doc_object_file = "\t\t\tOnly generate a .epo object file"
 and doc_sim = "<node>\t\tCreate simulation for node <node>"
 and doc_hepts = "\t\tSimulation for hepts (graphical simulator)"
 and doc_locate_stdlib = "\t\tLocate standard libray"
@@ -116,15 +130,21 @@ and doc_target =
   "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
   ^ " java or z3z)"
 and doc_full_type_info = "\t\t\tPrint full type information"
-and doc_full_name = "\t\t\tPrint full variable name information"
+and doc_full_name = "\t\tPrint full variable name information"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
   ^ " cleaned)"
+and doc_boolean = "\t\tTranslate enumerated values towards boolean vectors"
+and doc_deadcode = "\t\tDeadcode removal"
 and doc_nocaus = "\t\tDisable causality analysis"
 and doc_noinit = "\t\tDisable initialization analysis"
-and doc_assert = "<node>\t\tInsert run-time assertions for boolean node <node>"
-and doc_inline = "<node>\t\tInline node <node>"
+and doc_assert = "<node>\tInsert run-time assertions for boolean node <node>"
+and doc_inline = "<node>\tInline node <node>"
 and doc_itfusion = "\t\tEnable iterator fusion."
 and doc_tomato = "\t\tEnable automata minimization."
+and doc_memalloc = "\t\tEnable memory allocation and linear annotations"
+and doc_memalloc_only = "\tEnable memory allocation"
 and doc_java_queue_size = "\t\tSet the default input queue size for async nodes, 0 means threadPool."
 and doc_java_queue_nb = "\t\tSet the default thread number for async nodes."
+and doc_linear_only = "\t\tEnable linear annotations"
+and doc_interf_scheduler = "\tUse the old scheduler"

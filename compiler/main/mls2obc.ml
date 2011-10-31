@@ -71,17 +71,17 @@ let rec pattern_of_idx_list p l =
   in
   aux p l
 
-let rec exp_of_idx_list e l = match e.w_ty, l with
+let rec exp_of_idx_list e l = match Modules.unalias_type e.w_ty, l with
   | _, [] -> e
   | Tarray (ty',_), idx :: l ->
     exp_of_idx_list (mk_ext_value ty' (Warray (e, idx))) l
-  | _ -> internal_error "mls2obc"
+  | _ -> internal_error "mls2obc exp_of_idx_list"
 
-let rec extvalue_of_idx_list w l = match w.w_ty, l with
+let rec extvalue_of_idx_list w l = match Modules.unalias_type w.w_ty, l with
   | _, [] -> w
   | Tarray (ty',_), idx :: l ->
     extvalue_of_idx_list (mk_ext_value ty' (Warray (w, idx))) l
-  | _ -> internal_error "mls2obc"
+  | _ -> internal_error "mls2obc extvalue_of_idx_list"
 
 let rec ext_value_of_trunc_idx_list p l =
   let mk_between idx se =
@@ -90,27 +90,40 @@ let rec ext_value_of_trunc_idx_list p l =
   let rec aux p l = match p.w_ty, l with
     | _, [] -> p
     | Tarray (ty', se), idx :: l -> aux (mk_ext_value ty' (Warray (p, mk_between idx se))) l
-    | _ -> internal_error "mls2obc"
+    | _ -> internal_error "mls2obc ext_value_of_trunc_idx_list"
   in
   aux p l
 
+let rec ty_of_idx_list ty idx_list = match ty, idx_list with
+  | _, [] -> ty
+  | Tarray(ty, _), idx::idx_list -> ty_of_idx_list ty idx_list
+  | _, _ -> internal_error "mls2obc ty_of_idx_list"
+
+let mk_static_array_power ty c params = match params with
+  | [] -> mk_ext_value_exp ty (Wconst c)
+  | _ ->
+    let se = mk_static_exp ty (Sarray_power (c, params)) in
+    mk_ext_value_exp ty (Wconst se)
+
 let array_elt_of_exp idx e =
   match e.e_desc, Modules.unalias_type e.e_ty with
-  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) }; }, Tarray (ty,_) ->
-      mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+  | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _::new_params) }; }, Tarray (ty,_) ->
+     mk_static_array_power ty c new_params
   | _, Tarray (ty,_) ->
       mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
-  | _ -> internal_error "mls2obc"
+  | _ -> internal_error "mls2obc array_elt_of_exp"
 
 let rec array_elt_of_exp_list idx_list e =
   match e.e_desc, Modules.unalias_type e.e_ty with
-    | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, _) } }, Tarray (ty,_) ->
-        mk_ext_value_exp ty (Wconst c) (* TODO BUG : (4^2^2^2)[0][1] is not 4, but 4^2 *)
+    | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, params) } }, Tarray (ty,n) ->
+      let new_params, _ = Misc.split_at (List.length params - List.length idx_list) params in
+      let ty = ty_of_idx_list (Tarray(ty,n)) idx_list in
+      mk_static_array_power ty c new_params
     | _ , t ->
-        let rec ty id_l t = match id_l, t with
+        let rec ty id_l t = match id_l, Modules.unalias_type t with
           | [] , t -> t
           | _::id_l , Tarray (t,_) -> ty id_l t
-          | _, _ -> internal_error "mls2obc"
+          | _, _ -> internal_error "mls2obc ty"
         in
         mk_exp (ty idx_list t) (Eextvalue (extvalue_of_idx_list (ext_value_of_exp e) idx_list))
 
@@ -145,7 +158,7 @@ let mk_plus_one e = match e.e_desc with
 
 (** Creates the action list that copies [src] to [dest],
     updating the value at index [idx_list] with the value [v]. *)
-let rec update_array dest src idx_list v = match dest.pat_ty, idx_list with
+let rec update_array dest src idx_list v = match Modules.unalias_type dest.pat_ty, idx_list with
   | Tarray (t, n), idx::idx_list ->
       (*Body of the copy loops*)
       let copy i =
@@ -201,8 +214,8 @@ let rec translate_pat map ty pat = match pat, ty with
   | Minils.Etuplepat _, _ -> Misc.internal_error "Ill-typed pattern"
 
 let translate_var_dec l =
-  let one_var { Minils.v_ident = x; Minils.v_type = t; v_loc = loc } =
-    mk_var_dec ~loc:loc x t
+  let one_var { Minils.v_ident = x; Minils.v_type = t; Minils.v_linearity = lin; v_loc = loc } =
+    mk_var_dec ~loc:loc ~linearity:lin x t
   in
   List.map one_var l
 
@@ -213,7 +226,7 @@ let rec translate_extvalue map w = match w.Minils.w_desc with
       | Minils.Wconst v -> Wconst v
       | Minils.Wvar x -> assert false
       | Minils.Wfield (w1, f) -> Wfield (translate_extvalue map w1, f)
-      | Minils.Wwhen (w1, c, x) -> (translate_extvalue map w1).w_desc
+      | Minils.Wwhen (w1, _, _) | Minils.Wreinit(_, w1)  -> (translate_extvalue map w1).w_desc
     in
     mk_ext_value w.Minils.w_ty desc
 
@@ -527,7 +540,12 @@ and mk_node_call map call_context app loc (name_list : Obc.pattern list) args ty
           v @ nd.Minils.n_local, si, j, subst_act_list env s
 
     | Minils.Enode f | Minils.Efun f ->
-        let o = mk_obj_call_from_context call_context (gen_obj_ident f) in
+	let id =
+	  begin match app.Minils.a_id with
+	    None -> gen_obj_ident f
+	  | Some id -> id
+	  end in
+        let o = mk_obj_call_from_context call_context id in
         let obj =
           { o_ident = obj_ref_name o; o_class = f;
             o_params = app.Minils.a_params;
@@ -662,12 +680,12 @@ let translate_contract map mem_var_tys =
 
 (** Returns a map, mapping variables names to the variables
     where they will be stored. *)
-let subst_map inputs outputs locals mem_tys =
+let subst_map inputs outputs controllables c_locals locals mem_tys =
   (* Create a map that simply maps each var to itself *)
   let map =
     List.fold_left
       (fun m { Minils.v_ident = x; Minils.v_type = ty } -> Env.add x (mk_pattern ty (Lvar x)) m)
-      Env.empty (inputs @ outputs @ locals)
+      Env.empty (inputs @ outputs @ controllables @ c_locals @ locals)
   in
   List.fold_left (fun map (x, x_ty) -> Env.add x (mk_pattern x_ty (Lmem x)) map) map mem_tys
 
@@ -675,10 +693,15 @@ let translate_node
     ({ Minils.n_name = f; Minils.n_input = i_list; Minils.n_output = o_list;
       Minils.n_local = d_list; Minils.n_equs = eq_list; Minils.n_stateful = stateful;
       Minils.n_contract = contract; Minils.n_params = params; Minils.n_loc = loc;
+      Minils.n_mem_alloc = mem_alloc
     } as n) =
   Idents.enter_node f;
   let mem_var_tys = Mls_utils.node_memory_vars n in
-  let subst_map = subst_map i_list o_list d_list mem_var_tys in
+  let c_list, c_locals =
+    match contract with
+    | None -> [], []
+    | Some c -> c.Minils.c_controllables, c.Minils.c_local in
+  let subst_map = subst_map i_list o_list c_list c_locals d_list mem_var_tys in
   let (v, si, j, s_list) = translate_eq_list subst_map empty_call_context eq_list in
   let (si', j', s_list', d_list') = translate_contract subst_map mem_var_tys contract in
   let i_list = translate_var_dec i_list in
@@ -695,12 +718,12 @@ let translate_node
   let resetm = { m_name = Mreset; m_inputs = []; m_outputs = []; m_body = mk_block si } in
   if stateful
   then { cd_name = f; cd_stateful = true; cd_mems = m; cd_params = params;
-         cd_objs = j; cd_methods = [stepm; resetm]; cd_loc = loc; }
+         cd_objs = j; cd_methods = [stepm; resetm]; cd_loc = loc; cd_mem_alloc = mem_alloc }
   else (
     (* Functions won't have [Mreset] or memories,
        they still have [params] and instances (of functions) *)
     { cd_name = f; cd_stateful = false; cd_mems = []; cd_params = params;
-      cd_objs = j; cd_methods = [stepm]; cd_loc = loc; }
+      cd_objs = j; cd_methods = [stepm]; cd_loc = loc; cd_mem_alloc = mem_alloc }
   )
 
 let translate_ty_def { Minils.t_name = name; Minils.t_desc = tdesc;
@@ -736,3 +759,22 @@ let program { Minils.p_modname = p_modname; Minils.p_opened = p_o; Minils.p_desc
     p_opened = p_o;
     p_desc = p_desc }
 
+
+let signature s =
+  { sig_name = s.Minils.sig_name;
+    sig_inputs = s.Minils.sig_inputs;
+    sig_stateful = s.Minils.sig_stateful;
+    sig_outputs = s.Minils.sig_outputs;
+    sig_params = s.Minils.sig_params;
+    sig_param_constraints = s.Minils.sig_param_constraints;
+    sig_loc = s.Minils.sig_loc }
+
+let interface i =
+  let interface_decl id = match id with
+    | Minils.Itypedef td -> Itypedef (translate_ty_def td)
+    | Minils.Iconstdef cd -> Iconstdef (translate_const_def cd)
+    | Minils.Isignature s -> Isignature (signature s)
+  in
+  { i_modname = i.Minils.i_modname;
+    i_opened = i.Minils.i_opened;
+    i_desc = List.map interface_decl i.Minils.i_desc }

@@ -71,7 +71,9 @@ let output_names_list sig_info =
     | Some n -> n
     | None -> Error.message no_location Error.Eno_unnamed_output
   in
-  List.map remove_option sig_info.node_outputs
+  let outputs = List.filter
+    (fun ad -> not (Linearity.is_linear ad.a_linearity)) sig_info.node_outputs in
+    List.map remove_option outputs
 
 let is_stateful n =
   try
@@ -83,9 +85,6 @@ let is_stateful n =
 (******************************)
 
 (** {2 Translation from Obc to C using our AST.} *)
-
-(** [fold_stm_list] is an utility function that transforms a list of statements
-    into one statements using Cseq constructors. *)
 
 (** [ctype_of_type mods oty] translates the Obc type [oty] to a C
     type. We assume that identified types have already been defined
@@ -105,18 +104,11 @@ let rec ctype_of_otype oty =
     | Tinvalid -> assert false
     | Tfuture _ -> assert false (* TODO async *)
 
-let cvarlist_of_ovarlist vl =
-  let cvar_of_ovar vd =
-    let ty = ctype_of_otype vd.v_type in
-    name vd.v_ident, ty
-  in
-  List.map cvar_of_ovar vl
-
 let copname = function
   | "="  -> "==" | "<>" -> "!=" | "&"  -> "&&" | "or" -> "||" | "+" -> "+"
   | "-" -> "-" | "*" -> "*" | "/" -> "/" | "*." -> "*" | "/." -> "/"
   | "+." -> "+" | "-." -> "-" | "<"  -> "<" | ">"  -> ">" | "<=" -> "<="
-  | ">=" -> ">="
+  | ">=" -> ">=" | "<=." -> "<=" | "<." -> "<" | ">=." -> ">=" | ">." -> ">"
   | "~-" -> "-" | "not" -> "!" | "%" -> "%"
   | op   -> op
 
@@ -124,27 +116,27 @@ let copname = function
 let cvar_of_vd vd =
   name vd.v_ident, ctype_of_otype vd.v_type
 
-(** If idx_list = [e1;..;ep], returns the lhs e[e1]...[ep] *)
-let rec csubscript_of_e_list e idx_list =
-  match idx_list with
-    | [] -> e
-    | idx::idx_list ->
-        Carray (csubscript_of_e_list e idx_list, idx)
+(** Returns the type of a pointer to a type, except for
+    types which are already pointers. *)
+let pointer_type ty cty =
+  match Modules.unalias_type ty with
+    | Tarray _ -> cty
+    | _ -> Cty_ptr cty
 
-(** If idx_list = [i1;..;ip], returns the lhs e[i1]...[ip] *)
-let csubscript_of_idx_list e idx_list =
-  csubscript_of_e_list e (List.map (fun i -> Cconst (Ccint i)) idx_list)
+(** Returns the expression to use e as an argument of
+    a function expecting a pointer as argument. *)
+let address_of ty e =
+  match Modules.unalias_type ty with
+    | Tarray _ -> e
+    | _ -> Caddrof e
 
-(** Generate the expression to copy [src] into [dest], where bounds
-    represents the bounds of these two arrays. *)
-let rec copy_array src dest bounds =
-  match bounds with
-    | [] -> [Caffect (dest, src)]
-    | n::bounds ->
-        let x = gen_symbol () in
-        [Cfor(x, Cconst (Ccint 0), n,
-              copy_array (Carray (src, Cvar x))
-                (CLarray (dest, Cvar x)) bounds)]
+let inputlist_of_ovarlist vl =
+  let cvar_of_ovar vd =
+    let ty = ctype_of_otype vd.v_type in
+    let ty = if vd.v_mutable then pointer_type vd.v_type ty else ty in
+    name vd.v_ident, ty
+  in
+  List.map cvar_of_ovar vl
 
 (** @return the unaliased version of a type. *)
 let rec unalias_ctype cty = match cty with
@@ -177,7 +169,7 @@ let rec assoc_type_lhs lhs var_env = match lhs with
     | Cty_ptr ty -> ty
     | _ -> Error.message no_location Error.Ederef_not_pointer)
   | CLfield(CLderef (CLvar "self"), { name = x }) -> assoc_type x var_env
-  | CLfield(CLderef (CLvar "out"), { name = x }) -> assoc_type x var_env
+  | CLfield(CLderef (CLvar "_out"), { name = x }) -> assoc_type x var_env
   | CLfield(x, f) ->
     let ty = assoc_type_lhs x var_env in
     let n = struct_name ty in
@@ -220,13 +212,6 @@ and create_affect_stm dest src ty =
           | _ -> [Caffect (dest, src)])
     | _ -> [Caffect (dest, src)]
 
-(** Returns the expression to use e as an argument of
-    a function expecting a pointer as argument. *)
-let address_of e = match e with
-  | Carray _ -> e
-  | Cderef e -> e
-  | _ -> Caddrof e
-
 let rec cexpr_of_static_exp se =
   match se.se_desc with
     | Sint i -> Cconst (Ccint i)
@@ -248,18 +233,19 @@ let rec cexpr_of_static_exp se =
           (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n)))
                      (cexpr_of_static_exp c) n_list)
     | Svar ln ->
-        (try
+        (* (try
           let cd = find_const ln in
           cexpr_of_static_exp (Static.simplify QualEnv.empty cd.c_value)
-        with Not_found -> assert false)
+        with Not_found -> assert false) *)
+      Cvar (cname_of_qn ln)
     | Sop _ ->
         let se' = Static.simplify QualEnv.empty se in
           if se = se' then
             Error.message se.se_loc Error.Estatic_exp_compute_failed
           else
             cexpr_of_static_exp se'
+    | Stuple _ -> Misc.internal_error "cgen: static tuple"
     | Sasync _ -> assert false (** TODO async *)
-    | Stuple _ -> assert false (** TODO *)
 
 
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
@@ -284,14 +270,14 @@ and cexprs_of_exps out_env var_env exps =
 and cop_of_op_aux op_name cexps = match op_name with
     | { qual = Pervasives; name = op } ->
         begin match op,cexps with
-          | "~-", [e] -> Cuop ("-", e)
+          | ("~-" | "~-."), [e] -> Cuop ("-", e)
           | "not", [e] -> Cuop ("!", e)
           | (
               "=" | "<>"
             | "&" | "or"
             | "+" | "-" | "*" | "/"
             | "*." | "/." | "+." | "-." | "%"
-            | "<" | ">" | "<=" | ">="), [el;er] ->
+            | "<" | ">" | "<=" | ">=" | "<=." | "<." | ">=." | ">."), [el;er] ->
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
         end
@@ -307,7 +293,7 @@ and clhs_of_pattern out_env var_env l = match l.pat_desc with
       let n = name v in
       let n_lhs =
         if IdentSet.mem v out_env
-        then CLfield (CLderef (CLvar "out"), local_qn n)
+        then CLfield (CLderef (CLvar "_out"), local_qn n)
         else CLvar n
       in
 
@@ -336,7 +322,7 @@ and cexpr_of_pattern out_env var_env l = match l.pat_desc with
       let n = name v in
       let n_lhs =
         if IdentSet.mem v out_env
-        then Cfield (Cderef (Cvar "out"), local_qn n)
+        then Cfield (Cderef (Cvar "_out"), local_qn n)
         else Cvar n
       in
 
@@ -363,7 +349,7 @@ and cexpr_of_ext_value out_env var_env w = match w.w_desc with
     let n = name v in
     let n_lhs =
       if IdentSet.mem v out_env
-      then Cfield (Cderef (Cvar "out"), local_qn n)
+      then Cfield (Cderef (Cvar "_out"), local_qn n)
       else Cvar n
     in
 
@@ -404,6 +390,15 @@ let out_var_name_of_objn o =
     of the called node, [mem] represents the node context and [args] the
     argument list.*)
 let step_fun_call out_env var_env sig_info objn out args =
+  let rec add_targeting l ads = match l, ads with
+    | [], [] -> []
+    | e::l, ad::ads ->
+        (*this arg is targeted, use a pointer*)
+        let e = if Linearity.is_linear ad.a_linearity then address_of ad.a_type e else e in
+          e::(add_targeting l ads)
+    | _, _ -> assert false
+  in
+  let args = (add_targeting args sig_info.node_inputs) in
   if sig_info.node_stateful then (
     let mem =
       (match objn with
@@ -610,8 +605,8 @@ let qn_append q suffix =
 
 (** Builds the argument list of step function*)
 let step_fun_args n md =
-  let args = cvarlist_of_ovarlist md.m_inputs in
-  let out_arg = [("out", Cty_ptr (Cty_id (qn_append n "_out")))] in
+  let args = inputlist_of_ovarlist md.m_inputs in
+  let out_arg = [("_out", Cty_ptr (Cty_id (qn_append n "_out")))] in
   let context_arg =
     if is_stateful n then
       [("self", Cty_ptr (Cty_id (qn_append n "_mem")))]
@@ -701,11 +696,12 @@ let out_decl_of_class_def cd =
     tasked to reset the class [cd]. *)
 let reset_fun_def_of_class_def cd =
   let body =
-    try
+    if cd.cd_stateful then
       let var_env = List.map cvar_of_vd cd.cd_mems in
       let reset = find_reset_method cd in
       cstm_of_act_list IdentSet.empty var_env cd.cd_objs reset.m_body
-    with Not_found -> [] (* TODO C : nicely deal with stateless objects *)
+    else
+      []
   in
   Cfundef {
     f_name = (cname_of_qn cd.cd_name) ^ "_reset";
@@ -743,26 +739,6 @@ let cdefs_and_cdecls_of_class_def cd =
   defs
 
 (** {2 Type translation} *)
-
-
-let decls_of_type_decl otd =
-  let name = cname_of_qn otd.t_name in
-  match otd.t_desc with
-    | Type_abs -> [] (*assert false*)
-    | Type_alias ty -> [Cdecl_typedef (ctype_of_otype ty, name)]
-    | Type_enum nl ->
-        let name = !global_name ^ "_" ^ name in
-        [Cdecl_enum (name, List.map cname_of_qn nl);
-         Cdecl_function (name ^ "_of_string",
-                         Cty_id otd.t_name,
-                         [("s", Cty_ptr Cty_char)]);
-         Cdecl_function ("string_of_" ^ name,
-                         Cty_ptr Cty_char,
-                         [("x", Cty_id otd.t_name); ("buf", Cty_ptr Cty_char)])]
-    | Type_struct fl ->
-        let decls = List.map (fun f -> cname_of_qn f.Signature.f_name,
-                                ctype_of_otype f.Signature.f_type) fl in
-        [Cdecl_struct (name, decls)];;
 
 (** Translates an Obc type declaration to its C counterpart. *)
 let cdefs_and_cdecls_of_type_decl otd =
@@ -808,25 +784,26 @@ let cdefs_and_cdecls_of_type_decl otd =
           cdecl_of_cfundef of_string_fun;
           cdecl_of_cfundef to_string_fun])
     | Type_struct fl ->
-        let decls = List.map (fun f -> cname_of_qn f.Signature.f_name,
+        let decls = List.map (fun f -> cname_of_name f.Signature.f_name.name,
                                 ctype_of_otype f.Signature.f_type) fl in
         let decl = Cdecl_struct (name, decls) in
         ([], [decl])
 
-(** [cfile_list_of_oprog oprog] translates the Obc program [oprog] to a list of
-    C source and header files. *)
-let cfile_list_of_oprog_ty_decls name oprog =
-  let types = Obc_utils.program_types oprog in
-  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_type_decl types in
+let cdefs_and_cdecls_of_const_decl cd =
+  let name = cname_of_qn cd.c_name in
+  let v = cexpr_of_static_exp cd.Obc.c_value in
+  let cty = ctype_of_otype cd.Obc.c_type in
+  [], [Cdecl_constant (name, cty, v)]
 
-  let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
-  let filename_types = name ^ "_types" in
-  let types_h = (filename_types ^ ".h",
-                 Cheader (["stdbool"; "assert"; "pervasives"],
-                          List.concat cty_decls)) in
-  let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
+let cdefs_and_cdecls_of_interface_decl id = match id with
+  | Itypedef td -> cdefs_and_cdecls_of_type_decl td
+  | Iconstdef cd -> cdefs_and_cdecls_of_const_decl cd
+  | _ -> [], []
 
-  filename_types, [types_h; types_c]
+let cdefs_and_cdecls_of_program_decl id = match id with
+  | Ptype td -> cdefs_and_cdecls_of_type_decl td
+  | Pconst cd -> cdefs_and_cdecls_of_const_decl cd
+  | _ -> [], []
 
 let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
@@ -838,10 +815,33 @@ let global_file_header name prog =
   let decls = List.concat decls
   and defs = List.concat defs in
 
-  let (ty_fname, ty_files) = cfile_list_of_oprog_ty_decls name prog in
+  let filename_types = name ^ "_types" in
+  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_program_decl prog.p_desc in
+
+  let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
+  let types_h = (filename_types ^ ".h",
+                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies,
+                          List.concat cty_decls)) in
+  let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
   let header =
-    (name ^ ".h", Cheader (ty_fname :: dependencies, decls))
+    (name ^ ".h", Cheader (filename_types :: dependencies, decls))
   and source =
     (name ^ ".c", Csource defs) in
-  [header; source] @ ty_files
+  [header; source; types_h; types_c]
+
+
+let interface_header name i =
+  let dependencies = ModulSet.elements (Obc_utils.Deps.deps_interface i) in
+  let dependencies =
+    List.map (fun m -> String.uncapitalize (modul_to_string m)) dependencies in
+
+  let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_interface_decl i.i_desc in
+
+  let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
+  let types_h = (name ^ ".h",
+                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies,
+                          List.concat cty_decls)) in
+  let types_c = (name ^ ".c", Csource (concat cty_defs)) in
+
+  [types_h; types_c]

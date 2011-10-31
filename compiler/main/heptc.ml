@@ -28,10 +28,17 @@ let compile_interface modname source_f =
 
   try
   (* Process the [lexbuf] to an Heptagon AST *)
-    let _ = Hept_parser_scoper.parse_interface modname lexbuf in
+    let p = Hept_parser_scoper.parse_interface modname lexbuf in
     if !print_types then Global_printer.print_interface Format.std_formatter;
-  (* Output the .epci *)
+
+    (* Process the interface *)
+    let p = Hept_compiler.compile_interface p in
+    (* Output the .epci *)
     output_value epci_c (Modules.current_module ());
+    (* Translate to Obc *)
+    let p = Hept2mls.interface p in
+    (* Generate the sequential code *)
+    Mls2seq.interface p;
     close_all_files ()
   with
     | x -> close_all_files (); raise x
@@ -100,6 +107,8 @@ let main () =
         "-c", Arg.Set create_object_file, doc_object_file;
         "-s", Arg.String set_simulation_node, doc_sim;
         "-hepts", Arg.Set hepts_simulation, doc_hepts;
+        "-bool", Arg.Set boolean, doc_boolean;
+        "-deadcode", Arg.Set deadcode, doc_deadcode;
         "-tomato", Arg.Set tomato, doc_tomato;
         "-tomanode", read_qualname add_tomato_node, doc_tomato;
         "-tomacheck", read_qualname add_tomato_check, "";
@@ -114,7 +123,11 @@ let main () =
         "-fti", Arg.Set full_type_info, doc_full_type_info;
         "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
+        "-memalloc", Arg.Unit do_mem_alloc_and_typing, doc_memalloc;
         "-java_queue_size", Arg.Set_int java_queue_size, doc_java_queue_size;
+        "-only-memalloc", Arg.Set do_mem_alloc, doc_memalloc_only;
+        "-only-linear", Arg.Set do_linear_typing, doc_linear_only;
+        "-old-scheduler", Arg.Set use_old_scheduler, doc_interf_scheduler
       ]
         compile errmsg;
   with

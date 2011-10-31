@@ -132,7 +132,7 @@ let level_up defnames constr h =
 let add_to_locals vd_env locals h =
   let add_one n nn (locals,vd_env) =
     let orig_vd = Idents.Env.find n vd_env in
-    let vd_nn = mk_var_dec nn orig_vd.v_type in
+    let vd_nn = mk_var_dec nn orig_vd.v_type orig_vd.v_linearity in
     vd_nn::locals, Idents.Env.add vd_nn.v_ident vd_nn vd_env
   in
     fold add_one h (locals, vd_env)
@@ -177,7 +177,7 @@ let eqdesc funs (vd_env,env,h) eqd = match eqd with
       (* create a clock var corresponding to the switch condition [e] *)
       let ck = fresh_clock_id () in
       let e, (vd_env,env,h) = exp_it funs (vd_env,env,h) e in
-      let locals = [mk_var_dec ck e.e_ty] in
+      let locals = [mk_var_dec ck e.e_ty e.e_linearity] in
       let equs = [mk_equation (Eeq (Evarpat ck, e))] in
 
       (* typing have proved that defined variables are the same among states *)
@@ -203,14 +203,16 @@ let eqdesc funs (vd_env,env,h) eqd = match eqd with
       in
 
       (* create a merge equation for each defnames *)
-      let new_merge n ty equs =
-        let c_h_to_c_e (constr,h) = constr, mk_exp (Evar(Rename.rename n h)) ty in
+      let new_merge n vd equs =
+        let c_h_to_c_e (constr,h) =
+          constr, mk_exp (Evar(Rename.rename n h)) vd.v_type ~linearity:vd.v_linearity
+        in
         let c_e_l = List.map c_h_to_c_e c_h_l in
-        let merge = mk_exp (Emerge (ck, c_e_l)) ty in
+        let merge = mk_exp (Emerge (ck, c_e_l)) vd.v_type ~linearity:vd.v_linearity in
         (mk_equation (Eeq (Evarpat (Rename.rename n h), merge))) :: equs
       in
       let equs =
-        Idents.Env.fold (fun n ty equs -> new_merge n ty equs) defnames equs
+        Idents.Env.fold (fun n vd equs -> new_merge n vd equs) defnames equs
       in
 
         (* return the transformation in a block *)

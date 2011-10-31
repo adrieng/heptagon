@@ -34,6 +34,7 @@ let compile_program p =
 
   let p =
     let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
+    let p = pass "Extended value inlining" call_tomato Inline_extvalues.program p pp in
     pass "Data-flow minimization" call_tomato Tomato.program p pp in
 
 (** TODO: re enable when ported to the new AST
@@ -41,10 +42,18 @@ let compile_program p =
     pass "Automata minimization checks" true Tomato.tomato_checks p pp in
 *)
 
-  (* Scheduling *)
-  let p = pass "Scheduling" true Schedule.program p pp in
-
-   (* Normalize memories*)
+  (* Normalize memories*)
   let p = pass "Normalize memories" true Normalize_mem.program p pp in
+
+  (* Scheduling *)
+  let p =
+    if not !Compiler_options.use_old_scheduler then
+      pass "Scheduling (with minimization of interferences)" true Schedule_interf.program p pp
+    else
+      pass "Scheduling" true Schedule.program p pp
+  in
+
+  (* Memory allocation *)
+  let p = pass "Memory allocation" !do_mem_alloc Interference.program p pp in
 
   p

@@ -44,10 +44,13 @@ struct
     raise Errors.Error
 end
 
+let fresh = Idents.gen_fresh "hept2mls"
+  (function Heptagon.Enode f -> (shortname f)
+    | _ -> "n")
 
-let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty;
+let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; Heptagon.v_linearity = linearity;
                     Heptagon.v_loc = loc; Heptagon.v_clock = ck } =
-  mk_var_dec ~loc:loc n ty ck
+  mk_var_dec ~loc:loc n ty linearity ck
 
 let translate_reset = function
   | Some { Heptagon.e_desc = Heptagon.Evar n } -> Some n
@@ -77,14 +80,19 @@ let rec translate_op = function
   | Heptagon.Earray -> Earray
   | Heptagon.Etuple -> Misc.internal_error "hept2mls Etuple"
   | Heptagon.Earrow -> assert false
+  | Heptagon.Ereinit -> assert false
   | Heptagon.Ebang -> Ebang
 
 let translate_app app =
   mk_app ~params:app.Heptagon.a_params ~async:app.Heptagon.a_async
-    ~unsafe:app.Heptagon.a_unsafe (translate_op app.Heptagon.a_op)
+    ~unsafe:app.Heptagon.a_unsafe
+    ~id:(Some (fresh app.Heptagon.a_op))
+    (translate_op app.Heptagon.a_op)
 
 let rec translate_extvalue e =
-  let mk_extvalue = mk_extvalue ~loc:e.Heptagon.e_loc ~ty:e.Heptagon.e_ty in
+  let mk_extvalue =
+    mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity ~ty:e.Heptagon.e_ty
+  in
   match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue (Wconst c)
     | Heptagon.Evar x -> mk_extvalue (Wvar x)
@@ -96,14 +104,18 @@ let rec translate_extvalue e =
         let f = assert_1 params in
         let fn = match f.se_desc with Sfield fn -> fn | _ -> assert false in
           mk_extvalue (Wfield (translate_extvalue e, fn))
+    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Ereinit }, e_list, _) ->
+        let e1, e2 = assert_2 e_list in
+          mk_extvalue (Wreinit (translate_extvalue e1, translate_extvalue e2))
     | _ -> Error.message e.Heptagon.e_loc Error.Enormalization
 
-let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_level_ck = b_ck;
-                 Heptagon.e_ct_annot = a_ct; Heptagon.e_loc = loc } as e) =
+let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
+                 Heptagon.e_level_ck = b_ck; Heptagon.e_linearity = linearity;
+                 Heptagon.e_ct_annot = a_ct; Heptagon.e_loc = loc;  } as e) =
   let desc = match desc with
     | Heptagon.Econst _
     | Heptagon.Evar _
-    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield }, _, _) ->
+    | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield | Heptagon.Ereinit }, _, _) ->
         let w = translate_extvalue e in
         Eextvalue w
     | Heptagon.Ewhen (e,c,x) -> Ewhen (translate e, c, x)
@@ -129,12 +141,13 @@ let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty; Heptagon.e_leve
                     translate_reset reset)
     | Heptagon.Efby _ -> Misc.internal_error "Hept2mls : Efby still present"
     | Heptagon.Elast _ -> Misc.internal_error "Hept2mls : Elast still present"
+    | Heptagon.Esplit _ -> Misc.internal_error "Hept2mls : Esplit still present"
     | Heptagon.Emerge (x, c_e_list) ->
         Emerge (x, List.map (fun (c,e)-> c, translate_extvalue e) c_e_list)
   in
   match a_ct with
-    | None -> mk_exp b_ck ty ~loc:loc desc
-    | Some ct -> mk_exp b_ck ty ~ct:ct ~loc:loc desc
+    | None -> mk_exp b_ck ty ~loc:loc ~linearity:linearity desc
+    | Some ct -> mk_exp b_ck ty ~ct:ct ~loc:loc ~linearity:linearity desc
 
 
 
@@ -171,11 +184,14 @@ let node n =
     n_input = List.map translate_var n.Heptagon.n_input;
     n_output = List.map translate_var n.Heptagon.n_output;
     n_contract = translate_contract n.Heptagon.n_contract;
+    n_controller_call = ([],[]);
     n_local = List.map translate_var n.Heptagon.n_block.Heptagon.b_local;
     n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
-    n_param_constraints = n.Heptagon.n_param_constraints }
+    n_param_constraints = n.Heptagon.n_param_constraints;
+    n_mem_alloc = [] }
+
 
 let typedec
     {Heptagon.t_name = n; Heptagon.t_desc = tdesc; Heptagon.t_loc = loc} =
@@ -206,3 +222,22 @@ let program
     p_format_version = minils_format_version;
     p_opened = modules;
     p_desc = List.map program_desc desc_list }
+
+let signature s =
+  { sig_name = s.Heptagon.sig_name;
+    sig_inputs = s.Heptagon.sig_inputs;
+    sig_stateful = s.Heptagon.sig_stateful;
+    sig_outputs = s.Heptagon.sig_outputs;
+    sig_params = s.Heptagon.sig_params;
+    sig_param_constraints = s.Heptagon.sig_param_constraints;
+    sig_loc = s.Heptagon.sig_loc }
+
+let interface i =
+  let interface_decl id = match id with
+    | Heptagon.Itypedef td -> Itypedef (typedec td)
+    | Heptagon.Iconstdef cd -> Iconstdef (const_dec cd)
+    | Heptagon.Isignature s -> Isignature (signature s)
+  in
+  { i_modname = i.Heptagon.i_modname;
+    i_opened = i.Heptagon.i_opened;
+    i_desc = List.map interface_decl i.Heptagon.i_desc }

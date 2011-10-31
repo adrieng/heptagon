@@ -1,0 +1,11 @@
+const n:int = 100
+
+node bad_mem()
+  returns (v : float)
+var t2,t,t_next:float^n at r;
+let
+  t_next = [t with [0] = 0.0];
+  t2 = [ t_next with [1] = 1.0 ];
+  init<<r>> t = (0.0^n) fby t_next;
+  v = t2[0];
+tel

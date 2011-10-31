@@ -1,0 +1,43 @@
+const n:int = 100
+
+fun f(a:int^n at r) returns (o:int^n at r)
+let
+  o = [ a with [0] = 0 ]
+tel
+
+fun g(a:int^n at r) returns (o:int^n at r)
+let
+  o = [ a with [n-1] = 0 ]
+tel
+
+node autom(a:int^n at r) returns (o:int^n at r; u:int)
+let
+  automaton
+    state S1
+    do
+      o = f(a)
+    until true then S2
+
+    state S2
+    do
+      o = g(a)
+    until false then S1
+  end;
+  u = a[0]
+tel
+
+node autom_last() returns (u:int)
+var last o : int^n at r = 0^n;
+let
+  automaton
+    state S1
+    do
+    until true then S2
+
+    state S2
+    do
+      o = g(last o)
+    until false then S1
+  end;
+  u = o[0]
+tel

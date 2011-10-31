@@ -87,8 +87,9 @@ and edesc =
   | Eiterator of iterator_type * app * exp list * exp list * exp list
   | Ewhen of exp * constructor_name * var_name
   | Emerge of var_name * (constructor_name * exp) list
+  | Esplit of var_name * exp
 
-and app = { a_op: op; a_params: exp list; a_async : async_t option }
+and app = { a_op: op; a_params: exp list; a_async : async_t option; a_inlined: bool }
 
 and op =
   | Etuple
@@ -107,6 +108,7 @@ and op =
   | Eupdate
   | Econcat
   | Ebang
+  | Ereinit
 
 and pat =
   | Etuplepat of pat list
@@ -126,7 +128,7 @@ and eqdesc =
   | Epresent of present_handler list * block
   | Ereset of block * exp
   | Eblock of block
-  | Eeq of pat * exp
+  | Eeq of pat * Linearity.init * exp
 
 and block =
   { b_local : var_dec list;
@@ -156,6 +158,7 @@ and present_handler =
 and var_dec =
   { v_name  : var_name;
     v_type  : ty;
+    v_linearity : Linearity.linearity;
     v_clock : ck option;
     v_last  : last;
     v_loc   : location; }
@@ -211,6 +214,7 @@ and program_desc =
 type arg =
   { a_type  : ty;
     a_clock : ck option;
+    a_linearity : Linearity.linearity;
     a_name  : var_name option }
 
 type signature =
@@ -222,14 +226,12 @@ type signature =
     sig_param_constraints : exp list;
     sig_loc         : location }
 
-type interface = interface_decl list
-
-and interface_decl =
-  { interf_desc : interface_desc;
-    interf_loc  : location }
+type interface =
+    { i_modname : dec_name;
+      i_opened : module_name list;
+      i_desc : interface_desc list }
 
 and interface_desc =
-  | Iopen of module_name
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
@@ -239,11 +241,11 @@ and interface_desc =
 let mk_exp desc ?(ct_annot = None) loc =
   { e_desc = desc; e_ct_annot = ct_annot; e_loc = loc }
 
-let mk_app op async params =
-  { a_op = op; a_params = params; a_async = async; }
+let mk_app op async params inlined =
+  { a_op = op; a_params = params; a_async = async; a_inlined = inlined }
 
-let mk_call ?(async=None) ?(params=[]) op exps =
-  Eapp (mk_app op async params, exps)
+let mk_call ?(async=None) ?(params=[]) ?(inlined=false) op exps =
+  Eapp (mk_app op async params inlined, exps)
 
 let mk_op_call ?(params=[]) s exps =
   mk_call ~params:params (Efun (Q (Names.pervasives_qn s))) exps
@@ -269,12 +271,9 @@ let mk_type_dec name desc loc =
 let mk_equation desc loc =
   { eq_desc = desc; eq_loc = loc }
 
-let mk_interface_decl desc loc =
-  { interf_desc = desc; interf_loc = loc }
-
-let mk_var_dec name ty ck last loc =
-  { v_name = name; v_type = ty; v_clock = ck;
-    v_last = last; v_loc = loc }
+let mk_var_dec ?(linearity=Linearity.Ltop) name ty ck last loc =
+  { v_name = name; v_type = ty; v_linearity = linearity;
+    v_clock =ck; v_last = last; v_loc = loc }
 
 let mk_block locals ?(async=None) eqs loc =
   { b_local = locals; b_equs = eqs;
@@ -283,8 +282,8 @@ let mk_block locals ?(async=None) eqs loc =
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }
 
-let mk_arg name ty ck =
-  { a_type = ty; a_name = name; a_clock = ck}
+let mk_arg name (ty,lin) ck =
+  { a_type = ty; a_linearity = lin; a_name = name; a_clock = ck }
 
 let ptrue = Q Initial.ptrue
 let pfalse = Q Initial.pfalse

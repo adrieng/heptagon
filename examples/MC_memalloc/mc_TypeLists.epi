@@ -1,0 +1,5 @@
+type tpriority = { missionTrackIndex : int; trackNumber : int }
+
+(* TrackNumbers of the tracks with highest priority,
+   sorted from the highest priority *)
+type tpriorityList = int^4

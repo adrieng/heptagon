@@ -1,0 +1,488 @@
+open CstArrayInit
+open Mc_TypeSensors
+open Mc_ext
+open TypeTracks
+open TypeBase
+open TypeArray
+
+const trackarrayinit : bool = false
+
+(* safe state machine for the computing of radar or iff state
+   state ident: state.0  *)
+node statecmd(onoffbuttonpressed : bool (*last = false*);
+                currentstate : tsensorstate)
+    returns (onoffcmd : bool)
+let
+    automaton
+      state Off
+        do  onoffcmd = false;
+        unless onoffbuttonpressed & currentstate = TState_OFF then On
+
+      state On
+        do  onoffcmd = true;
+        unless onoffbuttonpressed & currentstate = TState_ON then Off
+    end
+tel
+
+(* compute the new radar state each time on/off button
+   is pressed *)
+node mc_rdrstatecmd(rdronoffbutton : bool; currentrdrstate : tsensorstate)
+    returns (rdronoffcmd : bool)
+let
+  rdronoffcmd =
+      statecmd(Digital.risingEdge(rdronoffbutton), currentrdrstate);
+tel
+
+(* compute the new iff state each time on/off button
+   is pressed *)
+node mc_iffstatecmd(iffonoffbutton : bool; currentiffstate : tsensorstate)
+    returns (iffonoffcmd : bool)
+let
+  iffonoffcmd =
+      statecmd(Digital.risingEdge(iffonoffbutton), currentiffstate);
+tel
+
+(* safe state machine for the computing of radar mode
+   state ident: state.6  *)
+node rdrmodecmd(currentstate : tsensorstate;
+                  modebuttonpressed : bool(* last = false*);
+                  currentmode : trdrmode)
+    returns (modecmd : bool)
+let
+    automaton
+      state Wide
+        do  modecmd = false;
+        unless (modebuttonpressed &
+          (currentstate = TState_ON &
+           currentmode = TRdrMode_WIDE)) then Narrow
+
+      state Narrow
+        do  modecmd = true;
+        unless (modebuttonpressed &
+          (currentstate = TState_ON &
+           currentmode = TRdrMode_NARROW)) then Wide
+     end
+tel
+
+(* compute the new radar mode each time on/off button
+   is pressed *)
+node mc_rdrmodecmd(currentrdrstate : tsensorstate;
+                     rdrmodebutton : bool;
+                     currentrdrmode : trdrmode)
+    returns (rdrmodecmd : bool)
+let
+    rdrmodecmd =
+      rdrmodecmd(currentrdrstate, Digital.risingEdge(rdrmodebutton),
+        currentrdrmode);
+tel
+
+(* compute the radar mode, according to the corresponding
+   input command from the mission computer *)
+fun radar_mode(modecmd : bool) returns (mode : trdrmode)
+let
+  mode = if modecmd then TRdrMode_NARROW else TRdrMode_WIDE;
+tel
+
+(* compute the radar state, according to:
+   - the corresponding input command from the mission computer
+   - the failure state of the radar  *)
+node radar_state(onoffcmd, failure : bool)
+    returns (initializing : bool; st : tsensorstate)
+var x : bool;
+let
+   initializing = st = TState_OFF & onoffcmd;
+(* x = fby (onoffcmd; 5; false) *)
+   x = false fby false fby false fby false fby false fby onoffcmd;
+   st =
+      if failure
+      then TState_FAIL
+      else if (if onoffcmd then x else false)
+      then TState_ON
+      else TState_OFF;
+tel
+
+(* elaborate and generate the (up to 2) tracks detected
+   by the radar (position + speed + distance + rate of
+   closing) *)
+node radar_tracks(st : tsensorstate;
+                    tracks : TypeArray.ttracksarray;
+                    rdrdetectedtracks : TypeArray.tdetectedrdrtracksarray)
+    returns (rdrtracks : TypeArray.trdrtracksarray)
+var
+    l22 : TypeTracks.ttrack^ksizerdrtracksarray;
+    l30 : TypeTracks.trdrtrack^ksizerdrtracksarray;
+let
+    rdrtracks = if st = TState_ON then l30 else kinitrdrtrackarray;
+    l30 = map<<ksizerdrtracksarray>> Trackslib.elaboraterdrtrack(l22);
+    l22 =
+      map<<ksizerdrtracksarray>> Trackslib.selectdetectedtrack(
+        rdrdetectedtracks, tracks^ksizerdrtracksarray,
+        CstTracksInit.kinittrack^ksizerdrtracksarray);
+tel
+
+(* scade representation for the radar, generating:
+   1) the radar state
+   2) the radar mode
+   3) the (up to 2) tracks detected by the radar  *)
+node radar(onoffcmd, modecmd, failure : bool;
+             rdrdetectedtracks : TypeArray.tdetectedrdrtracksarray;
+             tracks : TypeArray.ttracksarray)
+  returns (initializing : bool;
+             st : tsensorstate;
+             mode : trdrmode;
+             rdrtracks : TypeArray.trdrtracksarray)
+let
+    rdrtracks = radar_tracks(st, tracks, rdrdetectedtracks);
+    mode = radar_mode(modecmd);
+    (initializing, st) = radar_state(onoffcmd, failure);
+tel
+
+(* compute the iff state, according to:
+   - the corresponding input command from the mission computer
+   - the failure state of the iff *)
+node iff_state(onoffcmd, failure : bool)
+    returns (initializing : bool; st : tsensorstate)
+var x : bool;
+let
+    initializing = st = TState_OFF & onoffcmd;
+(*  x = fby (onoffcmd; 5; false) *)
+    x = false fby false fby false fby false fby false fby onoffcmd;
+    st =
+      if failure
+      then TState_FAIL
+      else if (if onoffcmd then x else false)
+      then TState_ON
+      else TState_OFF;
+tel
+
+fun ifftrack_of_track(track : TypeTracks.ttrack)
+    returns (ifftrack : TypeTracks.tifftrack)
+let
+  ifftrack = { i_pos = track.t_pos; i_id = track.t_id };
+tel
+
+(* elaborate and generate the (up to 2) tracks detected
+   by the iff (position + identifier) *)
+fun iff_tracks(st : tsensorstate;
+                      tracks : TypeArray.ttracksarray;
+                      iffdetectedtracks : TypeArray.tdetectedifftracksarray)
+    returns (ifftracks : TypeArray.tifftracksarray)
+var l34 : TypeTracks.ttrack^TypeArray.ksizeifftracksarray;
+    l40 : TypeArray.tifftracksarray;
+let
+    l34 =
+      map<<ksizeifftracksarray>> Trackslib.selectdetectedtrack(
+        iffdetectedtracks, tracks^ksizeifftracksarray,
+        CstTracksInit.kinittrack^ksizeifftracksarray);
+    l40 = map<<ksizeifftracksarray>> ifftrack_of_track(l34);
+    ifftracks = if st = TState_ON then l40 else kinitifftrackarray;
+  tel
+
+
+(* scade representation for the iff, generating:
+   1) the iff state
+   2) the (up to 2) tracks detected by the iff  *)
+node iff(tracks : TypeArray.ttracksarray;
+           failure : bool;
+           iffdetectedtracks : TypeArray.tdetectedifftracksarray;
+           onoffcmd : bool)
+    returns (st : tsensorstate;
+             ifftracks : TypeArray.tifftracksarray;
+             initializing : bool)
+let
+  ifftracks = iff_tracks(st, tracks, iffdetectedtracks);
+  (initializing, st) = iff_state(onoffcmd, failure);
+tel
+
+node advrandr(min, max : float) returns (output1 : float)
+let
+  output1 = (max -. min) *. rand() +. min;
+tel
+
+node advrandi(min, max, step : int) returns (output1 : int)
+var l8 : int;
+let
+  l8 = if 0 <> step then step else 1;
+  output1 = (int_of_float (float_of_int (max - min) *. rand())
+   + min) / (l8 * l8);
+tel
+
+(* for one given track, generate:
+   1) its new position according to:
+   - its previous position, the input speed and slope
+   if set/reset button not pressed
+   - the input initial position if set/reset button pressed
+   2) its identifier according to the input identifier  *)
+node createtracks_createonetrack_init_rand()
+    returns (sloperadinit, speedinit, xmeterinit, ymeterinit : float;
+             idinit : int)
+let
+    speedinit = advrandr(250.0, 1000.0) *. CstPhysics.t;
+    ymeterinit = CstPhysics.nm *. advrandr(-. 10.0, 10.0);
+    xmeterinit = advrandr(-. 10.0, 10.0) *. CstPhysics.nm;
+    sloperadinit = 2.0 *. CstPhysics.pi *. advrandr(0.0, 360.0) /. 360.0;
+    idinit = advrandi(0, 1000, 10);
+tel
+
+(* for one given track, generate:
+   1) its new position according to:
+   - its previous position, the input speed and slope
+   if set/reset button not pressed
+   - the input initial position if set/reset button pressed
+   2) its identifier according to the input identifier  *)
+node createtracks_createonetrack_rand(res : bool)
+    returns (track : TypeTracks.ttrack)
+var id : int; sloperad, speedt, x0, y0, l9, l18 : float;
+let
+ (* (sloperad, speedt, x0, y0, id) =
+      (activate createtracks_createonetrack_init_rand every reset initial default (
+        0., 0., 0., 0., 0))(); *)
+  (sloperad, speedt, x0, y0, id) =
+    if res then createtracks_createonetrack_init_rand()
+             else (0.0, 0.0, 0.0, 0.0, 0) fby (sloperad, speedt, x0, y0, id);
+  l18 = y0 -> Mathext.sinr(sloperad) *. speedt +. (y0 -> pre l18);
+  l9 = x0 -> (x0 -> pre l9) +. speedt *. Mathext.cosr(sloperad);
+  track = { t_pos = { x = l9; y = l18 }; t_id  = id };
+tel
+
+(* generate up to 4 tracks (position + identifier) according
+   to the graphical track inputs panel. *)
+node createtracks_rand(res : bool)
+    returns (tracks : TypeArray.ttracksarray)
+let
+    tracks = map<<ksizetracksarray>> createtracks_createonetrack_rand(res^ksizetracksarray);
+tel
+
+node createalltracks(res : bool)
+  returns (tracks : TypeArray.ttracksarray)
+let
+(*  tracks = (restart createtracks_rand every res)(res); *)
+    reset
+      tracks = createtracks_rand(res);
+    every res
+tel
+
+
+(* merge a mission track detected by the radar with a
+   mission track detected by the iff if they have the same
+   position and speed.
+   in that case, newrdrmissiontrack is the merged track, and newiffmissiontrack is reset to "empty".
+   otherwise, outputs = inputs  *)
+fun fusionrdrifftracks(iffmissiontrack : TypeTracks.tmissiontrack at r1;
+                      rdrmissiontrack : TypeTracks.tmissiontrack at r2)
+    returns (newiffmissiontrack : TypeTracks.tmissiontrack at r1;
+             newrdrmissiontrack : TypeTracks.tmissiontrack at r2)
+var l90 : bool; rdrmissiontrack_true, rdrmissiontrack_false : TypeTracks.tmissiontrack at r2;
+iffmissiontrack_true, iffmissiontrack_false : TypeTracks.tmissiontrack at r1;
+let
+    l90 =
+      Trackslib.comparetracks(rdrmissiontrack.m_pos, iffmissiontrack.m_pos,
+        rdrmissiontrack.m_speed, iffmissiontrack.m_speed);
+    (rdrmissiontrack_true, rdrmissiontrack_false) = split l90 (rdrmissiontrack);
+    (iffmissiontrack_true, iffmissiontrack_false) = split l90 (iffmissiontrack);
+    newrdrmissiontrack =
+      merge l90
+       (true -> { ({ ({ ({ rdrmissiontrack_true with .m_id = iffmissiontrack_true.m_id })
+                            with .m_detectedbyiff = iffmissiontrack_true.m_detectedbyiff })
+                            with .m_tracknumber = 0 })
+                            with .m_targettype = iffmissiontrack_true.m_targettype } )
+      (false -> rdrmissiontrack_false);
+    newiffmissiontrack =
+      merge l90
+      (true -> reinit(iffmissiontrack_true, CstTracksInit.kinitmissiontrack))
+      (false -> iffmissiontrack_false);
+(*
+    newrdrmissiontrack =
+      if l90
+      then { m_pos             = rdrmissiontrack.m_pos;
+             m_speed           = rdrmissiontrack.m_speed;
+             m_id              = iffmissiontrack.m_id;
+             m_priority        = rdrmissiontrack.m_priority;
+             m_d               = rdrmissiontrack.m_d;
+             m_sabs            = rdrmissiontrack.m_sabs;
+             m_sr              = rdrmissiontrack.m_sr;
+             m_detectedbyradar = rdrmissiontrack.m_detectedbyradar;
+             m_detectedbyiff   = iffmissiontrack.m_detectedbyiff;
+             m_tracknumber     = 0;
+             m_targettype      = iffmissiontrack.m_targettype;
+             m_isvisible       = rdrmissiontrack.m_isvisible;
+             m_angle           = rdrmissiontrack.m_angle }
+      else rdrmissiontrack;
+*)
+tel
+
+(* merge tracks data received from both radar and iff sensors *)
+fun mc_tracks_fusion_onerdrwithifftracks(rdrtrack : TypeTracks.tmissiontrack at r1;
+       ifftracks : TypeTracks.tmissiontrack^ksizeifftracksarray at r2)
+    returns (fusionnedrdrtrack : TypeTracks.tmissiontrack at r1;
+            fusionnedifftracks : TypeTracks.tmissiontrack^ksizeifftracksarray at r2)
+let
+    (fusionnedifftracks, fusionnedrdrtrack) =
+      mapfold<<ksizeifftracksarray>> fusionrdrifftracks(ifftracks, rdrtrack);
+tel
+
+(* merge tracks data received from both radar and iff sensors *)
+node mc_tracks_fusion(rdrtracks : TypeArray.trdrtracksarray;
+                        ifftracks : TypeArray.tifftracksarray)
+    returns (missiontracks : TypeArray.tmissiontracksarray)
+var
+    mergedrdrtracks : TypeTracks.tmissiontrack^ksizerdrtracksarray;
+    mergedifftracks : TypeTracks.tmissiontrack^ksizeifftracksarray;
+    l140 : TypeTracks.tmissiontrack^ksizerdrtracksarray at rdr;
+    l139 : TypeTracks.tmissiontrack^ksizeifftracksarray at iff;
+let
+    missiontracks = mergedrdrtracks @ mergedifftracks;
+    (mergedrdrtracks, mergedifftracks) =
+      mapfold<<ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks(l140, l139);
+    init<<rdr>> l140 = map<<ksizerdrtracksarray>> Trackslib.convertrdrtracktomissiontrack(rdrtracks);
+    init<<iff>> l139 = map<<ksizeifftracksarray>> Trackslib.convertifftracktomissiontrack(ifftracks);
+tel
+
+
+fun prio_tracknumbernotinarray(missiontracktracknumber,
+                               prioritytrack : int; acc : bool)
+    returns (notinarray : bool)
+let
+    notinarray = acc & missiontracktracknumber <> prioritytrack;
+tel
+
+(* replace the lowest priority track in priorityarray by missiontrack *)
+node prio_selecthighestprioritynotinpriorityarray(
+       missiontrack : TypeTracks.tmissiontrack;
+       prioritiesarray : Mc_TypeLists.tpriorityList;
+       accprioritymissiontrack : TypeTracks.tmissiontrack at r)
+    returns (prioritymissiontrack : TypeTracks.tmissiontrack at r)
+var
+    missiontracknotinpriorittiesarray,
+    missiontrackhashigherprioritythanacc : bool;
+let
+    missiontrackhashigherprioritythanacc =
+      not Trackslib.trackalowerprioritythanb(missiontrack,
+        accprioritymissiontrack);
+    missiontracknotinpriorittiesarray =
+      fold<<4>> prio_tracknumbernotinarray(missiontrack.m_tracknumber^4,
+        prioritiesarray, true);
+    prioritymissiontrack =
+      if missiontracknotinpriorittiesarray & missiontrackhashigherprioritythanacc
+      then missiontrack
+      else accprioritymissiontrack;
+tel
+
+(* for each missiontrack
+   if priority higher than all in priorityarray and not in priorityarray
+   then, copy in priorityarray at index *)
+node prio_selectprioritarymissiontracks(missiontracks : TypeArray.tmissiontracksarray;
+                                          prioritiesarray : Mc_TypeLists.tpriorityList at prio;
+                                          indexpriority : int)
+    returns (newprioritiesarray : Mc_TypeLists.tpriorityList at prio)
+var initmtrack, missiontrackwithhighestpriority : TypeTracks.tmissiontrack at r;
+let
+    newprioritiesarray =
+     [ prioritiesarray with [indexpriority] =
+          missiontrackwithhighestpriority.m_tracknumber ];
+    init<<r>> initmtrack = CstTracksInit.kinitmissiontrack;
+    missiontrackwithhighestpriority =
+      fold<<ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray(
+        missiontracks,
+        prioritiesarray^ksizemissiontracksarray, initmtrack);
+tel
+
+fun prio_setpriorityinmissiontrack(prioritytracknumber : int;
+                                   priorityindex : int;
+                                   missiontrack : TypeTracks.tmissiontrack at r)
+    returns (missiontrackwithprio : TypeTracks.tmissiontrack at r)
+var missiontrack_true, missiontrack_false : TypeTracks.tmissiontrack at r;
+    c : bool;
+  let
+    c = prioritytracknumber = missiontrack.m_tracknumber;
+    (missiontrack_true, missiontrack_false) = split c (missiontrack);
+    missiontrackwithprio =
+      merge c
+       (true -> Trackslib.setmissiontrackpriority(missiontrack_true, (priorityindex when c) + 1))
+       (false -> missiontrack_false);
+  tel
+
+fun prio_setpriorityinmissiontrackarray(priorityarray : Mc_TypeLists.tpriorityList;
+                                        missiontrack : TypeTracks.tmissiontrack at r)
+    returns (missiontrackwithprio : TypeTracks.tmissiontrack at r)
+let
+    missiontrackwithprio =
+      foldi<<4>> prio_setpriorityinmissiontrack(priorityarray, missiontrack);
+tel
+
+
+
+(* set the priority in missiontracks:
+   1) set the highest prority
+   2) set the second priority=highest different from the previous
+   3) set the 3rd priority=highest different from the previous
+   3) set the 4th priority=highest different from the previous
+   => the 4 priority track should be in an array (initialized to "empty")
+   operator selectprioritymissiontracks inputs
+   - missiontracks
+   - prioritytrack set (to perform the "different from the previous")
+   *test for each missiontrack: the higest, and not already in prioritytracks.
+   *then, set the ith element of prioritytracks with the one found
+   for each missiontrack, if prioritary higher than the lowest 4 prioritary
+   old: compute each detected track priority, and sort tracks
+   according to their priority *)
+node mc_tracks_prio(missiontracks : TypeArray.tmissiontracksarray at r)
+    returns (missiontrackswithprio : TypeArray.tmissiontracksarray at r)
+var initprio, prioritytracknumbers : Mc_TypeLists.tpriorityList at prio;
+let
+    missiontrackswithprio =
+      map<<ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+        <(prioritytracknumbers)> (missiontracks);
+    init<<prio>> initprio = 0^4;
+    prioritytracknumbers =
+      prio_selectprioritarymissiontracks(missiontracks,
+        prio_selectprioritarymissiontracks(missiontracks,
+          prio_selectprioritarymissiontracks(missiontracks,
+            prio_selectprioritarymissiontracks(missiontracks, initprio, 0), 1), 2),
+        3);
+tel
+
+(* associate a track number to each detected track *)
+node mc_tracks_tracknumber(withouttracknb : TypeArray.tmissiontracksarray at r)
+    returns (withtracknumber : TypeArray.tmissiontracksarray at r)
+var l81 : int;
+let
+    (withtracknumber, l81) =
+      mapfold<<ksizemissiontracksarray>> Trackslib.calculatemissiontracknumber
+          <(kinitmissiontrackarray -> pre withtracknumber)>
+           (withouttracknb, 0 -> pre l81);
+tel
+
+(* 1) merge tracks data received from both radar and iff sensors
+   2) associate a track number to each detected track
+  3) compute each detected track priority, and sort tracks
+   according to their priority  *)
+node mc_tracks(rdrtracks : TypeArray.trdrtracksarray;
+                 ifftracks : TypeArray.tifftracksarray)
+    returns (missiontracks : TypeArray.tmissiontracksarray)
+var fused_tracks : TypeArray.tmissiontracksarray at r;
+let
+    init<<r>> fused_tracks = mc_tracks_fusion(rdrtracks, ifftracks);
+    missiontracks = mc_tracks_prio(mc_tracks_tracknumber(fused_tracks));
+tel
+
+(* scade representation for the mission computer, computing:
+   - the new radar state
+   - the new radar mode
+   - the new iff state
+   - the (up to 4) tracks detected by the fighter *)
+node mc(currentrdrstate : tsensorstate;
+          currentrdrmode : trdrmode;
+          rdrtracks : TypeArray.trdrtracksarray;
+          rdronoffbutton, rdrmodebutton, iffonoffbutton : bool;
+          currentiffstate : tsensorstate;
+          ifftracks : TypeArray.tifftracksarray)
+    returns (rdronoffcmd, rdrmodecmd : bool;
+             missiontracks : TypeArray.tmissiontracksarray;
+             iffonoffcmd : bool)
+let
+    missiontracks = mc_tracks(rdrtracks, ifftracks);
+    iffonoffcmd = mc_iffstatecmd(iffonoffbutton, currentiffstate);
+    rdrmodecmd = mc_rdrmodecmd(currentrdrstate, rdrmodebutton, currentrdrmode);
+    rdronoffcmd = mc_rdrstatecmd(rdronoffbutton, currentrdrstate);
+tel

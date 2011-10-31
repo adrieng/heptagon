@@ -1,0 +1,25 @@
+const n:int = 100
+
+fun f(a:int^n at r) returns (o:int^n at r)
+let
+  o = [a with [0] = 0]
+tel
+
+fun g () returns (o:int^n)
+var x:int^n at r;
+let
+  init<<r>> x = 1^n;
+  o = f(f(x))
+tel
+
+fun f2(u:int; a:int^n at r) returns (o:int^n at r)
+let
+  o = [a with [0] = u]
+tel
+
+fun lin_fold(a : int^3) returns (o:int^n)
+var x:int^n at r;
+let
+  init<<r>> x = 1^n;
+  o = fold<<3>> f2(a, f(f(x)));
+tel

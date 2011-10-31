@@ -14,7 +14,7 @@ open Names
 open Idents
 open Heptagon
 open Location
-open Graph
+open Sgraph
 open Format
 open Pp_tools
 
@@ -36,6 +36,7 @@ type sc =
   | Ctuple of sc list
   | Cwrite of ident
   | Cread of ident
+  | Clinread of ident
   | Clastread of ident
   | Cempty
 
@@ -43,6 +44,7 @@ type sc =
 type ac =
   | Awrite of ident
   | Aread of ident
+  | Alinread of ident
   | Alastread of ident
   | Aseq of ac * ac
   | Aand of ac * ac
@@ -71,6 +73,7 @@ let output_ac ff ac =
         fprintf ff "@[%a@]" (print_list_r (print 1) "(" "," ")") acs
     | Awrite(m) -> fprintf ff "%s" (name m)
     | Aread(m) -> fprintf ff "^%s" (name m)
+    | Alinread(m) -> fprintf ff "*%s" (name m)
     | Alastread(m) -> fprintf ff "last %s" (name m)
   in
   fprintf ff "@[<v 1>%a@]@?" (print 0) ac
@@ -112,17 +115,22 @@ let rec cand nc1 nc2 =
     | nc1, Aor(nc2, nc22) -> Aor(cand nc1 nc2, cand nc1 nc22)
     | Aac(ac1), Aac(ac2) -> Aac(Aand(ac1, ac2))
 
+let mk_tuple l = match l with
+  | [] -> Aempty
+  | [ac] -> Aac ac
+  | _ -> Aac (Atuple l)
+
 let rec ctuple l =
-  let rec norm_or l res = match l with
-    | [] -> Aac (Atuple (List.rev res))
-    | Aempty::l -> norm_or l res
-    | Aor (Aempty, nc2)::l -> norm_or (nc2::l) res
-    | Aor (nc1, Aempty)::l -> norm_or (nc1::l) res
-    | Aor(nc1, nc2)::l ->
-        Aor(norm_or (nc1::l) res, norm_or (nc2::l) res)
-    | (Aac ac)::l -> norm_or l (ac::res)
+  let rec norm_tuple l before newl = match l with
+    | [] -> cseq before (mk_tuple newl)
+    | Aempty::l -> norm_tuple l before newl
+    | (Aac ((Awrite _ | Aread _ | Alinread _ | Alastread _) as ac))::l ->
+      norm_tuple l before (ac::newl)
+    | ((Aac _) as ac)::l ->
+      norm_tuple l (cand before ac) newl
+    | (Aor _)::l -> assert false
   in
-    norm_or l []
+  norm_tuple l Aempty []
 
 and norm = function
   | Cor(c1, c2) -> cor (norm c1) (norm c2)
@@ -131,47 +139,67 @@ and norm = function
   | Ctuple l -> ctuple (List.map norm l)
   | Cwrite(n) -> Aac(Awrite(n))
   | Cread(n) -> Aac(Aread(n))
+  | Clinread(n) -> Aac(Alinread(n))
   | Clastread(n) -> Aac(Alastread(n))
   | _ -> Aempty
+
+exception Self_dependency
 
 (* building a dependence graph from a scheduling constraint *)
 let build ac =
   (* associate a graph node for each name declaration *)
   let nametograph n g n_to_graph = Env.add n g n_to_graph in
 
-  let rec associate_node g n_to_graph = function
+  let rec associate_node g (n_to_graph, lin_map) = function
     | Awrite(n) ->
-        nametograph n g n_to_graph
+        nametograph n g n_to_graph, lin_map
+    | Alinread(n) ->
+        n_to_graph, nametograph n g lin_map
     | Atuple l ->
-        List.fold_left (associate_node g) n_to_graph l
+        List.fold_left (associate_node g) (n_to_graph, lin_map) l
     | _ ->
-        n_to_graph
+        n_to_graph, lin_map
   in
 
   (* first build the association [n -> node] *)
   (* for every defined variable *)
-  let rec initialize ac n_to_graph =
+  let rec initialize ac n_to_graph lin_map =
     match ac with
       | Aand(ac1, ac2) ->
-          let n_to_graph = initialize ac1 n_to_graph in
-          initialize ac2 n_to_graph
+          let n_to_graph, lin_map = initialize ac1 n_to_graph lin_map in
+          initialize ac2 n_to_graph lin_map
       | Aseq(ac1, ac2) ->
-          let n_to_graph = initialize ac1 n_to_graph in
-          initialize ac2 n_to_graph
+          let n_to_graph, lin_map = initialize ac1 n_to_graph lin_map in
+          initialize ac2 n_to_graph lin_map
       | _ ->
           let g = make ac in
-          associate_node g n_to_graph ac
+          associate_node g (n_to_graph, lin_map) ac
   in
 
-  let make_graph ac n_to_graph =
+  let make_graph ac n_to_graph lin_map =
     let attach node n =
       try
-        let g = Env.find n n_to_graph in add_depends node g
+        let g = Env.find n n_to_graph in
+        if g.g_tag = node.g_tag then
+          raise Self_dependency
+        else
+          add_depends node g
+      with
+        | Not_found -> () in
+
+    let attach_lin node n =
+      try
+        let g = Env.find n lin_map in
+        if g.g_tag = node.g_tag then
+          raise Self_dependency
+        else
+          add_depends g node
       with
         | Not_found -> () in
 
     let rec add_dependence g = function
-      | Aread(n) -> attach g n
+      | Aread(n) -> attach g n; attach_lin g n
+      | Alinread(n) -> attach g n
       | _ -> ()
     in
 
@@ -187,13 +215,12 @@ let build ac =
       in
       match ac with
         | Awrite n -> Env.find n n_to_graph
+        | Alinread n -> Env.find n lin_map
         | Atuple l ->
-            begin try
-              node_for_tuple l
-            with Not_found
-                _ -> make ac
-            end
-        | _ -> make ac
+            (try
+                node_for_tuple l
+              with Not_found -> make ac)
+        | _ -> raise Not_found
     in
 
     let rec make_graph ac =
@@ -211,36 +238,33 @@ let build ac =
               top2;
             top1 @ top2, bot1 @ bot2
         | Awrite(n) -> let g = Env.find n n_to_graph in [g], [g]
-        | Aread(n) -> let g = make ac in attach g n; [g], [g]
+        | Aread(n) ->let g = make ac in attach g n; attach_lin g n; [g], [g]
+        | Alinread(n) -> let g = Env.find n lin_map in attach g n; [g], [g]
         | Atuple(l) ->
-            let make_graph_tuple ac =
-              match ac with
-                | Aand _ | Atuple _ -> make_graph ac
-                | _ -> [], []
-            in
             let g = node_for_ac ac in
-            List.iter (add_dependence g) l;
-            let top_l, bot_l = List.split (List.map make_graph_tuple l) in
-            let top_l = List.flatten top_l in
-            let bot_l = List.flatten bot_l in
-            g::top_l, g::bot_l
+            List.iter (add_dependence g) l; [g], [g]
         | _ -> [], []
 
     in
     let top_list, bot_list = make_graph ac in
     graph top_list bot_list in
 
-  let n_to_graph = initialize ac Env.empty in
-  let g = make_graph ac n_to_graph in
+  let n_to_graph, lin_map = initialize ac Env.empty Env.empty in
+  let g = make_graph ac n_to_graph lin_map in
   g
 
 (* the main entry. *)
 let check loc c =
   let check_ac ac =
-    let { g_bot = g_list } = build ac in
-    match cycle g_list with
-      | None -> ()
-      | Some _ -> error (Ecausality_cycle ac) in
+    try
+      (let { g_bot = g_list } = build ac in
+      match cycle g_list with
+        | None -> ()
+        | Some _ -> error (Ecausality_cycle ac))
+    with
+      | Self_dependency -> error (Ecausality_cycle ac)
+  in
+
 
   let rec check = function
     | Aempty -> ()

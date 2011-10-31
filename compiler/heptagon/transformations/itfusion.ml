@@ -51,13 +51,23 @@ match l with
   | [vd] -> Evarpat (vd.v_ident)
   | _ -> Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) l)
 
+let type_of_vd_list l =
+  Types.prod (List.map (fun vd -> vd.v_type) l)
+
+let linearity_of_vd_list l =
+  Linearity.prod (List.map (fun vd -> vd.v_linearity) l)
+
+let exp_of_vd vd =
+  mk_exp (Evar vd.v_ident) vd.v_type ~linearity:vd.v_linearity
+
 let tuple_of_vd_list l =
-  let el = List.map (fun vd -> mk_exp (Evar vd.v_ident) vd.v_type) l in
-  let ty = Types.prod (List.map (fun vd -> vd.v_type) l) in
-    mk_exp (Eapp (mk_app Etuple, el, None)) ty
+  let el = List.map exp_of_vd l in
+  let ty = type_of_vd_list l in
+  let lin = linearity_of_vd_list l in
+    mk_exp (Eapp (mk_app Etuple, el, None)) ty ~linearity:lin
 
 let vd_of_arg ad =
-    mk_var_dec (fresh_vd_of_arg ad) ad.a_type
+    mk_var_dec (fresh_vd_of_arg ad) ad.a_type ad.a_linearity
 
 (** @return the lists of inputs and outputs (as var_dec) of
     an app object. *)
@@ -80,10 +90,10 @@ let get_node_inp_outp app = match app.a_op with
     added equations. *)
 let mk_call app acc_eq_list =
   let new_inp, new_outp = get_node_inp_outp app in
-  let args = List.map (fun vd -> mk_exp
-                         (Evar vd.v_ident) vd.v_type) new_inp in
-  let out_ty = Types.prod (List.map (fun vd -> vd.v_type) new_outp) in
-  let e = mk_exp (Eapp (app, args, None)) out_ty in
+  let args = List.map exp_of_vd new_inp in
+  let out_ty = type_of_vd_list new_outp in
+  let out_lin = linearity_of_vd_list new_outp in
+  let e = mk_exp (Eapp (app, args, None)) out_ty ~linearity:out_lin in
   match List.length new_outp with
     | 1 -> new_inp, e, acc_eq_list
     | _ ->
@@ -112,9 +122,8 @@ let edesc funs acc ed =
               let new_inp, e, acc_eq_list = mk_call g acc_eq_list in
               new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->
-              let vd = mk_var_dec (fresh_var ()) e.e_ty in
-              let x = mk_exp (Evar vd.v_ident) vd.v_type in
-              vd::inp, acc_eq_list, x::largs, e::args, b
+              let vd = mk_var_dec (fresh_var ()) e.e_ty e.e_linearity in
+              vd::inp, acc_eq_list, (exp_of_vd vd)::largs, e::args, b
         in
 
         let inp, acc_eq_list, largs, args, can_be_fused =
@@ -123,8 +132,9 @@ let edesc funs acc ed =
         then (
           (* create the call to f in the lambda fun *)
           let _, outp = get_node_inp_outp f in
-          let f_out_type = Types.prod (List.map (fun v -> v.v_type) outp) in
-          let call = mk_exp (Eapp(f, largs, None)) f_out_type in
+          let f_out_type = type_of_vd_list outp in
+          let f_out_lin = linearity_of_vd_list outp in
+          let call = mk_exp (Eapp(f, largs, None)) f_out_type f_out_lin in
           let eq = mk_equation (Eeq(pat_of_vd_list outp, call)) in
           (* create the lambda *)
           let anon = mk_app

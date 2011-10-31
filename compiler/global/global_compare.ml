@@ -22,9 +22,9 @@ let rec clock_compare ck1 ck2 = match ck1, ck2 with
       if cr1 <> 0 then cr1 else
         let cr2 = ident_compare vi1 vi2 in
         if cr2 <> 0 then cr2 else clock_compare ck1 ck2
-  | Cbase _, _ -> 1
+  | Cbase , _ -> 1
 
-  | Cvar _, Cbase _ -> -1
+  | Cvar _, Cbase -> -1
   | Cvar _, _ -> 1
 
   | Con _, _ -> -1

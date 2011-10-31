@@ -1,0 +1,4 @@
+node f<<n:int>>(n: int) returns (o:int)
+let
+  o = n
+tel

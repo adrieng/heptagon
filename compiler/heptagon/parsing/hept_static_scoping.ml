@@ -70,12 +70,14 @@ let const_dec funs local_const cd =
 let program p =
   let funs = { Hept_parsetree_mapfold.defaults
                with node_dec = node; exp = exp; static_exp = static_exp; const_dec = const_dec } in
+  List.iter open_module p.p_opened;
   let p, _ = Hept_parsetree_mapfold.program_it funs Names.NamesSet.empty p in
   p
 
 let interface i =
   let funs = { Hept_parsetree_mapfold.defaults
                with node_dec = node; exp = exp; const_dec = const_dec } in
+  List.iter open_module i.i_opened;
   let i, _ = Hept_parsetree_mapfold.interface_it funs Names.NamesSet.empty i in
   i
 

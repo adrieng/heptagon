@@ -1,0 +1,2796 @@
+open Mctypes
+open Mc_ext
+open Mathext
+node abs(a : float) returns (o : float)
+let
+  o = if (<=.)(0.000000, a) then a else ~-.(a)
+tel
+
+node sign(a : float) returns (o : float)
+let
+  o =
+    if (>.)(a, 0.000000)
+    then 1.000000
+    else if (=)(0.000000, a) then 0.000000 else ~-.(1.000000)
+tel
+
+node myarctan(y : float; x : float) returns (atan : float)
+var a_2 : float; o_2 : float; a : float; o : float; l6 : float; l4 : bool;
+    l1 : float;
+let
+  a_2 = x;
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = y;
+  o =
+    if (>.)(a, 0.000000)
+    then 1.000000
+    else if (=)(0.000000, a) then 0.000000 else ~-.(1.000000);
+  atan =
+    if l4
+    then if (<.)(x, 0.000000) then (+.)(Mctypes.pi, l1) else l1
+    else (Mctypes.pi /. 2.000000) *. o;
+  l6 = if l4 then (/.)(y, x) else 0.000000 -> pre l6;
+  l4 = (>.)(o_2, 0.100000);
+  l1 = Mathext.atanr(l6)
+tel
+
+node missiontrackequalsprevious(previousone : Mctypes.tmissiontrack;
+                                 actualone : Mctypes.tmissiontrack)
+returns (equal : bool)
+var a_6 : float; o_6 : float; a_5 : float; o_5 : float; a_4 : float;
+    o_4 : float; a_3 : float; o_3 : float; a_2 : float; o_2 : float;
+    a : float; o : float;
+let
+  a_6 = actualone.Mctypes.m_pos.Mctypes.y;
+  o_6 = if (<=.)(0.000000, a_6) then a_6 else ~-.(a_6);
+  a_5 = actualone.Mctypes.m_pos.Mctypes.x;
+  o_5 = if (<=.)(0.000000, a_5) then a_5 else ~-.(a_5);
+  a_4 = previousone.Mctypes.m_pos.Mctypes.y;
+  o_4 = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  a_3 = previousone.Mctypes.m_pos.Mctypes.x;
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  a_2 =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.y, actualone.Mctypes.m_pos.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.x, actualone.Mctypes.m_pos.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal =
+    (or)
+    ((&)
+     (not((=)(0, previousone.Mctypes.m_id)),
+       (=)(previousone.Mctypes.m_id, actualone.Mctypes.m_id)),
+      (&)
+      ((&)((<.)(o, 100.000000), (<.)(o_2, 100.000000)),
+        not
+        ((&)
+         ((&)
+          ((&)((<.)(o_3, 0.100000), (<.)(o_4, 0.100000)),
+            (<.)(o_5, 0.100000)),
+           (<.)(o_6, 0.100000)))
+          )
+        )
+
+tel
+
+node calctrackvisible1(position : Mctypes.tposition; speed : Mctypes.tspeed)
+returns (trackvisible : bool)
+var a_4 : float; o_4 : float; a_3 : float; o_3 : float; a_2 : float;
+    o_2 : float; a : float; o : float;
+let
+  a_4 = speed.Mctypes.sy;
+  o_4 = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  a_3 = speed.Mctypes.sx;
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  a_2 = position.Mctypes.y;
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = position.Mctypes.x;
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  trackvisible =
+    not
+    ((&)
+     ((&)((&)((<.)(o, 0.001000), (<.)(o_2, 0.001000)), (<.)(o_3, 0.001000)),
+       (<.)(o_4, 0.001000)))
+
+tel
+
+node missiontrackexist1(acc_tracknumber : int;
+                         missiontrack : Mctypes.tmissiontrack;
+                         previousmissiontrack : Mctypes.tmissiontrack)
+returns (tracknumbertoset : int)
+var previousone : Mctypes.tmissiontrack; actualone : Mctypes.tmissiontrack;
+    a_6 : float; o_6 : float; a_5 : float; o_5 : float; a_4 : float;
+    o_4 : float; a_3 : float; o_3 : float; a_2 : float; o_2 : float;
+    a : float; o : float; equal : bool;
+let
+  previousone = missiontrack;
+  actualone = previousmissiontrack;
+  a_6 = actualone.Mctypes.m_pos.Mctypes.y;
+  o_6 = if (<=.)(0.000000, a_6) then a_6 else ~-.(a_6);
+  a_5 = actualone.Mctypes.m_pos.Mctypes.x;
+  o_5 = if (<=.)(0.000000, a_5) then a_5 else ~-.(a_5);
+  a_4 = previousone.Mctypes.m_pos.Mctypes.y;
+  o_4 = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  a_3 = previousone.Mctypes.m_pos.Mctypes.x;
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  a_2 =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.y, actualone.Mctypes.m_pos.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.x, actualone.Mctypes.m_pos.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal =
+    (or)
+    ((&)
+     (not((=)(0, previousone.Mctypes.m_id)),
+       (=)(previousone.Mctypes.m_id, actualone.Mctypes.m_id)),
+      (&)
+      ((&)((<.)(o, 100.000000), (<.)(o_2, 100.000000)),
+        not
+        ((&)
+         ((&)
+          ((&)((<.)(o_3, 0.100000), (<.)(o_4, 0.100000)),
+            (<.)(o_5, 0.100000)),
+           (<.)(o_6, 0.100000)))
+          )
+        )
+      ;
+  tracknumbertoset =
+    if (&)(equal, not((=)(0, previousmissiontrack.Mctypes.m_tracknumber)))
+    then previousmissiontrack.Mctypes.m_tracknumber
+    else acc_tracknumber
+tel
+
+node missiontrackequalsprevious_orig(previousone : Mctypes.tmissiontrack;
+                                      actualone : Mctypes.tmissiontrack)
+returns (equal : bool)
+var a_6 : float; o_6 : float; a_5 : float; o_5 : float; a_4 : float;
+    o_4 : float; a_3 : float; o_3 : float; a_2 : float; o_2 : float;
+    a : float; o : float; l43 : bool;
+let
+  a_6 = actualone.Mctypes.m_pos.Mctypes.y;
+  o_6 = if (<=.)(0.000000, a_6) then a_6 else ~-.(a_6);
+  a_5 = actualone.Mctypes.m_pos.Mctypes.x;
+  o_5 = if (<=.)(0.000000, a_5) then a_5 else ~-.(a_5);
+  a_4 = previousone.Mctypes.m_pos.Mctypes.y;
+  o_4 = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  a_3 = previousone.Mctypes.m_pos.Mctypes.x;
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  a_2 =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.y, actualone.Mctypes.m_pos.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.x, actualone.Mctypes.m_pos.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  l43 = not((=)(previousone.Mctypes.m_tracknumber, 0));
+  equal =
+    (&)
+    (l43,
+      (or)
+      ((&)
+       ((&)(l43, not((=)(0, previousone.Mctypes.m_id))),
+         (=)(previousone.Mctypes.m_id, actualone.Mctypes.m_id)),
+        (&)
+        ((&)((<.)(o, 100.000000), (<.)(o_2, 100.000000)),
+          not
+          ((&)
+           ((&)
+            ((&)((<.)(o_3, 0.100000), (<.)(o_4, 0.100000)),
+              (<.)(o_5, 0.100000)),
+             (<.)(o_6, 0.100000)))
+            )
+          )
+        )
+
+tel
+
+node util_radtodeg(input1 : float) returns (output1 : float)
+let
+  output1 = (/.)(input1, (2.000000 *. Mctypes.pi)) *. 360.000000
+tel
+
+node util_degtorad(input1 : float) returns (output1 : float)
+let
+  output1 = (/.)((2.000000 *. Mctypes.pi) *. input1, 360.000000)
+tel
+
+node calctrackangle(speed : Mctypes.tspeed;
+                     speedabs : Mctypes.tmetresseconde)
+returns (trackangle : float)
+var a_2 : float; o_2 : float; a : float; o : float; input1 : float;
+    output1 : float; l51 : bool; l48 : float; l47 : float;
+let
+  a_2 = l47;
+  o_2 =
+    if (>.)(a_2, 0.000000)
+    then 1.000000
+    else if (=)(0.000000, a_2) then 0.000000 else ~-.(1.000000);
+  a =
+    Mathext.asinr((/.)(speed.Mctypes.sy, if l51 then 1.000000 else speedabs));
+  o =
+    if (>.)(a, 0.000000)
+    then 1.000000
+    else if (=)(0.000000, a) then 0.000000 else ~-.(1.000000);
+  input1 = if l51 then 0.000000 else Mathext.acosr(l47) *. l48;
+  output1 = (/.)(input1, (2.000000 *. Mctypes.pi)) *. 360.000000;
+  trackangle = output1 *. l48 *. o;
+  l51 = (<.)(speedabs, 0.010000);
+  l48 = o_2;
+  l47 = (/.)(speed.Mctypes.sx, if l51 then 1.000000 else speedabs)
+tel
+
+node calctrackvisible(position : Mctypes.tposition)
+returns (trackvisible : bool)
+var a_2 : float; o_2 : float; a : float; o : float;
+let
+  a_2 = position.Mctypes.y;
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = position.Mctypes.x;
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  trackvisible = not((&)((<.)(o, 0.001000), (<.)(o_2, 0.001000)))
+tel
+
+node missiontrackexist(missiontrack : Mctypes.tmissiontrack;
+                        previousmissiontrack : Mctypes.tmissiontrack;
+                        acc_tracknumber : int)
+returns (tracknumbertoset : int)
+var previousone : Mctypes.tmissiontrack; actualone : Mctypes.tmissiontrack;
+    a_6 : float; o_6 : float; a_5 : float; o_5 : float; a_4 : float;
+    o_4 : float; a_3 : float; o_3 : float; a_2 : float; o_2 : float;
+    a : float; o : float; equal : bool;
+let
+  previousone = missiontrack;
+  actualone = previousmissiontrack;
+  a_6 = actualone.Mctypes.m_pos.Mctypes.y;
+  o_6 = if (<=.)(0.000000, a_6) then a_6 else ~-.(a_6);
+  a_5 = actualone.Mctypes.m_pos.Mctypes.x;
+  o_5 = if (<=.)(0.000000, a_5) then a_5 else ~-.(a_5);
+  a_4 = previousone.Mctypes.m_pos.Mctypes.y;
+  o_4 = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  a_3 = previousone.Mctypes.m_pos.Mctypes.x;
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  a_2 =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.y, actualone.Mctypes.m_pos.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a =
+    (-.)
+    (previousone.Mctypes.m_pos.Mctypes.x, actualone.Mctypes.m_pos.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal =
+    (or)
+    ((&)
+     (not((=)(0, previousone.Mctypes.m_id)),
+       (=)(previousone.Mctypes.m_id, actualone.Mctypes.m_id)),
+      (&)
+      ((&)((<.)(o, 100.000000), (<.)(o_2, 100.000000)),
+        not
+        ((&)
+         ((&)
+          ((&)((<.)(o_3, 0.100000), (<.)(o_4, 0.100000)),
+            (<.)(o_5, 0.100000)),
+           (<.)(o_6, 0.100000)))
+          )
+        )
+      ;
+  tracknumbertoset =
+    if equal
+    then previousmissiontrack.Mctypes.m_tracknumber
+    else acc_tracknumber
+tel
+
+node calculatevrdivd(vr : float; d : float) returns (result : float)
+var l13 : float; l11 : bool;
+let
+  result = if l11 then l13 else 0.000000;
+  l13 = if l11 then (/.)(vr, d) else 0.000000 -> pre l13;
+  l11 = (>.)(d, 0.100000)
+tel
+
+node trackalowerprioritythanb(a : Mctypes.tmissiontrack;
+                               b : Mctypes.tmissiontrack)
+returns (prioritary : bool)
+var vr_2 : float; d_2 : float; l13_2 : float; l11_2 : bool; result_2 : float;
+    vr : float; d : float; l13 : float; l11 : bool; result : float;
+let
+  vr_2 = b.Mctypes.m_sr;
+  d_2 = b.Mctypes.m_d;
+  result_2 = if l11_2 then l13_2 else 0.000000;
+  l13_2 = if l11_2 then (/.)(vr_2, d_2) else 0.000000 -> pre l13_2;
+  l11_2 = (>.)(d_2, 0.100000);
+  vr = a.Mctypes.m_sr;
+  d = a.Mctypes.m_d;
+  result = if l11 then l13 else 0.000000;
+  l13 = if l11 then (/.)(vr, d) else 0.000000 -> pre l13;
+  l11 = (>.)(d, 0.100000);
+  prioritary =
+    (or)
+    ((or)
+     ((=)(a.Mctypes.m_targettype, Mctypes.Ttargettype_friend),
+       not(a.Mctypes.m_detectedbyradar)),
+      (&)
+      ((&)(a.Mctypes.m_detectedbyradar, (<.)(result, result_2)),
+        b.Mctypes.m_detectedbyradar))
+
+tel
+
+node comparespeeds(speed1 : Mctypes.tspeed; speed2 : Mctypes.tspeed)
+returns (equal : bool)
+var a_2 : float; o_2 : float; a : float; o : float;
+let
+  a_2 = (-.)(speed1.Mctypes.sy, speed2.Mctypes.sy);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = (-.)(speed1.Mctypes.sx, speed2.Mctypes.sx);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal = (&)((<.)(o, 1.000000), (<.)(o_2, 1.000000))
+tel
+
+node calculateprioritizedtracknb(missiontrack : Mctypes.tmissiontrack)
+returns (prioritizedtracknb : int)
+let
+  prioritizedtracknb =
+    if (&)
+       (not
+        ((=)(missiontrack.Mctypes.m_targettype, Mctypes.Ttargettype_friend)),
+         not((=)(missiontrack.Mctypes.m_priority, 0)))
+    then missiontrack.Mctypes.m_tracknumber
+    else 0
+tel
+
+node sortreals(a : float; b : float) returns (newa : float; newb : float)
+var l2 : bool;
+let
+  l2 = (<.)(a, b);
+  newb = if l2 then a else b;
+  newa = if l2 then b else a
+tel
+
+node comparepositions(pos1 : Mctypes.tposition; pos2 : Mctypes.tposition)
+returns (equal : bool)
+var a_2 : float; o_2 : float; a : float; o : float;
+let
+  a_2 = (-.)(pos1.Mctypes.y, pos2.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = (-.)(pos1.Mctypes.x, pos2.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal = (&)((<.)(o, 0.100000), (<.)(o_2, 0.100000))
+tel
+
+node comparetracks(pos1 : Mctypes.tposition; pos2 : Mctypes.tposition;
+                    v1 : Mctypes.tspeed; v2 : Mctypes.tspeed)
+returns (equal : bool)
+var speed1 : Mctypes.tspeed; speed2 : Mctypes.tspeed; a_2_2 : float;
+    o_2_2 : float; a_3 : float; o_3 : float; equal_3 : bool;
+    pos1_2 : Mctypes.tposition; pos2_2 : Mctypes.tposition; a_2 : float;
+    o_2 : float; a : float; o : float; equal_2 : bool;
+let
+  speed1 = v1;
+  speed2 = v2;
+  a_2_2 = (-.)(speed1.Mctypes.sy, speed2.Mctypes.sy);
+  o_2_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = (-.)(speed1.Mctypes.sx, speed2.Mctypes.sx);
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  equal_3 = (&)((<.)(o_3, 1.000000), (<.)(o_2_2, 1.000000));
+  pos1_2 = pos1;
+  pos2_2 = pos2;
+  a_2 = (-.)(pos1_2.Mctypes.y, pos2_2.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = (-.)(pos1_2.Mctypes.x, pos2_2.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal_2 = (&)((<.)(o, 0.100000), (<.)(o_2, 0.100000));
+  equal = (&)(equal_2, equal_3)
+tel
+
+node setmissiontracknumber(missiontrack : Mctypes.tmissiontrack;
+                            number : int)
+returns (newmissiontrack : Mctypes.tmissiontrack)
+let
+  newmissiontrack = {missiontrack with .Mctypes.m_tracknumber = number}
+tel
+
+node missiontrackisnull(missiontrack : Mctypes.tmissiontrack)
+returns (isnull : bool)
+var pos1 : Mctypes.tposition; pos2 : Mctypes.tposition; v1 : Mctypes.tspeed;
+    v2 : Mctypes.tspeed; speed1 : Mctypes.tspeed; speed2 : Mctypes.tspeed;
+    a_2_2 : float; o_2_2 : float; a_3 : float; o_3 : float; equal_3 : bool;
+    pos1_2 : Mctypes.tposition; pos2_2 : Mctypes.tposition; a_2 : float;
+    o_2 : float; a : float; o : float; equal_2 : bool; equal : bool;
+let
+  pos1 = missiontrack.Mctypes.m_pos;
+  pos2 = Mctypes.kInitPosition;
+  v1 = missiontrack.Mctypes.m_speed;
+  v2 = Mctypes.kInitSpeed;
+  speed1 = v1;
+  speed2 = v2;
+  a_2_2 = (-.)(speed1.Mctypes.sy, speed2.Mctypes.sy);
+  o_2_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = (-.)(speed1.Mctypes.sx, speed2.Mctypes.sx);
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  equal_3 = (&)((<.)(o_3, 1.000000), (<.)(o_2_2, 1.000000));
+  pos1_2 = pos1;
+  pos2_2 = pos2;
+  a_2 = (-.)(pos1_2.Mctypes.y, pos2_2.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = (-.)(pos1_2.Mctypes.x, pos2_2.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal_2 = (&)((<.)(o, 0.100000), (<.)(o_2, 0.100000));
+  equal = (&)(equal_2, equal_3);
+  isnull = equal
+tel
+
+node calculatemissiontracknumber(previousmissiontracks : Mctypes.tmissiontracksarray;
+                                  missiontrack : Mctypes.tmissiontrack;
+                                  currenttracknumber : int)
+returns (newmissiontrack : Mctypes.tmissiontrack; newtracknumber : int)
+var missiontrack_3 : Mctypes.tmissiontrack; number : int;
+    newmissiontrack_2 : Mctypes.tmissiontrack;
+    missiontrack_2 : Mctypes.tmissiontrack; pos1 : Mctypes.tposition;
+    pos2 : Mctypes.tposition; v1 : Mctypes.tspeed; v2 : Mctypes.tspeed;
+    speed1 : Mctypes.tspeed; speed2 : Mctypes.tspeed; a_2_2 : float;
+    o_2_2 : float; a_3 : float; o_3 : float; equal_3 : bool;
+    pos1_2 : Mctypes.tposition; pos2_2 : Mctypes.tposition; a_2 : float;
+    o_2 : float; a : float; o : float; equal_2 : bool; equal : bool;
+    isnull : bool; setnewtracknumber : bool; previoustracknumber : int;
+let
+  missiontrack_3 = missiontrack;
+  number = if setnewtracknumber then newtracknumber else previoustracknumber;
+  newmissiontrack_2 = {missiontrack_3 with .Mctypes.m_tracknumber = number};
+  missiontrack_2 = missiontrack;
+  pos1 = missiontrack_2.Mctypes.m_pos;
+  pos2 = Mctypes.kInitPosition;
+  v1 = missiontrack_2.Mctypes.m_speed;
+  v2 = Mctypes.kInitSpeed;
+  speed1 = v1;
+  speed2 = v2;
+  a_2_2 = (-.)(speed1.Mctypes.sy, speed2.Mctypes.sy);
+  o_2_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = (-.)(speed1.Mctypes.sx, speed2.Mctypes.sx);
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  equal_3 = (&)((<.)(o_3, 1.000000), (<.)(o_2_2, 1.000000));
+  pos1_2 = pos1;
+  pos2_2 = pos2;
+  a_2 = (-.)(pos1_2.Mctypes.y, pos2_2.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = (-.)(pos1_2.Mctypes.x, pos2_2.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal_2 = (&)((<.)(o, 0.100000), (<.)(o_2, 0.100000));
+  equal = (&)(equal_2, equal_3);
+  isnull = equal;
+  setnewtracknumber = (&)((=)(previoustracknumber, 0), not(isnull));
+  newtracknumber =
+    if setnewtracknumber
+    then (+)(currenttracknumber, 1)
+    else currenttracknumber;
+  previoustracknumber =
+    fold<<Mctypes.ksizemissiontracksarray>> missiontrackexist
+      <(missiontrack)>(previousmissiontracks, 0);
+  newmissiontrack = newmissiontrack_2
+tel
+
+node calculatetracktargettypefromid(id : int)
+returns (targettype : Mctypes.ttargettype)
+let
+  targettype =
+    if (=)(0, id)
+    then Mctypes.Ttargettype_unknown
+    else if (<=)(id, 500)
+         then Mctypes.Ttargettype_friend
+         else Mctypes.Ttargettype_foe
+
+tel
+
+node myderivative(inv : float; period : float) returns (o : float)
+var a_2 : float; o_3 : float; a : float; o_2 : float; l2 : float;
+let
+  a_2 = inv;
+  o_3 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = l2;
+  o_2 = if (<=.)(0.000000, a) then a else ~-.(a);
+  l2 = 0.000000 fby 0.000000 fby inv;
+  o =
+    if (or)((<.)(o_2, 0.100000), (<.)(o_3, 0.100000))
+    then 0.000000
+    else 0.000000 -> (/.)((-.)(inv, l2), 2.000000 *. period)
+tel
+
+node calculatetrackspeedfrompos(position : Mctypes.tposition)
+returns (speed : Mctypes.tspeed)
+var inv_2 : float; period_2 : float; a_2_2 : float; o_3_2 : float;
+    a_3 : float; o_2_2 : float; l2_2 : float; o_4 : float; inv : float;
+    period : float; a_2 : float; o_3 : float; a : float; o_2 : float;
+    l2 : float; o : float;
+let
+  inv_2 = position.Mctypes.y;
+  period_2 = Mctypes.t;
+  a_2_2 = inv_2;
+  o_3_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = l2_2;
+  o_2_2 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  l2_2 = 0.000000 fby 0.000000 fby inv_2;
+  o_4 =
+    if (or)((<.)(o_2_2, 0.100000), (<.)(o_3_2, 0.100000))
+    then 0.000000
+    else 0.000000 -> (/.)((-.)(inv_2, l2_2), 2.000000 *. period_2);
+  inv = position.Mctypes.x;
+  period = Mctypes.t;
+  a_2 = inv;
+  o_3 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = l2;
+  o_2 = if (<=.)(0.000000, a) then a else ~-.(a);
+  l2 = 0.000000 fby 0.000000 fby inv;
+  o =
+    if (or)((<.)(o_2, 0.100000), (<.)(o_3, 0.100000))
+    then 0.000000
+    else 0.000000 -> (/.)((-.)(inv, l2), 2.000000 *. period);
+  speed = { Mctypes.sx = o; Mctypes.sy = o_4 }
+tel
+
+node selectdetectedtrack(index : int; tracks : Mctypes.ttracksarray;
+                          defaulttrack : Mctypes.ttrack)
+returns (trackselected : Mctypes.ttrack)
+let
+  trackselected = tracks.[index] default defaulttrack
+tel
+
+node setmissiontrackpriority(missiontrack : Mctypes.tmissiontrack;
+                              priority : int)
+returns (newmissiontrack : Mctypes.tmissiontrack)
+let
+  newmissiontrack =
+    {missiontrack with .Mctypes.m_priority =
+      if missiontrack.Mctypes.m_detectedbyradar then priority else 0}
+tel
+
+node sortblockmissiontrack(a : Mctypes.tmissiontrack;
+                            b : Mctypes.tmissiontrack)
+returns (newa : Mctypes.tmissiontrack; newb : Mctypes.tmissiontrack)
+var missiontrack : Mctypes.tmissiontrack; pos1 : Mctypes.tposition;
+    pos2 : Mctypes.tposition; v1 : Mctypes.tspeed; v2 : Mctypes.tspeed;
+    speed1 : Mctypes.tspeed; speed2 : Mctypes.tspeed; a_2_2 : float;
+    o_2_2 : float; a_3 : float; o_3 : float; equal_3 : bool;
+    pos1_2 : Mctypes.tposition; pos2_2 : Mctypes.tposition; a_2 : float;
+    o_2 : float; a_4 : float; o : float; equal_2 : bool; equal : bool;
+    isnull : bool; l7 : bool;
+let
+  missiontrack = a;
+  pos1 = missiontrack.Mctypes.m_pos;
+  pos2 = Mctypes.kInitPosition;
+  v1 = missiontrack.Mctypes.m_speed;
+  v2 = Mctypes.kInitSpeed;
+  speed1 = v1;
+  speed2 = v2;
+  a_2_2 = (-.)(speed1.Mctypes.sy, speed2.Mctypes.sy);
+  o_2_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = (-.)(speed1.Mctypes.sx, speed2.Mctypes.sx);
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  equal_3 = (&)((<.)(o_3, 1.000000), (<.)(o_2_2, 1.000000));
+  pos1_2 = pos1;
+  pos2_2 = pos2;
+  a_2 = (-.)(pos1_2.Mctypes.y, pos2_2.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a_4 = (-.)(pos1_2.Mctypes.x, pos2_2.Mctypes.x);
+  o = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  equal_2 = (&)((<.)(o, 0.100000), (<.)(o_2, 0.100000));
+  equal = (&)(equal_2, equal_3);
+  isnull = equal;
+  l7 = isnull;
+  newb = if l7 then a else b;
+  newa = if l7 then b else a
+tel
+
+node sortblockpriorities(a : Mctypes.tmissiontrack;
+                          b : Mctypes.tmissiontrack)
+returns (newa : Mctypes.tmissiontrack; newb : Mctypes.tmissiontrack)
+var a_2 : Mctypes.tmissiontrack; b_2 : Mctypes.tmissiontrack; vr_2 : float;
+    d_2 : float; l13_2 : float; l11_2 : bool; result_2 : float; vr : float;
+    d : float; l13 : float; l11 : bool; result : float; prioritary : bool;
+    l25 : bool;
+let
+  a_2 = a;
+  b_2 = b;
+  vr_2 = b_2.Mctypes.m_sr;
+  d_2 = b_2.Mctypes.m_d;
+  result_2 = if l11_2 then l13_2 else 0.000000;
+  l13_2 = if l11_2 then (/.)(vr_2, d_2) else 0.000000 -> pre l13_2;
+  l11_2 = (>.)(d_2, 0.100000);
+  vr = a_2.Mctypes.m_sr;
+  d = a_2.Mctypes.m_d;
+  result = if l11 then l13 else 0.000000;
+  l13 = if l11 then (/.)(vr, d) else 0.000000 -> pre l13;
+  l11 = (>.)(d, 0.100000);
+  prioritary =
+    (or)
+    ((or)
+     ((=)(a_2.Mctypes.m_targettype, Mctypes.Ttargettype_friend),
+       not(a_2.Mctypes.m_detectedbyradar)),
+      (&)
+      ((&)(a_2.Mctypes.m_detectedbyradar, (<.)(result, result_2)),
+        b_2.Mctypes.m_detectedbyradar))
+      ;
+  l25 = prioritary;
+  newb = if l25 then a else b;
+  newa = if l25 then b else a
+tel
+
+node position_equal(p1 : Mctypes.tposition; p2 : Mctypes.tposition)
+returns (res : bool)
+let
+  res = (&)((=)(p1.Mctypes.x, p2.Mctypes.x), (=)(p1.Mctypes.y, p2.Mctypes.y))
+tel
+
+node speed_equal(s1 : Mctypes.tspeed; s2 : Mctypes.tspeed)
+returns (res : bool)
+let
+  res =
+    (&)((=)(s1.Mctypes.sx, s2.Mctypes.sx), (=)(s1.Mctypes.sy, s2.Mctypes.sy))
+tel
+
+node convertifftracktomissiontrack(ifftrack : Mctypes.tifftrack)
+returns (missiontrack : Mctypes.tmissiontrack)
+var position_2 : Mctypes.tposition; a_2_3 : float; o_2_3 : float;
+    a_4 : float; o_5 : float; trackvisible : bool; id : int;
+    targettype : Mctypes.ttargettype; p1_2 : Mctypes.tposition;
+    p2_2 : Mctypes.tposition; res_2 : bool; position : Mctypes.tposition;
+    inv_2 : float; period_2 : float; a_2_2 : float; o_3_2 : float;
+    a_3 : float; o_2_2 : float; l2_2 : float; o_4 : float; inv : float;
+    period : float; a_2 : float; o_3 : float; a : float; o_2 : float;
+    l2 : float; o : float; speed : Mctypes.tspeed; p1 : Mctypes.tposition;
+    p2 : Mctypes.tposition; res : bool;
+let
+  position_2 = ifftrack.Mctypes.i_pos;
+  a_2_3 = position_2.Mctypes.y;
+  o_2_3 = if (<=.)(0.000000, a_2_3) then a_2_3 else ~-.(a_2_3);
+  a_4 = position_2.Mctypes.x;
+  o_5 = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  trackvisible = not((&)((<.)(o_5, 0.001000), (<.)(o_2_3, 0.001000)));
+  id = ifftrack.Mctypes.i_id;
+  targettype =
+    if (=)(0, id)
+    then Mctypes.Ttargettype_unknown
+    else if (<=)(id, 500)
+         then Mctypes.Ttargettype_friend
+         else Mctypes.Ttargettype_foe
+      ;
+  p1_2 = ifftrack.Mctypes.i_pos;
+  p2_2 = Mctypes.kInitPosition;
+  res_2 =
+    (&)
+    ((=)(p1_2.Mctypes.x, p2_2.Mctypes.x),
+      (=)(p1_2.Mctypes.y, p2_2.Mctypes.y));
+  position = ifftrack.Mctypes.i_pos;
+  inv_2 = position.Mctypes.y;
+  period_2 = Mctypes.t;
+  a_2_2 = inv_2;
+  o_3_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = l2_2;
+  o_2_2 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  l2_2 = 0.000000 fby 0.000000 fby inv_2;
+  o_4 =
+    if (or)((<.)(o_2_2, 0.100000), (<.)(o_3_2, 0.100000))
+    then 0.000000
+    else 0.000000 -> (/.)((-.)(inv_2, l2_2), 2.000000 *. period_2);
+  inv = position.Mctypes.x;
+  period = Mctypes.t;
+  a_2 = inv;
+  o_3 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = l2;
+  o_2 = if (<=.)(0.000000, a) then a else ~-.(a);
+  l2 = 0.000000 fby 0.000000 fby inv;
+  o =
+    if (or)((<.)(o_2, 0.100000), (<.)(o_3, 0.100000))
+    then 0.000000
+    else 0.000000 -> (/.)((-.)(inv, l2), 2.000000 *. period);
+  speed = { Mctypes.sx = o; Mctypes.sy = o_4 };
+  p1 = Mctypes.kInitPosition;
+  p2 = ifftrack.Mctypes.i_pos;
+  res = (&)((=)(p1.Mctypes.x, p2.Mctypes.x), (=)(p1.Mctypes.y, p2.Mctypes.y));
+  missiontrack =
+    { Mctypes.m_pos =
+      ifftrack.Mctypes.i_pos;
+      Mctypes.m_speed =
+      if res then Mctypes.kInitSpeed else speed;
+      Mctypes.m_id =
+      ifftrack.Mctypes.i_id;
+      Mctypes.m_priority =
+      0;
+      Mctypes.m_d =
+      0.000000;
+      Mctypes.m_sabs =
+      0.000000;
+      Mctypes.m_sr =
+      0.000000;
+      Mctypes.m_detectedbyradar =
+      false;
+      Mctypes.m_detectedbyiff =
+      not((&)(res_2, (=)(ifftrack.Mctypes.i_id, 0)));
+      Mctypes.m_tracknumber =
+      0;
+      Mctypes.m_targettype =
+      targettype;
+      Mctypes.m_isvisible =
+      trackvisible;
+      Mctypes.m_angle =
+      0.000000 }
+tel
+
+node convertrdrtracktomissiontrack(rdrtrack : Mctypes.trdrtrack)
+returns (missiontrack : Mctypes.tmissiontrack)
+var speed : Mctypes.tspeed; speedabs : Mctypes.tmetresseconde; a_2_2 : float;
+    o_2_2 : float; a_3 : float; o_3 : float; input1 : float; output1 : float;
+    l51 : bool; l48 : float; l47 : float; trackangle : float;
+    position : Mctypes.tposition; a_2 : float; o_2 : float; a : float;
+    o : float; trackvisible : bool; s1 : Mctypes.tspeed; s2 : Mctypes.tspeed;
+    res_2 : bool; p1 : Mctypes.tposition; p2 : Mctypes.tposition; res : bool;
+let
+  speed = rdrtrack.Mctypes.r_s;
+  speedabs = rdrtrack.Mctypes.r_sabs;
+  a_2_2 = l47;
+  o_2_2 =
+    if (>.)(a_2_2, 0.000000)
+    then 1.000000
+    else if (=)(0.000000, a_2_2) then 0.000000 else ~-.(1.000000);
+  a_3 =
+    Mathext.asinr((/.)(speed.Mctypes.sy, if l51 then 1.000000 else speedabs));
+  o_3 =
+    if (>.)(a_3, 0.000000)
+    then 1.000000
+    else if (=)(0.000000, a_3) then 0.000000 else ~-.(1.000000);
+  input1 = if l51 then 0.000000 else Mathext.acosr(l47) *. l48;
+  output1 = (/.)(input1, (2.000000 *. Mctypes.pi)) *. 360.000000;
+  trackangle = output1 *. l48 *. o_3;
+  l51 = (<.)(speedabs, 0.010000);
+  l48 = o_2_2;
+  l47 = (/.)(speed.Mctypes.sx, if l51 then 1.000000 else speedabs);
+  position = rdrtrack.Mctypes.r_pos;
+  a_2 = position.Mctypes.y;
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = position.Mctypes.x;
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  trackvisible = not((&)((<.)(o, 0.001000), (<.)(o_2, 0.001000)));
+  s1 = rdrtrack.Mctypes.r_s;
+  s2 = Mctypes.kInitSpeed;
+  res_2 =
+    (&)((=)(s1.Mctypes.sx, s2.Mctypes.sx), (=)(s1.Mctypes.sy, s2.Mctypes.sy));
+  p1 = rdrtrack.Mctypes.r_pos;
+  p2 = Mctypes.kInitPosition;
+  res = (&)((=)(p1.Mctypes.x, p2.Mctypes.x), (=)(p1.Mctypes.y, p2.Mctypes.y));
+  missiontrack =
+    { Mctypes.m_pos =
+      rdrtrack.Mctypes.r_pos;
+      Mctypes.m_speed =
+      rdrtrack.Mctypes.r_s;
+      Mctypes.m_id =
+      0;
+      Mctypes.m_priority =
+      0;
+      Mctypes.m_d =
+      rdrtrack.Mctypes.r_d;
+      Mctypes.m_sabs =
+      rdrtrack.Mctypes.r_sabs;
+      Mctypes.m_sr =
+      rdrtrack.Mctypes.r_sr;
+      Mctypes.m_detectedbyradar =
+      not
+      ((&)
+       ((&)
+        ((&)((&)(res, res_2), (=)(rdrtrack.Mctypes.r_d, 0.000000)),
+          (=)(rdrtrack.Mctypes.r_sabs, 0.000000)),
+         (=)(rdrtrack.Mctypes.r_sr, 0.000000)))
+        ;
+      Mctypes.m_detectedbyiff =
+      false;
+      Mctypes.m_tracknumber =
+      0;
+      Mctypes.m_targettype =
+      Mctypes.Ttargettype_unknown;
+      Mctypes.m_isvisible =
+      trackvisible;
+      Mctypes.m_angle =
+      trackangle }
+tel
+
+node vectnorme(a : float; b : float) returns (c : float)
+let
+  c = Mathext.sqrtr((+.)(a *. a, b *. b))
+tel
+
+node extracttrackposxy(track : Mctypes.ttrack)
+returns (x : Mctypes.tmetres; y : Mctypes.tmetres)
+let
+  y = track.Mctypes.t_pos.Mctypes.y;
+  x = track.Mctypes.t_pos.Mctypes.x
+tel
+
+node elaboraterdrtrack(track : Mctypes.ttrack)
+returns (rdrtrack : Mctypes.trdrtrack)
+var position : Mctypes.tposition; inv_2 : float; period_2 : float;
+    a_2_2 : float; o_3_2 : float; a_3 : float; o_2_2 : float; l2_2 : float;
+    o_4 : float; inv : float; period : float; a_2_3 : float; o_3 : float;
+    a_4 : float; o_2 : float; l2 : float; o : float; speed : Mctypes.tspeed;
+    a_2 : float; b_2 : float; c_2 : float; a : float; b : float; c : float;
+    track_2 : Mctypes.ttrack; x_2 : Mctypes.tmetres; y_2 : Mctypes.tmetres;
+    d : float; v : float; vr : float; vx : float; vy : float; x : float;
+    y : float; l142 : Mctypes.tspeed;
+let
+  position = { Mctypes.x = x; Mctypes.y = y };
+  inv_2 = position.Mctypes.y;
+  period_2 = Mctypes.t;
+  a_2_2 = inv_2;
+  o_3_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = l2_2;
+  o_2_2 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  l2_2 = 0.000000 fby 0.000000 fby inv_2;
+  o_4 =
+    if (or)((<.)(o_2_2, 0.100000), (<.)(o_3_2, 0.100000))
+    then 0.000000
+    else 0.000000 -> (/.)((-.)(inv_2, l2_2), 2.000000 *. period_2);
+  inv = position.Mctypes.x;
+  period = Mctypes.t;
+  a_2_3 = inv;
+  o_3 = if (<=.)(0.000000, a_2_3) then a_2_3 else ~-.(a_2_3);
+  a_4 = l2;
+  o_2 = if (<=.)(0.000000, a_4) then a_4 else ~-.(a_4);
+  l2 = 0.000000 fby 0.000000 fby inv;
+  o =
+    if (or)((<.)(o_2, 0.100000), (<.)(o_3, 0.100000))
+    then 0.000000
+    else 0.000000 -> (/.)((-.)(inv, l2), 2.000000 *. period);
+  speed = { Mctypes.sx = o; Mctypes.sy = o_4 };
+  a_2 = x;
+  b_2 = y;
+  c_2 = Mathext.sqrtr((+.)(a_2 *. a_2, b_2 *. b_2));
+  a = vx;
+  b = vy;
+  c = Mathext.sqrtr((+.)(a *. a, b *. b));
+  track_2 = track;
+  y_2 = track_2.Mctypes.t_pos.Mctypes.y;
+  x_2 = track_2.Mctypes.t_pos.Mctypes.x;
+  switch ((=)(d, 0.000000))
+    | true
+       do
+      vr = 0.000000
+    | false
+      var xnorm : float; ynorm : float; do
+
+      ynorm = (/.)(y, d);
+      xnorm = (/.)(x, d);
+      vr = ~-.((+.)(vx *. xnorm, vy *. ynorm))
+  end;
+  (x, y) = (x_2, y_2);
+  rdrtrack =
+    { Mctypes.r_pos =
+      { Mctypes.x = x; Mctypes.y = y };
+      Mctypes.r_s =
+      { Mctypes.sx = vx; Mctypes.sy = vy };
+      Mctypes.r_d =
+      d;
+      Mctypes.r_sabs =
+      v;
+      Mctypes.r_sr =
+      vr };
+  v = c;
+  d = c_2;
+  vy = l142.Mctypes.sy;
+  vx = l142.Mctypes.sx;
+  l142 = speed
+tel
+
+node risingEdge(re_Input : bool) returns (re_Output : bool)
+let
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input)
+tel
+
+node statecmd(onoffbuttonpressed : bool; currentstate : Mctypes.tsensorstate)
+returns (onoffcmd : bool)
+let
+  automaton
+    state Off
+       do
+      onoffcmd = false
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd = true
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_ON)) then Off
+  end
+tel
+
+node mc_rdrstatecmd(rdronoffbutton : bool;
+                     currentrdrstate : Mctypes.tsensorstate)
+returns (rdronoffcmd : bool)
+var onoffbuttonpressed : bool; currentstate : Mctypes.tsensorstate;
+    onoffcmd : bool; re_Input : bool; re_Output : bool;
+let
+  onoffbuttonpressed = re_Output;
+  currentstate = currentrdrstate;
+  automaton
+    state Off
+       do
+      onoffcmd = false
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd = true
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_ON)) then Off
+  end;
+  re_Input = rdronoffbutton;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  rdronoffcmd = onoffcmd
+tel
+
+node mc_iffstatecmd(iffonoffbutton : bool;
+                     currentiffstate : Mctypes.tsensorstate)
+returns (iffonoffcmd : bool)
+var onoffbuttonpressed : bool; currentstate : Mctypes.tsensorstate;
+    onoffcmd : bool; re_Input : bool; re_Output : bool;
+let
+  onoffbuttonpressed = re_Output;
+  currentstate = currentiffstate;
+  automaton
+    state Off
+       do
+      onoffcmd = false
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd = true
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_ON)) then Off
+  end;
+  re_Input = iffonoffbutton;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  iffonoffcmd = onoffcmd
+tel
+
+node rdrmodecmd(currentstate : Mctypes.tsensorstate;
+                 modebuttonpressed : bool; currentmode : Mctypes.trdrmode)
+returns (modecmd : bool)
+let
+  automaton
+    state Wide
+       do
+      modecmd = false
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_WIDE)))
+           then Narrow
+    state Narrow
+       do
+      modecmd = true
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_NARROW)))
+           then Wide
+  end
+tel
+
+node mc_rdrmodecmd(currentrdrstate : Mctypes.tsensorstate;
+                    rdrmodebutton : bool; currentrdrmode : Mctypes.trdrmode)
+returns (rdrmodecmd : bool)
+var currentstate : Mctypes.tsensorstate; modebuttonpressed : bool;
+    currentmode : Mctypes.trdrmode; modecmd : bool; re_Input : bool;
+    re_Output : bool;
+let
+  currentstate = currentrdrstate;
+  modebuttonpressed = re_Output;
+  currentmode = currentrdrmode;
+  automaton
+    state Wide
+       do
+      modecmd = false
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_WIDE)))
+           then Narrow
+    state Narrow
+       do
+      modecmd = true
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_NARROW)))
+           then Wide
+  end;
+  re_Input = rdrmodebutton;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  rdrmodecmd = modecmd
+tel
+
+node radar_mode(modecmd : bool) returns (mode : Mctypes.trdrmode)
+let
+  mode = if modecmd then Mctypes.TRdrMode_NARROW else Mctypes.TRdrMode_WIDE
+tel
+
+node radar_state(onoffcmd : bool; failure : bool)
+returns (initializing : bool; st : Mctypes.tsensorstate)
+var x : bool;
+let
+  initializing = (&)((=)(st, Mctypes.TState_OFF), onoffcmd);
+  x = false fby false fby false fby false fby false fby onoffcmd;
+  st =
+    if failure
+    then Mctypes.TState_FAIL
+    else if if onoffcmd then x else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+
+tel
+
+node radar_tracks(st : Mctypes.tsensorstate; tracks : Mctypes.ttracksarray;
+                   rdrdetectedtracks : Mctypes.tdetectedrdrtracksarray)
+returns (rdrtracks : Mctypes.trdrtracksarray)
+var l22 : Mctypes.ttrack^Mctypes.ksizerdrtracksarray;
+    l30 : Mctypes.trdrtrack^Mctypes.ksizerdrtracksarray;
+let
+  rdrtracks =
+    if (=)(st, Mctypes.TState_ON) then l30 else Mctypes.kinitrdrtrackarray;
+  l30 = map<<Mctypes.ksizerdrtracksarray>> elaboraterdrtrack<()>(l22);
+  l22 =
+    map<<Mctypes.ksizerdrtracksarray>> selectdetectedtrack
+      <()>(rdrdetectedtracks, tracks^Mctypes.ksizerdrtracksarray,
+            Mctypes.kinittrack^Mctypes.ksizerdrtracksarray)
+tel
+
+node radar(onoffcmd : bool; modecmd : bool; failure : bool;
+            rdrdetectedtracks : Mctypes.tdetectedrdrtracksarray;
+            tracks : Mctypes.ttracksarray)
+returns (initializing : bool; st : Mctypes.tsensorstate;
+          mode : Mctypes.trdrmode; rdrtracks : Mctypes.trdrtracksarray)
+var onoffcmd_2 : bool; failure_2 : bool; x : bool; initializing_2 : bool;
+    st_3 : Mctypes.tsensorstate; modecmd_2 : bool; mode_2 : Mctypes.trdrmode;
+    st_2 : Mctypes.tsensorstate; tracks_2 : Mctypes.ttracksarray;
+    rdrdetectedtracks_2 : Mctypes.tdetectedrdrtracksarray;
+    l22 : Mctypes.ttrack^Mctypes.ksizerdrtracksarray;
+    l30 : Mctypes.trdrtrack^Mctypes.ksizerdrtracksarray;
+    rdrtracks_2 : Mctypes.trdrtracksarray;
+let
+  onoffcmd_2 = onoffcmd;
+  failure_2 = failure;
+  initializing_2 = (&)((=)(st_3, Mctypes.TState_OFF), onoffcmd_2);
+  x = false fby false fby false fby false fby false fby onoffcmd_2;
+  st_3 =
+    if failure_2
+    then Mctypes.TState_FAIL
+    else if if onoffcmd_2 then x else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+      ;
+  modecmd_2 = modecmd;
+  mode_2 =
+    if modecmd_2 then Mctypes.TRdrMode_NARROW else Mctypes.TRdrMode_WIDE;
+  st_2 = st;
+  tracks_2 = tracks;
+  rdrdetectedtracks_2 = rdrdetectedtracks;
+  rdrtracks_2 =
+    if (=)(st_2, Mctypes.TState_ON) then l30 else Mctypes.kinitrdrtrackarray;
+  l30 = map<<Mctypes.ksizerdrtracksarray>> elaboraterdrtrack<()>(l22);
+  l22 =
+    map<<Mctypes.ksizerdrtracksarray>> selectdetectedtrack
+      <()>(rdrdetectedtracks_2, tracks_2^Mctypes.ksizerdrtracksarray,
+            Mctypes.kinittrack^Mctypes.ksizerdrtracksarray);
+  rdrtracks = rdrtracks_2;
+  mode = mode_2;
+  (initializing, st) = (initializing_2, st_3)
+tel
+
+node iff_state(onoffcmd : bool; failure : bool)
+returns (initializing : bool; st : Mctypes.tsensorstate)
+var x : bool;
+let
+  initializing = (&)((=)(st, Mctypes.TState_OFF), onoffcmd);
+  x = false fby false fby false fby false fby false fby onoffcmd;
+  st =
+    if failure
+    then Mctypes.TState_FAIL
+    else if if onoffcmd then x else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+
+tel
+
+node ifftrack_of_track(track : Mctypes.ttrack)
+returns (ifftrack : Mctypes.tifftrack)
+let
+  ifftrack =
+    { Mctypes.i_pos =
+      track.Mctypes.t_pos;
+      Mctypes.i_id =
+      track.Mctypes.t_id }
+tel
+
+node iff_tracks(st : Mctypes.tsensorstate; tracks : Mctypes.ttracksarray;
+                 iffdetectedtracks : Mctypes.tdetectedifftracksarray)
+returns (ifftracks : Mctypes.tifftracksarray)
+var l34 : Mctypes.ttrack^Mctypes.ksizeifftracksarray;
+    l40 : Mctypes.tifftracksarray;
+let
+  l34 =
+    map<<Mctypes.ksizeifftracksarray>> selectdetectedtrack
+      <()>(iffdetectedtracks, tracks^Mctypes.ksizeifftracksarray,
+            Mctypes.kinittrack^Mctypes.ksizeifftracksarray);
+  l40 = map<<Mctypes.ksizeifftracksarray>> ifftrack_of_track<()>(l34);
+  ifftracks =
+    if (=)(st, Mctypes.TState_ON) then l40 else Mctypes.kinitifftrackarray
+tel
+
+node iff(tracks : Mctypes.ttracksarray; failure : bool;
+          iffdetectedtracks : Mctypes.tdetectedifftracksarray;
+          onoffcmd : bool)
+returns (st : Mctypes.tsensorstate; ifftracks : Mctypes.tifftracksarray;
+          initializing : bool)
+var onoffcmd_2 : bool; failure_2 : bool; x : bool; initializing_2 : bool;
+    st_3 : Mctypes.tsensorstate; st_2 : Mctypes.tsensorstate;
+    tracks_2 : Mctypes.ttracksarray;
+    iffdetectedtracks_2 : Mctypes.tdetectedifftracksarray;
+    l34 : Mctypes.ttrack^Mctypes.ksizeifftracksarray;
+    l40 : Mctypes.tifftracksarray; ifftracks_2 : Mctypes.tifftracksarray;
+let
+  onoffcmd_2 = onoffcmd;
+  failure_2 = failure;
+  initializing_2 = (&)((=)(st_3, Mctypes.TState_OFF), onoffcmd_2);
+  x = false fby false fby false fby false fby false fby onoffcmd_2;
+  st_3 =
+    if failure_2
+    then Mctypes.TState_FAIL
+    else if if onoffcmd_2 then x else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+      ;
+  st_2 = st;
+  tracks_2 = tracks;
+  iffdetectedtracks_2 = iffdetectedtracks;
+  l34 =
+    map<<Mctypes.ksizeifftracksarray>> selectdetectedtrack
+      <()>(iffdetectedtracks_2, tracks_2^Mctypes.ksizeifftracksarray,
+            Mctypes.kinittrack^Mctypes.ksizeifftracksarray);
+  l40 = map<<Mctypes.ksizeifftracksarray>> ifftrack_of_track<()>(l34);
+  ifftracks_2 =
+    if (=)(st_2, Mctypes.TState_ON) then l40 else Mctypes.kinitifftrackarray;
+  ifftracks = ifftracks_2;
+  (initializing, st) = (initializing_2, st_3)
+tel
+
+node advrandr(min : float; max : float) returns (output1 : float)
+let
+  output1 = (+.)((-.)(max, min) *. Mc_ext.rand(), min)
+tel
+
+node advrandi(min : int; max : int; step : int) returns (output1 : int)
+var l8 : int;
+let
+  l8 = if not((=)(0, step)) then step else 1;
+  output1 =
+    (/)
+    ((+)
+     (Mc_ext.int_of_float
+      (Mc_ext.float_of_int((-)(max, min)) *. Mc_ext.rand()), min), l8 * l8)
+tel
+
+node createtracks_createonetrack_init_rand()
+returns (sloperadinit : float; speedinit : float; xmeterinit : float;
+          ymeterinit : float; idinit : int)
+var min_5 : int; max_5 : int; step : int; l8 : int; output1_5 : int;
+    min_4 : float; max_4 : float; output1_4 : float; min_3 : float;
+    max_3 : float; output1_3 : float; min_2 : float; max_2 : float;
+    output1_2 : float; min : float; max : float; output1 : float;
+let
+  min_5 = 0;
+  max_5 = 1000;
+  step = 10;
+  l8 = if not((=)(0, step)) then step else 1;
+  output1_5 =
+    (/)
+    ((+)
+     (Mc_ext.int_of_float
+      (Mc_ext.float_of_int((-)(max_5, min_5)) *. Mc_ext.rand()), min_5),
+      l8 * l8);
+  min_4 = 0.000000;
+  max_4 = 360.000000;
+  output1_4 = (+.)((-.)(max_4, min_4) *. Mc_ext.rand(), min_4);
+  min_3 = ~-.(10.000000);
+  max_3 = 10.000000;
+  output1_3 = (+.)((-.)(max_3, min_3) *. Mc_ext.rand(), min_3);
+  min_2 = ~-.(10.000000);
+  max_2 = 10.000000;
+  output1_2 = (+.)((-.)(max_2, min_2) *. Mc_ext.rand(), min_2);
+  min = 250.000000;
+  max = 1000.000000;
+  output1 = (+.)((-.)(max, min) *. Mc_ext.rand(), min);
+  speedinit = output1 *. Mctypes.t;
+  ymeterinit = Mctypes.nm *. output1_2;
+  xmeterinit = output1_3 *. Mctypes.nm;
+  sloperadinit = (/.)((2.000000 *. Mctypes.pi) *. output1_4, 360.000000);
+  idinit = output1_5
+tel
+
+node createtracks_createonetrack_rand(res : bool)
+returns (track : Mctypes.ttrack)
+var min_5 : int; max_5 : int; step : int; l8 : int; output1_5 : int;
+    min_4 : float; max_4 : float; output1_4 : float; min_3 : float;
+    max_3 : float; output1_3 : float; min_2 : float; max_2 : float;
+    output1_2 : float; min : float; max : float; output1 : float;
+    sloperadinit : float; speedinit : float; xmeterinit : float;
+    ymeterinit : float; idinit : int; id : int; sloperad : float;
+    speedt : float; x0 : float; y0 : float; l9 : float; l18 : float;
+let
+  min_5 = 0;
+  max_5 = 1000;
+  step = 10;
+  l8 = if not((=)(0, step)) then step else 1;
+  output1_5 =
+    (/)
+    ((+)
+     (Mc_ext.int_of_float
+      (Mc_ext.float_of_int((-)(max_5, min_5)) *. Mc_ext.rand()), min_5),
+      l8 * l8);
+  min_4 = 0.000000;
+  max_4 = 360.000000;
+  output1_4 = (+.)((-.)(max_4, min_4) *. Mc_ext.rand(), min_4);
+  min_3 = ~-.(10.000000);
+  max_3 = 10.000000;
+  output1_3 = (+.)((-.)(max_3, min_3) *. Mc_ext.rand(), min_3);
+  min_2 = ~-.(10.000000);
+  max_2 = 10.000000;
+  output1_2 = (+.)((-.)(max_2, min_2) *. Mc_ext.rand(), min_2);
+  min = 250.000000;
+  max = 1000.000000;
+  output1 = (+.)((-.)(max, min) *. Mc_ext.rand(), min);
+  speedinit = output1 *. Mctypes.t;
+  ymeterinit = Mctypes.nm *. output1_2;
+  xmeterinit = output1_3 *. Mctypes.nm;
+  sloperadinit = (/.)((2.000000 *. Mctypes.pi) *. output1_4, 360.000000);
+  idinit = output1_5;
+  (sloperad, speedt, x0, y0, id) =
+    if res
+    then (sloperadinit, speedinit, xmeterinit, ymeterinit, idinit)
+    else (0.000000, 0.000000, 0.000000, 0.000000, 0) fby
+           (sloperad, speedt, x0, y0, id)
+      ;
+  l18 = y0 -> (+.)(Mathext.sinr(sloperad) *. speedt, y0 -> pre l18);
+  l9 = x0 -> (+.)(x0 -> pre l9, speedt *. Mathext.cosr(sloperad));
+  track =
+    { Mctypes.t_pos =
+      { Mctypes.x = l9; Mctypes.y = l18 };
+      Mctypes.t_id =
+      id }
+tel
+
+node createtracks_rand(res : bool) returns (tracks : Mctypes.ttracksarray)
+let
+  tracks =
+    map<<Mctypes.ksizetracksarray>> createtracks_createonetrack_rand
+      <()>(res^Mctypes.ksizetracksarray)
+tel
+
+node createalltracks(res : bool) returns (tracks : Mctypes.ttracksarray)
+let
+  reset
+    var res_2 : bool; tracks_2 : Mctypes.ttracksarray; in
+
+    res_2 = res;
+    tracks_2 =
+      map<<Mctypes.ksizetracksarray>> createtracks_createonetrack_rand
+        <()>(res_2^Mctypes.ksizetracksarray);
+    tracks = tracks_2
+  every res
+tel
+
+node fusionrdrifftracks(iffmissiontrack : Mctypes.tmissiontrack;
+                         rdrmissiontrack : Mctypes.tmissiontrack)
+returns (newiffmissiontrack : Mctypes.tmissiontrack;
+          newrdrmissiontrack : Mctypes.tmissiontrack)
+var pos1 : Mctypes.tposition; pos2 : Mctypes.tposition; v1 : Mctypes.tspeed;
+    v2 : Mctypes.tspeed; speed1 : Mctypes.tspeed; speed2 : Mctypes.tspeed;
+    a_2_2 : float; o_2_2 : float; a_3 : float; o_3 : float; equal_3 : bool;
+    pos1_2 : Mctypes.tposition; pos2_2 : Mctypes.tposition; a_2 : float;
+    o_2 : float; a : float; o : float; equal_2 : bool; equal : bool;
+    l90 : bool;
+let
+  pos1 = rdrmissiontrack.Mctypes.m_pos;
+  pos2 = iffmissiontrack.Mctypes.m_pos;
+  v1 = rdrmissiontrack.Mctypes.m_speed;
+  v2 = iffmissiontrack.Mctypes.m_speed;
+  speed1 = v1;
+  speed2 = v2;
+  a_2_2 = (-.)(speed1.Mctypes.sy, speed2.Mctypes.sy);
+  o_2_2 = if (<=.)(0.000000, a_2_2) then a_2_2 else ~-.(a_2_2);
+  a_3 = (-.)(speed1.Mctypes.sx, speed2.Mctypes.sx);
+  o_3 = if (<=.)(0.000000, a_3) then a_3 else ~-.(a_3);
+  equal_3 = (&)((<.)(o_3, 1.000000), (<.)(o_2_2, 1.000000));
+  pos1_2 = pos1;
+  pos2_2 = pos2;
+  a_2 = (-.)(pos1_2.Mctypes.y, pos2_2.Mctypes.y);
+  o_2 = if (<=.)(0.000000, a_2) then a_2 else ~-.(a_2);
+  a = (-.)(pos1_2.Mctypes.x, pos2_2.Mctypes.x);
+  o = if (<=.)(0.000000, a) then a else ~-.(a);
+  equal_2 = (&)((<.)(o, 0.100000), (<.)(o_2, 0.100000));
+  equal = (&)(equal_2, equal_3);
+  newrdrmissiontrack =
+    if l90
+    then { Mctypes.m_pos =
+           rdrmissiontrack.Mctypes.m_pos;
+           Mctypes.m_speed =
+           rdrmissiontrack.Mctypes.m_speed;
+           Mctypes.m_id =
+           iffmissiontrack.Mctypes.m_id;
+           Mctypes.m_priority =
+           rdrmissiontrack.Mctypes.m_priority;
+           Mctypes.m_d =
+           rdrmissiontrack.Mctypes.m_d;
+           Mctypes.m_sabs =
+           rdrmissiontrack.Mctypes.m_sabs;
+           Mctypes.m_sr =
+           rdrmissiontrack.Mctypes.m_sr;
+           Mctypes.m_detectedbyradar =
+           rdrmissiontrack.Mctypes.m_detectedbyradar;
+           Mctypes.m_detectedbyiff =
+           iffmissiontrack.Mctypes.m_detectedbyiff;
+           Mctypes.m_tracknumber =
+           0;
+           Mctypes.m_targettype =
+           iffmissiontrack.Mctypes.m_targettype;
+           Mctypes.m_isvisible =
+           rdrmissiontrack.Mctypes.m_isvisible;
+           Mctypes.m_angle =
+           rdrmissiontrack.Mctypes.m_angle }
+    else rdrmissiontrack;
+  l90 = equal;
+  newiffmissiontrack =
+    if l90 then Mctypes.kinitmissiontrack else iffmissiontrack
+tel
+
+node mc_tracks_fusion_onerdrwithifftracks(rdrtrack : Mctypes.tmissiontrack;
+                                           ifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray)
+returns (fusionnedrdrtrack : Mctypes.tmissiontrack;
+          fusionnedifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray)
+let
+  (fusionnedifftracks, fusionnedrdrtrack) =
+    mapfold<<Mctypes.ksizeifftracksarray>> fusionrdrifftracks
+      <()>(ifftracks, rdrtrack)
+tel
+
+node mc_tracks_fusion(rdrtracks : Mctypes.trdrtracksarray;
+                       ifftracks : Mctypes.tifftracksarray)
+returns (missiontracks : Mctypes.tmissiontracksarray)
+var mergedrdrtracks : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    mergedifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    l140 : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    l139 : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+let
+  missiontracks = mergedrdrtracks @ mergedifftracks;
+  (mergedrdrtracks, mergedifftracks) =
+    mapfold<<Mctypes.ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks
+      <()>(l140, l139);
+  l140 =
+    map<<Mctypes.ksizerdrtracksarray>> convertrdrtracktomissiontrack
+      <()>(rdrtracks);
+  l139 =
+    map<<Mctypes.ksizeifftracksarray>> convertifftracktomissiontrack
+      <()>(ifftracks)
+tel
+
+node prio_tracknumbernotinarray(missiontracktracknumber : int;
+                                 prioritytrack : int; acc : bool)
+returns (notinarray : bool)
+let
+  notinarray = (&)(acc, not((=)(missiontracktracknumber, prioritytrack)))
+tel
+
+node prio_selecthighestprioritynotinpriorityarray(missiontrack : Mctypes.tmissiontrack;
+                                                   prioritiesarray : Mctypes.tpriorityList;
+                                                   accprioritymissiontrack : Mctypes.tmissiontrack)
+returns (prioritymissiontrack : Mctypes.tmissiontrack)
+var a : Mctypes.tmissiontrack; b : Mctypes.tmissiontrack; vr_2 : float;
+    d_2 : float; l13_2 : float; l11_2 : bool; result_2 : float; vr : float;
+    d : float; l13 : float; l11 : bool; result : float; prioritary : bool;
+    missiontracknotinpriorittiesarray : bool;
+    missiontrackhashigherprioritythanacc : bool;
+let
+  a = missiontrack;
+  b = accprioritymissiontrack;
+  vr_2 = b.Mctypes.m_sr;
+  d_2 = b.Mctypes.m_d;
+  result_2 = if l11_2 then l13_2 else 0.000000;
+  l13_2 = if l11_2 then (/.)(vr_2, d_2) else 0.000000 -> pre l13_2;
+  l11_2 = (>.)(d_2, 0.100000);
+  vr = a.Mctypes.m_sr;
+  d = a.Mctypes.m_d;
+  result = if l11 then l13 else 0.000000;
+  l13 = if l11 then (/.)(vr, d) else 0.000000 -> pre l13;
+  l11 = (>.)(d, 0.100000);
+  prioritary =
+    (or)
+    ((or)
+     ((=)(a.Mctypes.m_targettype, Mctypes.Ttargettype_friend),
+       not(a.Mctypes.m_detectedbyradar)),
+      (&)
+      ((&)(a.Mctypes.m_detectedbyradar, (<.)(result, result_2)),
+        b.Mctypes.m_detectedbyradar))
+      ;
+  missiontrackhashigherprioritythanacc = not(prioritary);
+  missiontracknotinpriorittiesarray =
+    fold<<4>> prio_tracknumbernotinarray
+      <()>(missiontrack.Mctypes.m_tracknumber^4, prioritiesarray, true);
+  prioritymissiontrack =
+    if (&)
+       (missiontracknotinpriorittiesarray,
+         missiontrackhashigherprioritythanacc)
+    then missiontrack
+    else accprioritymissiontrack
+tel
+
+node prio_selectprioritarymissiontracks(missiontracks : Mctypes.tmissiontracksarray;
+                                         prioritiesarray : Mctypes.tpriorityList;
+                                         indexpriority : int)
+returns (newprioritiesarray : Mctypes.tpriorityList)
+var missiontrackwithhighestpriority : Mctypes.tmissiontrack;
+let
+  newprioritiesarray =
+    [prioritiesarray with [indexpriority] =
+      missiontrackwithhighestpriority.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks, prioritiesarray^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack)
+tel
+
+node prio_setpriorityinmissiontrack(prioritytracknumber : int;
+                                     priorityindex : int;
+                                     missiontrack : Mctypes.tmissiontrack)
+returns (missiontrackwithprio : Mctypes.tmissiontrack)
+var missiontrack_2 : Mctypes.tmissiontrack; priority : int;
+    newmissiontrack : Mctypes.tmissiontrack;
+let
+  missiontrack_2 = missiontrack;
+  priority = (+)(priorityindex, 1);
+  newmissiontrack =
+    {missiontrack_2 with .Mctypes.m_priority =
+      if missiontrack_2.Mctypes.m_detectedbyradar then priority else 0};
+  missiontrackwithprio =
+    if (=)(prioritytracknumber, missiontrack.Mctypes.m_tracknumber)
+    then newmissiontrack
+    else missiontrack
+tel
+
+node prio_setpriorityinmissiontrackarray(priorityarray : Mctypes.tpriorityList;
+                                          missiontrack : Mctypes.tmissiontrack)
+returns (missiontrackwithprio : Mctypes.tmissiontrack)
+let
+  missiontrackwithprio =
+    foldi<<4>> prio_setpriorityinmissiontrack
+      <()>(priorityarray, missiontrack)
+tel
+
+node mc_tracks_prio(missiontracks : Mctypes.tmissiontracksarray)
+returns (missiontrackswithprio : Mctypes.tmissiontracksarray)
+var missiontracks_5 : Mctypes.tmissiontracksarray;
+    prioritiesarray_4 : Mctypes.tpriorityList; indexpriority_4 : int;
+    missiontrackwithhighestpriority_4 : Mctypes.tmissiontrack;
+    newprioritiesarray_4 : Mctypes.tpriorityList;
+    missiontracks_4 : Mctypes.tmissiontracksarray;
+    prioritiesarray_3 : Mctypes.tpriorityList; indexpriority_3 : int;
+    missiontrackwithhighestpriority_3 : Mctypes.tmissiontrack;
+    newprioritiesarray_3 : Mctypes.tpriorityList;
+    missiontracks_3 : Mctypes.tmissiontracksarray;
+    prioritiesarray_2 : Mctypes.tpriorityList; indexpriority_2 : int;
+    missiontrackwithhighestpriority_2 : Mctypes.tmissiontrack;
+    newprioritiesarray_2 : Mctypes.tpriorityList;
+    missiontracks_2 : Mctypes.tmissiontracksarray;
+    prioritiesarray : Mctypes.tpriorityList; indexpriority : int;
+    missiontrackwithhighestpriority : Mctypes.tmissiontrack;
+    newprioritiesarray : Mctypes.tpriorityList;
+    prioritytracknumbers : Mctypes.tpriorityList;
+let
+  missiontracks_5 = missiontracks;
+  prioritiesarray_4 = newprioritiesarray_3;
+  indexpriority_4 = 3;
+  newprioritiesarray_4 =
+    [prioritiesarray_4 with [indexpriority_4] =
+      missiontrackwithhighestpriority_4.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_4 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_5,
+            prioritiesarray_4^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_4 = missiontracks;
+  prioritiesarray_3 = newprioritiesarray_2;
+  indexpriority_3 = 2;
+  newprioritiesarray_3 =
+    [prioritiesarray_3 with [indexpriority_3] =
+      missiontrackwithhighestpriority_3.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_3 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_4,
+            prioritiesarray_3^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_3 = missiontracks;
+  prioritiesarray_2 = newprioritiesarray;
+  indexpriority_2 = 1;
+  newprioritiesarray_2 =
+    [prioritiesarray_2 with [indexpriority_2] =
+      missiontrackwithhighestpriority_2.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_2 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_3,
+            prioritiesarray_2^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_2 = missiontracks;
+  prioritiesarray = 0^4;
+  indexpriority = 0;
+  newprioritiesarray =
+    [prioritiesarray with [indexpriority] =
+      missiontrackwithhighestpriority.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_2, prioritiesarray^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontrackswithprio =
+    map<<Mctypes.ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+      <(prioritytracknumbers)>(missiontracks);
+  prioritytracknumbers = newprioritiesarray_4
+tel
+
+node mc_tracks_tracknumber(withouttracknb : Mctypes.tmissiontracksarray)
+returns (withtracknumber : Mctypes.tmissiontracksarray)
+var l81 : int;
+let
+  (withtracknumber, l81) =
+    mapfold<<Mctypes.ksizemissiontracksarray>> calculatemissiontracknumber
+      <(Mctypes.kinitmissiontrackarray -> pre withtracknumber)>(withouttracknb,
+                                                                 0 -> pre l81)
+tel
+
+node mc_tracks(rdrtracks : Mctypes.trdrtracksarray;
+                ifftracks : Mctypes.tifftracksarray)
+returns (missiontracks : Mctypes.tmissiontracksarray)
+var missiontracks_6 : Mctypes.tmissiontracksarray;
+    missiontracks_5 : Mctypes.tmissiontracksarray;
+    prioritiesarray_4 : Mctypes.tpriorityList; indexpriority_4 : int;
+    missiontrackwithhighestpriority_4 : Mctypes.tmissiontrack;
+    newprioritiesarray_4 : Mctypes.tpriorityList;
+    missiontracks_4 : Mctypes.tmissiontracksarray;
+    prioritiesarray_3 : Mctypes.tpriorityList; indexpriority_3 : int;
+    missiontrackwithhighestpriority_3 : Mctypes.tmissiontrack;
+    newprioritiesarray_3 : Mctypes.tpriorityList;
+    missiontracks_3 : Mctypes.tmissiontracksarray;
+    prioritiesarray_2 : Mctypes.tpriorityList; indexpriority_2 : int;
+    missiontrackwithhighestpriority_2 : Mctypes.tmissiontrack;
+    newprioritiesarray_2 : Mctypes.tpriorityList;
+    missiontracks_2_2 : Mctypes.tmissiontracksarray;
+    prioritiesarray : Mctypes.tpriorityList; indexpriority : int;
+    missiontrackwithhighestpriority : Mctypes.tmissiontrack;
+    newprioritiesarray : Mctypes.tpriorityList;
+    prioritytracknumbers : Mctypes.tpriorityList;
+    missiontrackswithprio : Mctypes.tmissiontracksarray;
+    withouttracknb : Mctypes.tmissiontracksarray; l81 : int;
+    withtracknumber : Mctypes.tmissiontracksarray;
+    rdrtracks_2 : Mctypes.trdrtracksarray;
+    ifftracks_2 : Mctypes.tifftracksarray;
+    mergedrdrtracks : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    mergedifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    l140 : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    l139 : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    missiontracks_2 : Mctypes.tmissiontracksarray;
+let
+  missiontracks_6 = withtracknumber;
+  missiontracks_5 = missiontracks_6;
+  prioritiesarray_4 = newprioritiesarray_3;
+  indexpriority_4 = 3;
+  newprioritiesarray_4 =
+    [prioritiesarray_4 with [indexpriority_4] =
+      missiontrackwithhighestpriority_4.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_4 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_5,
+            prioritiesarray_4^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_4 = missiontracks_6;
+  prioritiesarray_3 = newprioritiesarray_2;
+  indexpriority_3 = 2;
+  newprioritiesarray_3 =
+    [prioritiesarray_3 with [indexpriority_3] =
+      missiontrackwithhighestpriority_3.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_3 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_4,
+            prioritiesarray_3^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_3 = missiontracks_6;
+  prioritiesarray_2 = newprioritiesarray;
+  indexpriority_2 = 1;
+  newprioritiesarray_2 =
+    [prioritiesarray_2 with [indexpriority_2] =
+      missiontrackwithhighestpriority_2.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_2 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_3,
+            prioritiesarray_2^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_2_2 = missiontracks_6;
+  prioritiesarray = 0^4;
+  indexpriority = 0;
+  newprioritiesarray =
+    [prioritiesarray with [indexpriority] =
+      missiontrackwithhighestpriority.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_2_2,
+            prioritiesarray^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontrackswithprio =
+    map<<Mctypes.ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+      <(prioritytracknumbers)>(missiontracks_6);
+  prioritytracknumbers = newprioritiesarray_4;
+  withouttracknb = missiontracks_2;
+  (withtracknumber, l81) =
+    mapfold<<Mctypes.ksizemissiontracksarray>> calculatemissiontracknumber
+      <(Mctypes.kinitmissiontrackarray -> pre withtracknumber)>(withouttracknb,
+                                                                 0 -> pre l81);
+  rdrtracks_2 = rdrtracks;
+  ifftracks_2 = ifftracks;
+  missiontracks_2 = mergedrdrtracks @ mergedifftracks;
+  (mergedrdrtracks, mergedifftracks) =
+    mapfold<<Mctypes.ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks
+      <()>(l140, l139);
+  l140 =
+    map<<Mctypes.ksizerdrtracksarray>> convertrdrtracktomissiontrack
+      <()>(rdrtracks_2);
+  l139 =
+    map<<Mctypes.ksizeifftracksarray>> convertifftracktomissiontrack
+      <()>(ifftracks_2);
+  missiontracks = missiontrackswithprio
+tel
+
+node mc(currentrdrstate : Mctypes.tsensorstate;
+         currentrdrmode : Mctypes.trdrmode;
+         rdrtracks : Mctypes.trdrtracksarray; rdronoffbutton : bool;
+         rdrmodebutton : bool; iffonoffbutton : bool;
+         currentiffstate : Mctypes.tsensorstate;
+         ifftracks : Mctypes.tifftracksarray)
+returns (rdronoffcmd : bool; rdrmodecmd : bool;
+          missiontracks : Mctypes.tmissiontracksarray; iffonoffcmd : bool)
+var rdronoffbutton_2 : bool; currentrdrstate_3 : Mctypes.tsensorstate;
+    onoffbuttonpressed_2 : bool; currentstate_3 : Mctypes.tsensorstate;
+    onoffcmd_2 : bool; re_Input_3 : bool; re_Output_3 : bool;
+    rdronoffcmd_2 : bool; currentrdrstate_2 : Mctypes.tsensorstate;
+    rdrmodebutton_2 : bool; currentrdrmode_2 : Mctypes.trdrmode;
+    currentstate_2 : Mctypes.tsensorstate; modebuttonpressed : bool;
+    currentmode : Mctypes.trdrmode; modecmd : bool; re_Input_2 : bool;
+    re_Output_2 : bool; rdrmodecmd_2 : bool; iffonoffbutton_2 : bool;
+    currentiffstate_2 : Mctypes.tsensorstate; onoffbuttonpressed : bool;
+    currentstate : Mctypes.tsensorstate; onoffcmd : bool; re_Input : bool;
+    re_Output : bool; iffonoffcmd_2 : bool;
+    rdrtracks_3 : Mctypes.trdrtracksarray;
+    ifftracks_3 : Mctypes.tifftracksarray;
+    missiontracks_6 : Mctypes.tmissiontracksarray;
+    missiontracks_5 : Mctypes.tmissiontracksarray;
+    prioritiesarray_4 : Mctypes.tpriorityList; indexpriority_4 : int;
+    missiontrackwithhighestpriority_4 : Mctypes.tmissiontrack;
+    newprioritiesarray_4 : Mctypes.tpriorityList;
+    missiontracks_4 : Mctypes.tmissiontracksarray;
+    prioritiesarray_3 : Mctypes.tpriorityList; indexpriority_3 : int;
+    missiontrackwithhighestpriority_3 : Mctypes.tmissiontrack;
+    newprioritiesarray_3 : Mctypes.tpriorityList;
+    missiontracks_3 : Mctypes.tmissiontracksarray;
+    prioritiesarray_2 : Mctypes.tpriorityList; indexpriority_2 : int;
+    missiontrackwithhighestpriority_2 : Mctypes.tmissiontrack;
+    newprioritiesarray_2 : Mctypes.tpriorityList;
+    missiontracks_2_2 : Mctypes.tmissiontracksarray;
+    prioritiesarray : Mctypes.tpriorityList; indexpriority : int;
+    missiontrackwithhighestpriority : Mctypes.tmissiontrack;
+    newprioritiesarray : Mctypes.tpriorityList;
+    prioritytracknumbers : Mctypes.tpriorityList;
+    missiontrackswithprio : Mctypes.tmissiontracksarray;
+    withouttracknb : Mctypes.tmissiontracksarray; l81 : int;
+    withtracknumber : Mctypes.tmissiontracksarray;
+    rdrtracks_2 : Mctypes.trdrtracksarray;
+    ifftracks_2 : Mctypes.tifftracksarray;
+    mergedrdrtracks : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    mergedifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    l140 : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    l139 : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    missiontracks_2 : Mctypes.tmissiontracksarray;
+    missiontracks_7 : Mctypes.tmissiontracksarray;
+let
+  rdronoffbutton_2 = rdronoffbutton;
+  currentrdrstate_3 = currentrdrstate;
+  onoffbuttonpressed_2 = re_Output_3;
+  currentstate_3 = currentrdrstate_3;
+  automaton
+    state Off
+       do
+      onoffcmd_2 = false
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd_2 = true
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_ON)) then Off
+  end;
+  re_Input_3 = rdronoffbutton_2;
+  re_Output_3 = (&)(not(re_Input_3 -> pre re_Input_3), re_Input_3);
+  rdronoffcmd_2 = onoffcmd_2;
+  currentrdrstate_2 = currentrdrstate;
+  rdrmodebutton_2 = rdrmodebutton;
+  currentrdrmode_2 = currentrdrmode;
+  currentstate_2 = currentrdrstate_2;
+  modebuttonpressed = re_Output_2;
+  currentmode = currentrdrmode_2;
+  automaton
+    state Wide
+       do
+      modecmd = false
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_WIDE)))
+           then Narrow
+    state Narrow
+       do
+      modecmd = true
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_NARROW)))
+           then Wide
+  end;
+  re_Input_2 = rdrmodebutton_2;
+  re_Output_2 = (&)(not(re_Input_2 -> pre re_Input_2), re_Input_2);
+  rdrmodecmd_2 = modecmd;
+  iffonoffbutton_2 = iffonoffbutton;
+  currentiffstate_2 = currentiffstate;
+  onoffbuttonpressed = re_Output;
+  currentstate = currentiffstate_2;
+  automaton
+    state Off
+       do
+      onoffcmd = false
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd = true
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_ON)) then Off
+  end;
+  re_Input = iffonoffbutton_2;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  iffonoffcmd_2 = onoffcmd;
+  rdrtracks_3 = rdrtracks;
+  ifftracks_3 = ifftracks;
+  missiontracks_6 = withtracknumber;
+  missiontracks_5 = missiontracks_6;
+  prioritiesarray_4 = newprioritiesarray_3;
+  indexpriority_4 = 3;
+  newprioritiesarray_4 =
+    [prioritiesarray_4 with [indexpriority_4] =
+      missiontrackwithhighestpriority_4.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_4 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_5,
+            prioritiesarray_4^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_4 = missiontracks_6;
+  prioritiesarray_3 = newprioritiesarray_2;
+  indexpriority_3 = 2;
+  newprioritiesarray_3 =
+    [prioritiesarray_3 with [indexpriority_3] =
+      missiontrackwithhighestpriority_3.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_3 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_4,
+            prioritiesarray_3^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_3 = missiontracks_6;
+  prioritiesarray_2 = newprioritiesarray;
+  indexpriority_2 = 1;
+  newprioritiesarray_2 =
+    [prioritiesarray_2 with [indexpriority_2] =
+      missiontrackwithhighestpriority_2.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_2 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_3,
+            prioritiesarray_2^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_2_2 = missiontracks_6;
+  prioritiesarray = 0^4;
+  indexpriority = 0;
+  newprioritiesarray =
+    [prioritiesarray with [indexpriority] =
+      missiontrackwithhighestpriority.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_2_2,
+            prioritiesarray^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontrackswithprio =
+    map<<Mctypes.ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+      <(prioritytracknumbers)>(missiontracks_6);
+  prioritytracknumbers = newprioritiesarray_4;
+  withouttracknb = missiontracks_2;
+  (withtracknumber, l81) =
+    mapfold<<Mctypes.ksizemissiontracksarray>> calculatemissiontracknumber
+      <(Mctypes.kinitmissiontrackarray -> pre withtracknumber)>(withouttracknb,
+                                                                 0 -> pre l81);
+  rdrtracks_2 = rdrtracks_3;
+  ifftracks_2 = ifftracks_3;
+  missiontracks_2 = mergedrdrtracks @ mergedifftracks;
+  (mergedrdrtracks, mergedifftracks) =
+    mapfold<<Mctypes.ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks
+      <()>(l140, l139);
+  l140 =
+    map<<Mctypes.ksizerdrtracksarray>> convertrdrtracktomissiontrack
+      <()>(rdrtracks_2);
+  l139 =
+    map<<Mctypes.ksizeifftracksarray>> convertifftracktomissiontrack
+      <()>(ifftracks_2);
+  missiontracks_7 = missiontrackswithprio;
+  missiontracks = missiontracks_7;
+  iffonoffcmd = iffonoffcmd_2;
+  rdrmodecmd = rdrmodecmd_2;
+  rdronoffcmd = rdronoffcmd_2
+tel
+
+node implies(a : bool; b : bool) returns (c : bool)
+let
+  c = (or)(not(a), b)
+tel
+
+node dv_detectedbyiff(missiontrack : Mctypes.tmissiontrack; accin : bool)
+returns (accout : bool)
+let
+  accout = (&)(accin, not(not((=)(missiontrack.Mctypes.m_tracknumber, 0))))
+tel
+
+node dv_sametracknumber(missiontrack1 : Mctypes.tmissiontrack;
+                         missiontrack2 : Mctypes.tmissiontrack; accin : bool)
+returns (accout : bool)
+let
+  accout =
+    (or)
+    (accin,
+      (&)
+      ((=)
+       (missiontrack1.Mctypes.m_tracknumber,
+         missiontrack2.Mctypes.m_tracknumber),
+        not((=)(missiontrack2.Mctypes.m_tracknumber, 0))))
+
+tel
+
+node dv_tracknumberexist(missiontrack : Mctypes.tmissiontrack;
+                          missiontracks : Mctypes.tmissiontracksarray;
+                          accin : bool)
+returns (accout : bool)
+var l36 : bool;
+let
+  l36 =
+    fold<<Mctypes.ksizemissiontracksarray>> dv_sametracknumber
+      <()>(missiontrack^Mctypes.ksizemissiontracksarray, missiontracks,
+            false);
+  accout = (or)(accin, l36)
+tel
+
+node dv_proof1(currentrdrstate : Mctypes.tsensorstate; rdronoffbutton : bool;
+                rdronoffcmd : bool)
+returns (proof1 : bool)
+var a : bool; b : bool; c : bool; re_Input : bool; re_Output : bool;
+let
+  a = (&)(re_Output, (=)(currentrdrstate, Mctypes.TState_FAIL));
+  b = (=)(rdronoffcmd, false -> pre rdronoffcmd);
+  c = (or)(not(a), b);
+  re_Input = rdronoffbutton;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  proof1 = c
+tel
+
+node dv_proof2(ifftracks : Mctypes.tifftracksarray;
+                missiontracks : Mctypes.tmissiontracksarray)
+returns (proof2 : bool)
+var a : bool; b : bool; c : bool; l33 : bool;
+let
+  a = (=)(ifftracks, Mctypes.kinitifftrackarray);
+  b = l33;
+  c = (or)(not(a), b);
+  l33 =
+    fold<<Mctypes.ksizemissiontracksarray>> dv_detectedbyiff
+      <()>(missiontracks, true);
+  proof2 = c
+tel
+
+node dv_proof3(missiontracks : Mctypes.tmissiontracksarray)
+returns (proof3 : bool)
+var l33 : bool;
+let
+  l33 =
+    fold<<Mctypes.ksizemissiontracksarray>> dv_tracknumberexist
+      <()>(missiontracks, missiontracks^Mctypes.ksizemissiontracksarray,
+            false);
+  proof3 = not(l33)
+tel
+
+node dv_observer(currentrdrstate : Mctypes.tsensorstate;
+                  currentrdrmode : Mctypes.trdrmode;
+                  rdrtracks : Mctypes.trdrtracksarray; rdronoffbutton : bool;
+                  rdrmodebutton : bool; iffonoffbutton : bool;
+                  currentiffstate : Mctypes.tsensorstate;
+                  ifftracks : Mctypes.tifftracksarray)
+returns (proof1 : bool; proof2 : bool; proof3 : bool)
+var currentrdrstate_4 : Mctypes.tsensorstate;
+    currentrdrmode_3 : Mctypes.trdrmode;
+    rdrtracks_4 : Mctypes.trdrtracksarray; rdronoffbutton_3 : bool;
+    rdrmodebutton_3 : bool; iffonoffbutton_3 : bool;
+    currentiffstate_3 : Mctypes.tsensorstate;
+    ifftracks_4 : Mctypes.tifftracksarray; rdronoffbutton_2_2 : bool;
+    currentrdrstate_3 : Mctypes.tsensorstate; onoffbuttonpressed_2 : bool;
+    currentstate_3 : Mctypes.tsensorstate; onoffcmd_2 : bool;
+    re_Input_3 : bool; re_Output_3 : bool; rdronoffcmd_2 : bool;
+    currentrdrstate_2_2 : Mctypes.tsensorstate; rdrmodebutton_2 : bool;
+    currentrdrmode_2 : Mctypes.trdrmode;
+    currentstate_2 : Mctypes.tsensorstate; modebuttonpressed : bool;
+    currentmode : Mctypes.trdrmode; modecmd : bool; re_Input_2 : bool;
+    re_Output_2 : bool; rdrmodecmd_2 : bool; iffonoffbutton_2 : bool;
+    currentiffstate_2 : Mctypes.tsensorstate; onoffbuttonpressed : bool;
+    currentstate : Mctypes.tsensorstate; onoffcmd : bool; re_Input_4 : bool;
+    re_Output_4 : bool; iffonoffcmd_2 : bool;
+    rdrtracks_3 : Mctypes.trdrtracksarray;
+    ifftracks_3 : Mctypes.tifftracksarray;
+    missiontracks_6 : Mctypes.tmissiontracksarray;
+    missiontracks_5 : Mctypes.tmissiontracksarray;
+    prioritiesarray_4 : Mctypes.tpriorityList; indexpriority_4 : int;
+    missiontrackwithhighestpriority_4 : Mctypes.tmissiontrack;
+    newprioritiesarray_4 : Mctypes.tpriorityList;
+    missiontracks_4 : Mctypes.tmissiontracksarray;
+    prioritiesarray_3 : Mctypes.tpriorityList; indexpriority_3 : int;
+    missiontrackwithhighestpriority_3 : Mctypes.tmissiontrack;
+    newprioritiesarray_3 : Mctypes.tpriorityList;
+    missiontracks_3 : Mctypes.tmissiontracksarray;
+    prioritiesarray_2 : Mctypes.tpriorityList; indexpriority_2 : int;
+    missiontrackwithhighestpriority_2 : Mctypes.tmissiontrack;
+    newprioritiesarray_2 : Mctypes.tpriorityList;
+    missiontracks_2_2 : Mctypes.tmissiontracksarray;
+    prioritiesarray : Mctypes.tpriorityList; indexpriority : int;
+    missiontrackwithhighestpriority : Mctypes.tmissiontrack;
+    newprioritiesarray : Mctypes.tpriorityList;
+    prioritytracknumbers : Mctypes.tpriorityList;
+    missiontrackswithprio : Mctypes.tmissiontracksarray;
+    withouttracknb : Mctypes.tmissiontracksarray; l81 : int;
+    withtracknumber : Mctypes.tmissiontracksarray;
+    rdrtracks_2 : Mctypes.trdrtracksarray;
+    ifftracks_2_2 : Mctypes.tifftracksarray;
+    mergedrdrtracks : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    mergedifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    l140 : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    l139 : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    missiontracks_2_3 : Mctypes.tmissiontracksarray;
+    missiontracks_7 : Mctypes.tmissiontracksarray; rdronoffcmd_3 : bool;
+    rdrmodecmd : bool; missiontracks_8 : Mctypes.tmissiontracksarray;
+    iffonoffcmd : bool; currentrdrstate_2 : Mctypes.tsensorstate;
+    rdronoffbutton_2 : bool; rdronoffcmd : bool; a_2 : bool; b_2 : bool;
+    c_2 : bool; re_Input : bool; re_Output : bool; proof1_2 : bool;
+    ifftracks_2 : Mctypes.tifftracksarray;
+    missiontracks_2 : Mctypes.tmissiontracksarray; a : bool; b : bool;
+    c : bool; l33_2 : bool; proof2_2 : bool;
+    missiontracks : Mctypes.tmissiontracksarray; l33 : bool; proof3_2 : bool;
+    l3 : Mctypes.tmissiontracksarray; l1 : bool; l4 : bool; l5 : bool;
+let
+  currentrdrstate_4 = currentrdrstate;
+  currentrdrmode_3 = currentrdrmode;
+  rdrtracks_4 = rdrtracks;
+  rdronoffbutton_3 = rdronoffbutton;
+  rdrmodebutton_3 = rdrmodebutton;
+  iffonoffbutton_3 = iffonoffbutton;
+  currentiffstate_3 = currentiffstate;
+  ifftracks_4 = ifftracks;
+  rdronoffbutton_2_2 = rdronoffbutton_3;
+  currentrdrstate_3 = currentrdrstate_4;
+  onoffbuttonpressed_2 = re_Output_3;
+  currentstate_3 = currentrdrstate_3;
+  automaton
+    state Off
+       do
+      onoffcmd_2 = false
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd_2 = true
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_ON)) then Off
+  end;
+  re_Input_3 = rdronoffbutton_2_2;
+  re_Output_3 = (&)(not(re_Input_3 -> pre re_Input_3), re_Input_3);
+  rdronoffcmd_2 = onoffcmd_2;
+  currentrdrstate_2_2 = currentrdrstate_4;
+  rdrmodebutton_2 = rdrmodebutton_3;
+  currentrdrmode_2 = currentrdrmode_3;
+  currentstate_2 = currentrdrstate_2_2;
+  modebuttonpressed = re_Output_2;
+  currentmode = currentrdrmode_2;
+  automaton
+    state Wide
+       do
+      modecmd = false
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_WIDE)))
+           then Narrow
+    state Narrow
+       do
+      modecmd = true
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_NARROW)))
+           then Wide
+  end;
+  re_Input_2 = rdrmodebutton_2;
+  re_Output_2 = (&)(not(re_Input_2 -> pre re_Input_2), re_Input_2);
+  rdrmodecmd_2 = modecmd;
+  iffonoffbutton_2 = iffonoffbutton_3;
+  currentiffstate_2 = currentiffstate_3;
+  onoffbuttonpressed = re_Output_4;
+  currentstate = currentiffstate_2;
+  automaton
+    state Off
+       do
+      onoffcmd = false
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd = true
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_ON)) then Off
+  end;
+  re_Input_4 = iffonoffbutton_2;
+  re_Output_4 = (&)(not(re_Input_4 -> pre re_Input_4), re_Input_4);
+  iffonoffcmd_2 = onoffcmd;
+  rdrtracks_3 = rdrtracks_4;
+  ifftracks_3 = ifftracks_4;
+  missiontracks_6 = withtracknumber;
+  missiontracks_5 = missiontracks_6;
+  prioritiesarray_4 = newprioritiesarray_3;
+  indexpriority_4 = 3;
+  newprioritiesarray_4 =
+    [prioritiesarray_4 with [indexpriority_4] =
+      missiontrackwithhighestpriority_4.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_4 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_5,
+            prioritiesarray_4^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_4 = missiontracks_6;
+  prioritiesarray_3 = newprioritiesarray_2;
+  indexpriority_3 = 2;
+  newprioritiesarray_3 =
+    [prioritiesarray_3 with [indexpriority_3] =
+      missiontrackwithhighestpriority_3.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_3 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_4,
+            prioritiesarray_3^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_3 = missiontracks_6;
+  prioritiesarray_2 = newprioritiesarray;
+  indexpriority_2 = 1;
+  newprioritiesarray_2 =
+    [prioritiesarray_2 with [indexpriority_2] =
+      missiontrackwithhighestpriority_2.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_2 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_3,
+            prioritiesarray_2^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_2_2 = missiontracks_6;
+  prioritiesarray = 0^4;
+  indexpriority = 0;
+  newprioritiesarray =
+    [prioritiesarray with [indexpriority] =
+      missiontrackwithhighestpriority.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_2_2,
+            prioritiesarray^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontrackswithprio =
+    map<<Mctypes.ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+      <(prioritytracknumbers)>(missiontracks_6);
+  prioritytracknumbers = newprioritiesarray_4;
+  withouttracknb = missiontracks_2_3;
+  (withtracknumber, l81) =
+    mapfold<<Mctypes.ksizemissiontracksarray>> calculatemissiontracknumber
+      <(Mctypes.kinitmissiontrackarray -> pre withtracknumber)>(withouttracknb,
+                                                                 0 -> pre l81);
+  rdrtracks_2 = rdrtracks_3;
+  ifftracks_2_2 = ifftracks_3;
+  missiontracks_2_3 = mergedrdrtracks @ mergedifftracks;
+  (mergedrdrtracks, mergedifftracks) =
+    mapfold<<Mctypes.ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks
+      <()>(l140, l139);
+  l140 =
+    map<<Mctypes.ksizerdrtracksarray>> convertrdrtracktomissiontrack
+      <()>(rdrtracks_2);
+  l139 =
+    map<<Mctypes.ksizeifftracksarray>> convertifftracktomissiontrack
+      <()>(ifftracks_2_2);
+  missiontracks_7 = missiontrackswithprio;
+  missiontracks_8 = missiontracks_7;
+  iffonoffcmd = iffonoffcmd_2;
+  rdrmodecmd = rdrmodecmd_2;
+  rdronoffcmd_3 = rdronoffcmd_2;
+  currentrdrstate_2 = currentrdrstate;
+  rdronoffbutton_2 = rdronoffbutton;
+  rdronoffcmd = l1;
+  a_2 = (&)(re_Output, (=)(currentrdrstate_2, Mctypes.TState_FAIL));
+  b_2 = (=)(rdronoffcmd, false -> pre rdronoffcmd);
+  c_2 = (or)(not(a_2), b_2);
+  re_Input = rdronoffbutton_2;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  proof1_2 = c_2;
+  ifftracks_2 = ifftracks;
+  missiontracks_2 = l3;
+  a = (=)(ifftracks_2, Mctypes.kinitifftrackarray);
+  b = l33_2;
+  c = (or)(not(a), b);
+  l33_2 =
+    fold<<Mctypes.ksizemissiontracksarray>> dv_detectedbyiff
+      <()>(missiontracks_2, true);
+  proof2_2 = c;
+  missiontracks = l3;
+  l33 =
+    fold<<Mctypes.ksizemissiontracksarray>> dv_tracknumberexist
+      <()>(missiontracks, missiontracks^Mctypes.ksizemissiontracksarray,
+            false);
+  proof3_2 = not(l33);
+  proof3 = proof3_2;
+  proof2 = proof2_2;
+  proof1 = proof1_2;
+  (l1, l4, l3, l5) =
+    (rdronoffcmd_3, rdrmodecmd, missiontracks_8, iffonoffcmd)
+tel
+
+node fighterdebug(res : bool; rdronoffclicked : bool; iffonoffclicked : bool)
+returns (missiontracks : Mctypes.tmissiontracksarray)
+var onoffcmd_4 : bool; modecmd_3 : bool; failure_3 : bool;
+    rdrdetectedtracks : Mctypes.tdetectedrdrtracksarray;
+    tracks_4 : Mctypes.ttracksarray; onoffcmd_2_3 : bool; failure_2_2 : bool;
+    x_2 : bool; initializing_2_2 : bool; st_3_2 : Mctypes.tsensorstate;
+    modecmd_2 : bool; mode_2 : Mctypes.trdrmode;
+    st_2_2 : Mctypes.tsensorstate; tracks_2_2 : Mctypes.ttracksarray;
+    rdrdetectedtracks_2 : Mctypes.tdetectedrdrtracksarray;
+    l22 : Mctypes.ttrack^Mctypes.ksizerdrtracksarray;
+    l30 : Mctypes.trdrtrack^Mctypes.ksizerdrtracksarray;
+    rdrtracks_2_2 : Mctypes.trdrtracksarray; initializing_3 : bool;
+    st_4 : Mctypes.tsensorstate; mode : Mctypes.trdrmode;
+    rdrtracks_4 : Mctypes.trdrtracksarray; tracks_3 : Mctypes.ttracksarray;
+    failure : bool; iffdetectedtracks : Mctypes.tdetectedifftracksarray;
+    onoffcmd_3 : bool; onoffcmd_2_2 : bool; failure_2 : bool; x : bool;
+    initializing_2 : bool; st_3 : Mctypes.tsensorstate;
+    st_2 : Mctypes.tsensorstate; tracks_2 : Mctypes.ttracksarray;
+    iffdetectedtracks_2 : Mctypes.tdetectedifftracksarray;
+    l34 : Mctypes.ttrack^Mctypes.ksizeifftracksarray;
+    l40 : Mctypes.tifftracksarray; ifftracks_2_2 : Mctypes.tifftracksarray;
+    st : Mctypes.tsensorstate; ifftracks_4 : Mctypes.tifftracksarray;
+    initializing : bool; currentrdrstate : Mctypes.tsensorstate;
+    currentrdrmode : Mctypes.trdrmode; rdrtracks : Mctypes.trdrtracksarray;
+    rdronoffbutton : bool; rdrmodebutton : bool; iffonoffbutton : bool;
+    currentiffstate : Mctypes.tsensorstate;
+    ifftracks : Mctypes.tifftracksarray; rdronoffbutton_2 : bool;
+    currentrdrstate_3 : Mctypes.tsensorstate; onoffbuttonpressed_2 : bool;
+    currentstate_3 : Mctypes.tsensorstate; onoffcmd_2 : bool;
+    re_Input_3 : bool; re_Output_3 : bool; rdronoffcmd_2 : bool;
+    currentrdrstate_2 : Mctypes.tsensorstate; rdrmodebutton_2 : bool;
+    currentrdrmode_2 : Mctypes.trdrmode;
+    currentstate_2 : Mctypes.tsensorstate; modebuttonpressed : bool;
+    currentmode : Mctypes.trdrmode; modecmd : bool; re_Input_2 : bool;
+    re_Output_2 : bool; rdrmodecmd_2 : bool; iffonoffbutton_2 : bool;
+    currentiffstate_2 : Mctypes.tsensorstate; onoffbuttonpressed : bool;
+    currentstate : Mctypes.tsensorstate; onoffcmd : bool; re_Input : bool;
+    re_Output : bool; iffonoffcmd_2 : bool;
+    rdrtracks_3 : Mctypes.trdrtracksarray;
+    ifftracks_3 : Mctypes.tifftracksarray;
+    missiontracks_6 : Mctypes.tmissiontracksarray;
+    missiontracks_5 : Mctypes.tmissiontracksarray;
+    prioritiesarray_4 : Mctypes.tpriorityList; indexpriority_4 : int;
+    missiontrackwithhighestpriority_4 : Mctypes.tmissiontrack;
+    newprioritiesarray_4 : Mctypes.tpriorityList;
+    missiontracks_4 : Mctypes.tmissiontracksarray;
+    prioritiesarray_3 : Mctypes.tpriorityList; indexpriority_3 : int;
+    missiontrackwithhighestpriority_3 : Mctypes.tmissiontrack;
+    newprioritiesarray_3 : Mctypes.tpriorityList;
+    missiontracks_3 : Mctypes.tmissiontracksarray;
+    prioritiesarray_2 : Mctypes.tpriorityList; indexpriority_2 : int;
+    missiontrackwithhighestpriority_2 : Mctypes.tmissiontrack;
+    newprioritiesarray_2 : Mctypes.tpriorityList;
+    missiontracks_2_2 : Mctypes.tmissiontracksarray;
+    prioritiesarray : Mctypes.tpriorityList; indexpriority : int;
+    missiontrackwithhighestpriority : Mctypes.tmissiontrack;
+    newprioritiesarray : Mctypes.tpriorityList;
+    prioritytracknumbers : Mctypes.tpriorityList;
+    missiontrackswithprio : Mctypes.tmissiontracksarray;
+    withouttracknb : Mctypes.tmissiontracksarray; l81 : int;
+    withtracknumber : Mctypes.tmissiontracksarray;
+    rdrtracks_2 : Mctypes.trdrtracksarray;
+    ifftracks_2 : Mctypes.tifftracksarray;
+    mergedrdrtracks : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    mergedifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    l140 : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    l139 : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    missiontracks_2 : Mctypes.tmissiontracksarray;
+    missiontracks_7 : Mctypes.tmissiontracksarray; rdronoffcmd : bool;
+    rdrmodecmd : bool; missiontracks_8 : Mctypes.tmissiontracksarray;
+    iffonoffcmd : bool; l4 : Mctypes.trdrtracksarray; l3 : Mctypes.trdrmode;
+    l6 : Mctypes.tifftracksarray; l5 : Mctypes.tsensorstate; l12 : bool;
+    l11 : bool; l10 : bool; l172 : Mctypes.tsensorstate;
+    l179 : Mctypes.ttracksarray; l200 : bool; l201 : bool;
+let
+  onoffcmd_4 = false -> pre l10;
+  modecmd_3 = false -> pre l11;
+  failure_3 = false;
+  rdrdetectedtracks = [0, 1, 2, 3, 4];
+  tracks_4 = l179;
+  onoffcmd_2_3 = onoffcmd_4;
+  failure_2_2 = failure_3;
+  initializing_2_2 = (&)((=)(st_3_2, Mctypes.TState_OFF), onoffcmd_2_3);
+  x_2 = false fby false fby false fby false fby false fby onoffcmd_2_3;
+  st_3_2 =
+    if failure_2_2
+    then Mctypes.TState_FAIL
+    else if if onoffcmd_2_3 then x_2 else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+      ;
+  modecmd_2 = modecmd_3;
+  mode_2 =
+    if modecmd_2 then Mctypes.TRdrMode_NARROW else Mctypes.TRdrMode_WIDE;
+  st_2_2 = st_4;
+  tracks_2_2 = tracks_4;
+  rdrdetectedtracks_2 = rdrdetectedtracks;
+  rdrtracks_2_2 =
+    if (=)(st_2_2, Mctypes.TState_ON)
+    then l30
+    else Mctypes.kinitrdrtrackarray;
+  l30 = map<<Mctypes.ksizerdrtracksarray>> elaboraterdrtrack<()>(l22);
+  l22 =
+    map<<Mctypes.ksizerdrtracksarray>> selectdetectedtrack
+      <()>(rdrdetectedtracks_2, tracks_2_2^Mctypes.ksizerdrtracksarray,
+            Mctypes.kinittrack^Mctypes.ksizerdrtracksarray);
+  rdrtracks_4 = rdrtracks_2_2;
+  mode = mode_2;
+  (initializing_3, st_4) = (initializing_2_2, st_3_2);
+  tracks_3 = l179;
+  failure = false;
+  iffdetectedtracks = [1, 2, 3];
+  onoffcmd_3 = false -> pre l12;
+  onoffcmd_2_2 = onoffcmd_3;
+  failure_2 = failure;
+  initializing_2 = (&)((=)(st_3, Mctypes.TState_OFF), onoffcmd_2_2);
+  x = false fby false fby false fby false fby false fby onoffcmd_2_2;
+  st_3 =
+    if failure_2
+    then Mctypes.TState_FAIL
+    else if if onoffcmd_2_2 then x else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+      ;
+  st_2 = st;
+  tracks_2 = tracks_3;
+  iffdetectedtracks_2 = iffdetectedtracks;
+  l34 =
+    map<<Mctypes.ksizeifftracksarray>> selectdetectedtrack
+      <()>(iffdetectedtracks_2, tracks_2^Mctypes.ksizeifftracksarray,
+            Mctypes.kinittrack^Mctypes.ksizeifftracksarray);
+  l40 = map<<Mctypes.ksizeifftracksarray>> ifftrack_of_track<()>(l34);
+  ifftracks_2_2 =
+    if (=)(st_2, Mctypes.TState_ON) then l40 else Mctypes.kinitifftrackarray;
+  ifftracks_4 = ifftracks_2_2;
+  (initializing, st) = (initializing_2, st_3);
+  currentrdrstate = l172;
+  currentrdrmode = l3;
+  rdrtracks = l4;
+  rdronoffbutton = rdronoffclicked;
+  rdrmodebutton = false;
+  iffonoffbutton = iffonoffclicked;
+  currentiffstate = l5;
+  ifftracks = l6;
+  rdronoffbutton_2 = rdronoffbutton;
+  currentrdrstate_3 = currentrdrstate;
+  onoffbuttonpressed_2 = re_Output_3;
+  currentstate_3 = currentrdrstate_3;
+  automaton
+    state Off
+       do
+      onoffcmd_2 = false
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd_2 = true
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_ON)) then Off
+  end;
+  re_Input_3 = rdronoffbutton_2;
+  re_Output_3 = (&)(not(re_Input_3 -> pre re_Input_3), re_Input_3);
+  rdronoffcmd_2 = onoffcmd_2;
+  currentrdrstate_2 = currentrdrstate;
+  rdrmodebutton_2 = rdrmodebutton;
+  currentrdrmode_2 = currentrdrmode;
+  currentstate_2 = currentrdrstate_2;
+  modebuttonpressed = re_Output_2;
+  currentmode = currentrdrmode_2;
+  automaton
+    state Wide
+       do
+      modecmd = false
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_WIDE)))
+           then Narrow
+    state Narrow
+       do
+      modecmd = true
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_NARROW)))
+           then Wide
+  end;
+  re_Input_2 = rdrmodebutton_2;
+  re_Output_2 = (&)(not(re_Input_2 -> pre re_Input_2), re_Input_2);
+  rdrmodecmd_2 = modecmd;
+  iffonoffbutton_2 = iffonoffbutton;
+  currentiffstate_2 = currentiffstate;
+  onoffbuttonpressed = re_Output;
+  currentstate = currentiffstate_2;
+  automaton
+    state Off
+       do
+      onoffcmd = false
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd = true
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_ON)) then Off
+  end;
+  re_Input = iffonoffbutton_2;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  iffonoffcmd_2 = onoffcmd;
+  rdrtracks_3 = rdrtracks;
+  ifftracks_3 = ifftracks;
+  missiontracks_6 = withtracknumber;
+  missiontracks_5 = missiontracks_6;
+  prioritiesarray_4 = newprioritiesarray_3;
+  indexpriority_4 = 3;
+  newprioritiesarray_4 =
+    [prioritiesarray_4 with [indexpriority_4] =
+      missiontrackwithhighestpriority_4.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_4 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_5,
+            prioritiesarray_4^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_4 = missiontracks_6;
+  prioritiesarray_3 = newprioritiesarray_2;
+  indexpriority_3 = 2;
+  newprioritiesarray_3 =
+    [prioritiesarray_3 with [indexpriority_3] =
+      missiontrackwithhighestpriority_3.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_3 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_4,
+            prioritiesarray_3^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_3 = missiontracks_6;
+  prioritiesarray_2 = newprioritiesarray;
+  indexpriority_2 = 1;
+  newprioritiesarray_2 =
+    [prioritiesarray_2 with [indexpriority_2] =
+      missiontrackwithhighestpriority_2.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_2 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_3,
+            prioritiesarray_2^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_2_2 = missiontracks_6;
+  prioritiesarray = 0^4;
+  indexpriority = 0;
+  newprioritiesarray =
+    [prioritiesarray with [indexpriority] =
+      missiontrackwithhighestpriority.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_2_2,
+            prioritiesarray^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontrackswithprio =
+    map<<Mctypes.ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+      <(prioritytracknumbers)>(missiontracks_6);
+  prioritytracknumbers = newprioritiesarray_4;
+  withouttracknb = missiontracks_2;
+  (withtracknumber, l81) =
+    mapfold<<Mctypes.ksizemissiontracksarray>> calculatemissiontracknumber
+      <(Mctypes.kinitmissiontrackarray -> pre withtracknumber)>(withouttracknb,
+                                                                 0 -> pre l81);
+  rdrtracks_2 = rdrtracks_3;
+  ifftracks_2 = ifftracks_3;
+  missiontracks_2 = mergedrdrtracks @ mergedifftracks;
+  (mergedrdrtracks, mergedifftracks) =
+    mapfold<<Mctypes.ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks
+      <()>(l140, l139);
+  l140 =
+    map<<Mctypes.ksizerdrtracksarray>> convertrdrtracktomissiontrack
+      <()>(rdrtracks_2);
+  l139 =
+    map<<Mctypes.ksizeifftracksarray>> convertifftracktomissiontrack
+      <()>(ifftracks_2);
+  missiontracks_7 = missiontrackswithprio;
+  missiontracks_8 = missiontracks_7;
+  iffonoffcmd = iffonoffcmd_2;
+  rdrmodecmd = rdrmodecmd_2;
+  rdronoffcmd = rdronoffcmd_2;
+  l179 = createalltracks(res);
+  (l10, l11, missiontracks, l12) =
+    (rdronoffcmd, rdrmodecmd, missiontracks_8, iffonoffcmd);
+  (l5, l6, l200) = (st, ifftracks_4, initializing);
+  (l201, l172, l3, l4) = (initializing_3, st_4, mode, rdrtracks_4)
+tel
+
+node dv_fighterdebug(res : bool; rdronoffclicked : bool;
+                      iffonoffclicked : bool)
+returns (proof3 : bool)
+var missiontracks_9 : Mctypes.tmissiontracksarray; l33 : bool;
+    proof3_2 : bool; res_2 : bool; rdronoffclicked_2 : bool;
+    iffonoffclicked_2 : bool; onoffcmd_4 : bool; modecmd_3 : bool;
+    failure_3 : bool; rdrdetectedtracks : Mctypes.tdetectedrdrtracksarray;
+    tracks_4 : Mctypes.ttracksarray; onoffcmd_2_3 : bool; failure_2_2 : bool;
+    x_2 : bool; initializing_2_2 : bool; st_3_2 : Mctypes.tsensorstate;
+    modecmd_2 : bool; mode_2 : Mctypes.trdrmode;
+    st_2_2 : Mctypes.tsensorstate; tracks_2_2 : Mctypes.ttracksarray;
+    rdrdetectedtracks_2 : Mctypes.tdetectedrdrtracksarray;
+    l22 : Mctypes.ttrack^Mctypes.ksizerdrtracksarray;
+    l30 : Mctypes.trdrtrack^Mctypes.ksizerdrtracksarray;
+    rdrtracks_2_2 : Mctypes.trdrtracksarray; initializing_3 : bool;
+    st_4 : Mctypes.tsensorstate; mode : Mctypes.trdrmode;
+    rdrtracks_4 : Mctypes.trdrtracksarray; tracks_3 : Mctypes.ttracksarray;
+    failure : bool; iffdetectedtracks : Mctypes.tdetectedifftracksarray;
+    onoffcmd_3 : bool; onoffcmd_2_2 : bool; failure_2 : bool; x : bool;
+    initializing_2 : bool; st_3 : Mctypes.tsensorstate;
+    st_2 : Mctypes.tsensorstate; tracks_2 : Mctypes.ttracksarray;
+    iffdetectedtracks_2 : Mctypes.tdetectedifftracksarray;
+    l34 : Mctypes.ttrack^Mctypes.ksizeifftracksarray;
+    l40 : Mctypes.tifftracksarray; ifftracks_2_2 : Mctypes.tifftracksarray;
+    st : Mctypes.tsensorstate; ifftracks_4 : Mctypes.tifftracksarray;
+    initializing : bool; currentrdrstate : Mctypes.tsensorstate;
+    currentrdrmode : Mctypes.trdrmode; rdrtracks : Mctypes.trdrtracksarray;
+    rdronoffbutton : bool; rdrmodebutton : bool; iffonoffbutton : bool;
+    currentiffstate : Mctypes.tsensorstate;
+    ifftracks : Mctypes.tifftracksarray; rdronoffbutton_2 : bool;
+    currentrdrstate_3 : Mctypes.tsensorstate; onoffbuttonpressed_2 : bool;
+    currentstate_3 : Mctypes.tsensorstate; onoffcmd_2 : bool;
+    re_Input_3 : bool; re_Output_3 : bool; rdronoffcmd_2 : bool;
+    currentrdrstate_2 : Mctypes.tsensorstate; rdrmodebutton_2 : bool;
+    currentrdrmode_2 : Mctypes.trdrmode;
+    currentstate_2 : Mctypes.tsensorstate; modebuttonpressed : bool;
+    currentmode : Mctypes.trdrmode; modecmd : bool; re_Input_2 : bool;
+    re_Output_2 : bool; rdrmodecmd_2 : bool; iffonoffbutton_2 : bool;
+    currentiffstate_2 : Mctypes.tsensorstate; onoffbuttonpressed : bool;
+    currentstate : Mctypes.tsensorstate; onoffcmd : bool; re_Input : bool;
+    re_Output : bool; iffonoffcmd_2 : bool;
+    rdrtracks_3 : Mctypes.trdrtracksarray;
+    ifftracks_3 : Mctypes.tifftracksarray;
+    missiontracks_6 : Mctypes.tmissiontracksarray;
+    missiontracks_5 : Mctypes.tmissiontracksarray;
+    prioritiesarray_4 : Mctypes.tpriorityList; indexpriority_4 : int;
+    missiontrackwithhighestpriority_4 : Mctypes.tmissiontrack;
+    newprioritiesarray_4 : Mctypes.tpriorityList;
+    missiontracks_4 : Mctypes.tmissiontracksarray;
+    prioritiesarray_3 : Mctypes.tpriorityList; indexpriority_3 : int;
+    missiontrackwithhighestpriority_3 : Mctypes.tmissiontrack;
+    newprioritiesarray_3 : Mctypes.tpriorityList;
+    missiontracks_3 : Mctypes.tmissiontracksarray;
+    prioritiesarray_2 : Mctypes.tpriorityList; indexpriority_2 : int;
+    missiontrackwithhighestpriority_2 : Mctypes.tmissiontrack;
+    newprioritiesarray_2 : Mctypes.tpriorityList;
+    missiontracks_2_2 : Mctypes.tmissiontracksarray;
+    prioritiesarray : Mctypes.tpriorityList; indexpriority : int;
+    missiontrackwithhighestpriority : Mctypes.tmissiontrack;
+    newprioritiesarray : Mctypes.tpriorityList;
+    prioritytracknumbers : Mctypes.tpriorityList;
+    missiontrackswithprio : Mctypes.tmissiontracksarray;
+    withouttracknb : Mctypes.tmissiontracksarray; l81 : int;
+    withtracknumber : Mctypes.tmissiontracksarray;
+    rdrtracks_2 : Mctypes.trdrtracksarray;
+    ifftracks_2 : Mctypes.tifftracksarray;
+    mergedrdrtracks : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    mergedifftracks : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    l140 : Mctypes.tmissiontrack^Mctypes.ksizerdrtracksarray;
+    l139 : Mctypes.tmissiontrack^Mctypes.ksizeifftracksarray;
+    missiontracks_2 : Mctypes.tmissiontracksarray;
+    missiontracks_7 : Mctypes.tmissiontracksarray; rdronoffcmd : bool;
+    rdrmodecmd : bool; missiontracks_8 : Mctypes.tmissiontracksarray;
+    iffonoffcmd : bool; l4 : Mctypes.trdrtracksarray; l3 : Mctypes.trdrmode;
+    l6 : Mctypes.tifftracksarray; l5 : Mctypes.tsensorstate; l12 : bool;
+    l11 : bool; l10 : bool; l172 : Mctypes.tsensorstate;
+    l179 : Mctypes.ttracksarray; l200 : bool; l201 : bool;
+    missiontracks : Mctypes.tmissiontracksarray;
+let
+  missiontracks_9 = missiontracks;
+  l33 =
+    fold<<Mctypes.ksizemissiontracksarray>> dv_tracknumberexist
+      <()>(missiontracks_9, missiontracks_9^Mctypes.ksizemissiontracksarray,
+            false);
+  proof3_2 = not(l33);
+  res_2 = res;
+  rdronoffclicked_2 = rdronoffclicked;
+  iffonoffclicked_2 = iffonoffclicked;
+  onoffcmd_4 = false -> pre l10;
+  modecmd_3 = false -> pre l11;
+  failure_3 = false;
+  rdrdetectedtracks = [0, 1, 2, 3, 4];
+  tracks_4 = l179;
+  onoffcmd_2_3 = onoffcmd_4;
+  failure_2_2 = failure_3;
+  initializing_2_2 = (&)((=)(st_3_2, Mctypes.TState_OFF), onoffcmd_2_3);
+  x_2 = false fby false fby false fby false fby false fby onoffcmd_2_3;
+  st_3_2 =
+    if failure_2_2
+    then Mctypes.TState_FAIL
+    else if if onoffcmd_2_3 then x_2 else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+      ;
+  modecmd_2 = modecmd_3;
+  mode_2 =
+    if modecmd_2 then Mctypes.TRdrMode_NARROW else Mctypes.TRdrMode_WIDE;
+  st_2_2 = st_4;
+  tracks_2_2 = tracks_4;
+  rdrdetectedtracks_2 = rdrdetectedtracks;
+  rdrtracks_2_2 =
+    if (=)(st_2_2, Mctypes.TState_ON)
+    then l30
+    else Mctypes.kinitrdrtrackarray;
+  l30 = map<<Mctypes.ksizerdrtracksarray>> elaboraterdrtrack<()>(l22);
+  l22 =
+    map<<Mctypes.ksizerdrtracksarray>> selectdetectedtrack
+      <()>(rdrdetectedtracks_2, tracks_2_2^Mctypes.ksizerdrtracksarray,
+            Mctypes.kinittrack^Mctypes.ksizerdrtracksarray);
+  rdrtracks_4 = rdrtracks_2_2;
+  mode = mode_2;
+  (initializing_3, st_4) = (initializing_2_2, st_3_2);
+  tracks_3 = l179;
+  failure = false;
+  iffdetectedtracks = [1, 2, 3];
+  onoffcmd_3 = false -> pre l12;
+  onoffcmd_2_2 = onoffcmd_3;
+  failure_2 = failure;
+  initializing_2 = (&)((=)(st_3, Mctypes.TState_OFF), onoffcmd_2_2);
+  x = false fby false fby false fby false fby false fby onoffcmd_2_2;
+  st_3 =
+    if failure_2
+    then Mctypes.TState_FAIL
+    else if if onoffcmd_2_2 then x else false
+         then Mctypes.TState_ON
+         else Mctypes.TState_OFF
+      ;
+  st_2 = st;
+  tracks_2 = tracks_3;
+  iffdetectedtracks_2 = iffdetectedtracks;
+  l34 =
+    map<<Mctypes.ksizeifftracksarray>> selectdetectedtrack
+      <()>(iffdetectedtracks_2, tracks_2^Mctypes.ksizeifftracksarray,
+            Mctypes.kinittrack^Mctypes.ksizeifftracksarray);
+  l40 = map<<Mctypes.ksizeifftracksarray>> ifftrack_of_track<()>(l34);
+  ifftracks_2_2 =
+    if (=)(st_2, Mctypes.TState_ON) then l40 else Mctypes.kinitifftrackarray;
+  ifftracks_4 = ifftracks_2_2;
+  (initializing, st) = (initializing_2, st_3);
+  currentrdrstate = l172;
+  currentrdrmode = l3;
+  rdrtracks = l4;
+  rdronoffbutton = rdronoffclicked_2;
+  rdrmodebutton = false;
+  iffonoffbutton = iffonoffclicked_2;
+  currentiffstate = l5;
+  ifftracks = l6;
+  rdronoffbutton_2 = rdronoffbutton;
+  currentrdrstate_3 = currentrdrstate;
+  onoffbuttonpressed_2 = re_Output_3;
+  currentstate_3 = currentrdrstate_3;
+  automaton
+    state Off
+       do
+      onoffcmd_2 = false
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd_2 = true
+      unless
+      | (&)(onoffbuttonpressed_2, (=)(currentstate_3, Mctypes.TState_ON)) then Off
+  end;
+  re_Input_3 = rdronoffbutton_2;
+  re_Output_3 = (&)(not(re_Input_3 -> pre re_Input_3), re_Input_3);
+  rdronoffcmd_2 = onoffcmd_2;
+  currentrdrstate_2 = currentrdrstate;
+  rdrmodebutton_2 = rdrmodebutton;
+  currentrdrmode_2 = currentrdrmode;
+  currentstate_2 = currentrdrstate_2;
+  modebuttonpressed = re_Output_2;
+  currentmode = currentrdrmode_2;
+  automaton
+    state Wide
+       do
+      modecmd = false
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_WIDE)))
+           then Narrow
+    state Narrow
+       do
+      modecmd = true
+      unless
+      | (&)
+        (modebuttonpressed,
+          (&)
+          ((=)(currentstate_2, Mctypes.TState_ON),
+            (=)(currentmode, Mctypes.TRdrMode_NARROW)))
+           then Wide
+  end;
+  re_Input_2 = rdrmodebutton_2;
+  re_Output_2 = (&)(not(re_Input_2 -> pre re_Input_2), re_Input_2);
+  rdrmodecmd_2 = modecmd;
+  iffonoffbutton_2 = iffonoffbutton;
+  currentiffstate_2 = currentiffstate;
+  onoffbuttonpressed = re_Output;
+  currentstate = currentiffstate_2;
+  automaton
+    state Off
+       do
+      onoffcmd = false
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_OFF)) then On
+    state On
+       do
+      onoffcmd = true
+      unless
+      | (&)(onoffbuttonpressed, (=)(currentstate, Mctypes.TState_ON)) then Off
+  end;
+  re_Input = iffonoffbutton_2;
+  re_Output = (&)(not(re_Input -> pre re_Input), re_Input);
+  iffonoffcmd_2 = onoffcmd;
+  rdrtracks_3 = rdrtracks;
+  ifftracks_3 = ifftracks;
+  missiontracks_6 = withtracknumber;
+  missiontracks_5 = missiontracks_6;
+  prioritiesarray_4 = newprioritiesarray_3;
+  indexpriority_4 = 3;
+  newprioritiesarray_4 =
+    [prioritiesarray_4 with [indexpriority_4] =
+      missiontrackwithhighestpriority_4.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_4 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_5,
+            prioritiesarray_4^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_4 = missiontracks_6;
+  prioritiesarray_3 = newprioritiesarray_2;
+  indexpriority_3 = 2;
+  newprioritiesarray_3 =
+    [prioritiesarray_3 with [indexpriority_3] =
+      missiontrackwithhighestpriority_3.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_3 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_4,
+            prioritiesarray_3^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_3 = missiontracks_6;
+  prioritiesarray_2 = newprioritiesarray;
+  indexpriority_2 = 1;
+  newprioritiesarray_2 =
+    [prioritiesarray_2 with [indexpriority_2] =
+      missiontrackwithhighestpriority_2.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority_2 =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_3,
+            prioritiesarray_2^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontracks_2_2 = missiontracks_6;
+  prioritiesarray = 0^4;
+  indexpriority = 0;
+  newprioritiesarray =
+    [prioritiesarray with [indexpriority] =
+      missiontrackwithhighestpriority.Mctypes.m_tracknumber];
+  missiontrackwithhighestpriority =
+    fold<<Mctypes.ksizemissiontracksarray>> prio_selecthighestprioritynotinpriorityarray
+      <()>(missiontracks_2_2,
+            prioritiesarray^Mctypes.ksizemissiontracksarray,
+            Mctypes.kinitmissiontrack);
+  missiontrackswithprio =
+    map<<Mctypes.ksizemissiontracksarray>> prio_setpriorityinmissiontrackarray
+      <(prioritytracknumbers)>(missiontracks_6);
+  prioritytracknumbers = newprioritiesarray_4;
+  withouttracknb = missiontracks_2;
+  (withtracknumber, l81) =
+    mapfold<<Mctypes.ksizemissiontracksarray>> calculatemissiontracknumber
+      <(Mctypes.kinitmissiontrackarray -> pre withtracknumber)>(withouttracknb,
+                                                                 0 -> pre l81);
+  rdrtracks_2 = rdrtracks_3;
+  ifftracks_2 = ifftracks_3;
+  missiontracks_2 = mergedrdrtracks @ mergedifftracks;
+  (mergedrdrtracks, mergedifftracks) =
+    mapfold<<Mctypes.ksizerdrtracksarray>> mc_tracks_fusion_onerdrwithifftracks
+      <()>(l140, l139);
+  l140 =
+    map<<Mctypes.ksizerdrtracksarray>> convertrdrtracktomissiontrack
+      <()>(rdrtracks_2);
+  l139 =
+    map<<Mctypes.ksizeifftracksarray>> convertifftracktomissiontrack
+      <()>(ifftracks_2);
+  missiontracks_7 = missiontrackswithprio;
+  missiontracks_8 = missiontracks_7;
+  iffonoffcmd = iffonoffcmd_2;
+  rdrmodecmd = rdrmodecmd_2;
+  rdronoffcmd = rdronoffcmd_2;
+  l179 = createalltracks(res_2);
+  (l10, l11, missiontracks, l12) =
+    (rdronoffcmd, rdrmodecmd, missiontracks_8, iffonoffcmd);
+  (l5, l6, l200) = (st, ifftracks_4, initializing);
+  (l201, l172, l3, l4) = (initializing_3, st_4, mode, rdrtracks_4);
+  proof3 = proof3_2
+tel
+
+node dv_debug(missiontracks : Mctypes.tmissiontracksarray)
+returns (proof3 : bool)
+var missiontracks_2 : Mctypes.tmissiontracksarray; l33 : bool;
+    proof3_2 : bool;
+let
+  missiontracks_2 = missiontracks;
+  l33 =
+    fold<<Mctypes.ksizemissiontracksarray>> dv_tracknumberexist
+      <()>(missiontracks_2, missiontracks_2^Mctypes.ksizemissiontracksarray,
+            false);
+  proof3_2 = not(l33);
+  proof3 = proof3_2
+tel

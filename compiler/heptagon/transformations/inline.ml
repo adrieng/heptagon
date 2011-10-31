@@ -49,19 +49,22 @@ let mk_unique_node nd =
                  edesc = subst_edesc; } in
   fst (Hept_mapfold.node_dec funs () nd)
 
-let exp funs (env, newvars, newequs) exp = match exp.e_desc with
+let exp funs (env, newvars, newequs) exp =
+  let exp, (env, newvars, newequs) = Hept_mapfold.exp funs (env, newvars, newequs) exp in
+  match exp.e_desc with
   | Eiterator (it, { a_op = Enode nn; }, _, _, _, _) when to_be_inlined nn ->
       Format.eprintf
         "WARN: inlining iterators (\"%s %s\" here) is unsupported.@."
         (Hept_printer.iterator_to_string it) (fullname nn);
       (exp, (env, newvars, newequs))
 
-  | Eapp ({ a_op = Enode nn; } as op, argl, rso) when to_be_inlined nn ->
+  | Eapp ({ a_op = (Enode nn | Efun nn); } as op, argl, rso) when to_be_inlined nn ->
+    begin try
       let add_reset eq = match rso with
         | None -> eq
         | Some x -> mk_equation (Ereset (mk_block [eq], x)) in
 
-      let ni = mk_unique_node (env nn) in
+      let ni = mk_unique_node (QualEnv.find nn env) in
 
       let static_subst =
         List.combine (List.map (fun p -> (local_qn p.p_name)) ni.n_params)
@@ -82,7 +85,7 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
         fst (Hept_mapfold.node_dec funs () ni) in
 
       let mk_input_equ vd e = mk_equation (Eeq (Evarpat vd.v_ident, e)) in
-      let mk_output_exp vd = mk_exp (Evar vd.v_ident) vd.v_type in
+      let mk_output_exp vd = mk_exp (Evar vd.v_ident) vd.v_type ~linearity:vd.v_linearity in
 
       let newvars = ni.n_input @ ni.n_block.b_local @ ni.n_output @ newvars
       and newequs =
@@ -95,39 +98,35 @@ let exp funs (env, newvars, newequs) exp = match exp.e_desc with
         | [o] -> mk_output_exp o
         | _ ->
             mk_exp (Eapp ({ op with a_op = Etuple; },
-                          List.map mk_output_exp ni.n_output, None)) exp.e_ty in
+                          List.map mk_output_exp ni.n_output, None)) exp.e_ty
+                   ~linearity:exp.e_linearity in
       (res_e, (env, newvars, newequs))
-  | _ -> Hept_mapfold.exp funs (env, newvars, newequs) exp
+
+    with
+      | Not_found -> Format.eprintf "Could not inline %s@." (fullname nn);
+        exp, (env, newvars, newequs)
+    end
+  | _ -> exp, (env, newvars, newequs)
 
 let block funs (env, newvars, newequs) blk =
-  let (_, (env, newvars, newequs)) =
+  let (blk, (env, newvars, newequs)) =
     Hept_mapfold.block funs (env, newvars, newequs) blk in
   ({ blk with b_local = newvars @ blk.b_local; b_equs = newequs @ blk.b_equs; },
    (env, [], []))
 
 let node_dec funs (env, newvars, newequs) nd =
-  Idents.enter_node nd.n_name;
   let nd, (env, newvars, newequs) =
     Hept_mapfold.node_dec funs (env, newvars, newequs) nd in
-  ({ nd with n_block =
-       { nd.n_block with b_local = newvars @ nd.n_block.b_local;
-           b_equs = newequs @ nd.n_block.b_equs } },
-   (env, [], []))
+  let nd = { nd with n_block =
+      { nd.n_block with b_local = newvars @ nd.n_block.b_local;
+        b_equs = newequs @ nd.n_block.b_equs } } in
+  let env = QualEnv.add nd.n_name nd env in
+   nd, (env, [], [])
 
 let program p =
-  let env n =
-    let d =
-      List.find
-  (function
-     | Pnode nd -> nd.n_name = n
-     | _ -> false)
-  p.p_desc in
-    match d with
-    | Pnode nd -> nd
-    | _ -> assert false in
   let funs =
     { defaults with exp = exp; block = block; node_dec = node_dec; eq = eq; } in
-  let (p, (_, newvars, newequs)) = Hept_mapfold.program funs (env, [], []) p in
+  let (p, (_, newvars, newequs)) = Hept_mapfold.program funs (QualEnv.empty, [], []) p in
   assert (newvars = []);
   assert (newequs = []);
   p

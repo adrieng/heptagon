@@ -18,16 +18,18 @@ let fresh = Idents.gen_fresh "last" Idents.name
 
 (* introduce a fresh equation [last_x = pre(x)] for every *)
 (* variable declared with a last *)
-let last (eq_list, env, v) { v_ident = n; v_type = t; v_last = last } =
+let last (eq_list, env, v) { v_ident = n; v_type = t; v_linearity = lin; v_last = last } =
   match last with
     | Var -> (eq_list, env, v)
     | Last(default) ->
         let lastn = fresh n in
-        let eq = mk_equation (Eeq (Evarpat lastn,
-                                   mk_exp (Epre (default, mk_exp (Evar n) t)) t)) in
+        let eq =
+          mk_equation (Eeq (Evarpat lastn,
+                            mk_exp (Epre (default,
+                                          mk_exp (Evar n) t Linearity.Ltop)) t lin)) in
         eq:: eq_list,
         Env.add n lastn env,
-        (mk_var_dec lastn t) :: v
+        (mk_var_dec lastn t lin) :: v
 
 let extend_env env v = List.fold_left last ([], env, []) v
 

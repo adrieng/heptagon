@@ -113,6 +113,9 @@ and edesc funs acc ed = match ed with
   | Ewhen (e, c, x) ->
     let e, acc = exp_it funs acc e in
       Ewhen (e, c, x), acc
+  | Esplit (x, e2) ->
+      let e2, acc = exp_it funs acc e2 in
+        Esplit(x, e2), acc
   | Eapp (app, args) ->
       let app, acc = app_it funs acc app in
       let args, acc = mapfold (exp_it funs) acc args in
@@ -175,10 +178,10 @@ and eqdesc funs acc eqd = match eqd with
   | Eblock b ->
       let b, acc = block_it funs acc b in
       Eblock b, acc
-  | Eeq (p, e) ->
+  | Eeq (p, inits, e) ->
       let p, acc = pat_it funs acc p in
       let e, acc = exp_it funs acc e in
-      Eeq (p, e), acc
+      Eeq (p, inits, e), acc
 
 
 and block_it funs acc b = funs.block funs acc b
@@ -217,7 +220,7 @@ and present_handler_it funs acc ph = funs.present_handler funs acc ph
 and present_handler funs acc ph =
   let p_cond, acc = exp_it funs acc ph.p_cond in
   let p_block, acc = block_it funs acc ph.p_block in
-  { ph with p_cond = p_cond; p_block = p_block }, acc
+  { p_cond = p_cond; p_block = p_block }, acc
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
@@ -323,18 +326,14 @@ and interface_desc_it funs acc id =
   try funs.interface_desc funs acc id
   with Fallback -> interface_desc funs acc id
 and interface_desc funs acc id = match id with
-  | Iopen _ -> id, acc
   | Itypedef t -> let t, acc = type_dec_it funs acc t in Itypedef t, acc
   | Iconstdef c -> let c, acc = const_dec_it funs acc c in Iconstdef c, acc
   | Isignature s -> let s, acc = signature_it funs acc s in Isignature s, acc
 
 and interface_it funs acc i = funs.interface funs acc i
 and interface funs acc i =
-  let decl acc id =
-    let idc, acc = interface_desc_it funs acc id.interf_desc in
-    { id with interf_desc = idc }, acc
-  in
-  mapfold decl acc i
+  let desc, acc = mapfold (interface_desc_it funs) acc i.i_desc in
+  { i with i_desc = desc }, acc
 
 and signature_it funs acc s = funs.signature funs acc s
 and signature funs acc s =

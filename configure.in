@@ -1,0 +1,60 @@
+AC_INIT(heptagon,1.0)
+
+AC_PROG_INSTALL
+
+AC_ARG_ENABLE(simulator,
+    [  --enable-simulator            enable Why3 IDE],,
+    enable_simulator=no)
+
+AC_ARG_ENABLE(local_stdlib,
+    [  --enable-local-stdlib            Use the standard library in the source tree],,
+    enable_local_stdlib=no)
+
+AC_PROG_OCAML
+if test "$OCAMLC" = "no"; then
+  AC_MSG_ERROR([Please install the OCaml compiler])
+fi
+
+case "$OCAMLVERSION" in
+  0.*|1.*|2.*|3.0*)
+     AC_MSG_ERROR(You need Objective Caml 3.10 or higher);;
+esac
+
+AC_PROG_FINDLIB
+if test "$OCAMLFIND" = "no"; then
+  AC_MSG_ERROR([Please install OCaml findlib (the ocamlfind command)])
+fi
+
+AC_CHECK_PROG(MENHIR,menhir,menhir,no)
+if test "$MENHIR" = no ; then
+    AC_MSG_ERROR(Please install menhir.)
+fi
+
+AC_CHECK_OCAML_PKG([menhirLib])
+ if test "$OCAML_PKG_menhirLib" = "no"; then
+   AC_MSG_ERROR([Please install menhirLib package.])
+ fi
+
+AC_CHECK_OCAML_PKG([ocamlgraph])
+ if test "$OCAML_PKG_ocamlgraph" = "no"; then
+   AC_MSG_ERROR([Please install ocamlgraph package.])
+ fi
+
+AC_CHECK_OCAML_PKG([lablgtk2])
+ if test "$OCAML_PKG_lablgtk2" = "no"; then
+    enable_simulator=no
+    AC_MSG_WARN([Could not find 'lablgtk2'. The simulator will not be built])
+ fi
+
+if test "$enable_local_stdlib" = "yes"; then
+    stdlib_dir=$srcdir/lib
+else
+    stdlib_dir=$libdir/heptagon
+fi
+
+AC_SUBST(INSTALL)
+AC_SUBST(stdlib_dir)
+
+AC_SUBST(enable_simulator)
+
+AC_OUTPUT(config)

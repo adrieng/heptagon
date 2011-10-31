@@ -3,6 +3,7 @@ open Names
 open Signature
 open Idents
 open Types
+open Linearity
 open Clocks
 open Static
 open Format
@@ -28,10 +29,10 @@ let rec print_pat ff = function
   | Etuplepat pat_list ->
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
 
-let print_vd ff { v_ident = n; v_type = ty; v_clock = ck } =
- (* if !Compiler_options.full_type_info then*)
-    fprintf ff "%a : %a :: %a" print_ident n print_type ty print_ck ck
-  (*else fprintf ff "%a : %a" print_ident n print_type ty*)
+let print_vd ff { v_ident = n; v_type = ty; v_linearity = lin; v_clock = ck } =
+ if !Compiler_options.full_type_info then
+    fprintf ff "%a : %a%a :: %a" print_ident n print_type ty print_linearity lin print_ck ck
+  else fprintf ff "%a : %a%a" print_ident n print_type ty print_linearity lin
 
 let print_local_vars ff = function
   | [] -> ()
@@ -73,8 +74,8 @@ and print_trunc_index ff idx =
 
 and print_exp ff e =
   if !Compiler_options.full_type_info then
-    fprintf ff "(%a : %a :: %a)"
-      print_exp_desc e.e_desc print_type e.e_ty print_ct e.e_ct
+    fprintf ff "(%a : %a%a :: %a)"
+      print_exp_desc e.e_desc print_type e.e_ty print_linearity e.e_linearity print_ct e.e_ct
   else fprintf ff "%a" print_exp_desc e.e_desc
 
 and print_every ff reset =
@@ -82,8 +83,8 @@ and print_every ff reset =
 
 and print_extvalue ff w =
   if !Compiler_options.full_type_info then
-    fprintf ff "(%a : %a :: %a)"
-      print_extvalue_desc w.w_desc print_type w.w_ty print_ck w.w_ck
+    fprintf ff "(%a : %a%a :: %a)"
+      print_extvalue_desc w.w_desc print_type w.w_ty print_linearity w.w_linearity print_ck w.w_ck
   else fprintf ff "%a" print_extvalue_desc w.w_desc
 
 
@@ -93,6 +94,8 @@ and print_extvalue_desc ff = function
   | Wfield (w,f) -> fprintf ff "%a.%a" print_extvalue w print_qualname f
   | Wwhen (w, c, n) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]" print_extvalue w print_qualname c print_ident n
+  | Wreinit (w1, w2) ->
+      fprintf ff "@[reinit@,(%a, %a)@]" print_extvalue w1  print_extvalue w2
 
 and print_exp_desc ff = function
   | Eextvalue w -> print_extvalue ff w
@@ -199,7 +202,7 @@ let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
 let print_contract ff { c_local = l; c_eq = eqs;
                         c_assume = e_a; c_enforce = e_g;
       c_controllables = c;} =
-  fprintf ff "@[<v2>contract@\n%a%a@ assume %a@ enforce %a@ with (%a)@]"
+  fprintf ff "@[<v2>contract@\n%a%a@ assume %a@ enforce %a@ with %a@\n@]"
     print_local_vars l
     print_eqs eqs
     print_extvalue e_a

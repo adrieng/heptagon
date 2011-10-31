@@ -154,6 +154,12 @@ let rec assocd value = function
       else
         assocd value l
 
+(** [list_diff l dl] returns [l] without the elements belonging to [dl].*)
+let rec list_diff l dl = match l with
+    | [] -> []
+    | x::l ->
+      let l = list_diff l dl in
+      if List.mem x dl then l else x::l
 
 (** { 3 Compiler iterators } *)
 
@@ -162,6 +168,12 @@ let mapfold f acc l =
   let l,acc = List.fold_left
                 (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)
                 ([],acc) l in
+  List.rev l, acc
+
+let mapfold2 f acc l1 l2 =
+  let l,acc = List.fold_left2
+                (fun (l,acc) e1 e2 -> let e,acc = f acc e1 e2 in e::l, acc)
+                ([],acc) l1 l2 in
   List.rev l, acc
 
 let mapfold_right f l acc =
@@ -218,33 +230,38 @@ let fold_righti f l acc =
     | h :: l -> f i h (aux (i + 1) l acc) in
   aux 0 l acc
 
+let rec map3 f l1 l2 l3 = match l1, l2, l3 with
+  | [], [], [] -> []
+  | v1::l1, v2::l2, v3::l3 -> (f v1 v2 v3)::(map3 f l1 l2 l3)
+  | _ -> invalid_arg "Misc.map3"
+
 exception Assert_false
 let internal_error passe =
-  Format.eprintf "@.---------\n
-                  Internal compiler error\n
-                  Passe : %s\n
+  Format.eprintf "@.---------@\n\
+                  Internal compiler error@\n\
+                  Passe : %s@\n\
                   ----------@." passe;
   raise Assert_false
 
 exception Unsupported
 let unsupported passe =
-  Format.eprintf "@.---------\n
-                  Unsupported feature, please report it\n
-                  Passe : %s\n
-                  ----------@." passe;
+  Format.eprintf "@.---------@\n\
+Unsupported feature, please report it@\n\
+Passe : %s@\n\
+----------@." passe;
   raise Unsupported
 
 (* Functions to decompose a list into a tuple *)
 let _arity_error i l =
-  Format.eprintf "@.---------\n
-                  Internal compiler error: wrong list size (found %d, expected %d).\n
-                  ----------@." (List.length l) i;
+  Format.eprintf "@.---------@\n\
+Internal compiler error: wrong list size (found %d, expected %d).@\n\
+----------@." (List.length l) i;
   raise Assert_false
 
 let _arity_min_error i l =
-  Format.eprintf "@.---------\n
-                  Internal compiler error: wrong list size (found %d, expected %d at least).\n
-                  ----------@." (List.length l) i;
+  Format.eprintf "@.---------@\n\
+Internal compiler error: wrong list size (found %d, expected %d at least).@\n\
+----------@." (List.length l) i;
   raise Assert_false
 
 let assert_empty = function
@@ -277,4 +294,42 @@ let split_string s separator = Str.split (separator |> Str.quote |> Str.regexp) 
 
 let file_extension s = split_string s "." |> last_element
 
+(** Memoize the result of the function [f]*)
+let memoize f =
+  let map = Hashtbl.create 100 in
+    fun x ->
+      try
+        Hashtbl.find map x
+      with
+        | Not_found -> let r = f x in Hashtbl.add map x r; r
 
+(** Memoize the result of the function [f], taht should expect a
+   tuple as input and be reflexive (f (x,y) = f (y,x)) *)
+let memoize_couple f =
+  let map = Hashtbl.create 100 in
+    fun (x,y) ->
+      try
+        Hashtbl.find map (x,y)
+      with
+        | Not_found ->
+            let r = f (x,y) in Hashtbl.add map (x,y) r; Hashtbl.add map (y,x) r; r
+
+(** [iter_couple f l] calls f for all x and y distinct in [l].  *)
+let rec iter_couple f l = match l with
+  | [] -> ()
+  | x::l ->
+      List.iter (f x) l;
+      iter_couple f l
+
+(** [iter_couple_2 f l1 l2] calls f for all x in [l1] and y in [l2].  *)
+let iter_couple_2 f l1 l2 =
+  List.iter (fun v1 -> List.iter (f v1) l2) l1
+
+(** [index p l] returns the idx of the first element in l
+    that satisfies predicate p.*)
+let index p l =
+  let rec aux i = function
+    | [] -> -1
+    | v::l -> if p v then i else aux (i+1) l
+  in
+    aux 0 l

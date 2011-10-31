@@ -55,6 +55,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "assume", ASSUME;
  "enforce", ENFORCE;
  "with", WITH;
+ "inlined",INLINED;
  "when", WHEN;
  "whenot", WHENOT;
  "merge", MERGE;
@@ -65,6 +66,10 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "fold", FOLD;
  "foldi", FOLDI;
  "mapfold", MAPFOLD;
+ "at", AT;
+ "init", INIT;
+ "split", SPLIT;
+ "reinit", REINIT;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");

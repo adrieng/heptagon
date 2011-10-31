@@ -15,6 +15,7 @@ open Misc
 open Names
 open Idents
 open Types
+open Linearity
 open Signature
 open Location
 
@@ -90,6 +91,7 @@ and block =
 and var_dec =
     { v_ident : var_ident;
       v_type : ty;
+      v_linearity : linearity;
       v_mutable : bool;
       v_loc : location }
 
@@ -117,7 +119,8 @@ type class_def =
       cd_objs  : obj_dec list;
       cd_params : param list;
       cd_methods: method_def list;
-      cd_loc : location }
+      cd_loc : location;
+      cd_mem_alloc : (ty * Interference_graph.ivar list) list; }
 
 
 type program =
@@ -130,3 +133,22 @@ and program_desc =
   | Pconst of const_dec
   | Ptype of type_dec
 
+
+type signature = {
+  sig_name              : qualname;
+  sig_inputs            : arg list;
+  sig_stateful          : bool;
+  sig_outputs           : arg list;
+  sig_params            : param list;
+  sig_param_constraints : constrnt list;
+  sig_loc               : location }
+
+type interface =
+    { i_modname : modul;
+      i_opened : modul list;
+      i_desc : interface_desc list }
+
+and interface_desc =
+  | Itypedef of type_dec
+  | Iconstdef of const_dec
+  | Isignature of signature

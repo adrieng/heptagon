@@ -206,7 +206,7 @@ let main_def_of_class_def cd =
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
       let (stm, vars) =
-        write_lhs_of_ty (Cfield (Cvar "res",
+        write_lhs_of_ty (Cfield (Cvar "_res",
                                  local_qn (name vd.v_ident))) vd.v_type in
       if !Compiler_options.hepts_simulation then
   (stm, vars)
@@ -216,8 +216,8 @@ let main_def_of_class_def cd =
     split (map write_lhs_of_ty_for_vd stepm.m_outputs) in
   let printf_calls = List.concat printf_calls in
 
-  let cinp = cvarlist_of_ovarlist stepm.m_inputs in
-  let cout = ["res", (Cty_id (qn_append cd.cd_name "_out"))] in
+  let cinp = inputlist_of_ovarlist stepm.m_inputs in
+  let cout = ["_res", (Cty_id (qn_append cd.cd_name "_out"))] in
 
   let varlist =
     (if cd.cd_stateful
@@ -234,7 +234,7 @@ let main_def_of_class_def cd =
     let funcall =
       let args =
         map (fun vd -> Cvar (name vd.v_ident)) stepm.m_inputs
-        @ (Caddrof (Cvar "res")
+        @ (Caddrof (Cvar "_res")
            :: if cd.cd_stateful then [Caddrof (Cvar "mem")] else []) in
       Cfun_call ((cname_of_qn cd.cd_name) ^ "_step", args) in
     concat scanf_calls
@@ -343,4 +343,12 @@ let program p =
   let dirname = build_path (filename ^ "_c") in
   let dir = clean_dir dirname in
   let c_ast = translate filename p in
+    C.output dir c_ast
+
+let interface i =
+  let filename =
+    filename_of_name (cname_of_name (modul_to_string i.i_modname)) in
+  let dirname = build_path (filename ^ "_c") in
+  let dir = clean_dir dirname in
+  let c_ast = interface_header (Filename.basename filename) i in
     C.output dir c_ast
