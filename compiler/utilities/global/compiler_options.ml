@@ -77,6 +77,8 @@ let set_target_path path =
 
 let full_type_info = ref false
 
+let stateful_info = ref false
+
 let full_name = ref false
 
 let causality = ref true
@@ -127,6 +129,7 @@ and doc_target =
   "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
   ^ " java or z3z)"
 and doc_full_type_info = "\t\t\tPrint full type information"
+and doc_stateful_info = "\t\t\tPrint stateful information"
 and doc_full_name = "\t\tPrint full variable name information"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
