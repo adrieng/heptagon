@@ -30,9 +30,7 @@ let compile_program p =
   let p = pass "Completion" true Completion.program p pp in
 
   (* Inlining *)
-  let p =
-    let call_inline_pass = (List.length !inline > 0) || !flatten in
-    pass "Inlining" call_inline_pass Inline.program p pp in
+  let p = pass "Inlining" true Inline.program p pp in
 
   (* Automata *)
   let p = pass "Automata" true Automata.program p pp in

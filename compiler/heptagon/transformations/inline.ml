@@ -58,7 +58,9 @@ let exp funs (env, newvars, newequs) exp =
         (Hept_printer.iterator_to_string it) (fullname nn);
       (exp, (env, newvars, newequs))
 
-  | Eapp ({ a_op = (Enode nn | Efun nn); } as op, argl, rso) when to_be_inlined nn ->
+  | Eapp ({ a_op = (Enode nn | Efun nn);
+            a_unsafe = false; (* Unsafe can't be inlined *)
+            a_inlined = inlined } as op, argl, rso) when inlined || to_be_inlined nn ->
     begin try
       let add_reset eq = match rso with
         | None -> eq

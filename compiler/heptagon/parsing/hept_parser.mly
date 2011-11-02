@@ -463,6 +463,7 @@ node_name:
 
 merge_handlers:
   | hs=nonempty_list(merge_handler) { hs }
+  | e1=simple_exp e2=simple_exp { [(Q Initial.ptrue, e1);(Q Initial.pfalse, e2)] }
 merge_handler:
   | LPAREN c=constructor_or_bool ARROW e=exp RPAREN { (c,e) }
 
