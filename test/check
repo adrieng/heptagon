@@ -119,15 +119,13 @@ launch_check () {
     fi
     # Compil. java ?
     if [[ ($echec == 0) && ($java == 1) ]]; then
-      pushd "${base_f}" > /dev/null
-      for java_file in *.java ; do
-        if $JAVAC -warn:-unused -sourcepath .:..:../t1 ${java_file} > /dev/null
+     pushd "java/$(echo ${base_f} | sed 's/^./\u&/')" > /dev/null
+        if $JAVAC -cp ../../../../lib/java:../ *.java > /dev/null
         then
           echec=0
         else
           echec=3
         fi
-      done
       popd > /dev/null
     fi
     # Compil. caml ?
