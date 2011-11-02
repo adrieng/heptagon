@@ -59,6 +59,7 @@ let exp funs (env, newvars, newequs) exp =
       (exp, (env, newvars, newequs))
 
   | Eapp ({ a_op = (Enode nn | Efun nn);
+            a_async = None; (* Async can't be inlined *)
             a_unsafe = false; (* Unsafe can't be inlined *)
             a_inlined = inlined } as op, argl, rso) when inlined || to_be_inlined nn ->
     begin try

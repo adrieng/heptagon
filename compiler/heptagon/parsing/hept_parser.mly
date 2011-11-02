@@ -471,7 +471,7 @@ _simple_exp:
 
 node_name:
   | a=async q=qualname c=call_params { mk_app (Enode q) a c false }
-  /* inlined can be async */
+  /* inlined can't be async */
   | INLINED q=qualname c=call_params { mk_app (Enode q) None c true }
 
 merge_handlers:
