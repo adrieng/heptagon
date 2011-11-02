@@ -35,25 +35,31 @@ let static ff s = if s then fprintf ff "static " else ()
 
 let final ff f = if f then fprintf ff "final " else ()
 
-let rec _ty news ff t = match t with
+let rec _ty is_new is_init ff t = match t with
   | Tbool -> fprintf ff "boolean"
   | Tint -> fprintf ff "int"
   | Tlong -> fprintf ff "long"
   | Tfloat -> fprintf ff "float"
   | Tclass n -> class_name ff n
   | Tgeneric (n, ty_l) ->
-      if news
+      if is_new
       then fprintf ff "%a" class_name n
       else fprintf ff "%a<@[%a@]>" class_name n (print_list_r ty """,""") ty_l
   | Tarray (t,s_l) ->
-      if news
-      then fprintf ff "%a@[%a@]" new_ty t (print_list exp "[""][""]") s_l
-      else fprintf ff "%a@[%a@]" ty t (print_list (fun ff e -> ()) "[""][""]") s_l
+      let me = _ty is_new is_init in
+      (* print size expressions only for new without init *)
+      let print_size = if is_new && not is_init then exp else (fun ff e -> ()) in
+      fprintf ff "%a@[%a@]" me t (print_list print_size "[""][""]") s_l
   | Tunit -> pp_print_string ff "void"
 
-and new_ty ff t = _ty true ff t
+(* print types for [new] expressions (without generics) *)
+and new_ty ff t = _ty true false ff t
 
-and ty ff t = _ty false ff t
+(* print types for [new] expressions without generics nor array size *)
+and new_init_ty ff t = _ty true true ff t
+
+(* print types *)
+and ty ff t = _ty false false ff t
 
 and var_dec init ff vd =
   if init then
@@ -83,12 +89,12 @@ and exp ff = function
   | Enew_array (t,e_l) ->
     (match e_l with
       | [] -> fprintf ff "new %a" new_ty t
-      | _ -> fprintf ff "new %a@[<2>%a@]" ty t (print_list_r exp "{"",""}") e_l )
+      | _ -> fprintf ff "new %a@[<2>%a@]" new_init_ty t (print_list_r exp "{"",""}") e_l )
   | Evoid -> ()
   | Ecast (t,e) -> fprintf ff "(%a)(%a)" ty t exp e
   | Svar c -> const_name ff c
   | Sint i -> pp_print_int ff i
-  | Sfloat f -> pp_print_float ff f
+  | Sfloat f -> fprintf ff "%Ff" f
   | Sbool b -> pp_print_bool ff b
   | Sconstructor c -> constructor_name ff c
   | Sstring s -> fprintf ff "\"%s\"" s

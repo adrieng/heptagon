@@ -1,0 +1,4 @@
+node f(x:bool) returns (y:bool)
+let
+  y = x when x
+tel

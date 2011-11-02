@@ -104,6 +104,9 @@ and print_trunc_index ff idx =
 and print_exps ff e_list =
   print_list_r print_exp "(" "," ")" ff e_list
 
+and print_stateful ff s =
+  if !Compiler_options.stateful_info && s then fprintf ff "$"
+
 and print_exp ff e =
  if !Compiler_options.full_type_info then
     fprintf ff "(%a : %a%a%a)"
@@ -172,7 +175,11 @@ and print_app ff (app, args) =
     | Efun { name = n } when (n = "*" or n = "*.") ->
       let a1, a2 = assert_2 args in
       fprintf ff "@[%a@, %s@, %a@]" print_exp a1  n  print_exp a2
-    | Efun f | Enode f ->
+    | Efun f ->
+        fprintf ff "@[%a@,%a@,%a@]"
+          print_qualname f print_params app.a_params  print_exp_tuple args
+    | Enode f ->
+        print_stateful ff true;
         fprintf ff "@[%a@,%a@,%a@]"
           print_qualname f print_params app.a_params  print_exp_tuple args
     | Eifthenelse ->
@@ -225,6 +232,7 @@ and print_app ff (app, args) =
 
 
 let rec print_eq ff eq =
+  print_stateful ff eq.eq_stateful;
   match eq.eq_desc with
     | Eeq(p, e) ->
       fprintf ff "@[<2>%a =@ %a@]" print_pat_init (p, eq.eq_inits)  print_exp e
@@ -291,12 +299,9 @@ and print_eq_list ff = function
   | [] -> ()
   | l -> print_list_r print_eq """;""" ff l
 
-and print_block sep ff { b_local = v_list; b_equs = eqs } =
-  match v_list with
-    | [] ->
-      fprintf ff "@[<v>%s@,%a@]" sep print_eq_list eqs
-    | _ ->
-      fprintf ff "@[<v>%a@,%a@]" (print_local_vars sep) v_list print_eq_list eqs
+
+and print_block sep ff { b_local = v_list; b_equs = eqs; b_stateful = s } =
+  fprintf ff "%a@[<v>%a%a@]" print_stateful s (print_local_vars sep) v_list print_eq_list eqs
 
 and print_sblock sep ff { b_local = v_list; b_equs = eqs } =
   match v_list with

@@ -90,17 +90,23 @@ let program p =
                     (* default max number of iterations *)
                     mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
           in
-          let ret = Emethod_call(e_main, "step", []) in
-          let print_ret = match ty_main with
-            | Types.Tarray (Types.Tarray _, _) -> Emethod_call(jarrays, "deepToString", [ret])
-            | Types.Tarray _ -> Emethod_call(jarrays, "toString", [ret])
-            | t when t = Initial.tint -> Emethod_call(jint, "toString", [ret])
-            | t when t = Initial.tfloat -> Emethod_call(jfloat, "toString", [ret])
-            | t when t = Initial.tbool -> Emethod_call(jbool, "toString", [ret])
-            | _ -> Emethod_call(ret, "toString", [])
+          let ty_ret = Obc2java.ty NamesEnv.empty ty_main in
+          let vd_ret, pat_ret, exp_ret = mk_var ty_ret "ret" in
+          let call_main = match ty_ret with
+            | Tunit -> Aexp(Emethod_call(e_main, "step", []))
+            | _ -> Anewvar (vd_ret, Emethod_call(e_main, "step", []))
+          in
+          let print_ret = match ty_ret with
+            | Tunit -> Sstring ""
+            | Tarray (Tarray _, _) -> Emethod_call(jarrays, "deepToString", [exp_ret])
+            | Tarray _ -> Emethod_call(jarrays, "toString", [exp_ret])
+            | Tint -> Emethod_call(jint, "toString", [exp_ret])
+            | Tfloat -> Emethod_call(jfloat, "toString", [exp_ret])
+            | Tbool -> Emethod_call(jbool, "toString", [exp_ret])
+            | _ -> Emethod_call(exp_ret, "toString", [])
           in
           let main_for_loop i =
-            [Aexp (Emethod_call(out, "printf",
+            [call_main; Aexp (Emethod_call(out, "printf",
                                 [Sstring "%d => %s\\n"; Evar i; print_ret]))]
           in
           let vd_t1, e_t1 =
