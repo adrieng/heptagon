@@ -18,17 +18,17 @@ open Hept_mapfold
 
 let to_be_inlined s = !Compiler_options.flatten || (List.mem s !Compiler_options.inline)
 
-let fresh = Idents.gen_fresh "automata" (fun s -> s)
+let fresh = Idents.gen_var "inline"
 
 let mk_unique_node nd =
   let mk_bind vd =
     let id = fresh (Idents.name vd.v_ident) in
-    (vd.v_ident, { vd with v_ident = id; }) in
+    (vd.v_ident, { vd with v_ident = id; v_clock = Clocks.fresh_clock () }) in
   let subst = List.map mk_bind (nd.n_block.b_local
                                 @ nd.n_input @ nd.n_output) in
 
   let subst_var_dec _ () vd =
-    ({ vd with v_ident = (List.assoc vd.v_ident subst).v_ident; }, ()) in
+    (List.assoc vd.v_ident subst, ()) in
   let subst_edesc _ () ed = match ed with
       | Evar vn -> (Evar (List.assoc vn subst).v_ident, ())
       | _ -> raise Errors.Fallback in
