@@ -95,8 +95,12 @@ let block funs (res,_) b =
   Hept_mapfold.block funs (res,b.b_stateful) b
 
 (* Transform reset blocks in blocks with reseted exps,
-   create a var to store the reset condition evaluation. *)
+   create a var to store the reset condition evaluation if not already a var. *)
 let eqdesc funs (res,stateful) = function
+  | Ereset(b, ({ e_desc = Evar x } as e)) ->
+        let r = if stateful then merge_resets res (Some e) else res in
+        let b, _ = Hept_mapfold.block_it funs (r,stateful) b in
+        Eblock(b), (res,stateful)
   | Ereset(b, e) ->
       if stateful then (
         let e, _ = Hept_mapfold.exp_it funs (res,stateful) e in
