@@ -1,0 +1,44 @@
+
+type pixel = float^3
+
+node nat() returns (n :int)
+let
+  n = 0 fby n+1
+tel
+
+fun pix_sum(x1,x2 :pixel) returns (r :pixel)
+let
+  r = map<<3>> (+.) (x1,x2);
+tel
+
+fun pix_div(x :pixel; c :float) returns (r :pixel)
+let
+  r = map<<3>> (/.) (x, c^3);
+tel
+
+node counter(res :bool) returns (cpt :int)
+let
+  reset
+    cpt = (0 fby cpt) + 1
+  every res
+tel
+
+(* down par region
+node down(x :pixel; out :bool) returns (r :pixel)
+var cpt :float; sum :pixel;
+let
+  reset
+    cpt = (0.0 fby cpt) +. 1.0;
+    sum = x -> pix_sum(pre sum, x);
+  every out;
+  r = pix_div(sum when out, cpt when out);
+tel
+*)
+
+node down(x :pixel; out :bool) returns (r :pixel :: . on out)
+var x1, x2 : pixel;
+let
+  x1 = x fby x;
+  x2 = x fby x1;
+  r = pix_div(pix_sum(x when out, pix_sum(x1 when out, x2 when out)), 3.0 );
+tel
