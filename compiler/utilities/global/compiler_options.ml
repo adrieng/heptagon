@@ -114,6 +114,13 @@ let do_mem_alloc_and_typing () =
 
 let use_old_scheduler = ref false
 
+let optim = ref false
+let do_optim () =
+  do_mem_alloc_and_typing ();
+  tomato := true;
+  deadcode := true;
+  do_iterator_fusion := true
+
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
 and doc_print_types = "\t\t\tPrint types"
@@ -146,3 +153,4 @@ and doc_memalloc = "\t\tEnable memory allocation and linear annotations"
 and doc_memalloc_only = "\tEnable memory allocation"
 and doc_linear_only = "\t\tEnable linear annotations"
 and doc_interf_scheduler = "\tUse the old scheduler"
+and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
