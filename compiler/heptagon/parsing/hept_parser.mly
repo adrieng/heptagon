@@ -166,9 +166,12 @@ label_ty:
   IDENT COLON ty_ident { $1, $3 }
 ;
 
+returns: RETURNS | EQUAL {}
+;
+
 node_dec:
   | n=node_or_fun f=ident pc=node_params LPAREN i=in_params RPAREN
-    RETURNS LPAREN o=out_params RPAREN
+    returns LPAREN o=out_params RPAREN
     c=contract b=block(LET) TEL
       {{ n_name = f;
          n_stateful = n;
@@ -473,6 +476,7 @@ node_name:
 
 merge_handlers:
   | hs=nonempty_list(merge_handler) { hs }
+  | e1=simple_exp e2=simple_exp { [(Q Initial.ptrue, e1);(Q Initial.pfalse, e2)] }
 merge_handler:
   | LPAREN c=constructor_or_bool ARROW e=exp RPAREN { (c,e) }
 
@@ -677,7 +681,7 @@ interface_desc:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
   | VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
-    RETURNS LPAREN o=params_signature RPAREN
+    returns LPAREN o=params_signature RPAREN
     { Isignature({ sig_name = f;
                    sig_inputs = i;
                    sig_stateful = n;
