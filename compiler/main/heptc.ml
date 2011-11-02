@@ -128,7 +128,8 @@ let main () =
         "-java_queue_size", Arg.Set_int java_queue_size, doc_java_queue_size;
         "-only-memalloc", Arg.Set do_mem_alloc, doc_memalloc_only;
         "-only-linear", Arg.Set do_linear_typing, doc_linear_only;
-        "-old-scheduler", Arg.Set use_old_scheduler, doc_interf_scheduler
+        "-old-scheduler", Arg.Set use_old_scheduler, doc_interf_scheduler;
+        "-O", Arg.Unit do_optim, doc_optim
       ]
         compile errmsg;
   with
