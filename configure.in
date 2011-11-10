@@ -3,11 +3,11 @@ AC_INIT(heptagon,1.0)
 AC_PROG_INSTALL
 
 AC_ARG_ENABLE(simulator,
-    [  --enable-simulator            enable Why3 IDE],,
+    [  --enable-simulator      enable the graphical simulator],,
     enable_simulator=no)
 
 AC_ARG_ENABLE(local_stdlib,
-    [  --enable-local-stdlib            Use the standard library in the source tree],,
+    [  --enable-local-stdlib   use the in-sources standard library],,
     enable_local_stdlib=no)
 
 AC_PROG_OCAML
