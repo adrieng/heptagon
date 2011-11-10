@@ -90,7 +90,9 @@ let translate_app app =
 
 let rec translate_extvalue e =
   let mk_extvalue =
-    mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity ~ty:e.Heptagon.e_ty
+    mk_extvalue
+      ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity ~ty:e.Heptagon.e_ty
+      ~clock:(match e.Heptagon.e_ct_annot with None -> fresh_clock () | Some ct -> assert_1 (unprod ct))
   in
   match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue (Wconst c)

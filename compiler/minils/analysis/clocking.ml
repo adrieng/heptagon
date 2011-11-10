@@ -73,6 +73,11 @@ let rec typing_extvalue h w =
       unify_ck t1 t2;
       t1
   in
+  (try unify_ck ck w.w_ck
+   with Unify ->
+     eprintf "Incoherent clock annotation for extvalue %a.@\n"
+       Mls_printer.print_extvalue w;
+     error_message w.w_loc (Etypeclash (Ck ck, Ck w.w_ck)));
   w.w_ck <- ck;
   ck
 
@@ -187,7 +192,7 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
     e.e_base_ck <- base;
     (try unify ct e.e_ct
      with Unify ->
-       eprintf "Incoherent clock annotation for exp %a.@\n"
+       eprintf "Inconsistent clock annotation for exp %a.@\n"
        Mls_printer.print_exp e;
        error_message e.e_loc (Etypeclash (ct,e.e_ct)));
     e.e_ct <- ct;
