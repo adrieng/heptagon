@@ -9,9 +9,9 @@ open Hept_parsetree_mapfold
 
 exception Not_static
 
-(** Qualify a var name as a constant variable,
-    if not in local_const or global_const then raise Not_found.
-    returns [true, c] if c is a fun
+let assert_se e =
+  if e.e_ct_annot <> None then raise Not_static;
+  match e.e_desc with
     returns [false, c] if c is a constant *)
 let qualify_var local_const c =
   try
@@ -22,7 +22,9 @@ let qualify_var local_const c =
     with Not_found ->
       false, qualify_const c
 
-let assert_se e = match e.e_desc with
+let assert_se e =
+  if e.e_ct_annot <> None then raise Not_static;
+  match e.e_desc with
   | Econst se -> se
   | _ -> raise Not_static
 
@@ -39,6 +41,7 @@ let static_app_from_app app args =
 let exp funs local_const e =
   let e, _ = Hept_parsetree_mapfold.exp funs local_const e in
     try
+      if e.e_ct_annot <> None then raise Not_static;
       let sed =
         match e.e_desc with
           | Evar n ->
