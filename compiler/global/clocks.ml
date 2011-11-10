@@ -59,6 +59,8 @@ let rec ck_repr ck = match ck with
       link.contents <- Clink ck;
       ck
 
+let fail_to_unify () =
+  if not !Compiler_options.no_clocking_error then raise Unify
 
 (** verifies that index is fresh in ck. *)
 let rec occur_check index ck =
@@ -67,7 +69,7 @@ let rec occur_check index ck =
     | Cbase -> ()
     | Cvar { contents = Cindex n } when index <> n -> ()
     | Con (ck, _, _) -> occur_check index ck
-    | _ -> raise Unify
+    | _ -> fail_to_unify ()
 
 
 (** unify ck *)
@@ -85,7 +87,7 @@ and unify_ck ck1 ck2 =
      | ck, Cvar ({ contents = Cindex n } as v) ->
           occur_check n ck;
          v.contents <- Clink ck
-     | _ -> raise Unify
+     | _ -> fail_to_unify ()
 
 
 (** unify ct *)
@@ -96,11 +98,11 @@ let rec unify t1 t2 =
     | (Cprod [], Ck (Cbase | Cvar { contents = Cindex _; })) -> ()
     | (Ck ck1, Ck ck2) -> unify_ck ck1 ck2
     | (Cprod t1_list, Cprod t2_list) -> unify_list t1_list t2_list
-    | _ -> raise Unify
+    | _ -> fail_to_unify ()
 
 and unify_list t1_list t2_list =
   try List.iter2 unify t1_list t2_list
-  with _ -> raise Unify
+  with _ -> fail_to_unify ()
 
 
 let rec skeleton ck = function

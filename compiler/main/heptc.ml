@@ -132,6 +132,7 @@ let main () =
         "-only-linear", Arg.Set do_linear_typing, doc_linear_only;
         "-old-scheduler", Arg.Set use_old_scheduler, doc_interf_scheduler;
         "-unroll", Arg.Set unroll_loops, doc_unroll;
+        "-no-clocking-error", Arg.Set no_clocking_error, doc_interf_scheduler;
         "-O", Arg.Unit do_optim, doc_optim;
         "-mall", Arg.Set interf_all, doc_interf_all;
       ]
