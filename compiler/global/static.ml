@@ -75,7 +75,7 @@ let apply_op partial loc op se_list =
   in
   let sed_l, has_var = Misc.mapfold has_var_desc false se_list in
   if (op.qual = Pervasives) && not has_var
-  then (
+  then ( (* concret evaluation *)
     match op.name, sed_l with
       | "+", [Sint n1; Sint n2] -> Sint (n1 + n2)
       | "-", [Sint n1; Sint n2] -> Sint (n1 - n2)
@@ -99,11 +99,14 @@ let apply_op partial loc op se_list =
       | "~-.", [Sfloat f] -> Sfloat (-. f)
       | f,_ -> Misc.internal_error ("Static evaluation failed of the pervasive operator "^f)
   )
-  else
-    if partial
-    then Sop(op, se_list) (* partial evaluation *)
-    else raise (Partial_evaluation (Unknown_op op, loc))
-
+  else ( (* symbolic evaluation *)
+    match op, sed_l with
+      | {qual = Pervasives; name = "=" }, [sed1;sed2] when sed1 = sed2 -> Sbool true
+      | _ ->
+          if partial
+          then Sop(op, se_list) (* partial evaluation *)
+          else raise (Partial_evaluation (Unknown_op op, loc))
+  )
 
 
 
