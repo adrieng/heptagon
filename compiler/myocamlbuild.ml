@@ -8,7 +8,7 @@ let df = function
       ocamlfind_after_rules ();
 
       (* Tell ocamlbuild about the camlp4 library. *)
-      ocaml_lib ~extern:true ~dir:"+camlp4" "camlp4";
+      ocaml_lib ~extern:true ~dir:(ocamlfind_query "camlp4") "camlp4";
 
       (* Add preproc.cmo to the ocaml pre-processor when use_preproc is set *)
       flag ["ocaml"; "pp"; "use_preproc"] (A "preproc.cmo");

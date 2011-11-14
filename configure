@@ -2929,6 +2929,12 @@ echo "$as_me: error: Please install OCaml findlib (the ocamlfind command)" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+OCAMLC_STDLIB=`$OCAMLFIND ocamlc -where`
+OCAMLFIND_STDLIB=`$OCAMLFIND printconf stdlib`
+if test "$OCAMLC_STDLIB" != "$OCAMLFIND_STDLIB"; then
+  as_fn_error $? "OCaml and OCamlfind are installed in different directories" "$LINENO" 5
+fi
+
 # Extract the first word of "menhir", so it can be a program name with args.
 set dummy menhir; ac_word=$2
 { echo "$as_me:$LINENO: checking for $ac_word" >&5
@@ -3068,6 +3074,7 @@ if test "$enable_local_stdlib" = "yes"; then
 else
     stdlib_dir=$libdir/heptagon
 fi
+
 
 
 

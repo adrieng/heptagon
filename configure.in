@@ -25,6 +25,12 @@ if test "$OCAMLFIND" = "no"; then
   AC_MSG_ERROR([Please install OCaml findlib (the ocamlfind command)])
 fi
 
+OCAMLC_STDLIB=`$OCAMLFIND ocamlc -where`
+OCAMLFIND_STDLIB=`$OCAMLFIND printconf stdlib`
+if test "$OCAMLC_STDLIB" != "$OCAMLFIND_STDLIB"; then
+  AC_MSG_ERROR([OCaml and OCamlfind make different assumptions about the standard library directory])
+fi
+
 AC_CHECK_PROG(MENHIR,menhir,menhir,no)
 if test "$MENHIR" = no ; then
     AC_MSG_ERROR(Please install menhir.)
@@ -51,6 +57,7 @@ if test "$enable_local_stdlib" = "yes"; then
 else
     stdlib_dir=$libdir/heptagon
 fi
+
 
 AC_SUBST(INSTALL)
 AC_SUBST(stdlib_dir)
