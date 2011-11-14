@@ -1,16 +1,18 @@
 open Misc
 open Errors
 open Types
-(*open Clocks*)
 open Signature
+open Clocks
+open Idents
 
 type 'a global_it_funs = {
   static_exp         : 'a global_it_funs -> 'a -> static_exp -> static_exp * 'a;
   static_exp_desc    : 'a global_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
   ty                 : 'a global_it_funs -> 'a -> ty -> ty * 'a;
-(*  ct               : 'a global_it_funs -> 'a -> ct -> ct * 'a;
+  ct               : 'a global_it_funs -> 'a -> ct -> ct * 'a;
   ck                 : 'a global_it_funs -> 'a -> ck -> ck * 'a;
-  link               : 'a global_it_funs -> 'a -> link -> link * 'a; *)
+  link               : 'a global_it_funs -> 'a -> link -> link * 'a;
+  var_ident          : 'a global_it_funs -> 'a -> var_ident -> var_ident * 'a;
   param              : 'a global_it_funs -> 'a -> param -> param * 'a;
   arg                : 'a global_it_funs -> 'a -> arg -> arg * 'a;
   node               : 'a global_it_funs -> 'a -> node -> node * 'a;
@@ -58,8 +60,8 @@ and ty funs acc t = match t with
       let se, acc = static_exp_it funs acc se in
       Tarray (t, se), acc
   | Tinvalid -> t, acc
-(*
-and ct_it funs acc c = try funs.ct funs acc c with Fallback -> ct funs acc t
+
+and ct_it funs acc c = try funs.ct funs acc c with Fallback -> ct funs acc c
 and ct funs acc c = match c with
   | Ck(ck) -> let ck, acc = ck_it funs acc ck in Ck ck, acc
   | Cprod(ct_l) ->
@@ -71,16 +73,20 @@ and ck funs acc c = match c with
   | Cvar(link_ref) ->
       let l, acc = link_it funs acc link_ref.contents in
       Cvar {link_ref with contents = l}, acc
-  | Con(ck, constructor_name, var_ident) ->
+  | Con(ck, constructor_name, v) ->
       let ck, acc = ck_it funs acc ck in
-      Con (ck, constructor_name, var_ident), acc
+      let v, acc = var_ident_it funs acc v in
+      Con (ck, constructor_name, v), acc
 
 and link_it funs acc c =
   try funs.link funs acc c with Fallback -> link funs acc c
 and link funs acc l = match l with
   | Cindex _ -> l, acc
   | Clink(ck) -> let ck, acc = ck_it funs acc ck in Clink ck, acc
-*)
+
+
+and var_ident_it funs acc i = funs.var_ident funs acc i
+and var_ident funs acc i = i, acc
 
 and structure_it funs acc s = funs.structure funs acc s
 and structure funs acc s =
@@ -118,6 +124,10 @@ let defaults = {
   static_exp = static_exp;
   static_exp_desc = static_exp_desc;
   ty = ty;
+  ct = ct;
+  ck = ck;
+  link = link;
+  var_ident = var_ident;
   structure = structure;
   field = field;
   param = param;
@@ -133,6 +143,10 @@ let defaults_stop = {
   static_exp = stop;
   static_exp_desc = stop;
   ty = stop;
+  ct = stop;
+  ck = stop;
+  link = stop;
+  var_ident = stop;
   structure = stop;
   field = stop;
   param = stop;

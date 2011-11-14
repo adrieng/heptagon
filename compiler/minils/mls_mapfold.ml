@@ -40,14 +40,19 @@ type 'a mls_it_funs = {
 let rec exp_it funs acc e = funs.exp funs acc e
 and exp funs acc e =
   let e_ty, acc = ty_it funs.global_funs acc e.e_ty in
+  let e_level_ck, acc = ck_it funs.global_funs acc e.e_level_ck in
+  let e_base_ck, acc = ck_it funs.global_funs acc e.e_base_ck in
+  let e_ct, acc = ct_it funs.global_funs acc e.e_ct in
   let ed, acc = edesc_it funs acc e.e_desc in
-  { e with e_desc = ed; e_ty = e_ty }, acc
+  { e with e_desc = ed; e_ty = e_ty; e_level_ck = e_level_ck;
+           e_base_ck = e_base_ck; e_ct = e_ct }, acc
 
 and extvalue_it funs acc w = funs.extvalue funs acc w
 and extvalue funs acc w =
   let w_ty, acc = ty_it funs.global_funs acc w.w_ty in
+  let w_ck, acc = ck_it funs.global_funs acc w.w_ck in
   let wd, acc = extvalue_desc_it funs acc w.w_desc in
-  { w with w_desc = wd; w_ty = w_ty }, acc
+  { w with w_desc = wd; w_ty = w_ty; w_ck = w_ck }, acc
 
 and extvalue_desc_it funs acc wd =
   try funs.extvalue_desc funs acc wd
@@ -56,12 +61,15 @@ and extvalue_desc funs acc wd = match wd with
   | Wconst se ->
       let se, acc = static_exp_it funs.global_funs acc se in
       Wconst se, acc
-  | Wvar _ -> wd, acc
+  | Wvar v ->
+      let v, acc = var_ident_it funs.global_funs acc v in
+      Wvar v, acc
   | Wfield (w,f) ->
       let w, acc = extvalue_it funs acc w in
       Wfield (w,f), acc
   | Wwhen (w, c, v) ->
       let w, acc = extvalue_it funs acc w in
+      let v, acc = var_ident_it funs.global_funs acc v in
       Wwhen (w,c,v), acc
   | Wreinit (w1, w2) ->
       let w1, acc = extvalue_it funs acc w1 in
@@ -78,32 +86,38 @@ and edesc funs acc ed = match ed with
   | Efby (se, w) ->
       let se, acc = optional_wacc (static_exp_it funs.global_funs) acc se in
       let w, acc = extvalue_it funs acc w in
-        Efby (se, w), acc
+      Efby (se, w), acc
   | Eapp(app, args, reset) ->
       let app, acc = app_it funs acc app in
       let args, acc = mapfold (extvalue_it funs) acc args in
-        Eapp (app, args, reset), acc
+      let reset, acc = optional_wacc (var_ident_it funs.global_funs) acc reset in
+      Eapp (app, args, reset), acc
   | Emerge(x, c_w_list) ->
       let aux acc (c,w) =
         let w, acc = extvalue_it funs acc w in
-          (c,w), acc in
+        (c,w), acc
+      in
       let c_w_list, acc = mapfold aux acc c_w_list in
-        Emerge(x, c_w_list), acc
+      let x, acc = var_ident_it funs.global_funs acc x in
+      Emerge(x, c_w_list), acc
   | Ewhen(e,c,x) ->
       let e, acc = exp_it funs acc e in
+      let x, acc = var_ident_it funs.global_funs acc x in
       Ewhen(e,c,x), acc
   | Estruct n_w_list ->
       let aux acc (n,w) =
         let w, acc = extvalue_it funs acc w in
-          (n,w), acc in
+        (n,w), acc
+      in
       let n_w_list, acc = mapfold aux acc n_w_list in
-        Estruct n_w_list, acc
+      Estruct n_w_list, acc
   | Eiterator (i, app, params, pargs, args, reset) ->
       let app, acc = app_it funs acc app in
       let params, acc = mapfold (static_exp_it funs.global_funs) acc params in
       let pargs, acc = mapfold (extvalue_it funs) acc pargs in
       let args, acc = mapfold (extvalue_it funs) acc args in
-        Eiterator (i, app, params, pargs, args, reset), acc
+      let reset, acc = optional_wacc (var_ident_it funs.global_funs) acc reset in
+      Eiterator (i, app, params, pargs, args, reset), acc
 
 
 and app_it funs acc a = funs.app funs acc a
@@ -119,7 +133,9 @@ and pat funs acc p = match p with
   | Etuplepat pl ->
       let pl, acc = mapfold (pat_it funs) acc pl in
       Etuplepat pl, acc
-  | Evarpat _ -> p, acc
+  | Evarpat v ->
+    let v, acc = var_ident_it funs.global_funs acc v in
+    Evarpat v, acc
 
 
 and eq_it funs acc eq = funs.eq funs acc eq
@@ -135,7 +151,9 @@ and eqs funs acc eqs = mapfold (eq_it funs) acc eqs
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
   let v_type, acc = ty_it funs.global_funs acc vd.v_type in
-  { vd with v_type = v_type }, acc
+  let v, acc = var_ident_it funs.global_funs acc vd.v_ident in
+  let v_clock, acc = ck_it funs.global_funs acc vd.v_clock in
+  { vd with v_type = v_type; v_clock = v_clock; v_ident = v }, acc
 
 and var_decs_it funs acc vds = funs.var_decs funs acc vds
 and var_decs funs acc vds = mapfold (var_dec_it funs) acc vds
