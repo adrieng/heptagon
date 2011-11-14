@@ -75,7 +75,7 @@ let apply_op partial loc op se_list =
   in
   let sed_l, has_var = Misc.mapfold has_var_desc false se_list in
   if (op.qual = Pervasives) && not has_var
-  then ( (* concret evaluation *)
+  then ( (* concrete evaluation *)
     match op.name, sed_l with
       | "+", [Sint n1; Sint n2] -> Sint (n1 + n2)
       | "-", [Sint n1; Sint n2] -> Sint (n1 - n2)
@@ -101,7 +101,8 @@ let apply_op partial loc op se_list =
   )
   else ( (* symbolic evaluation *)
     match op, sed_l with
-      | {qual = Pervasives; name = "=" }, [sed1;sed2] when sed1 = sed2 -> Sbool true
+      | {qual = Pervasives; name = "=" }, [sed1;sed2]
+          when Global_compare.static_exp_desc_compare sed1 sed2 = 0 -> Sbool true
       | _ ->
           if partial
           then Sop(op, se_list) (* partial evaluation *)
@@ -140,7 +141,8 @@ let rec eval_core partial env se = match se.se_desc with
   | Sarray se_list ->
       { se with se_desc = Sarray (List.map (eval_core partial env) se_list) }
   | Sarray_power (se, n_list) ->
-       { se with se_desc = Sarray_power (eval_core partial env se, List.map (eval_core partial env) n_list) }
+       { se with se_desc =
+            Sarray_power (eval_core partial env se, List.map (eval_core partial env) n_list) }
   | Stuple se_list ->
        { se with se_desc = Stuple (List.map (eval_core partial env) se_list) }
   | Srecord f_se_list ->
