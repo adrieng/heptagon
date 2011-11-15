@@ -126,7 +126,7 @@ let print_interface_type ff (name,tdesc) =
     | Talias t -> fprintf ff "@[<2>type %s = %a@]" name print_type t
 
 let print_interface_const ff (name,c) =
-  fprintf ff "@[<2>const %a : %a = %a@]@."
+  fprintf ff "@[<2>const %a : %a = %a@]"
       print_name name
       print_type c.Signature.c_type
       print_static_exp c.Signature.c_value
@@ -141,14 +141,15 @@ let print_sarg ff arg = match arg.a_name with
           print_sck arg.a_clock
 
 let print_interface_value ff (name,node) =
-  let print_node_params ff (p_list, constraints) =
+(*  let print_node_params ff (p_list, constraints) =
     fprintf ff "@[<2><<@[%a@]%a>>@]"
       (print_list_r (fun ff p -> print_name ff p.p_name) "" "," "") p_list
       print_constraints constraints
-  in
-  fprintf ff "@[<v 2>val %a%a@[%a@] returns @[%a@]@]"
+  in*)
+  fprintf ff "@[<4>val %a@,@[<2>%a@]%a@,@[<1>%a@]@ returns @[<1>%a@]@]"
     print_name name
-    print_node_params (node.node_params, node.node_param_constraints)
+    (print_list_r print_param "<<" "," ">>") node.node_params
+    print_constraints node.node_param_constraints
     (print_list_r print_sarg "(" ";" ")") node.node_inputs
     (print_list_r print_sarg "(" ";" ")") node.node_outputs
 
@@ -156,12 +157,11 @@ let print_interface ff =
   let m = Modules.current_module () in
   Format.fprintf ff "@[<v>";
   NamesEnv.iter
-    (fun key typdesc -> print_interface_type ff (key,typdesc)) m.m_types;
+    (fun key typdesc -> Format.fprintf ff "%a@," print_interface_type (key,typdesc)) m.m_types;
   NamesEnv.iter
-    (fun key constdec -> print_interface_const ff (key,constdec)) m.m_consts;
+    (fun key constdec -> Format.fprintf ff "%a@," print_interface_const (key,constdec)) m.m_consts;
   NamesEnv.iter
-    (fun key sigtype -> print_interface_value ff (key,sigtype)) m.m_values;
-  Format.fprintf ff "@]";
-  Format.fprintf ff "@."
+    (fun key sigtype -> Format.fprintf ff "%a@," print_interface_value (key,sigtype)) m.m_values;
+  Format.fprintf ff "@]@."
 
 
