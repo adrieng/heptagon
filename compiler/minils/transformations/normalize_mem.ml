@@ -20,8 +20,6 @@ open Mls_utils
        y = v fby x
 *)
 
-let normalize_outputs = ref true
-
 (** Builds the initial environment, that maps any register to the ident on the right hand side.
     For outputs that are also registers, if normalize_outputs is true,
     they are mapped to themselves to force the copy (made necessary by the calling convention).
@@ -36,7 +34,7 @@ let build_env nd =
   let env = add_none Env.empty nd.n_input in
   let env = List.fold_left add_eq env nd.n_equs in
   let env =
-    if !normalize_outputs then
+    if !Compiler_options.normalize_register_outputs then
       List.fold_left (fun env vd -> Env.add vd.v_ident (Some vd.v_ident) env) env nd.n_output
     else
       env

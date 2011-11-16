@@ -56,7 +56,7 @@ let write_obc_file p =
 
 let targets =
   [ mk_target ~interface:(IObc Cmain.interface) "c" (Obc_no_params Cmain.program);
-    mk_target "java" (Obc Java_main.program);
+    mk_target ~load_conf:(Java_main.load_conf) "java" (Obc Java_main.program);
     mk_target "z3z" (Minils_no_params Sigalimain.program);
     mk_target "obc" (Obc write_obc_file);
     mk_target "obc_np" (Obc_no_params write_obc_file);

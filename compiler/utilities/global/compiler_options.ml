@@ -117,6 +117,8 @@ let do_mem_alloc_and_typing () =
 
 let use_old_scheduler = ref false
 
+let normalize_register_outputs = ref true
+
 let optim = ref false
 let do_optim () =
   do_mem_alloc_and_typing ();

@@ -26,6 +26,7 @@ type arg = {
   a_type  : ty;
   a_clock : ck; (** [a_clock] set to [Cbase] means at the node activation clock *)
   a_linearity : linearity;
+  a_is_memory : bool;
 }
 
 (** Node static parameters *)
@@ -126,8 +127,9 @@ let types_of_param_list l = List.map (fun p -> p.p_type) l
 
 let linearities_of_arg_list l = List.map (fun ad -> ad.a_linearity) l
 
-let mk_arg name ty linearity ck =
-  { a_type = ty; a_linearity = linearity; a_name = name; a_clock = ck }
+let mk_arg ?(is_memory=false) name ty linearity ck =
+  { a_type = ty; a_linearity = linearity; a_name = name; a_clock = ck;
+    a_is_memory = is_memory }
 
 let mk_param name ty = { p_name = name; p_type = ty }
 

@@ -478,6 +478,11 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
         add_same_value_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
        with
          | InterfRead.Const_extvalue -> ())
+    | _, Eapp({ a_op = Efun f | Enode f }, _, _) ->
+      let info = Modules.find_value f in
+      List.iter2
+        (fun x arg -> if arg.a_is_memory then Format.eprintf "Removing %s@." (name x); remove_from_ivar (Ivar x))
+        (Mls_utils.Vars.def [] eq) info.node_outputs
     | _ -> () (* do nothing *)
 
 (** Add the special init and return equations to the dependency graph
@@ -558,7 +563,23 @@ let create_subst_lists igs =
   in
     List.flatten (List.map create_one_ig igs)
 
+let update_output_registers_sig f =
+  let update_output mems a vd =
+    if List.mem vd.v_ident mems then (
+      Format.eprintf "Ading memory register %s@." (name vd.v_ident);
+      { a with a_is_memory = true }
+    ) else
+      a
+  in
+  if not !Compiler_options.normalize_register_outputs then (
+    let mems, _ = List.split (Mls_utils.node_memory_vars f) in
+    let info = Modules.find_value f.n_name in
+    let outputs = List.map2 (update_output mems) info.node_outputs f.n_output in
+    Modules.replace_value f.n_name { info with node_outputs = outputs }
+  )
+
 let node _ acc f =
+  update_output_registers_sig f;
   (** Build the interference graphs *)
   let igs = build_interf_graph f in
     (** Color the graph *)

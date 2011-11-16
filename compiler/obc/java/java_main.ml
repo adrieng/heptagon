@@ -5,6 +5,9 @@ open Signature
 open Java
 open Java_printer
 
+let load_conf () =
+  Compiler_options.normalize_register_outputs := false
+
 (** returns the vd and the pat of a fresh ident from [name] *)
 let mk_var ty name =
   let id = Idents.gen_var "java_main" name in
