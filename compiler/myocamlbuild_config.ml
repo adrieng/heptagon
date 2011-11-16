@@ -32,6 +32,10 @@ let find_syntaxes () = ["camlp4o"; "camlp4r"]
 (* ocamlfind command *)
 let ocamlfind x = S[A"ocamlfind"; x]
 
+let ocamlfind_query pkg =
+  let cmd = Printf.sprintf "ocamlfind query %s" (Filename.quote pkg) in
+  Ocamlbuild_pack.My_unix.run_and_open cmd (fun ic -> input_line ic)
+
 let ocamlfind_before_options () =
        (* by using Before_options one let command line options have an higher priority *)
        (* on the contrary using After_options will guarantee to have the higher priority *)

@@ -3,11 +3,11 @@ AC_INIT(heptagon,1.0)
 AC_PROG_INSTALL
 
 AC_ARG_ENABLE(simulator,
-    [  --enable-simulator            enable Why3 IDE],,
+    [  --enable-simulator      enable the graphical simulator],,
     enable_simulator=no)
 
 AC_ARG_ENABLE(local_stdlib,
-    [  --enable-local-stdlib            Use the standard library in the source tree],,
+    [  --enable-local-stdlib   use the in-sources standard library],,
     enable_local_stdlib=no)
 
 AC_PROG_OCAML
@@ -23,6 +23,12 @@ esac
 AC_PROG_FINDLIB
 if test "$OCAMLFIND" = "no"; then
   AC_MSG_ERROR([Please install OCaml findlib (the ocamlfind command)])
+fi
+
+OCAMLC_STDLIB=`$OCAMLFIND ocamlc -where`
+OCAMLFIND_STDLIB=`$OCAMLFIND printconf stdlib`
+if test "$OCAMLC_STDLIB" != "$OCAMLFIND_STDLIB"; then
+  AC_MSG_ERROR([OCaml and OCamlfind make different assumptions about the standard library directory])
 fi
 
 AC_CHECK_PROG(MENHIR,menhir,menhir,no)
@@ -47,10 +53,11 @@ AC_CHECK_OCAML_PKG([lablgtk2])
  fi
 
 if test "$enable_local_stdlib" = "yes"; then
-    stdlib_dir=$srcdir/lib
+    stdlib_dir=$PWD/lib
 else
     stdlib_dir=$libdir/heptagon
 fi
+
 
 AC_SUBST(INSTALL)
 AC_SUBST(stdlib_dir)

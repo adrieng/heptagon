@@ -1245,8 +1245,8 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-simulator            enable Why3 IDE
-  --enable-local-stdlib            Use the standard library in the source tree
+  --enable-simulator      enable the graphical simulator
+  --enable-local-stdlib   use the in-sources standard library
 
 Report bugs to the package provider.
 _ACEOF
@@ -2923,6 +2923,12 @@ if test "$OCAMLFIND" = "no"; then
   as_fn_error $? "Please install OCaml findlib (the ocamlfind command)" "$LINENO" 5
 fi
 
+OCAMLC_STDLIB=`$OCAMLFIND ocamlc -where`
+OCAMLFIND_STDLIB=`$OCAMLFIND printconf stdlib`
+if test "$OCAMLC_STDLIB" != "$OCAMLFIND_STDLIB"; then
+  as_fn_error $? "OCaml and OCamlfind make different assumptions about the standard library directory" "$LINENO" 5
+fi
+
 # Extract the first word of "menhir", so it can be a program name with args.
 set dummy menhir; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -3052,10 +3058,11 @@ $as_echo "$as_me: WARNING: Could not find 'lablgtk2'. The simulator will not be 
  fi
 
 if test "$enable_local_stdlib" = "yes"; then
-    stdlib_dir=$srcdir/lib
+    stdlib_dir=$PWD/lib
 else
     stdlib_dir=$libdir/heptagon
 fi
+
 
 
 
@@ -4236,3 +4243,4 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
+
