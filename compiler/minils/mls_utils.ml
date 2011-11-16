@@ -27,6 +27,13 @@ let rec static_exp_of_exp e =
       | _ -> err_message e Enot_static_exp)
     | _ -> err_message e Enot_static_exp
 
+let rec ident_of_extvalue w = match w.w_desc with
+  | Wvar x -> Some x
+  | Wfield(w, _) -> ident_of_extvalue w
+  | Wwhen(w, _, _) -> ident_of_extvalue w
+  | Wconst _ -> None
+  | Wreinit (_, w) -> ident_of_extvalue w
+
 (** @return the list of bounds of an array type*)
 let rec bounds_list ty =
   match Modules.unalias_type ty with
