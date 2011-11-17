@@ -89,6 +89,7 @@ and block =
 and var_dec =
     { v_ident : var_ident;
       v_type : ty;
+      v_alias : bool; (* this var_dec only declare a const pointer, no allocation is done *)
       v_linearity : linearity;
       v_mutable : bool;
       v_loc : location }
