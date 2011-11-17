@@ -104,6 +104,7 @@ let add_tomato_check s = tomato_check := s :: !tomato_check
 let do_iterator_fusion = ref false
 
 let do_scalarize = ref false
+let do_simplify = ref true
 
 let do_mem_alloc = ref false
 let do_linear_typing = ref false
