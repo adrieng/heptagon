@@ -94,7 +94,9 @@ and extvalue funs acc w =
   let wd, acc = evdesc_it funs acc w.w_desc in
   { w with w_desc = wd; }, acc
 
-and evdesc_it funs acc wd = funs.evdesc funs acc wd
+and evdesc_it funs acc wd =
+  try funs.evdesc funs acc wd
+  with Fallback -> evdesc funs acc wd
 and evdesc funs acc wd = match wd with
   | Wvar x ->
       let x, acc = var_ident_it funs.global_funs acc x in
