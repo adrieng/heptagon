@@ -118,7 +118,7 @@ and op ff (f, e_l) =
   match Names.modul f with
   | Names.Pervasives ->
       (match Names.shortname f with
-        |("+" | "-" | "*" | "/"
+        |("+" | "-" | "*" | "/" | "%"
         |"+." | "-." | "*." | "/."
         | "=" | "<>" | "<" | "<="
         | ">" | ">=" | "&" | "or") as n ->
