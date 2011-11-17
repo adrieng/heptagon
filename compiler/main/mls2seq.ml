@@ -54,9 +54,14 @@ let write_obc_file p =
     close_out obc;
     comment "Generation of Obc code"
 
+
+let java_conf () =
+  Compiler_options.do_scalarize := true;
+  ()
+
 let targets =
   [ mk_target ~interface:(IObc Cmain.interface) "c" (Obc_no_params Cmain.program);
-    mk_target "java" (Obc Java_main.program);
+    mk_target ~load_conf:java_conf "java" (Obc Java_main.program);
     mk_target "z3z" (Minils_no_params Sigalimain.program);
     mk_target "obc" (Obc write_obc_file);
     mk_target "obc_np" (Obc_no_params write_obc_file);
