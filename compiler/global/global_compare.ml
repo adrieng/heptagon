@@ -40,69 +40,71 @@ let async_t_compare a1 a2 = Pervasives.compare a1 a2
 
 let rec static_exp_compare se1 se2 =
   let cr = type_compare se1.se_ty se2.se_ty in
+  if cr <> 0 then cr else static_exp_desc_compare se1.se_desc se2.se_desc
 
-  if cr <> 0 then cr else
-    let c = Pervasives.compare in
-    match se1.se_desc, se2.se_desc with
-      | Svar cn1, Svar cn2 -> Pervasives.compare cn1 cn2
-      | Sint i1, Sint i2 -> c i1 i2
-      | Sfloat f1, Sfloat f2 -> c f1 f2
-      | Sbool b1, Sbool b2 -> c b1 b2
-      | Sstring s1, Sstring s2 -> c s1 s2
-      | Sconstructor c1, Sconstructor c2 -> c c1 c2
-      | Sfield f1, Sfield f2 -> c f1 f2
-      | Stuple sel1, Stuple sel2 ->
-          list_compare static_exp_compare sel1 sel2
-      | Sarray_power (se11, sel1), Sarray_power (se12, sel2) ->
-          let cr = static_exp_compare se11 se12 in
-          if cr <> 0 then cr else list_compare static_exp_compare sel1 sel2
-      | Sarray sel1, Sarray sel2 ->
-          list_compare static_exp_compare sel1 sel2
-      | Srecord fnsel1, Srecord fnsel2 ->
-          let compare_field (fn1, se1) (fn2, se2) =
-            let cr = c fn1 fn2 in
-            if cr <> 0 then cr else static_exp_compare se1 se2 in
-          list_compare compare_field fnsel1 fnsel2
-      | Sop (fn1, sel1), Sop (fn2, sel2) ->
+
+and static_exp_desc_compare sed1 sed2 =
+  let c = Pervasives.compare in
+  match sed1, sed2 with
+    | Svar cn1, Svar cn2 -> Pervasives.compare cn1 cn2
+    | Sint i1, Sint i2 -> c i1 i2
+    | Sfloat f1, Sfloat f2 -> c f1 f2
+    | Sbool b1, Sbool b2 -> c b1 b2
+    | Sstring s1, Sstring s2 -> c s1 s2
+    | Sconstructor c1, Sconstructor c2 -> c c1 c2
+    | Sfield f1, Sfield f2 -> c f1 f2
+    | Stuple sel1, Stuple sel2 ->
+        list_compare static_exp_compare sel1 sel2
+    | Sarray_power (se11, sel1), Sarray_power (se12, sel2) ->
+        let cr = static_exp_compare se11 se12 in
+        if cr <> 0 then cr else list_compare static_exp_compare sel1 sel2
+    | Sarray sel1, Sarray sel2 ->
+        list_compare static_exp_compare sel1 sel2
+    | Srecord fnsel1, Srecord fnsel2 ->
+        let compare_field (fn1, se1) (fn2, se2) =
           let cr = c fn1 fn2 in
-          if cr <> 0 then cr else list_compare static_exp_compare sel1 sel2
+          if cr <> 0 then cr else static_exp_compare se1 se2 in
+        list_compare compare_field fnsel1 fnsel2
+    | Sop (fn1, sel1), Sop (fn2, sel2) ->
+        let cr = c fn1 fn2 in
+        if cr <> 0 then cr else list_compare static_exp_compare sel1 sel2
 
-      | Svar _, _ -> 1
+    | Svar _, _ -> 1
 
-      | Sint _, Svar _ -> -1
-      | Sint _, _ -> 1
+    | Sint _, Svar _ -> -1
+    | Sint _, _ -> 1
 
-      | Sfloat _, (Svar _ | Sint _) -> -1
-      | Sfloat _, _ -> 1
+    | Sfloat _, (Svar _ | Sint _) -> -1
+    | Sfloat _, _ -> 1
 
-      | Sbool _, (Svar _ | Sint _ | Sfloat _) -> -1
-      | Sbool _, _ -> 1
+    | Sbool _, (Svar _ | Sint _ | Sfloat _) -> -1
+    | Sbool _, _ -> 1
 
-      | Sstring _, (Svar _ | Sint _ | Sfloat _ | Sbool _) -> -1
-      | Sstring _, _ -> 1
+    | Sstring _, (Svar _ | Sint _ | Sfloat _ | Sbool _) -> -1
+    | Sstring _, _ -> 1
 
-      | Sconstructor _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sstring _) -> -1
-      | Sconstructor _, _ -> 1
+    | Sconstructor _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sstring _) -> -1
+    | Sconstructor _, _ -> 1
 
-      | Sfield _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sstring _ | Sconstructor _) -> -1
-      | Sfield _, _ -> 1
+    | Sfield _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sstring _ | Sconstructor _) -> -1
+    | Sfield _, _ -> 1
 
-      | Sasync _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _) -> -1
-      | Sasync _, _ -> 1
+    | Sasync _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _) -> -1
+    | Sasync _, _ -> 1
 
-      | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _ ) -> 1
-      | Stuple _, _ -> -1
+    | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _ ) -> 1
+    | Stuple _, _ -> -1
 
-      | Sarray_power _, (Srecord _ | Sop _ | Sarray _) -> -1
-      | Sarray_power _, _ -> 1
+    | Sarray_power _, (Srecord _ | Sop _ | Sarray _) -> -1
+    | Sarray_power _, _ -> 1
 
-      | Sarray _, (Srecord _ | Sop _) -> 1
-      | Sarray _, _ -> -1
+    | Sarray _, (Srecord _ | Sop _) -> 1
+    | Sarray _, _ -> -1
 
-      | Srecord _, Sop _ -> 1
-      | Srecord _, _ -> -1
+    | Srecord _, Sop _ -> 1
+    | Srecord _, _ -> -1
 
-      | Sop _, _ -> -1
+    | Sop _, _ -> -1
 
 and type_compare ty1 ty2 = match ty1, ty2 with
   | Tprod tyl1, Tprod tyl2 -> list_compare type_compare tyl1 tyl2

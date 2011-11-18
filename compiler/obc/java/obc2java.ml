@@ -91,7 +91,7 @@ let translate_constructor_name_2 q q_ty =
   { qual = QualModule classe; name = String.uppercase q.name }
 
 let translate_constructor_name q =
-  match Modules.find_constrs q with
+  match Modules.unalias_type (Modules.find_constrs q) with
     | Types.Tid q_ty when q_ty = Initial.pbool -> q |> shortname |> local_qn
     | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
     | _ -> assert false
@@ -142,7 +142,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
       in
       Enew (t_c, [static_exp param_env se])
 
-and boxed_ty param_env t = match t with
+and boxed_ty param_env t = match Modules.unalias_type t with
   | Types.Tprod [] -> Tunit
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
   | Types.Tid t when t = Initial.pbool -> Tclass (Names.local_qn "Boolean")
@@ -165,7 +165,9 @@ and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
   Tclass (java_pervasive_class ("Tuple"^ln))
 
-and ty param_env t :Java.ty = match t with
+and ty param_env t =
+  let t = Modules.unalias_type t in
+  match t with
   | Types.Tprod [] -> Tunit
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
   | Types.Tid t when t = Initial.pbool -> Tbool
@@ -175,12 +177,12 @@ and ty param_env t :Java.ty = match t with
   | Types.Tarray _ ->
       let rec gather_array t = match t with
         | Types.Tarray (t,size) ->
-            let t, s_l = gather_array t in
-            t, (static_exp param_env size)::s_l
+            let tin, s_l = gather_array t in
+            tin, (static_exp param_env size)::s_l
         | _ -> ty param_env t, []
       in
-      let t, s_l = gather_array t in
-      Tarray (t, s_l)
+      let tin, s_l = gather_array t in
+      Tarray (tin, s_l)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
   | Types.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
 
@@ -198,7 +200,7 @@ and exp param_env e = match e.e_desc with
 and exp_list param_env e_l = List.map (exp param_env) e_l
 
 and tuple param_env se_l =
-  let t = tuple_ty param_env (List.map (fun e -> e.Types.se_ty) se_l) in
+  let t = tuple_ty param_env (List.map (fun e -> Modules.unalias_type e.Types.se_ty) se_l) in
   Enew (t, List.map (static_exp param_env) se_l)
 
 
@@ -550,7 +552,7 @@ let class_def_list classes cd_l =
                  :: acts
         in
         (* function to allocate the arrays *)
-        let allocate acts vd = match vd.v_type with
+        let allocate acts vd = match Modules.unalias_type vd.v_type with
           | Types.Tarray _ ->
               let t = ty param_env vd.v_type in
               ( Aassgn (Pthis vd.v_ident, Enew_array (t,[])) ):: acts
@@ -612,7 +614,9 @@ let type_dec_list classes td_l =
     Idents.enter_node classe_name;
     match td.t_desc with
       | Type_abs -> Misc.unsupported "obc2java, abstract type."
-      | Type_alias _ -> Misc.unsupported "obc2java, type alias."
+      | Type_alias t -> (*verify that it is possible to unalias and skip it*)
+          let _ = Modules.unalias_type t in
+          classes
       | Type_enum c_l ->
           let mk_constr_enum c = translate_constructor_name_2 c td.t_name in
           (mk_enum (List.map mk_constr_enum c_l) classe_name) :: classes

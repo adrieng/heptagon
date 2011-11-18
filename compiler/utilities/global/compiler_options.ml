@@ -107,6 +107,7 @@ let add_tomato_check s = tomato_check := s :: !tomato_check
 let do_iterator_fusion = ref false
 
 let do_scalarize = ref false
+let do_simplify = ref true
 
 let do_mem_alloc = ref false
 let do_linear_typing = ref false
@@ -121,10 +122,11 @@ let normalize_register_outputs = ref true
 
 let optim = ref false
 let do_optim () =
+(*  do_iterator_fusion := true; TODO reset when itfusion is fixed *)
   do_mem_alloc_and_typing ();
   tomato := true;
-  deadcode := true;
-  do_iterator_fusion := true
+  deadcode := true
+
 
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"

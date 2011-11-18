@@ -2,7 +2,7 @@ open Obc
 open Obc_mapfold
 
 let is_deadcode = function
-    | Aassgn (lhs, e) ->
+    | Aassgn (lhs, e) -> (* remove x=x equations *)
         (match e.e_desc with
            | Eextvalue w -> Obc_compare.compare_lhs_extvalue lhs w = 0
            | _ -> false

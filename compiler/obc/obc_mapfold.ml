@@ -78,28 +78,38 @@ and lhsdesc_it funs acc ld =
   try funs.lhsdesc funs acc ld
   with Fallback -> lhsdesc funs acc ld
 and lhsdesc funs acc ld = match ld with
-  | Lvar x -> Lvar x, acc
-  | Lmem x -> Lmem x, acc
+  | Lvar x ->
+      let x, acc = var_ident_it funs.global_funs acc x in
+      Lvar x, acc
+  | Lmem x ->
+      let x, acc = var_ident_it funs.global_funs acc x in
+      Lmem x, acc
   | Lfield(lhs, f) ->
       let lhs, acc = lhs_it funs acc lhs in
-        Lfield(lhs, f), acc
+      Lfield(lhs, f), acc
   | Larray(lhs, e) ->
       let lhs, acc = lhs_it funs acc lhs in
       let e, acc = exp_it funs acc e in
-        Larray(lhs, e), acc
+      Larray(lhs, e), acc
 
 and extvalue_it funs acc w = funs.extvalue funs acc w
 and extvalue funs acc w =
   let wd, acc = evdesc_it funs acc w.w_desc in
   { w with w_desc = wd; }, acc
 
-and evdesc_it funs acc wd = funs.evdesc funs acc wd
+and evdesc_it funs acc wd =
+  try funs.evdesc funs acc wd
+  with Fallback -> evdesc funs acc wd
 and evdesc funs acc wd = match wd with
-  | Wvar x -> Wvar x, acc
+  | Wvar x ->
+      let x, acc = var_ident_it funs.global_funs acc x in
+      Wvar x, acc
   | Wconst c ->
     let c, acc = static_exp_it funs.global_funs acc c in
     Wconst c, acc
-  | Wmem x -> Wmem x, acc
+  | Wmem x ->
+      let x, acc = var_ident_it funs.global_funs acc x in
+      Wmem x, acc
   | Wfield(w, f) ->
       let w, acc = extvalue_it funs acc w in
       Wfield(w, f), acc
@@ -152,7 +162,8 @@ and block funs acc b =
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
   let v_type, acc = ty_it funs.global_funs acc vd.v_type in
-  { vd with v_type = v_type }, acc
+  let v, acc = var_ident_it funs.global_funs acc vd.v_ident in
+  { vd with v_type = v_type; v_ident = v }, acc
 
 and var_decs_it funs acc vds = funs.var_decs funs acc vds
 and var_decs funs acc vds = mapfold (var_dec_it funs) acc vds
@@ -162,7 +173,8 @@ and obj_dec_it funs acc od = funs.obj_dec funs acc od
 and obj_dec funs acc od =
   let o_size, acc = optional_wacc
     (mapfold (static_exp_it funs.global_funs)) acc od.o_size in
-  { od with o_size = o_size }, acc
+  let v, acc = var_ident_it funs.global_funs acc od.o_ident in
+  { od with o_size = o_size; o_ident = v }, acc
 
 and obj_decs_it funs acc ods = funs.obj_decs funs acc ods
 and obj_decs funs acc ods = mapfold (obj_dec_it funs) acc ods

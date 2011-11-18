@@ -6,7 +6,9 @@ open Java
 open Java_printer
 
 let load_conf () =
-  Compiler_options.normalize_register_outputs := false
+  Compiler_options.normalize_register_outputs := false;
+  Compiler_options.do_scalarize := true;
+  ()
 
 (** returns the vd and the pat of a fresh ident from [name] *)
 let mk_var ty name =
@@ -15,8 +17,6 @@ let mk_var ty name =
 
 
 let program p =
-  (*Scalarize*)
-  let p = Compiler_utils.pass "Scalarize" true Scalarize.program p Obc_compiler.pp in
   let p_java = Obc2java.program p in
   let dir = Compiler_utils.build_path "java" in
   Compiler_utils.ensure_dir dir;

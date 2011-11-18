@@ -1198,6 +1198,9 @@ let build_node_params cenv l =
   in
     mapfold check_param cenv l
 
+let typing_arg cenv a =
+  { a with a_type = check_type cenv a.a_type }
+
 let node ({ n_name = f; n_input = i_list; n_output = o_list;
             n_contract = contract;
             n_block = b; n_loc = loc;
@@ -1221,7 +1224,10 @@ let node ({ n_name = f; n_input = i_list; n_output = o_list;
     let cl = List.map (expect_static_exp cenv Initial.tbool) s.node_param_constraints in
     let cl = cl @ get_constraints () in
     let cl = solve cl in
-    replace_value f { s with node_param_constraints = cl };
+    let node_inputs = List.map (typing_arg QualEnv.empty) s.node_inputs in
+    let node_outputs = List.map (typing_arg QualEnv.empty) s.node_outputs in
+    replace_value f { s with node_param_constraints = cl;
+                             node_inputs = node_inputs; node_outputs = node_outputs };
 
     { n with
         n_input = typed_i_list;
@@ -1258,9 +1264,6 @@ let typing_typedec td =
     { td with t_desc = tydesc }
 
 let typing_signature s =
-  let typing_arg cenv a =
-    { a with a_type = check_type cenv a.a_type }
-  in
   let typed_params, cenv = build_node_params QualEnv.empty s.sig_params in
   { s with sig_params = typed_params;
     sig_inputs = List.map (typing_arg cenv) s.sig_inputs;

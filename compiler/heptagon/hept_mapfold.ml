@@ -80,7 +80,9 @@ let rec exp_it funs acc e = funs.exp funs acc e
 and exp funs acc e =
   let e_desc, acc = edesc_it funs acc e.e_desc in
   let e_ty, acc = ty_it funs.global_funs acc e.e_ty in
-  { e with e_desc = e_desc; e_ty = e_ty }, acc
+  let e_ct_annot, acc = optional_wacc (ct_it funs.global_funs) acc e.e_ct_annot in
+  let e_level_ck, acc = ck_it funs.global_funs acc e.e_level_ck in
+  { e with e_desc = e_desc; e_ty = e_ty; e_ct_annot = e_ct_annot; e_level_ck = e_level_ck }, acc
 
 and edesc_it funs acc ed =
   try funs.edesc funs acc ed
@@ -89,7 +91,12 @@ and edesc funs acc ed = match ed with
   | Econst se ->
       let se, acc = static_exp_it funs.global_funs acc se in
       Econst se, acc
-  | Evar _ | Elast _ -> ed, acc
+  | Evar v ->
+      let v, acc = var_ident_it funs.global_funs acc v in
+      Evar v, acc
+  | Elast v ->
+      let v, acc = var_ident_it funs.global_funs acc v in
+      Elast v, acc
   | Epre (se, e) ->
       let se, acc = optional_wacc (static_exp_it funs.global_funs) acc se in
       let e, acc = exp_it funs acc e in
@@ -118,18 +125,20 @@ and edesc funs acc ed = match ed with
       Eiterator (i, app, params, pargs, args, reset), acc
   | Ewhen (e, c, n) ->
       let e, acc = exp_it funs acc e in
+      let n, acc = var_ident_it funs.global_funs acc n in
       Ewhen (e, c, n), acc
   | Emerge (n, c_e_list) ->
+      let n, acc = var_ident_it funs.global_funs acc n in
       let aux acc (c,e) =
         let e, acc = exp_it funs acc e in
-        (c,e), acc in
+        (c,e), acc
+      in
       let c_e_list, acc = mapfold aux acc c_e_list in
       Emerge (n, c_e_list), acc
   | Esplit (e1, e2) ->
       let e1, acc = exp_it funs acc e1 in
       let e2, acc = exp_it funs acc e2 in
         Esplit(e1, e2), acc
-
 
 and app_it funs acc a = funs.app funs acc a
 and app funs acc a =
@@ -144,7 +153,9 @@ and pat funs acc p = match p with
   | Etuplepat pl ->
       let pl, acc = mapfold (pat_it funs) acc pl in
       Etuplepat pl, acc
-  | Evarpat _ -> p, acc
+  | Evarpat v ->
+      let v, acc = var_ident_it funs.global_funs acc v in
+      Evarpat v, acc
 
 
 and eq_it funs acc eq = funs.eq funs acc eq
@@ -221,9 +232,11 @@ and present_handler funs acc ph =
 
 and var_dec_it funs acc vd = funs.var_dec funs acc vd
 and var_dec funs acc vd =
-  (* TODO v_type ??? *)
+  let v_type, acc = ty_it funs.global_funs acc vd.v_type in
+  let v, acc = var_ident_it funs.global_funs acc vd.v_ident in
+  let v_clock, acc = ck_it funs.global_funs acc vd.v_clock in
   let v_last, acc = last_it funs acc vd.v_last in
-  { vd with v_last = v_last }, acc
+  { vd with v_last = v_last; v_type = v_type; v_clock = v_clock; v_ident = v }, acc
 
 
 and last_it funs acc l =
