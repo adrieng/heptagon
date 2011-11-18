@@ -117,10 +117,11 @@ let use_old_scheduler = ref false
 
 let optim = ref false
 let do_optim () =
+(*  do_iterator_fusion := true; TODO reset when itfusion is fixed *)
   do_mem_alloc_and_typing ();
   tomato := true;
-  deadcode := true;
-  do_iterator_fusion := true
+  deadcode := true
+
 
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
