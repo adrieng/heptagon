@@ -1,14 +1,19 @@
 #!/bin/bash
 #Small wrapper to deal with compilation of the compiler and the stdlib.
 
+STATUS=0
+
 RUN_DIR="`pwd`"
 
-SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+SCRIPT_DIR=`dirname $(readlink -f $0)`
 
 COMPILER_DIR="$SCRIPT_DIR/compiler"
 COMPILER=heptc.byte
 COMPILER_DEBUG=heptc.d.byte
 LIB_DIR="$SCRIPT_DIR/lib"
+
+JAVA_LIB_DIR="$LIB_DIR/java"
+JAVAC="javac -cp $JAVA_LIB_DIR"
 
 #the symlink
 HEPTC="$COMPILER_DIR/$COMPILER"
@@ -17,26 +22,50 @@ HEPTC_DEBUG="$COMPILER_DIR/$COMPILER_DEBUG"
 #compile the compiler
 if [ ! -x "$HEPTC" ]
 then
-	if [ -x "$HEPTC_DEBUG" ]
-	then
-		#use the debug
-		HEPTC=$HEPTC_DEBUG
-	else
-		cd "$COMPILER_DIR"
-		ocamlbuild -j 0 "$COMPILER"
-		cd -
-	fi
+  if [ -x "$HEPTC_DEBUG" ]
+  then
+    #use the debug
+    HEPTC=$HEPTC_DEBUG
+  else
+    pushd "$COMPILER_DIR" > /dev/null
+    ocamlbuild -j 0 "$COMPILER"
+    popd > /dev/null
+  fi
 fi
 
 #compile the stdlib
 if [ ! -e "$LIB_DIR/pervasives.epci" ] || [ "$HEPTC" -nt "$LIB_DIR/pervasives.epci" ]
 then
-	cd "$LIB_DIR"
-	echo "Recompile pervasives.epci"
-	"$HEPTC" -nopervasives pervasives.epi
-	cd -
+  pushd "$LIB_DIR" > /dev/null
+  echo "Recompile pervasives.epci"
+  "$HEPTC" -nopervasives pervasives.epi
+  popd > /dev/null
 fi
 
-#call the compiler with the passed arguments.
-cd "$RUN_DIR"
-"$HEPTC" -stdlib "$LIB_DIR" "$@"
+function compile
+{
+  #call the compiler with the passed arguments.
+  pushd "$RUN_DIR" > /dev/null
+  "$HEPTC" -stdlib "$LIB_DIR" "$@"
+  STATUS=$?
+  popd > /dev/null
+}
+
+case $1 in
+java )
+  shift
+  compile -target java "$@"
+  if [[ $STATUS = 0 ]]
+    #call javac to compile the file given as last argument
+    last_arg=$#
+    base_f=`basename ${!last_arg} .ept`
+    pushd "java/$(echo ${base_f} | sed 's/^./\u&/')" > /dev/null
+    $JAVAC *.java
+    popd > /dev/null
+  fi
+;;
+-- | * )
+  compile "$@"
+esac
+
+exit $STATUS
