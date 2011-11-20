@@ -1185,8 +1185,8 @@ let node ({ n_name = f; n_input = i_list; n_output = o_list;
     let cl = List.map (expect_static_exp cenv Initial.tbool) s.node_param_constraints in
     let cl = cl @ get_constraints () in
     let cl = solve cl in
-    let node_inputs = List.map (typing_arg QualEnv.empty) s.node_inputs in
-    let node_outputs = List.map (typing_arg QualEnv.empty) s.node_outputs in
+    let node_inputs = List.map (typing_arg cenv) s.node_inputs in
+    let node_outputs = List.map (typing_arg cenv) s.node_outputs in
     replace_value f { s with node_param_constraints = cl;
                              node_inputs = node_inputs; node_outputs = node_outputs };
 
