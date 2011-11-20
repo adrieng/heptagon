@@ -39,6 +39,7 @@ type node = {
   node_inputs             : arg list;
   node_outputs            : arg list;
   node_stateful           : bool;
+  node_unsafe             : bool;
   node_params             : param list;
   node_param_constraints  : constrnt list;
   node_loc                : location}
@@ -136,10 +137,11 @@ let mk_field n ty = { f_name = n; f_type = ty }
 let mk_const_def ty value =
   { c_type = ty; c_value = value }
 
-let mk_node ?(constraints = []) loc ins outs stateful params =
+let mk_node ?(constraints = []) loc ins outs stateful unsafe params =
   { node_inputs = ins;
     node_outputs  = outs;
     node_stateful = stateful;
+    node_unsafe = unsafe;
     node_params = params;
     node_param_constraints = constraints;
     node_loc = loc}

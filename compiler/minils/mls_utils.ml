@@ -233,7 +233,9 @@ let remove_eqs_from_node nd ids =
   let walk_vd vd vd_list = if IdentSet.mem vd.v_ident ids then vd_list else vd :: vd_list in
   let walk_eq eq eq_list =
     let defs = ident_list_of_pat eq.eq_lhs in
-    if List.for_all (fun v -> IdentSet.mem v ids) defs then eq_list else eq :: eq_list
+    if (not eq.eq_unsafe) & List.for_all (fun v -> IdentSet.mem v ids) defs
+    then eq_list
+    else eq :: eq_list
   in
   let vd_list = List.fold_right walk_vd nd.n_local [] in
   let eq_list = List.fold_right walk_eq nd.n_equs [] in

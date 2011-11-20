@@ -74,10 +74,11 @@ let mk_signature name ins outs stateful params constraints loc =
 
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None)
-    ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
+    ?(stateful = true) ?(unsafe = false) ?(loc = no_location) ?(param = []) ?(constraints = [])
     name block =
   { n_name = name;
     n_stateful = stateful;
+    n_unsafe = unsafe;
     n_input = input;
     n_output = output;
     n_contract = contract;
@@ -112,6 +113,7 @@ let signature_of_node n =
     { node_inputs = args_of_var_decs n.n_input;
       node_outputs  = args_of_var_decs n.n_output;
       node_stateful = n.n_stateful;
+      node_unsafe = n.n_unsafe;
       node_params = n.n_params;
       node_param_constraints = n.n_param_constraints;
       node_loc = n.n_loc }

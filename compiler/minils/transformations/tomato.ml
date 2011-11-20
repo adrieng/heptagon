@@ -356,7 +356,7 @@ let rec reconstruct ((tenv, cenv) as env) mapping =
 
     let pat = reconstruct_pattern mapping repr.er_pattern in
 
-    mk_equation pat e :: eq_list in
+    mk_equation false pat e :: eq_list in
   IntMap.fold reconstruct_class cenv []
 
 and reconstruct_exp_desc mapping headd children =
@@ -555,7 +555,7 @@ let rec fix_output_var_dec mapping vd (seen, equs, vd_list) =
     let new_vd = { vd with v_ident = new_id; v_clock = new_clock } in
     let new_eq =
       let w = mk_extvalue ~ty:vd.v_type ~clock:new_clock ~linearity:Linearity.Ltop (Wvar x) in
-      mk_equation
+      mk_equation false
         (Evarpat new_id)
         (mk_exp new_clock vd.v_type ~ct:(Ck new_clock)
            ~ck:new_clock ~linearity:Linearity.Ltop (Eextvalue w))
