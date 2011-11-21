@@ -22,4 +22,4 @@ install: all
 	(cd c/; $(INSTALL) $(C_OBJ) $(INSTALL_LIBDIR)/$(C_DIR))
 
 clean:
-	rm *.epci
+	rm -f *.epci
