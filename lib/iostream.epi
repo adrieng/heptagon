@@ -1,0 +1,44 @@
+(* The printing module *)
+
+(*
+type file
+
+const file stdout
+const file stdin
+const file stderr
+
+(* Basic Printing *)
+
+unsafe val fun open(name :string) returns (file)
+unsafe val fun flush(file) returns ()
+unsafe val fun print_int(file,int) returns ()
+unsafe val fun print_float(file,float) returns ()
+unsafe val fun print_string(file,string) returns ()
+unsafe val fun print_bool(file, bool) returns ()
+unsafe val fun print_nl(file) returns ()
+*)
+unsafe val fun out_flush() returns ()
+unsafe val fun out_int(int) returns ()
+unsafe val fun out_float(float) returns ()
+unsafe val fun out_string(string) returns ()
+unsafe val fun out_bool( bool) returns ()
+unsafe val fun out_nl() returns ()
+
+unsafe val fun err_flush() returns ()
+unsafe val fun err_int(int) returns ()
+unsafe val fun err_float(float) returns ()
+unsafe val fun err_string(string) returns ()
+unsafe val fun err_bool( bool) returns ()
+unsafe val fun err_nl() returns ()
+ 
+(* Basic Parsing *)
+(*
+val fun read_int(file) returns (int)
+val fun read_float(file) returns (float)
+val fun read_string(file) returns (string)
+val fun read_bool(file) returns (bool)
+*)
+unsafe val fun in_int() returns (int)
+unsafe val fun in_float() returns (float)
+unsafe val fun in_string() returns (string)
+unsafe val fun in_bool() returns (bool)
