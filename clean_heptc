@@ -1,2 +1,4 @@
 #!/bin/sh
+SCRIPT_DIR=`dirname $(readlink -f $0)`
+cd $SCRIPT_DIR
 rm -rf compiler/heptc.byte compiler/heptc.d.byte compiler/_build

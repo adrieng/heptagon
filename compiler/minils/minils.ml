@@ -108,36 +108,37 @@ type pat =
   | Evarpat of var_ident
 
 type eq = {
-  eq_lhs : pat;
-  eq_rhs : exp;
-  eq_loc : location }
+  eq_lhs    : pat;
+  eq_rhs    : exp;
+  eq_unsafe : bool;
+  eq_loc    : location }
 
 type var_dec = {
-  v_ident : var_ident;
-  v_type : ty;
+  v_ident     : var_ident;
+  v_type      : ty;
   v_linearity : linearity;
-  v_clock : ck;
-  v_loc : location }
+  v_clock     : ck;
+  v_loc       : location }
 
 type contract = {
-  c_assume : extvalue;
-  c_enforce : extvalue;
+  c_assume        : extvalue;
+  c_enforce       : extvalue;
   c_controllables : var_dec list;
-  c_local : var_dec list;
-  c_eq : eq list }
+  c_local         : var_dec list;
+  c_eq            : eq list }
 
 type node_dec = {
-  n_name   : qualname;
+  n_name     : qualname;
   n_stateful : bool;
-  n_input  : var_dec list;
-  n_output : var_dec list;
+  n_input    : var_dec list;
+  n_output   : var_dec list;
   n_contract : contract option;
   (* GD: inglorious hack for controller call *)
   mutable n_controller_call : string list * string list;
-  n_local  : var_dec list;
-  n_equs   : eq list;
-  n_loc    : location;
-  n_params : param list;
+  n_local    : var_dec list;
+  n_equs     : eq list;
+  n_loc      : location;
+  n_params   : param list;
   n_param_constraints : constrnt list;
   n_mem_alloc : (ty * Interference_graph.ivar list) list; }
 
@@ -197,8 +198,8 @@ let mk_extvalue_exp ?(clock = fresh_clock())
   mk_exp ~ck:clock ~loc:loc level_ck ty ~linearity:linearity
     (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ~linearity:linearity ~ty:ty desc))
 
-let mk_equation ?(loc = no_location) pat exp =
-  { eq_lhs = pat; eq_rhs = exp; eq_loc = loc }
+let mk_equation ?(loc = no_location) unsafe pat exp =
+  { eq_lhs = pat; eq_rhs = exp; eq_unsafe = unsafe; eq_loc = loc }
 
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(pinst = ([],[]))

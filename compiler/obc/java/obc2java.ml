@@ -452,7 +452,7 @@ let create_async_classe async base_classe =
         let act_result =
           let exp_call =
             let args = var_inst::exps_step in
-            let executor = Efield (Eclass the_java_pervasives, "executor_cached") in
+            let executor = Efield (java_pervasives, "executor_cached") in
             Emethod_call (executor, "submit", [Enew (Tclass callable_classe_name, args)] )
           in Aassgn (Pthis id_result, exp_call)
         in

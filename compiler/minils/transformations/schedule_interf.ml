@@ -52,10 +52,18 @@ struct
 
   (** Returns the next equation, chosen from the list of equations rem_eqs *)
   let next_equation rem_eqs ck env =
+    let bonus eq = match eq.eq_rhs.e_desc with
+      | Eapp ({a_op = (Eupdate _ | Efield_update _) },_,_) -> 1
+      | _ -> 0
+    in
     let cost eq =
       let nb_killed_vars = killed_vars eq env in
       let nb_def_vars = IvarSet.cardinal (all_ivars_set (InterfRead.def eq)) in
-        nb_def_vars - nb_killed_vars
+      let b = bonus eq in
+      if verbose_mode then
+      Format.eprintf "(%d,%d,%d)%a@." nb_killed_vars nb_def_vars b Mls_printer.print_eq eq;
+      nb_def_vars - nb_killed_vars + b
+
     in
     let eqs_wcost = List.map (fun eq -> (eq, cost eq)) rem_eqs in
     let compare_eqs_wcost (_,c1) (_,c2) = compare c1 c2 in
@@ -99,6 +107,7 @@ let remove_eq eq node_list =
 (** Main function to schedule a node. *)
 let schedule eq_list inputs node_list =
   let uses = Interference.compute_uses eq_list in
+  Interference.print_debug_ivar_env "uses" uses;
   let rec schedule_aux rem_eqs sched_eqs node_list ck costs =
     match rem_eqs with
       | [] ->

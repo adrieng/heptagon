@@ -6,7 +6,7 @@ open Java
 open Java_printer
 
 let load_conf () =
-  Compiler_options.normalize_register_outputs := false;
+  Compiler_options.normalize_register_outputs := true; (* TODO make it work before desactivating *)
   Compiler_options.do_scalarize := true;
   ()
 
@@ -60,7 +60,6 @@ let program p =
         in
         let acts =
           let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
-          let jarrays = Eclass(Names.qualname_of_string "java.util.Arrays") in
           let jint = Eclass(Names.qualname_of_string "Integer") in
           let jfloat = Eclass(Names.qualname_of_string "Float") in
           let jbool = Eclass(Names.qualname_of_string "Boolean") in
@@ -99,15 +98,7 @@ let program p =
             | Tunit -> Aexp(Emethod_call(e_main, "step", []))
             | _ -> Anewvar (vd_ret, Emethod_call(e_main, "step", []))
           in
-          let print_ret = match ty_ret with
-            | Tunit -> Sstring ""
-            | Tarray (Tarray _, _) -> Emethod_call(jarrays, "deepToString", [exp_ret])
-            | Tarray _ -> Emethod_call(jarrays, "toString", [exp_ret])
-            | Tint -> Emethod_call(jint, "toString", [exp_ret])
-            | Tfloat -> Emethod_call(jfloat, "toString", [exp_ret])
-            | Tbool -> Emethod_call(jbool, "toString", [exp_ret])
-            | _ -> Emethod_call(exp_ret, "toString", [])
-          in
+          let print_ret = Emethod_call(java_pervasives, "genToString", [exp_ret]) in
           let main_for_loop i =
             [call_main; Aexp (Emethod_call(out, "printf",
                                 [Sstring "%d => %s\\n"; Evar i; print_ret]))]

@@ -484,10 +484,10 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
     (resp at the bottom and top) *)
 let add_init_return_eq f =
    (** a_1,..,a_p = __init__  *)
-  let eq_init = mk_equation (Mls_utils.pat_from_dec_list f.n_input)
+  let eq_init = mk_equation false (Mls_utils.pat_from_dec_list f.n_input)
     (mk_extvalue_exp Cbase Initial.tint Ltop (Wconst (Initial.mk_static_int 0))) in
     (** __return__ = o_1,..,o_q *)
-  let eq_return = mk_equation (Etuplepat [])
+  let eq_return = mk_equation false (Etuplepat [])
     (mk_exp Cbase Tinvalid Ltop (Mls_utils.tuple_from_dec_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
 
@@ -497,7 +497,12 @@ let spill_registers_outputs f =
     | Eapp({ a_op = Efun f | Enode f }, _, _) ->
         let info = Modules.find_value f in
           List.iter2
-            (fun x arg -> if arg.a_is_memory then Format.eprintf "Removing %s@." (name x); remove_from_ivar (Ivar x))
+            (fun x arg ->
+              if arg.a_is_memory
+              then (
+                Format.eprintf "Removing %s@." (name x);
+                remove_from_ivar (Ivar x))
+            )
             (Mls_utils.Vars.def [] eq) info.node_outputs
     | _ -> ()
   in

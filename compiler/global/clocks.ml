@@ -136,7 +136,7 @@ let rec last_clock ct = match ct with
   E.g. .... on C1(x) and .... on C2(x) are. *)
 let same_control ck1 ck2 = match ck_repr ck1, ck_repr ck2 with
   | Cbase, Cbase -> true
-  | Con(_,_,x1), Con(_,_,x2) -> x1 = x2 
+  | Con(_,_,x1), Con(_,_,x2) -> x1 = x2
   | Cvar {contents = Cindex i1}, Cvar {contents = Cindex i2} -> i1 = i2
   | _ -> false
 

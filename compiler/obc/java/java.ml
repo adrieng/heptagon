@@ -9,8 +9,8 @@
 
 type class_name = Names.qualname (** [qual] is the package name, [Name] is the class name *)
 type obj_ident = Idents.var_ident
-type constructor_name = Names.qualname (** [Qual] is the enum class name (type),
-                                           [NAME] is the constructor name *)
+(** [Qual] is the enum class name (type), [NAME] is the constructor name *)
+type constructor_name = Names.qualname
 type const_name = Names.qualname
 type method_name = Names.name
 type field_name = Names.name
@@ -117,7 +117,8 @@ let rec default_value ty = match ty with
 
 
 let java_pervasive_class c = Names.qualname_of_string ("jeptagon.Pervasives."^c)
-let the_java_pervasives = Names.qualname_of_string "jeptagon.Pervasives"
+let java_pervasives_name = Names.qualname_of_string "jeptagon.Pervasives"
+let java_pervasives = Eclass java_pervasives_name
 
 let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
 
@@ -162,11 +163,9 @@ let mk_enum ?(protection=Ppublic) ?(static=false) ?(imports=[]) ?(implements=[])
     c_imports = imports; c_implements = implements;
     c_kind = Cenum(constructor_names) }
 
-
-let mk_field ?(protection = Ppublic) ?(static = false) ?(final = false) ?(value = None)
-             ty ident =
-  { f_protection = protection; f_static = static; f_final = final; f_type = ty;
-    f_ident = ident; f_value = value }
+let mk_field ?(protection = Ppublic) ?(static = false) ?(final = false) ?(value = None) ty ident =
+  { f_protection = protection; f_static = static; f_final = final;
+    f_type = ty; f_ident = ident; f_value = value }
 
 let vds_to_exps vd_l = List.map (fun { vd_ident = x } -> mk_var x) vd_l
 

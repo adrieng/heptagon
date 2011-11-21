@@ -237,21 +237,21 @@ and merge context e x c_e_list =
       let ty = (List.hd (List.hd e_lists)).e_ty in
       let lin = (List.hd (List.hd e_lists)).e_linearity in
       let rec build_c_e_list c_list e_lists =
-	match c_list, e_lists with
-	| [], [] -> [], []
-	| c::c_l, (e::e_l)::e_ls ->
-	    let c_e_list, e_lists = build_c_e_list c_l e_ls in
-	    (c,e)::c_e_list, e_l::e_lists
-	| _ -> assert false in
+        match c_list, e_lists with
+        | [], [] -> [], []
+        | c::c_l, (e::e_l)::e_ls ->
+            let c_e_list, e_lists = build_c_e_list c_l e_ls in
+            (c,e)::c_e_list, e_l::e_lists
+        | _ -> assert false in
       let rec build_merge_list c_list e_lists =
-	match e_lists with
-	  [] -> assert false
-	| []::_ -> []
-	| _ ::_ ->
-	    let c_e_list, e_lists = build_c_e_list c_list e_lists in
-	    let e_merge = mk_exp ~loc:e.e_loc (Emerge(x, c_e_list)) ty ~linearity:lin in
-	    let e_merge_list = build_merge_list c_list e_lists in
-	    e_merge::e_merge_list in
+        match e_lists with
+          [] -> assert false
+        | []::_ -> []
+        | _ ::_ ->
+            let c_e_list, e_lists = build_c_e_list c_list e_lists in
+            let e_merge = mk_exp ~loc:e.e_loc (Emerge(x, c_e_list)) ty ~linearity:lin in
+            let e_merge_list = build_merge_list c_list e_lists in
+            e_merge::e_merge_list in
       build_merge_list c_list e_lists
     in
     let c_e_list, context = mapfold translate_tag context c_e_list in
@@ -263,14 +263,14 @@ and merge context e x c_e_list =
               let e_lists = List.map (fun (_,e) -> e_to_e_list e) c_e_list in
               let e_lists, context =
                 mapfold
-		  (fun context e_list -> add_list context ExtValue e_list)
-		  context e_lists in
+                  (fun context e_list -> add_list context ExtValue e_list)
+                  context e_lists in
               let e_list = mk_merge x c_list e_lists in
                 context, { e with
-			     e_desc = Eapp(mk_app Etuple, e_list, None) }
+                             e_desc = Eapp(mk_app Etuple, e_list, None) }
             ) else
               context, { e with
-			   e_desc = Emerge(x, c_e_list) }
+                           e_desc = Emerge(x, c_e_list) }
 
 (* applies distribution rules *)
 (* [(p1,...,pn) = (e1,...,en)] into [p1 = e1;...;pn = en] *)
@@ -332,8 +332,8 @@ let contract funs context c =
       c_assume = e_a;
       c_enforce = e_e;
       c_block = { b with
-		    b_local = d_list@b.b_local;
-		    b_equs = eq_list@b.b_equs; }
+                    b_local = d_list@b.b_local;
+                    b_equs = eq_list@b.b_equs; }
   }, void_context
 
 let program p =

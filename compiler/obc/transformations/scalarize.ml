@@ -51,10 +51,10 @@ let act funs () a = match a with
               [a]
             in
             let copy_array = fresh_for (mk_exp_const_int 0) (mk_exp_static_int size) copy_i in
-            (* resulting block *)
+            (* resulting act *)
             (match new_vd, new_eq with
               | [],[] ->
-                  copy_array
+                  copy_array, ()
               | _ ->
                   let block = mk_block ~locals: new_vd (new_eq @ [copy_array]) in
                   Ablock block, ()

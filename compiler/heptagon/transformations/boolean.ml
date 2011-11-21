@@ -184,8 +184,8 @@ let print_enum_types () =
     (fun t ti () ->
        match ti with
        | Enum info ->
-	   Printf.printf "type %s :\n" (fullname t);
-	   print_enuminfo info
+           Printf.printf "type %s :\n" (fullname t);
+           print_enuminfo info
        | _ -> ()
     ) !enum_types ()
 *)
@@ -198,9 +198,9 @@ let split2 n l =
   let rec splitaux k acc l =
     if k = 0 then (acc,l) else
       begin
-	match l with
-	| x::t -> splitaux (k-1) (x::acc) t
-	| _ -> assert false
+        match l with
+        | x::t -> splitaux (k-1) (x::acc) t
+        | _ -> assert false
       end in
   let (l1,l2) = splitaux n [] l in
   (List.rev l1,l2)
@@ -213,8 +213,8 @@ let rec var_list clist =
   | [] -> (0,QualEnv.empty,Node(None))
   | [c] -> (1, QualEnv.add c [false] QualEnv.empty, Tree(Node(Some c),Node(None)))
   | [c1;c2] -> (1,
-		QualEnv.add c1 [false] (QualEnv.add c2 [true] QualEnv.empty),
-		Tree(Node(Some c1),Node(Some c2)))
+                QualEnv.add c1 [false] (QualEnv.add c2 [true] QualEnv.empty),
+                Tree(Node(Some c1),Node(Some c2)))
   | l ->
       let n = List.length l in
       let n1 = n asr 1 in
@@ -226,27 +226,27 @@ let rec var_list clist =
 (*       QualEnv.iter (fun _ l -> assert ((List.length l) = nv1)) vl1; *)
 (*       QualEnv.iter (fun _ l -> assert ((List.length l) = nv2)) vl2; *)
 (*       let nt1 =  *)
-(* 	begin *)
-(* 	  match (count t1) with *)
-(* 	    None -> assert false *)
-(* 	  | Some n -> n *)
-(* 	end in *)
+(*         begin *)
+(*           match (count t1) with *)
+(*             None -> assert false *)
+(*           | Some n -> n *)
+(*         end in *)
 (*       assert (nt1 = nv1);  *)
 (*       let nt2 = *)
-(* 	begin *)
-(* 	  match (count t2) with *)
-(* 	  | None -> assert false *)
-(* 	  | Some n -> n *)
-(* 	end in *)
+(*         begin *)
+(*           match (count t2) with *)
+(*           | None -> assert false *)
+(*           | Some n -> n *)
+(*         end in *)
 (*       assert (nt2 = nv2); *)
       let vl =
-	QualEnv.fold (fun c l m -> QualEnv.add c (true::l) m) vl2
-	  (QualEnv.fold
-	     (if nv1 = nv2
-	      then (fun c l m -> QualEnv.add c (false::l) m)
-	      else (fun c l m -> QualEnv.add c (false::false::l) m))
-	     vl1
-	     QualEnv.empty) in
+        QualEnv.fold (fun c l m -> QualEnv.add c (true::l) m) vl2
+          (QualEnv.fold
+             (if nv1 = nv2
+              then (fun c l m -> QualEnv.add c (false::l) m)
+              else (fun c l m -> QualEnv.add c (false::false::l) m))
+             vl1
+             QualEnv.empty) in
       let t1 = if nv1 = nv2 then t1 else Tree(t1,Node(None)) in
       let t = Tree(t1,t2) in
       nv2 + 1, vl, t
@@ -255,24 +255,24 @@ let nvar_list prefix n =
   let rec varl acc = function
     | 0 -> acc
     | n ->
-	let acc = (prefix ^ "_" ^ (string_of_int n)) :: acc in
-	varl acc (n-1) in
+        let acc = (prefix ^ "_" ^ (string_of_int n)) :: acc in
+        varl acc (n-1) in
   varl [] n
 
 let translate_pat env pat =
   let rec trans = function
     | Evarpat(name) ->
-	begin
-	  try
-	    let info = Env.find name env in
-	    match info.var_enum.ty_nb_var with
-	    | 1 ->
-		Evarpat(List.nth info.var_list 0)
-	    | _ ->
-		let varpat_list = info.var_list in
-		Etuplepat(List.map (fun v -> Evarpat(v)) varpat_list)
-	  with Not_found -> Evarpat(name)
-	end
+        begin
+          try
+            let info = Env.find name env in
+            match info.var_enum.ty_nb_var with
+            | 1 ->
+                Evarpat(List.nth info.var_list 0)
+            | _ ->
+                let varpat_list = info.var_list in
+                Etuplepat(List.map (fun v -> Evarpat(v)) varpat_list)
+          with Not_found -> Evarpat(name)
+        end
     | Etuplepat(pat_list) -> Etuplepat(List.map trans pat_list) in
   trans pat
 
@@ -281,18 +281,18 @@ let translate_ty ty =
     match ty with
     | Tid({ qual = Pervasives; name = "bool" }) -> ty
     | Tid(name) ->
-	begin
-	  try
-	    let info = get_enum name in
-	    begin match info with
-	    | Type(_) -> ty
-	    | Enum { ty_nb_var = 1 } -> ty_bool
-	    | Enum { ty_nb_var = n } ->
-		let strlist = nvar_list "" n in
-		Tprod(List.map (fun _ -> ty_bool) strlist)
-	    end
-	  with Not_found -> ty
-	end
+        begin
+          try
+            let info = get_enum name in
+            begin match info with
+            | Type(_) -> ty
+            | Enum { ty_nb_var = 1 } -> ty_bool
+            | Enum { ty_nb_var = n } ->
+                let strlist = nvar_list "" n in
+                Tprod(List.map (fun _ -> ty_bool) strlist)
+            end
+          with Not_found -> ty
+        end
     | Tprod(ty_list) -> Tprod(List.map trans ty_list)
     | Tarray(ty,se) -> Tarray(trans ty,se)
     | Tfuture _ -> assert false
@@ -316,13 +316,13 @@ let rec translate_ck env ck =
   | Con(ck,c,n) ->
       let ck = translate_ck env ck in
       begin
-	try
-	  let info = Env.find n env in
-	  let bl = QualEnv.find c info.var_enum.ty_assoc in
-	  on_list ck bl info.clocked_var
-	with Not_found ->
-	  (* Boolean clock *)
-	  Con(ck,c,n)
+        try
+          let info = Env.find n env in
+          let bl = QualEnv.find c info.var_enum.ty_assoc in
+          on_list ck bl info.clocked_var
+        with Not_found ->
+          (* Boolean clock *)
+          Con(ck,c,n)
       end
 
 let rec translate_ct env ct =
@@ -335,27 +335,27 @@ let translate_const c ty e =
   | _, Tid({ qual = Pervasives; name = "bool" }) -> Econst(c)
   | Sconstructor(cname),Tid(tname) ->
       begin
-	try
-	  begin
-	    match (get_enum tname) with
-	    | Type _ -> Econst(c)
-	    | Enum { ty_assoc = assoc } ->
-		let bl = QualEnv.find cname assoc in
-		let b_list = List.map (fun b -> Econst(sbool b)) bl in
-		begin
-		  match b_list with
-		  | [] -> assert false
-		  | [b] -> b
-		  | _::_ ->
-		      mk_tuple
-			(List.map
-			   (fun b -> {e with
-					e_desc = b;
-					e_ty = ty_bool })
-			   b_list)
-		end
-	  end
-	with Not_found -> Econst(c)
+        try
+          begin
+            match (get_enum tname) with
+            | Type _ -> Econst(c)
+            | Enum { ty_assoc = assoc } ->
+                let bl = QualEnv.find cname assoc in
+                let b_list = List.map (fun b -> Econst(sbool b)) bl in
+                begin
+                  match b_list with
+                  | [] -> assert false
+                  | [b] -> b
+                  | _::_ ->
+                      mk_tuple
+                        (List.map
+                           (fun b -> {e with
+                                        e_desc = b;
+                                        e_ty = ty_bool })
+                           b_list)
+                end
+          end
+        with Not_found -> Econst(c)
       end
   | _ -> Econst(c)
 
@@ -363,10 +363,10 @@ let new_var_list d_list ty ck n =
   let rec varl acc d_list = function
     | 0 -> acc,d_list
     | n ->
-	let v = fresh "bool" in
-	let acc = v :: acc in
-	let d_list = (mk_var_dec ~clock:ck v ty ~linearity:Linearity.Ltop) :: d_list in
-	varl acc d_list (n-1) in
+        let v = fresh "bool" in
+        let acc = v :: acc in
+        let d_list = (mk_var_dec ~clock:ck v ty ~linearity:Linearity.Ltop) :: d_list in
+        varl acc d_list (n-1) in
   varl [] d_list n
 
 let assert_ck = function
@@ -398,8 +398,8 @@ let rec when_list e bl vtree =
       let ck = assert_ck e.e_ct_annot in
       (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck))) ty_bool in *)
       let e_when = { e with
-		       e_ct_annot = Some (Ck(Con(ck,c,v)));
-		       e_desc = Ewhen(e,c,v) } in
+                       e_ct_annot = Some (Ck(Con(ck,c,v)));
+                       e_desc = Ewhen(e,c,v) } in
       when_list e_when bl' t
   | _::_, Vempty -> failwith("when_list: non-coherent boolean list and tree")
 
@@ -407,20 +407,20 @@ let rec when_ck desc li ty ck =
   match ck with
   | Cbase | Cvar _ ->
       { e_desc = desc;
-	e_level_ck = ck;
-	e_ct_annot = Some(Ck(ck));
-	e_linearity = li;
-	e_ty = ty;
-	e_loc = no_location }
+        e_level_ck = ck;
+        e_ct_annot = Some(Ck(ck));
+        e_linearity = li;
+        e_ty = ty;
+        e_loc = no_location }
   | Con(ck',c,v) ->
       let e = when_ck desc li ty ck' in
       (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck'))) ty_bool in *)
       { e_desc = Ewhen(e,c,v);
-	e_level_ck = ck;
-	e_ct_annot = Some(Ck(ck));
-	e_linearity = li;
-	e_ty = ty;
-	e_loc = no_location }
+        e_level_ck = ck;
+        e_ct_annot = Some(Ck(ck));
+        e_linearity = li;
+        e_ty = ty;
+        e_loc = no_location }
 
 let rec base_value ck li ty =
   match ty with
@@ -432,59 +432,59 @@ let rec base_value ck li ty =
       when_ck (Econst(strue)) li ty ck
   | Tid(sname) ->
       begin
-	try
-	  begin
-	    let info = get_enum sname in
-	    (* boolean tuple *)
-	    match info with
-	    | Type(Type_abs) -> failwith("Abstract types not implemented")
-	    | Type(Type_alias aty) -> base_value ck li aty
-	    | Type(Type_enum(l)) ->
-		when_ck
-		  (Econst(mk_static_exp ty (Sconstructor(List.hd l))))
-		  li ty ck
-	    | Type(Type_struct(l)) ->
-		let fields =
-		  List.map
-		    (fun {f_name = name; f_type = ty} ->
-		       name,(base_value ck li ty))
-		    l in
-		when_ck (Estruct(fields)) li ty ck
-	    | Enum { ty_nb_var = 1 } ->
-		when_ck (Econst(strue)) li ty_bool ck
-	    | Enum { ty_nb_var = n } ->
-		let e = when_ck (Econst(strue)) li ty_bool ck in
-		let rec aux acc = function
-		  | 0 -> acc
-		  | n -> aux (e::acc) (n-1) in
-		let e_list = aux [] n in
-		{ e_desc = mk_tuple e_list;
-		  e_ty = Tprod(List.map (fun _ -> ty_bool) e_list);
-		  e_level_ck = Cbase;
-		  e_ct_annot = Some(Ck(ck));
-		  e_linearity = li;
-		  e_loc = no_location }
-	  end
-	with Not_found ->
-	  Printf.printf "Name : %s\n" sname.name; assert false
+        try
+          begin
+            let info = get_enum sname in
+            (* boolean tuple *)
+            match info with
+            | Type(Type_abs) -> failwith("Abstract types not implemented")
+            | Type(Type_alias aty) -> base_value ck li aty
+            | Type(Type_enum(l)) ->
+                when_ck
+                  (Econst(mk_static_exp ty (Sconstructor(List.hd l))))
+                  li ty ck
+            | Type(Type_struct(l)) ->
+                let fields =
+                  List.map
+                    (fun {f_name = name; f_type = ty} ->
+                       name,(base_value ck li ty))
+                    l in
+                when_ck (Estruct(fields)) li ty ck
+            | Enum { ty_nb_var = 1 } ->
+                when_ck (Econst(strue)) li ty_bool ck
+            | Enum { ty_nb_var = n } ->
+                let e = when_ck (Econst(strue)) li ty_bool ck in
+                let rec aux acc = function
+                  | 0 -> acc
+                  | n -> aux (e::acc) (n-1) in
+                let e_list = aux [] n in
+                { e_desc = mk_tuple e_list;
+                  e_ty = Tprod(List.map (fun _ -> ty_bool) e_list);
+                  e_level_ck = Cbase;
+                  e_ct_annot = Some(Ck(ck));
+                  e_linearity = li;
+                  e_loc = no_location }
+          end
+        with Not_found ->
+          Printf.printf "Name : %s\n" sname.name; assert false
       end
   | Tprod(ty_list) ->
       let e_list = List.map (base_value ck li) ty_list in
       { e_desc = mk_tuple e_list;
-	e_ty = Tprod(List.map (fun e -> e.e_ty) e_list);
-	e_level_ck = Cbase;
-	e_ct_annot = Some(Ck(ck));
-	e_linearity = li;
-	e_loc = no_location;
+        e_ty = Tprod(List.map (fun e -> e.e_ty) e_list);
+        e_level_ck = Cbase;
+        e_ct_annot = Some(Ck(ck));
+        e_linearity = li;
+        e_loc = no_location;
       }
   | Tarray(ty,se) ->
       let e = base_value ck li ty in
       { e_desc = Eapp((mk_app ~params:[se] Earray_fill), [e], None);
-	e_ty = Tarray(e.e_ty,se);
-	e_level_ck = Cbase;
-	e_ct_annot = Some(Ck(ck));
-	e_linearity = li;
-	e_loc = no_location;
+        e_ty = Tarray(e.e_ty,se);
+        e_level_ck = Cbase;
+        e_ct_annot = Some(Ck(ck));
+        e_linearity = li;
+        e_loc = no_location;
       }
   | Tfuture _ -> Misc.internal_error "Boolean transformation fail, a future was encountered."
   | Tinvalid -> failwith("Boolean: invalid type")
@@ -501,11 +501,11 @@ let rec merge_tree ck ty li e_map btree vtree =
       in
       (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck))) ty_bool in *)
       { e_desc = Emerge(v,[(cfalse,e1);(ctrue,e2)]);
-	e_ty = ty;
-	e_level_ck = Cbase;
-	e_ct_annot = Some(Ck(ck));
-	e_linearity = li;
-	e_loc = no_location }
+        e_ty = ty;
+        e_level_ck = Cbase;
+        e_ct_annot = Some(Ck(ck));
+        e_linearity = li;
+        e_loc = no_location }
   | Tree (_,_), Vempty -> failwith("merge_tree: non-coherent trees")
 
 
@@ -514,121 +514,121 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
   let context,desc =
     match desc with
     | Econst(c) ->
-	context, translate_const c ty e
+        context, translate_const c ty e
     | Evar(name) ->
-	let desc = begin
-	  try
-	    let info = Env.find name env in
-	    if info.var_enum.ty_nb_var = 1 then
-	      Evar(List.nth info.var_list 0)
-	    else
-	      let ident_list = info.var_list in
-	      mk_tuple (List.map
-			  (fun v -> { e with
-					e_ty = ty_bool;
-					e_ct_annot = ct;
-					e_desc = Evar(v); })
-			  ident_list)
-	  with Not_found -> Evar(name)
-	end in
-	context,desc
+        let desc = begin
+          try
+            let info = Env.find name env in
+            if info.var_enum.ty_nb_var = 1 then
+              Evar(List.nth info.var_list 0)
+            else
+              let ident_list = info.var_list in
+              mk_tuple (List.map
+                          (fun v -> { e with
+                                        e_ty = ty_bool;
+                                        e_ct_annot = ct;
+                                        e_desc = Evar(v); })
+                          ident_list)
+          with Not_found -> Evar(name)
+        end in
+        context,desc
     | Efby(e1,e2) ->
-	let context,e1 = translate env context e1 in
-	let context,e2 = translate env context e2 in
-	context,Efby(e1,e2)
+        let context,e1 = translate env context e1 in
+        let context,e2 = translate env context e2 in
+        context,Efby(e1,e2)
     | Epre(None, e) ->
-	let context,e = translate env context e in
-	context,Epre(None,e)
+        let context,e = translate env context e in
+        context,Epre(None,e)
     | Epre(Some c,e) ->
-	let e_c = translate_const c ty e in
-	let context,e = translate env context e in
-	begin
-	  match e_c with
-	  | Econst(c) -> context,Epre(Some c,e)
-	  | Eapp({ a_op = Etuple },e_c_l,None) ->
-	      let context,e_l = intro_tuple context e in
-	      let c_l = List.map (function
-				    | { e_desc = Econst(c) } -> c
-				    | _ -> assert false) e_c_l in
-	      context,
-	      mk_tuple
-		(List.map2
-		   (fun c e -> { e with
-				   e_ty = ty_bool;
-				   e_desc = Epre(Some c,e)})
-		   c_l e_l)
-	  | _ -> assert false
-	end
+        let e_c = translate_const c ty e in
+        let context,e = translate env context e in
+        begin
+          match e_c with
+          | Econst(c) -> context,Epre(Some c,e)
+          | Eapp({ a_op = Etuple },e_c_l,None) ->
+              let context,e_l = intro_tuple context e in
+              let c_l = List.map (function
+                                    | { e_desc = Econst(c) } -> c
+                                    | _ -> assert false) e_c_l in
+              context,
+              mk_tuple
+                (List.map2
+                   (fun c e -> { e with
+                                   e_ty = ty_bool;
+                                   e_desc = Epre(Some c,e)})
+                   c_l e_l)
+          | _ -> assert false
+        end
     | Eapp(app, e_list, r) ->
-	let context,e_list = translate_list env context e_list in
-	context, Eapp(app, e_list, r)
+        let context,e_list = translate_list env context e_list in
+        context, Eapp(app, e_list, r)
     | Ewhen(e,c,ck) ->
-	let context,e = translate env context e in
-	begin
-	  try
-	    let info = Env.find ck env in
-	    let bl = QualEnv.find c info.var_enum.ty_assoc in
-	    let e_when = when_list e bl info.clocked_var in
-	    context,e_when.e_desc
-	  with Not_found ->
-	    (* Boolean clock *)
-	    context,Ewhen(e,c,ck)
-	end
+        let context,e = translate env context e in
+        begin
+          try
+            let info = Env.find ck env in
+            let bl = QualEnv.find c info.var_enum.ty_assoc in
+            let e_when = when_list e bl info.clocked_var in
+            context,e_when.e_desc
+          with Not_found ->
+            (* Boolean clock *)
+            context,Ewhen(e,c,ck)
+        end
     | Emerge(ck,l) (* of name * (longname * exp) list *)
       ->
-	begin
-	  try
-	    let info = Env.find ck env in
-	    let context,e_map = List.fold_left
-	      (fun (context,e_map) (n,e) ->
-		 let context,e = translate env context e in
-		 context,QualEnv.add n e e_map)
-	      (context,QualEnv.empty) l in
-	    let e_merge =
-	      merge_tree (assert_ck ct) ty e.e_linearity e_map
-		info.var_enum.ty_tree
-		info.clocked_var in
-	    context,e_merge.e_desc
-	  with Not_found ->
-	    (* Boolean clock *)
-	    let context, l =
-	      List.fold_left
-		(fun (context,acc_l) (n,e) ->
-		   let context,e = translate env context e in
-		   context, (n,e)::acc_l)
-		(context,[]) l in
-	    context,Emerge(ck,l)
-	end
+        begin
+          try
+            let info = Env.find ck env in
+            let context,e_map = List.fold_left
+              (fun (context,e_map) (n,e) ->
+                 let context,e = translate env context e in
+                 context,QualEnv.add n e e_map)
+              (context,QualEnv.empty) l in
+            let e_merge =
+              merge_tree (assert_ck ct) ty e.e_linearity e_map
+                info.var_enum.ty_tree
+                info.clocked_var in
+            context,e_merge.e_desc
+          with Not_found ->
+            (* Boolean clock *)
+            let context, l =
+              List.fold_left
+                (fun (context,acc_l) (n,e) ->
+                   let context,e = translate env context e in
+                   context, (n,e)::acc_l)
+                (context,[]) l in
+            context,Emerge(ck,l)
+        end
     | Esplit(e1,e2) ->
-	let context,e1 = translate env context e1 in
-	let context,e2 = translate env context e2 in
-	context,Esplit(e1,e2)
+        let context,e1 = translate env context e1 in
+        let context,e2 = translate env context e2 in
+        context,Esplit(e1,e2)
     | Estruct(l) ->
-	let context,acc =
-	  List.fold_left
-	    (fun (context,acc) (c,e) ->
-	       let context,e = translate env context e in
-	       (context,(c,e)::acc))
-	    (context,[]) l in
-	context,Estruct(List.rev acc)
+        let context,acc =
+          List.fold_left
+            (fun (context,acc) (c,e) ->
+               let context,e = translate env context e in
+               (context,(c,e)::acc))
+            (context,[]) l in
+        context,Estruct(List.rev acc)
     | Eiterator(it,app,se,pe_list,e_list,r) ->
-	let context,pe_list = translate_list env context pe_list in
-	let context,e_list = translate_list env context e_list in
-	context,Eiterator(it,app,se,pe_list,e_list,r)
+        let context,pe_list = translate_list env context pe_list in
+        let context,e_list = translate_list env context e_list in
+        context,Eiterator(it,app,se,pe_list,e_list,r)
     | Elast _ ->
-	failwith("Boolean: not supported expression (abstract tree should be normalized)")
+        failwith("Boolean: not supported expression (abstract tree should be normalized)")
   in
   context,{ e with
-	      e_desc = desc;
-	      e_ty = translate_ty ty;
-	      e_ct_annot = ct}
+              e_desc = desc;
+              e_ty = translate_ty ty;
+              e_ct_annot = ct}
 
 and translate_list env context e_list =
   let context,acc_e =
     List.fold_left
       (fun (context,acc_e) e ->
-	 let context,e = translate env context e in
-	 (context,e::acc_e))
+         let context,e = translate env context e in
+         (context,e::acc_e))
       (context,[]) e_list in
   context,List.rev acc_e
 
@@ -646,22 +646,22 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
   let rec when_ck ckvar_list ck var =
     match ckvar_list,ck with
     | [], _ ->
-	{ e_desc = Evar(var);
-	  e_level_ck = ck;
-	  e_ct_annot = Some(Ck(ck));
-	  e_ty = ty_bool;
-	  e_linearity = var_from.v_linearity;
-	  e_loc = no_location }
+        { e_desc = Evar(var);
+          e_level_ck = ck;
+          e_ct_annot = Some(Ck(ck));
+          e_ty = ty_bool;
+          e_linearity = var_from.v_linearity;
+          e_loc = no_location }
     | _ckvar::l, Con(ck',c,v) ->
-	(* assert v = _ckvar *)
-	let e = when_ck l ck' var in
-	(* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck'))) ty_bool in *)
-	{ e_desc = Ewhen(e,c,v);
-	  e_level_ck = ck;
-	  e_ct_annot = Some(Ck(ck));
-	  e_ty = ty_bool;
-	  e_linearity = var_from.v_linearity;
-	  e_loc = no_location }
+        (* assert v = _ckvar *)
+        let e = when_ck l ck' var in
+        (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck'))) ty_bool in *)
+        { e_desc = Ewhen(e,c,v);
+          e_level_ck = ck;
+          e_ct_annot = Some(Ck(ck));
+          e_ty = ty_bool;
+          e_linearity = var_from.v_linearity;
+          e_loc = no_location }
     | _ -> failwith("when_ck: non coherent clock and var list")
   in
 
@@ -673,13 +673,13 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
     then acc_vd
     else
       begin
-	let var_prefix = prefix ^ "_" ^ (string_of_int k) in
-	let var = fresh var_prefix in
-	(* addition of var_k *)
-	let acc_vd = { var_from with
-			 v_ident = var;
-			 v_type = ty_bool } :: acc_vd in
-	varl acc_vd (k+1)
+        let var_prefix = prefix ^ "_" ^ (string_of_int k) in
+        let var = fresh var_prefix in
+        (* addition of var_k *)
+        let acc_vd = { var_from with
+                         v_ident = var;
+                         v_type = ty_bool } :: acc_vd in
+        varl acc_vd (k+1)
       end in
 
   let vd_list = varl [] 1 in
@@ -693,59 +693,59 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
   let rec clocked_tree (acc_loc,acc_eq) acc_var suffix v_list ck =
     begin match v_list, acc_var with
       [], _ ->
-	(* Leafs *)
-	acc_loc,acc_eq,Vempty
+        (* Leafs *)
+        acc_loc,acc_eq,Vempty
     | v1::v_list, [] ->
-	(* Root : no new id, only rec calls for sons *)
-	(* Build left son (ck on False(vi_...)) *)
-	let ck_0 = Con(ck,cfalse,v1) in
-	let acc_loc,acc_eq,t0 =
-	  clocked_tree
-	    (acc_loc,acc_eq)
-	    ([v1])
-	    ("_0")
-	    v_list ck_0 in
-	(* Build right son (ck on True(vi_...))*)
-	let ck_1 = Con(ck,ctrue,v1) in
-	let acc_loc,acc_eq,t1 =
-	  clocked_tree
-	    (acc_loc,acc_eq)
-	    ([v1])
-	    ("_1")
-	    v_list ck_1 in
-	acc_loc,acc_eq,VNode(v1,t0,t1)
+        (* Root : no new id, only rec calls for sons *)
+        (* Build left son (ck on False(vi_...)) *)
+        let ck_0 = Con(ck,cfalse,v1) in
+        let acc_loc,acc_eq,t0 =
+          clocked_tree
+            (acc_loc,acc_eq)
+            ([v1])
+            ("_0")
+            v_list ck_0 in
+        (* Build right son (ck on True(vi_...))*)
+        let ck_1 = Con(ck,ctrue,v1) in
+        let acc_loc,acc_eq,t1 =
+          clocked_tree
+            (acc_loc,acc_eq)
+            ([v1])
+            ("_1")
+            v_list ck_1 in
+        acc_loc,acc_eq,VNode(v1,t0,t1)
     | vi::v_list, _ ->
-	(* Build name vi_(0|1)* *)
-	let v = (name vi) ^ suffix in
-	(* Build ident from this name *)
-	let id = fresh v in
-	let acc_loc = { v_ident = id;
-			v_type = ty_bool;
-			v_linearity = var_from.v_linearity;
-			v_clock = ck;
-			v_last = Var;
-			v_loc = no_location } :: acc_loc in
-	(* vi_... = vi when ... when (True|False)(v1) *)
-	let acc_eq =
-	  (mk_equation (Eeq(Evarpat(id),(when_ck acc_var ck vi))))
-	  ::acc_eq in
-	(* Build left son (ck on False(vi_...)) *)
-	let ck_0 = Con(ck,cfalse,id) in
-	let acc_loc,acc_eq,t0 =
-	  clocked_tree
-	    (acc_loc,acc_eq)
-	    (id::acc_var)
-	    (suffix ^ "_0")
-	    v_list ck_0 in
-	(* Build right son (ck on True(vi_...))*)
-	let ck_1 = Con(ck,ctrue,id) in
-	let acc_loc,acc_eq,t1 =
-	  clocked_tree
-	    (acc_loc,acc_eq)
-	    (id::acc_var)
-	    (suffix ^ "_1")
-	    v_list ck_1 in
-	acc_loc,acc_eq,VNode(id,t0,t1)
+        (* Build name vi_(0|1)* *)
+        let v = (name vi) ^ suffix in
+        (* Build ident from this name *)
+        let id = fresh v in
+        let acc_loc = { v_ident = id;
+                        v_type = ty_bool;
+                        v_linearity = var_from.v_linearity;
+                        v_clock = ck;
+                        v_last = Var;
+                        v_loc = no_location } :: acc_loc in
+        (* vi_... = vi when ... when (True|False)(v1) *)
+        let acc_eq =
+          (mk_equation (Eeq(Evarpat(id),(when_ck acc_var ck vi))))
+          ::acc_eq in
+        (* Build left son (ck on False(vi_...)) *)
+        let ck_0 = Con(ck,cfalse,id) in
+        let acc_loc,acc_eq,t0 =
+          clocked_tree
+            (acc_loc,acc_eq)
+            (id::acc_var)
+            (suffix ^ "_0")
+            v_list ck_0 in
+        (* Build right son (ck on True(vi_...))*)
+        let ck_1 = Con(ck,ctrue,id) in
+        let acc_loc,acc_eq,t1 =
+          clocked_tree
+            (acc_loc,acc_eq)
+            (id::acc_var)
+            (suffix ^ "_1")
+            v_list ck_1 in
+        acc_loc,acc_eq,VNode(id,t0,t1)
     end
   in
 
@@ -760,34 +760,34 @@ let buildenv_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
       v::acc_vd, acc_loc, acc_eq, env
   | Tid(tname) ->
       begin
-	match tname with
-	| { qual = Pervasives; name = ("bool" | "int" | "float") } ->
-	    v::acc_vd, acc_loc, acc_eq, env
-	| _ ->
-	    begin
-	      try
-		begin
-		  match (get_enum tname) with
-		  | Type _ -> v::acc_vd, acc_loc, acc_eq ,env
-		  | Enum(info) ->
-		      let (acc_vd,acc_loc,acc_eq,vl,t) =
-			var_dec_list
-			  (acc_vd,acc_loc,acc_eq)
-			  v info.ty_nb_var in
-		      let vi = { var_enum = info;
-			    var_list = vl;
-			    clocked_var = t } in
-		      let env =
-			Env.add
-			  v.v_ident
-			  { var_enum = info;
-			    var_list = vl;
-			    clocked_var = t }
-			  env in
-		      acc_vd, acc_loc, acc_eq, env
-		end
-	      with Not_found -> v::acc_vd, acc_loc, acc_eq, env
-	    end
+        match tname with
+        | { qual = Pervasives; name = ("bool" | "int" | "float") } ->
+            v::acc_vd, acc_loc, acc_eq, env
+        | _ ->
+            begin
+              try
+                begin
+                  match (get_enum tname) with
+                  | Type _ -> v::acc_vd, acc_loc, acc_eq ,env
+                  | Enum(info) ->
+                      let (acc_vd,acc_loc,acc_eq,vl,t) =
+                        var_dec_list
+                          (acc_vd,acc_loc,acc_eq)
+                          v info.ty_nb_var in
+                      let vi = { var_enum = info;
+                            var_list = vl;
+                            clocked_var = t } in
+                      let env =
+                        Env.add
+                          v.v_ident
+                          { var_enum = info;
+                            var_list = vl;
+                            clocked_var = t }
+                          env in
+                      acc_vd, acc_loc, acc_eq, env
+                end
+              with Not_found -> v::acc_vd, acc_loc, acc_eq, env
+            end
       end
    | Tfuture _ -> Misc.internal_error "Boolean transformation fail, a future was encountered."
    | Tinvalid -> failwith("Boolean: invalid type")
@@ -802,7 +802,7 @@ let translate_var_dec_list env vlist =
   List.map (translate_var_dec env) vlist
 
 let rec translate_block env add_locals add_eqs ({ b_local = v;
-					      b_equs = eq_list; } as b) =
+                                              b_equs = eq_list; } as b) =
   let v, v',v_eq,env = buildenv_var_dec_list env v in
   let v = v@v'@add_locals in
   let v = translate_var_dec_list env v in
@@ -817,14 +817,14 @@ and translate_eq env context ({eq_desc = desc} as eq) =
   let desc,(d_list,eq_list) =
     match desc with
     | Eblock block ->
-	let block, _ = translate_block env [] [] block in
-	Eblock block,
-	context
+        let block, _ = translate_block env [] [] block in
+        Eblock block,
+        context
     | Eeq(pat,e) ->
-	let pat = translate_pat env pat in
-	let context,e = translate env context e in
-	Eeq(pat,e),
-	context
+        let pat = translate_pat env pat in
+        let context,e = translate env context e in
+        Eeq(pat,e),
+        context
     | _ -> failwith("Boolean pass: control structures should be removed")
   in
   d_list,{ eq with eq_desc = desc }::eq_list
@@ -838,29 +838,29 @@ let translate_contract env contract =
   match contract with
   | None -> None, env
   | Some { c_assume = e_a;
-	   c_enforce = e_g;
-	   c_controllables = cl;
-	   c_block = b } ->
+           c_enforce = e_g;
+           c_controllables = cl;
+           c_block = b } ->
       let cl, cl_loc, cl_eq, env = buildenv_var_dec_list env cl in
       let cl = translate_var_dec_list env cl in
       let ({ b_local = v;
-	     b_equs = eqs } as b), env'
-	= translate_block env cl_loc cl_eq b in
+             b_equs = eqs } as b), env'
+        = translate_block env cl_loc cl_eq b in
       let context, e_a = translate env' (v,eqs) e_a in
       let context, e_g = translate env' context e_g in
       let (d_list,eq_list) = context in
       Some { c_block = { b with
-			   b_local = d_list;
-			   b_equs = eq_list };
-	     c_assume = e_a;
-	     c_enforce = e_g;
-	     c_controllables = cl },
+                           b_local = d_list;
+                           b_equs = eq_list };
+             c_assume = e_a;
+             c_enforce = e_g;
+             c_controllables = cl },
       env
 
 let node ({ n_input = inputs;
-	    n_output = outputs;
-	    n_contract = contract;
-	    n_block = b } as n) =
+            n_output = outputs;
+            n_contract = contract;
+            n_block = b } as n) =
   let inputs,in_loc,in_eq,env = buildenv_var_dec_list Env.empty inputs in
   let outputs,out_loc,out_eq,env = buildenv_var_dec_list env outputs in
   let contract, env = translate_contract env contract in
@@ -882,15 +882,15 @@ let build p_desc =
   match p_desc with
   | Ptype(type_dec) ->
       begin
-	let tenv =
-	  match type_dec.t_desc with
-	  | Type_enum clist ->
-	      let (n,env,t) = var_list clist in
-	      Enum({ ty_nb_var = n;
-		     ty_assoc = env;
-		     ty_tree = t})
-	  | tdesc -> Type(tdesc) in
-	enum_types := QualEnv.add type_dec.t_name tenv !enum_types
+        let tenv =
+          match type_dec.t_desc with
+          | Type_enum clist ->
+              let (n,env,t) = var_list clist in
+              Enum({ ty_nb_var = n;
+                     ty_assoc = env;
+                     ty_tree = t})
+          | tdesc -> Type(tdesc) in
+        enum_types := QualEnv.add type_dec.t_name tenv !enum_types
       end
   | _ -> ()
 

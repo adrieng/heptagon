@@ -91,9 +91,12 @@ let translate_app app =
 
 let rec translate_extvalue e =
   let mk_extvalue =
-    mk_extvalue
-      ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity ~ty:e.Heptagon.e_ty
-      ~clock:(match e.Heptagon.e_ct_annot with None -> fresh_clock () | Some ct -> assert_1 (unprod ct))
+    let clock = match e.Heptagon.e_ct_annot with
+      | None -> fresh_clock ()
+      | Some ct -> assert_1 (unprod ct)
+    in
+    mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity
+                ~ty:e.Heptagon.e_ty ~clock:clock
   in
   match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue (Wconst c)
@@ -157,11 +160,15 @@ let rec translate_pat = function
   | Heptagon.Evarpat(n) -> Evarpat n
   | Heptagon.Etuplepat(l) -> Etuplepat (List.map translate_pat l)
 
-let rec translate_eq
-    { Heptagon.eq_desc = desc; Heptagon.eq_loc = loc } =
+let rec translate_eq { Heptagon.eq_desc = desc; Heptagon.eq_loc = loc } =
   match desc with
     | Heptagon.Eeq(p, e) ->
-        mk_equation ~loc:loc (translate_pat p) (translate e)
+        begin match e.Heptagon.e_desc with
+          | Heptagon.Eapp({ Heptagon.a_unsafe = unsafe },_,_)
+          | Heptagon.Eiterator(_,{ Heptagon.a_unsafe = unsafe},_,_,_,_) ->
+              mk_equation ~loc:loc unsafe (translate_pat p) (translate e)
+          | _ -> mk_equation ~loc:loc false (translate_pat p) (translate e)
+        end
     | Heptagon.Eblock _ | Heptagon.Eswitch _
     | Heptagon.Epresent _ | Heptagon.Eautomaton _ | Heptagon.Ereset _ ->
         Error.message loc Error.Eunsupported_language_construct

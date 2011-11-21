@@ -3,28 +3,28 @@ let
   automaton
     state A
       do
-	y = 1;
+        y = 1;
       until (x = 0) then B
     state B
       do
-	y = 2;
+        y = 2;
       until (x = 1) then C
     state C
       do
-	automaton
-	  state D
-	    do
-	      y = 3;
-	    until (x = 2) then E
-	  state E
-	    do
-	      y = 4;
-	    until (x = 3) then F
-	  state F
-	    do
-	      y = 5;
-	    until (x = 4) then D
-	end
+        automaton
+          state D
+            do
+              y = 3;
+            until (x = 2) then E
+          state E
+            do
+              y = 4;
+            until (x = 3) then F
+          state F
+            do
+              y = 5;
+            until (x = 4) then D
+        end
       until (x = 5) then A
   end
 tel

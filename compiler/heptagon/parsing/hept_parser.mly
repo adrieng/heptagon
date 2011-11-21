@@ -18,7 +18,7 @@ open Hept_parsetree
 %token <float> FLOAT
 %token <bool> BOOL
 %token <string * string> PRAGMA
-%token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST
+%token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST UNSAFE
 %token FBY PRE SWITCH EVERY
 %token OR STAR NOT
 %token AMPERSAND
@@ -170,11 +170,12 @@ returns: RETURNS | EQUAL {}
 ;
 
 node_dec:
-  | n=node_or_fun f=ident pc=node_params LPAREN i=in_params RPAREN
+  | u=unsafe n=node_or_fun f=ident pc=node_params LPAREN i=in_params RPAREN
     returns LPAREN o=out_params RPAREN
     c=contract b=block(LET) TEL
       {{ n_name = f;
          n_stateful = n;
+         n_unsafe = u;
          n_input  = i;
          n_output = o;
          n_contract = c;
@@ -677,14 +678,19 @@ interface:
     { { i_modname = ""; i_opened = o; i_desc = i } }
 ;
 
+unsafe:
+  | UNSAFE    { true }
+  | /*empty*/ { false }
+
 interface_desc:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
-  | VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
+  | u=unsafe VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
     returns LPAREN o=params_signature RPAREN
     { Isignature({ sig_name = f;
                    sig_inputs = i;
                    sig_stateful = n;
+                   sig_unsafe = u;
                    sig_outputs = o;
                    sig_params = fst pc;
                    sig_param_constraints = snd pc;

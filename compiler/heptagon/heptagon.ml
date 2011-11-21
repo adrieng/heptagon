@@ -153,6 +153,7 @@ type contract = {
 type node_dec = {
   n_name               : qualname;
   n_stateful           : bool;
+  n_unsafe             : bool;
   n_input              : var_dec list;
   n_output             : var_dec list;
   n_contract           : contract option;

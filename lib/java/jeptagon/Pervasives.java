@@ -1,5 +1,7 @@
 package jeptagon;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -8,8 +10,14 @@ import java.util.concurrent.TimeUnit;
 public class Pervasives {
 
 	public static int between(int i, int m) {
-		if (i<0) return 0;
-		else if (i>=m) return m-1;
+		if (i<0) {
+			java.lang.System.err.printf("%d ! >= 0\n",i);
+			return 0;
+		}
+		else if (i>=m) {
+			java.lang.System.err.printf("%d ! < %d\n",i,m);
+			return m-1;
+		}
 		else return i;
 	}
 
@@ -32,10 +40,49 @@ public class Pervasives {
 		public V get(long timeout, TimeUnit unit) { return v; }
 	}
 
+	//faster version for primitive arrays using serializing
+    public static Object copyNd(Object arr) {
+        if (arr.getClass().isArray()) {
+            int innerArrayLength = Array.getLength(arr);
+            Class component = arr.getClass().getComponentType();
+            Object newInnerArray = Array.newInstance(component, innerArrayLength);
+            //copy each elem of the array
+            for (int i = 0; i < innerArrayLength; i++) {
+                Object elem = copyNd(Array.get(arr, i));
+                Array.set(newInnerArray, i, elem);
+            }
+            return newInnerArray;
+        } else {
+            return arr;//cant deep copy an opac object??
+        }
+    }
+
+	public static String genToString(Object c) {
+		Class<?> cClass = c.getClass();
+		if (cClass.isArray()) {
+			switch (cClass.getName().charAt(1)) { //charAt(0) is '['
+			case 'B' : return Arrays.toString((byte[]) c);
+			case 'C' : return Arrays.toString((char[]) c);
+			case 'D' : return Arrays.toString((double[]) c);
+			case 'F' : return Arrays.toString((float[]) c);
+			case 'I' : return Arrays.toString((int[]) c);
+			case 'J' : return Arrays.toString((long[]) c);
+			case 'S' : return Arrays.toString((short[]) c);
+			case 'Z' : return Arrays.toString((boolean[]) c);
+			default : //L or [
+				return Arrays.deepToString((Object [])c);
+			}
+		} else
+		return c.toString();
+	}
+
 	public static class Tuple1 {
 		public final Object c0;
 		public Tuple1(Object v) {
 			c0 = v;
+		}
+		public String toString() {
+			return "(" + genToString(c0) + ")";
 		}
 	}
 
@@ -47,7 +94,7 @@ public class Pervasives {
 			c1 = v1;
 		}
 		public String toString() {
-			return "(" + c0.toString() + ", " + c1.toString() + ")";
+			return "(" + genToString(c0) + ", " + genToString(c1) + ")";
 		}
 	}
 
@@ -61,7 +108,7 @@ public class Pervasives {
 			c2 = v2;
 		}
 		public String toString() {
-			return "(" + c0.toString() + ", " + c1.toString() + ", " + c2.toString() + ")";
+			return "(" + genToString(c0) + ", " + genToString(c1) + ", " + genToString(c2) + ")";
 		}
 	}
 
@@ -77,8 +124,8 @@ public class Pervasives {
 			c3 = v3;
 		}
 		public String toString() {
-			return "(" + c0.toString() + ", " + c1.toString()
-			+ ", " + c2.toString() + ", " + c3.toString() + ")";
+			return "(" + genToString(c0) + ", " + genToString(c1)
+			+ ", " + genToString(c2) + ", " + genToString(c3) + ")";
 		}
 	}
 
@@ -96,8 +143,8 @@ public class Pervasives {
 			c4 = v4;
 		}
 		public String toString() {
-			return "(" + c0.toString() + ", " + c1.toString() + ", " + c2.toString()
-			+ ", " + c3.toString() + ", " + c4.toString() + ")";
+			return "(" + genToString(c0) + ", " + genToString(c1) + ", " + genToString(c2)
+			+ ", " + genToString(c3) + ", " + genToString(c4) + ")";
 		}
 	}
 
@@ -117,8 +164,8 @@ public class Pervasives {
 			c5 = v5;
 		}
 		public String toString() {
-			return "(" + c0.toString() + ", " + c1.toString() + ", " + c2.toString()
-			+ ", " + c3.toString() + ", " + c4.toString() + ", " + c5.toString() + ")";
+			return "(" + genToString(c0) + ", " + genToString(c1) + ", " + genToString(c2)
+			+ ", " + genToString(c3) + ", " + genToString(c4) + ", " + genToString(c5) + ")";
 		}
 	}
 
@@ -140,9 +187,63 @@ public class Pervasives {
 			c6 = v6;
 		}
 		public String toString() {
-			return "(" + c0.toString() + ", " + c1.toString() + ", " + c2.toString()
-			+ ", " + c3.toString() + ", " + c4.toString() + ", " + c5.toString()
-			+ ", " + c6.toString() + ")";
+			return "(" + genToString(c0) + ", " + genToString(c1) + ", " + genToString(c2)
+			+ ", " + genToString(c3) + ", " + genToString(c4) + ", " + genToString(c5)
+			+ ", " + genToString(c6) + ")";
+		}
+	}
+
+	public static class Tuple8 {
+		public final Object c0;
+		public final Object c1;
+		public final Object c2;
+		public final Object c3;
+		public final Object c4;
+		public final Object c5;
+		public final Object c6;
+		public final Object c7;
+		public Tuple8(Object v0, Object v1, Object v2, Object v3, Object v4, Object v5, Object v6, Object v7) {
+			c0 = v0;
+			c1 = v1;
+			c2 = v2;
+			c3 = v3;
+			c4 = v4;
+			c5 = v5;
+			c6 = v6;
+			c7 = v7;
+		}
+		public String toString() {
+			return "(" + genToString(c0) + ", " + genToString(c1) + ", " + genToString(c2)
+			+ ", " + genToString(c3) + ", " + genToString(c4) + ", " + genToString(c5)
+			+ ", " + genToString(c6) + ", " + genToString(c7) + ")";
+		}
+	}
+
+	public static class Tuple9 {
+		public final Object c0;
+		public final Object c1;
+		public final Object c2;
+		public final Object c3;
+		public final Object c4;
+		public final Object c5;
+		public final Object c6;
+		public final Object c7;
+		public final Object c8;
+		public Tuple9(Object v0, Object v1, Object v2, Object v3, Object v4, Object v5, Object v6, Object v7, Object v8) {
+			c0 = v0;
+			c1 = v1;
+			c2 = v2;
+			c3 = v3;
+			c4 = v4;
+			c5 = v5;
+			c6 = v6;
+			c7 = v7;
+			c8 = v8;
+		}
+		public String toString() {
+			return "(" + genToString(c0) + ", " + genToString(c1) + ", " + genToString(c2)
+			+ ", " + genToString(c3) + ", " + genToString(c4) + ", " + genToString(c5)
+			+ ", " + genToString(c6) + ", " + genToString(c7) + ", " + genToString(c8) + ")";
 		}
 	}
 
@@ -155,6 +256,5 @@ public class Pervasives {
 		}
 		return 0;
 	}
-
 
 }
