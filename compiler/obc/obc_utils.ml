@@ -74,6 +74,9 @@ let mk_block ?(locals=[]) eq_list =
 let mk_ifthenelse cond true_act false_act =
   Acase (cond, [ Initial.ptrue, mk_block true_act; Initial.pfalse, mk_block false_act ])
 
+let mk_if cond true_act =
+  Acase (cond, [Initial.ptrue, mk_block true_act])
+
 let rec var_name x =
   match x.pat_desc with
     | Lvar x -> x

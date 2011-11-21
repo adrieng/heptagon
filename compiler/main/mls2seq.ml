@@ -105,7 +105,10 @@ let generate_interface i s =
     | IMinils convert_fun -> convert_fun i
 
 let load_conf () =
-  List.iter (fun s -> (find_target s).t_load_conf ()) !target_languages
+  List.iter (fun s -> (find_target s).t_load_conf ()) !target_languages;
+  try
+    check_options ()
+  with Arg.Bad m -> raise (Arg.Bad ("After loading target configurations: "^m))
 
 (** Translation into dataflow and sequential languages, defaults to obc. *)
 let program p =

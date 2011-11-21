@@ -84,7 +84,7 @@ let compile source_f =
   let modul = Names.modul_of_string modname in
   Initial.initialize modul;
   source_f |> Filename.dirname |> add_include;
-
+  check_options ();
   match Misc.file_extension source_f with
     | "ept" -> compile_program modname source_f
     | "epi" -> compile_interface modname source_f
@@ -124,6 +124,7 @@ let main () =
         "-statefuli", Arg.Set stateful_info, doc_stateful_info;
         "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
+        "-strict_ssa", Arg.Set strict_ssa, doc_strict_ssa;
         "-memalloc", Arg.Unit do_mem_alloc_and_typing, doc_memalloc;
         "-only-memalloc", Arg.Set do_mem_alloc, doc_memalloc_only;
         "-only-linear", Arg.Set do_linear_typing, doc_linear_only;

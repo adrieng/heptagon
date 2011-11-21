@@ -64,7 +64,7 @@ let fresh_for = fresh_for "mls2obc"
 let op_from_string op = { qual = Pervasives; name = op; }
 
 let rec pattern_of_idx_list p l =
-  let rec aux p l = match p.pat_ty, l with
+  let rec aux p l = match Modules.unalias_type p.pat_ty, l with
     | _, [] -> p
     | Tarray (ty',_), idx :: l -> aux (mk_pattern ty' (Larray (p, idx))) l
     | _ -> internal_error "mls2obc"
@@ -158,7 +158,7 @@ let mk_plus_one e = match e.e_desc with
 
 (** Creates the action list that copies [src] to [dest],
     updating the value at index [idx_list] with the value [v]. *)
-let rec update_array dest src idx_list v = match Modules.unalias_type dest.pat_ty, idx_list with
+let rec ssa_update_array dest src idx_list v = match Modules.unalias_type dest.pat_ty, idx_list with
   | Tarray (t, n), idx::idx_list ->
       (*Body of the copy loops*)
       let copy i =
@@ -171,7 +171,7 @@ let rec update_array dest src idx_list v = match Modules.unalias_type dest.pat_t
       (* Update the correct element*)
       let src_idx = array_elt_of_exp idx src in
       let dest_idx = mk_pattern t (Larray (dest, idx)) in
-      let a_update = update_array dest_idx src_idx idx_list v in
+      let a_update = ssa_update_array dest_idx src_idx idx_list v in
       (*Copy values > idx*)
       let idx_plus_one = mk_plus_one idx in
       let a_upper = fresh_for idx_plus_one (mk_exp_static_int n) copy in
@@ -181,7 +181,7 @@ let rec update_array dest src idx_list v = match Modules.unalias_type dest.pat_t
 
 (** Creates the action list that copies [src] to [dest],
     updating the value of field [f] with the value [v]. *)
-let update_record dest src f v =
+let ssa_update_record dest src f v =
   let assgn_act { f_name = l; f_type = ty } =
     let dest_l = mk_pattern ty (Lfield(dest, l)) in
     let src_l = mk_ext_value_exp ty (Wfield(src, l)) in
@@ -384,18 +384,29 @@ and translate_act map pat
         let e1 = translate_extvalue_to_exp map e1 in
         let e2 = translate_extvalue_to_exp map e2 in
         let cond = bound_check_expr idx bounds in
-        let true_act = update_array x e1 idx e2 in
-        let false_act = Aassgn (x, e1) in
-          [ mk_ifthenelse cond true_act [false_act] ]
+        let copy = Aassgn (x, e1) in
+        if !Compiler_options.strict_ssa
+        then (
+          let ssa_up = ssa_update_array x e1 idx e2 in
+          [ mk_ifthenelse cond ssa_up [copy] ]
+        ) else (
+          let assgn = Aassgn (pattern_of_idx_list x idx, e2) in
+          [copy; mk_if cond [assgn]]
+        )
 
     | Minils.Evarpat x,
       Minils.Eapp ({ Minils.a_op = Minils.Efield_update;
                      Minils.a_params = [{ se_desc = Sfield f }] }, [e1; e2], _) ->
         let x = var_from_name map x in
-        let e1 = translate_extvalue map e1 in
+        let e1' = translate_extvalue map e1 in
         let e2 = translate_extvalue_to_exp map e2 in
-        update_record x e1 f e2
-
+        if !Compiler_options.strict_ssa
+        then ssa_update_record x e1' f e2
+        else (
+          let copy = Aassgn (x, translate_extvalue_to_exp map e1) in
+          let action = Aassgn (mk_pattern (Types.Tid (Modules.find_field f)) (Lfield (x, f)), e2) in
+          [copy; action]
+        )
     | Minils.Evarpat n, _ ->
         [Aassgn (var_from_name map n, translate map act)]
     | _ ->
@@ -533,20 +544,20 @@ and mk_node_call map call_context app loc (name_list : Obc.pattern list) args ty
           v @ nd.Minils.n_local, si, j, subst_act_list env s
 
     | Minils.Enode f | Minils.Efun f ->
-	let id =
-	  begin match app.Minils.a_id with
-	    None -> gen_obj_ident f
-	  | Some id -> id
-	  end in
+        let id = match app.Minils.a_id with
+          | None -> gen_obj_ident f
+          | Some id -> id
+        in
         let o = mk_obj_call_from_context call_context id in
         let obj =
           { o_ident = obj_ref_name o; o_class = f;
             o_params = app.Minils.a_params;
             o_size = size_from_call_context call_context; o_loc = loc } in
-        let si = (match app.Minils.a_op with
-                   | Minils.Efun _ -> []
-                   | Minils.Enode _ -> [reinit o]
-                   | _ -> assert false) in
+        let si = match app.Minils.a_op with
+          | Minils.Efun _ -> []
+          | Minils.Enode _ -> [reinit o]
+          | _ -> assert false
+        in
         let s = [Acall (name_list, o, Mstep, args)] in
         [], si, [obj], s
     | _ -> assert false
