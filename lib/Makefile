@@ -11,7 +11,7 @@ C_OBJ=pervasives.h
 .epi.epci:
 	../compiler/$(COMPILER).$(TARGET) -nopervasives $<
 
-.PHONY: all install
+.PHONY: all install clean
 
 all: $(STDLIB_OBJ)
 
@@ -22,3 +22,4 @@ install: all
 	(cd c/; $(INSTALL) $(C_OBJ) $(INSTALL_LIBDIR)/$(C_DIR))
 
 clean:
+	rm *.epci
