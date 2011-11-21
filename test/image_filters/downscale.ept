@@ -1,4 +1,3 @@
-open Iostream
 
 type pixel = float^3
 
@@ -141,7 +140,6 @@ node main<<size_x, size_y:int>> () returns (img, out : pixel; ck_out :bool;
 let
   (*ck_out = true fby false fby not ck_out;*)
   img = pix_o fby pix_sum(img, pix_o);
-  () = out_bool(ck_y_dhv);
   (out, ck_out, y, y_dh, y_dh_t, y_dhv_t, ck_y_dh, ck_y_dhv) = down_img<<size_x,size_y,3,3>>(img);
 tel
 
