@@ -39,7 +39,7 @@ let add_classe, get_classes =
     with [body] a function from [var_ident] (the iterator) to [act] list *)
 let fresh_for size body =
   let i = Idents.gen_var "obc2java" "i" in
-  let id = mk_var_dec i Tint in
+  let id = mk_var_dec i false Tint in
   Afor (id, Sint 0, size, mk_block (body i))
 
 (** fresh nested Afor from 0 to [size]
@@ -54,11 +54,11 @@ let fresh_nfor s_l body =
   let rec aux s_l i_l = match s_l with
     | [s] ->
         let i = Idents.gen_var "obc2java" "i" in
-        let id = (mk_var_dec i Tint) in
+        let id = (mk_var_dec i false Tint) in
         Afor (id, Sint 0, s, mk_block (body (List.rev (i::i_l))))
     | s::s_l ->
         let i = Idents.gen_var "obc2java" "i" in
-        let id = mk_var_dec i Tint in
+        let id = mk_var_dec i false Tint in
         Afor (id, Sint 0, s, mk_block ([aux s_l (i::i_l)]))
     | [] -> Misc.internal_error "Fresh nfor called with empty size list"
   in
@@ -213,7 +213,9 @@ and ty param_env t =
       Tarray (tin, s_l)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
-and var_dec param_env vd = { vd_type = ty param_env vd.v_type; vd_ident = vd.v_ident }
+and var_dec param_env vd = { vd_type = ty param_env vd.v_type;
+                             vd_alias = vd.v_alias;
+                             vd_ident = vd.v_ident }
 
 and var_dec_list param_env vd_l = List.map (var_dec param_env) vd_l
 
@@ -290,7 +292,7 @@ let rec act_list param_env act_l acts =
     | Obc.Acall (p_l, obj, Mstep, e_l) ->
         let return_ty = p_l |> pattern_list_to_type |> (ty param_env) in
         let return_id = Idents.gen_var "obc2java" "out" in
-        let return_vd = { vd_type = return_ty; vd_ident = return_id } in
+        let return_vd = mk_var_dec return_id false return_ty in
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         let assgn = Anewvar (return_vd, ecall) in
         let copy_return_to_var i p =
@@ -349,7 +351,7 @@ and block param_env ?(locals=[]) ?(end_acts=[]) ob =
 let sig_params_to_vds p_l =
   let param_to_arg param_env p =
     let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
-    let p_vd = { vd_ident = p_ident; vd_type = ty param_env p.Signature.p_type } in
+    let p_vd = mk_var_dec p_ident false (ty param_env p.Signature.p_type) in
     let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
     p_vd, param_env
   in Misc.mapfold param_to_arg NamesEnv.empty p_l
@@ -359,7 +361,7 @@ let sig_args_to_vds param_env a_l =
   let arg_to_vd { a_name = n; a_type = t } =
     let n = match n with None -> "v" | Some s -> s in
     let id = Idents.gen_var "obc2java" n in
-    mk_var_dec id (ty param_env t)
+    mk_var_dec id false (ty param_env t)
   in List.map arg_to_vd a_l
 
 (** [copy_to_this vd_l] creates [this.x = x] for all [x] in [vd_l] *)

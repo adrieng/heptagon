@@ -43,6 +43,7 @@ and class_desc = { cd_fields       : field list;
                    cd_methodes     : methode list; }
 
 and var_dec = { vd_type  : ty;
+                vd_alias : bool;
                 vd_ident : var_ident }
 
 and protection = Ppublic | Pprotected | Pprivate | Ppackage
@@ -122,8 +123,8 @@ let java_pervasives = Eclass java_pervasives_name
 
 let mk_var x = Evar x
 
-let mk_var_dec x ty =
-  { vd_type = ty; vd_ident = x }
+let mk_var_dec x is_alias ty =
+  { vd_type = ty; vd_alias = is_alias; vd_ident = x }
 
 let mk_block ?(locals=[]) b =
   { b_locals = locals; b_body = b; }

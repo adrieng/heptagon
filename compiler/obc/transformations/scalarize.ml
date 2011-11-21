@@ -11,12 +11,6 @@
     they are only used as reference to the array, no copy is implied :
     array assignation after [scalarize] is pointer wise assignation *)
 
-
-open Misc
-open Obc
-open Obc_utils
-open Obc_mapfold
-
 (** Scalarize the code : any equation t = e with e_ty an array
     is transformed into : t_ref = e; for i do t[i] = t_ref[i].
     This pass assumes that the backend when encountering t_ref = (e : int^n) will NOT COPY the array
@@ -24,11 +18,27 @@ open Obc_mapfold
     No t_ref is created if e was an extended value, no calculation is done, so it can be duplicated.
 *)
 
+(** Note that Minils gives few opportunities to [Scalarize]
+    Eop with a unique return value or Earray :
+    fun pix_2(x :int^3) = (o :int^3^2) let o = [x,x] tel
+    fun pix2(x :int^3) = () var o : pixel^2; let o = pix_2(x); tel
+
+    The latter is a special Acall
+*)
+
+
+open Misc
+open Obc
+open Obc_utils
+open Obc_mapfold
+
+
 let fresh_for = fresh_for "scalarize"
 
 let act funs () a = match a with
+  (* TODO | Acall([p], ...) *)
   | Aassgn (p, e) ->
-      (match Modules.unalias_type e.e_ty with
+      (match Modules.unalias_type p.pat_ty with
         | Types.Tarray (t, size) ->
             let new_vd, new_eq, w_from_e = match e.e_desc with
               | Eextvalue w -> [], [], w
