@@ -73,17 +73,17 @@ let ident_list_of_pat pat =
 let rec typing h pat e =
   let ct,base = match e.e_desc with
     | Econst _ ->
-	let ck = fresh_clock() in
-	Ck ck, ck
+        let ck = fresh_clock() in
+        Ck ck, ck
     | Evar x ->
-	let ck = ck_of_name h x in
-	Ck ck, ck
+        let ck = ck_of_name h x in
+        Ck ck, ck
     | Efby (e1, e2) ->
         let ct,ck = typing h pat e1 in
-	expect h pat ct e2;
+        expect h pat ct e2;
         ct, ck
     | Epre(_,e) ->
-	typing h pat e
+        typing h pat e
     | Ewhen (e,c,n) ->
         let ck_n = ck_of_name h n in
         let base = expect h pat (skeleton ck_n e.e_ty) e in
@@ -108,27 +108,27 @@ let rec typing h pat e =
           | Imapi -> (* clocking the node with the extra i input on [ck_r] *)
               let il (* stubs i as 0 *) =
                 List.map (fun x -> mk_exp
-			    (Econst (Initial.mk_static_int 0))
-			    ~ct_annot:(Some(Ck(base_ck)))
-			    Initial.tint
+                            (Econst (Initial.mk_static_int 0))
+                            ~ct_annot:(Some(Ck(base_ck)))
+                            Initial.tint
           ~linearity:Linearity.Ltop
-			 ) nl
+                         ) nl
               in
               typing_app h base_ck pat op (pargs@args@il)
           | Ifold | Imapfold ->
               (* clocking node with equality constaint on last input and last output *)
               let ct = typing_app h base_ck pat op (pargs@args) in
-	      Misc.optional (unify (Ck(Clocks.last_clock ct)))
-		(Misc.last_element args).e_ct_annot;
+              Misc.optional (unify (Ck(Clocks.last_clock ct)))
+                (Misc.last_element args).e_ct_annot;
               ct
           | Ifoldi -> (* clocking the node with the extra i and last in/out constraints *)
               let il (* stubs i as 0 *) =
                 List.map (fun x -> mk_exp
-			    (Econst (Initial.mk_static_int 0))
-			    ~ct_annot:(Some(Ck(base_ck)))
-			    Initial.tint
+                            (Econst (Initial.mk_static_int 0))
+                            ~ct_annot:(Some(Ck(base_ck)))
+                            Initial.tint
           ~linearity:Linearity.Ltop
-			 ) nl
+                         ) nl
               in
               let rec insert_i args = match args with
                 | [] -> il
@@ -137,7 +137,7 @@ let rec typing h pat e =
               in
               let ct = typing_app h base_ck pat op (pargs@(insert_i args)) in
               Misc.optional (unify (Ck (Clocks.last_clock ct)))
-		(Misc.last_element args).e_ct_annot;
+                (Misc.last_element args).e_ct_annot;
               ct
         in
         ct, base_ck
@@ -147,10 +147,10 @@ let rec typing h pat e =
     None -> ()
   | Some e_ct ->
       try
-	unify ct e_ct
+        unify ct e_ct
       with Unify ->
-	eprintf "Incoherent clock annotation.@\n";
-	error_message e.e_loc (Etypeclash (ct,e_ct));
+        eprintf "Incoherent clock annotation.@\n";
+        error_message e.e_loc (Etypeclash (ct,e_ct));
   end;
   e.e_ct_annot <- Some(ct);
   ct, base
@@ -177,8 +177,8 @@ and typing_app h base pat op e_list = match op with
           | None -> build_env a_l v_l env
           | Some n -> build_env a_l v_l ((n,v)::env))
         | _ ->
-	    Printf.printf "Fun/node : %s\n" (Names.fullname f);
-	    Misc.internal_error "Clocking, non matching signature"
+            Printf.printf "Fun/node : %s\n" (Names.fullname f);
+            Misc.internal_error "Clocking, non matching signature"
       in
       let env_pat = build_env node.node_outputs pat_id_list [] in
       let env_args = build_env node.node_inputs e_list [] in
@@ -200,8 +200,8 @@ and typing_app h base pat op e_list = match op with
             Clocks.Con (sigck_to_ck sck, c, id)
       in
       List.iter2
-	(fun a e -> expect h pat (Ck(sigck_to_ck a.a_clock)) e)
-	node.node_inputs e_list;
+        (fun a e -> expect h pat (Ck(sigck_to_ck a.a_clock)) e)
+        node.node_inputs e_list;
       Clocks.prod (List.map (fun a -> sigck_to_ck a.a_clock) node.node_outputs)
 
 let append_env h vds =
@@ -214,8 +214,8 @@ let rec typing_eq h ({ eq_desc = desc; eq_loc = loc } as eq) =
       let pat_ct = typing_pat h pat in
       (try unify ct pat_ct
        with Unify ->
-	 eprintf "Incoherent clock between right and left side of the equation.@\n";
-	 error_message loc (Etypeclash (ct, pat_ct)))
+         eprintf "Incoherent clock between right and left side of the equation.@\n";
+         error_message loc (Etypeclash (ct, pat_ct)))
   | Eblock b ->
       ignore(typing_block h b)
   | _ -> assert false

@@ -36,8 +36,8 @@ tel
 node mod_counter_r<<m :int>>(res :bool) returns (cpt :int)
 let
   reset
-    cpt = (0 fby cpt) + 1 
-  every (res or (0 fby cpt = m)) 
+    cpt = (0 fby cpt) + 1
+  every (res or (0 fby cpt = m))
 tel
 
 (* count from 1 to m included *)
@@ -105,9 +105,9 @@ tel
 
 node down_img <<size_x, size_y, ratio_x, ratio_y :int>> (x :pixel :: .)
 returns (y_flat :pixel; y_clock :bool;
-	   y, y_dh, y_dh_t, y_dhv_t :pixel;
+           y, y_dh, y_dh_t, y_dhv_t :pixel;
          ck_y_dh, ck_y_dhv :bool
-	)
+        )
 var
     x_line, y_dh_t_line :bool;
 
@@ -135,8 +135,8 @@ let
 tel*)
 
 node main<<size_x, size_y:int>> () returns (img, out : pixel; ck_out :bool;
-	y, y_dh, y_dh_t, y_dhv_t :pixel;
-	ck_y_dh, ck_y_dhv :bool)
+        y, y_dh, y_dh_t, y_dhv_t :pixel;
+        ck_y_dh, ck_y_dhv :bool)
 (*var img : pixel;*)
 let
   (*ck_out = true fby false fby not ck_out;*)

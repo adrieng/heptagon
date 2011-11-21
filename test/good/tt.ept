@@ -22,7 +22,7 @@ let
     o = false;
     until true then Cruise
   state Cruise do
-    o = true; 
+    o = true;
   end
 tel
 *)

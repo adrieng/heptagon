@@ -129,20 +129,20 @@ let a_sup e1 e2 =
 module Printer =
   struct
     open Format
-      
+
     let rec print_list ff print sep l =
       match l with
       | [] -> ()
       | [x] -> print ff x
-      | x :: l -> 
-	    print ff x;
-	  fprintf ff "%s@ " sep;
-	  print_list ff print sep l
+      | x :: l ->
+            print ff x;
+          fprintf ff "%s@ " sep;
+          print_list ff print sep l
 
-    let print_string ff s = 
+    let print_string ff s =
       fprintf ff "%s" s
 
-    let print_name ff n = 
+    let print_name ff n =
       fprintf ff "%s" n
 
     let print_const ff c =
@@ -157,56 +157,56 @@ module Printer =
       | Sconst(c) -> print_const ff c
       | Svar(v) -> print_name ff v
       | Swhen(e1,e2) ->
-	  fprintf ff "(%a@ when %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ when %a)"
+            print_exp e1
+            print_exp e2
       | Sdefault(e1,e2) ->
-	  fprintf ff "(%a@ default %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ default %a)"
+            print_exp e1
+            print_exp e2
       | Sequal(e1,e2) ->
-	  fprintf ff "(%a@ = %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ = %a)"
+            print_exp e1
+            print_exp e2
       | Ssquare(e) ->
-	  fprintf ff "(%a^2)"
-	    print_exp e
+          fprintf ff "(%a^2)"
+            print_exp e
       | Snot(e) ->
-	  fprintf ff "(not %a)"
-	    print_exp e
+          fprintf ff "(not %a)"
+            print_exp e
       | Sand(e1,e2) ->
-	  fprintf ff "(%a@ and %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ and %a)"
+            print_exp e1
+            print_exp e2
       | Sor(e1,e2) ->
-	  fprintf ff "(%a@ or %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ or %a)"
+            print_exp e1
+            print_exp e2
       | Sprim(f,e_l) ->
-	  fprintf ff "%s(@[" f;
-	  print_list ff print_exp "," e_l;
-	  fprintf ff "@])"
+          fprintf ff "%s(@[" f;
+          print_list ff print_exp "," e_l;
+          fprintf ff "@])"
       | Slist(e_l) ->
-	  fprintf ff "[@[";
-	  print_list ff print_exp "," e_l;
-	  fprintf ff "]@]"
+          fprintf ff "[@[";
+          print_list ff print_exp "," e_l;
+          fprintf ff "]@]"
       | Splus(e1,e2) ->
-	  fprintf ff "(%a@ + %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ + %a)"
+            print_exp e1
+            print_exp e2
       | Sminus(e1,e2) ->
-	  fprintf ff "(%a@ - %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ - %a)"
+            print_exp e1
+            print_exp e2
       | Sprod(e1,e2) ->
-	  fprintf ff "(%a@ * %a)"
-	    print_exp e1
-	    print_exp e2
+          fprintf ff "(%a@ * %a)"
+            print_exp e1
+            print_exp e2
 
     let print_statement ff { stmt_name = name; stmt_def = e } =
       fprintf ff "@[<hov 2>%a : %a;@]"
-	print_name name
-	print_exp e
+        print_name name
+        print_exp e
 
     let print_statements ff stmt_l =
       fprintf ff "@[<v>";
@@ -216,54 +216,51 @@ module Printer =
     let print_objective name ff obj =
       match obj with
       | Security(e) ->
-	  fprintf ff "%s : S_Security(%s,B_True(%s,%a));"
-	    name name name 
-	    print_exp e
+          fprintf ff "%s : S_Security(%s,B_True(%s,%a));"
+            name name name
+            print_exp e
       | Reachability(e) ->
-	  fprintf ff "%s : S_Reachable(%s,B_True(%s,%a));"
-	    name name name 
-	    print_exp e
+          fprintf ff "%s : S_Reachable(%s,B_True(%s,%a));"
+            name name name
+            print_exp e
       | Attractivity(e) ->
-	  fprintf ff "%s : S_Attractivity(%s,B_True(%s,%a));"
-	    name name name 
-	    print_exp e
+          fprintf ff "%s : S_Attractivity(%s,B_True(%s,%a));"
+            name name name
+            print_exp e
 
     let print_verification name ff obj =
       match obj with
       | Security(e) ->
-	  fprintf ff "verif_result : verif_result andb notb Reachable(%s,B_False(%s,%a));"
-	    name name 
-	    print_exp e
+          fprintf ff "verif_result : verif_result andb notb Reachable(%s,B_False(%s,%a));"
+            name name
+            print_exp e
       | Reachability(e) ->
-	  fprintf ff "verif_result : verif_result andb Reachable(%s,B_True(%s,%a));"
-	    name name 
-	    print_exp e
+          fprintf ff "verif_result : verif_result andb Reachable(%s,B_True(%s,%a));"
+            name name
+            print_exp e
       | Attractivity(_) -> failwith("Attractivity verification not allowed")
 
-    let sigali_head = "
-set_reorder(2);\
-\
-read(\"Property.lib\");\
-read(\"Synthesis.lib\");\
-read(\"Verif_Determ.lib\");\
-read(\"Simul.lib\");\
-read(\"Synthesis_Partial_order.lib\");\
-read(\"Orbite.lib\");\
-"
+    let sigali_head = "set_reorder(2);\
+                       read(\"Property.lib\");\
+                       read(\"Synthesis.lib\");\
+                       read(\"Verif_Determ.lib\");\
+                       read(\"Simul.lib\");\
+                       read(\"Synthesis_Partial_order.lib\");\
+                       read(\"Orbite.lib\");"
 
     let sigali_foot = ""
 
     let print_processus dir ({ proc_dep = dep_list;
-			       proc_name = name;
-			       proc_inputs = inputs;
-			       proc_uncont_inputs = uncont_inputs;
-			       proc_outputs = outputs;
-			       proc_controllables = controllables;
-			       proc_states = states;
-			       proc_constraints = constraints;
-			       proc_body = body;
-			       proc_objectives = objectives;
-			     }) =
+                               proc_name = name;
+                               proc_inputs = inputs;
+                               proc_uncont_inputs = uncont_inputs;
+                               proc_outputs = outputs;
+                               proc_controllables = controllables;
+                               proc_states = states;
+                               proc_constraints = constraints;
+                               proc_body = body;
+                               proc_objectives = objectives;
+                             }) =
       let sigc = open_out (dir ^ "/" ^ name ^ ".z3z") in
       let ff = formatter_of_out_channel sigc in
 
@@ -274,28 +271,28 @@ read(\"Orbite.lib\");\
       (* declare dummy variables d1...dn *)
       fprintf ff "@[declare(@[<hov>d1";
       for i = 2 to n do
-	fprintf ff ",@ d%d" i;
+        fprintf ff ",@ d%d" i;
       done;
       fprintf ff "@]);@]@\n@\n";
-      
+
       fprintf ff "@[<v>";
 
       (* dependencies *)
       fprintf ff "%% -- dependencies --- %%@\n@\n";
 
-      List.iter 
-	(fun dep_name -> 
-	   fprintf ff "read(\"%s.z3z\");@\n" dep_name)
-	dep_list;
+      List.iter
+        (fun dep_name ->
+           fprintf ff "read(\"%s.z3z\");@\n" dep_name)
+        dep_list;
 
       (* head comment *)
       fprintf ff "%% ---------- process %s ---------- %%@\n@\n" name;
-      
+
       (* variables declaration *)
       fprintf ff "declare(@[<hov>";
       print_list ff print_name "," (inputs@states);
       fprintf ff "@]);@,";
-      
+
       (* inputs decl. *)
       fprintf ff "conditions : [@[";
       print_list ff print_name "," inputs;
@@ -304,10 +301,10 @@ read(\"Orbite.lib\");\
       (* states decl. *)
       fprintf ff "states : [@[";
       if states = [] then
-	(* dummy state var to avoid sigali segfault *)
-	fprintf ff "d1"
+        (* dummy state var to avoid sigali segfault *)
+        fprintf ff "d1"
       else
-	print_list ff print_name "," states;
+        print_list ff print_name "," states;
       fprintf ff "@]];@,";
 
       (* controllables : *)
@@ -317,11 +314,11 @@ read(\"Orbite.lib\");\
 
       (* init evolutions, initialisations *)
       if states = [] then
-	fprintf ff "evolutions : [d1];@,"
+        fprintf ff "evolutions : [d1];@,"
       else
-	fprintf ff "evolutions : [];@,";
+        fprintf ff "evolutions : [];@,";
       fprintf ff "initialisations : [];@,";
-      
+
       (* body statements *)
       print_statements ff body;
 
@@ -336,91 +333,93 @@ read(\"Orbite.lib\");\
       fprintf ff "@]] --- %%@,";
 
       (* process declaration *)
-      fprintf ff 
-	("%s : processus(" ^^
-	   "@[conditions," ^^ 
-	   "@ states," ^^
-	   "@ evolutions," ^^
-	   "@ initialisations," ^^
-	   "@ [gen(constraints)]," ^^
-	   "@ controllables@]);@,")
-	name;
+      fprintf ff
+        ("%s : processus(" ^^
+           "@[conditions," ^^
+           "@ states," ^^
+           "@ evolutions," ^^
+           "@ initialisations," ^^
+           "@ [gen(constraints)]," ^^
+           "@ controllables@]);@,")
+        name;
 
       begin
-	match controllables with
-	  [] ->
-	    begin
-	      (* No controllable variables: verification *)
+        match controllables with
+          [] ->
+            begin
+              (* No controllable variables: verification *)
 
-	      (* Initialisation of verification result *)
-	      fprintf ff "verif_result : True;@,";
+              (* Initialisation of verification result *)
+              fprintf ff "verif_result : True;@,";
 
-	      (* Verification of properties (update verif_result) *)
-	      fprintf ff "@[<v>";
-	      print_list ff (print_verification name) "" objectives;
-	      fprintf ff "@]@,";
+              (* Verification of properties (update verif_result) *)
+              fprintf ff "@[<v>";
+              print_list ff (print_verification name) "" objectives;
+              fprintf ff "@]@,";
 
-	      (* Print result *)
-	      fprintf ff "if verif_result then@,";
-	      fprintf ff "    print(\"%s: property true.\")@," name;
-	      fprintf ff "else@,";
-	      fprintf ff "    print(\"%s: property false.\");@," name;
-	    end
-	      
-	| _::_ ->
-	    begin
-	      (* At least one controllable variable: synthesis *)
+              (* Print result *)
+              fprintf ff "if verif_result then@,";
+              fprintf ff "    print(\"%s: property true.\")@," name;
+              fprintf ff "else@,";
+              fprintf ff "    print(\"%s: property false.\");@," name;
+            end
 
-	      (* Store the initial state for further check *)
-	      fprintf ff "%s_init : initial(%s);@," name name;
-	      
-	      (* Controller synthesis *)
-	      fprintf ff "@[<v>";
-	      print_list ff (print_objective name) "" objectives;
-	      fprintf ff "@]@,";
-	      
-	      (* Check that synthesis succeeded : initial state not modified *)
-	      fprintf ff "dcs_result : equal(%s_init,initial(%s));@," name name;
-	      
-	      (* Print result *)
-	      fprintf ff "if dcs_result then@,";
-	      fprintf ff "    print(\"%s: synthesis succeeded.\")@," name;
-	      fprintf ff "else@,";
-	      fprintf ff "    print(\"%s: synthesis failed.\");@," name;
-	      
-	      fprintf ff "@\nif dcs_result then@,";
-	      (* Controller output *)
-	      (*       fprintf ff "    simul(%s,\"%s.res\",\"%s.sim\")@\n" name name name; *)
-	      fprintf ff "    print(\"Triangulation and controller generation...\")@\n";
-	      fprintf ff "else@,";
-	      fprintf ff "    quit(1);@,";
-	      
-	      (* Triangulation *)
-	      (* phantoms : *)
-	      let phantom_vars = List.map (fun n -> "p_" ^ n) controllables in
-	      (* phantom variables declaration *)
-	      fprintf ff "declare(@[<hov>";
-	      print_list ff print_name "," phantom_vars;
-	      fprintf ff "@]);@,";
-	      fprintf ff "phantom_vars : [@[";
-	      print_list ff print_name "," phantom_vars;
-	      fprintf ff "@]];@,";
-	      fprintf ff "%s_triang : Triang(constraint(%s),controllables,phantom_vars);@," name name;
+        | _::_ ->
+            begin
+              (* At least one controllable variable: synthesis *)
 
-	      (* controller vars *)
-	      fprintf ff "controller_inputs : [@[";
-	      print_list ff print_name "," (uncont_inputs
-					    @states
-					    @(List.map 
-						(fun n -> "p_" ^ n)
-						controllables));
-	      fprintf ff "@]];@,";
-	      
-	      (* Controller generation *)
-	      fprintf ff "heptagon_controller(\"%s_controller.ept\",\"%s\",controller_inputs,controllables,%s_triang);@," name name name;
-	    end
+              (* Store the initial state for further check *)
+              fprintf ff "%s_init : initial(%s);@," name name;
+
+              (* Controller synthesis *)
+              fprintf ff "@[<v>";
+              print_list ff (print_objective name) "" objectives;
+              fprintf ff "@]@,";
+
+              (* Check that synthesis succeeded : initial state not modified *)
+              fprintf ff "dcs_result : equal(%s_init,initial(%s));@," name name;
+
+              (* Print result *)
+              fprintf ff "if dcs_result then@,";
+              fprintf ff "    print(\"%s: synthesis succeeded.\")@," name;
+              fprintf ff "else@,";
+              fprintf ff "    print(\"%s: synthesis failed.\");@," name;
+
+              fprintf ff "@\nif dcs_result then@,";
+              (* Controller output *)
+              (*       fprintf ff "    simul(%s,\"%s.res\",\"%s.sim\")@\n" name name name; *)
+              fprintf ff "    print(\"Triangulation and controller generation...\")@\n";
+              fprintf ff "else@,";
+              fprintf ff "    quit(1);@,";
+
+              (* Triangulation *)
+              (* phantoms : *)
+              let phantom_vars = List.map (fun n -> "p_" ^ n) controllables in
+              (* phantom variables declaration *)
+              fprintf ff "declare(@[<hov>";
+              print_list ff print_name "," phantom_vars;
+              fprintf ff "@]);@,";
+              fprintf ff "phantom_vars : [@[";
+              print_list ff print_name "," phantom_vars;
+              fprintf ff "@]];@,";
+              fprintf ff "%s_triang : Triang(constraint(%s),controllables,phantom_vars);@,"
+                name name;
+
+              (* controller vars *)
+              fprintf ff "controller_inputs : [@[";
+              print_list ff print_name "," (uncont_inputs
+                                            @states
+                                            @(List.map
+                                                (fun n -> "p_" ^ n)
+                                                controllables));
+              fprintf ff "@]];@,";
+
+              (* Controller generation *)
+              fprintf ff "heptagon_controller(\"%s_controller.ept\",\"%s\",\
+                          controller_inputs,controllables,%s_triang);@," name name name;
+            end
       end;
-      
+
       (* Footer and close file *)
       fprintf ff "@]@.";
       fprintf ff "%s" sigali_foot;
@@ -432,4 +431,4 @@ read(\"Orbite.lib\");\
     let print dir p_l =
       List.iter (print_processus dir) p_l
   end
-	    
+

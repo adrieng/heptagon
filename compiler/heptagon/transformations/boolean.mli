@@ -7,7 +7,7 @@
 (*                                                  *)
 (****************************************************)
 
-(* 
+(*
    Translate enumerated types (state variables) into boolean
 
    type t = A | B | C | D
@@ -22,7 +22,7 @@
    (e when A(x))
    -->
    (e when False(x1)) when False(x2)
-   
+
    merge x (A -> e0) (B -> e1) (C -> e2) (D -> e3)
    -->
    merge x1 (False -> merge x2 (False -> e0) (True -> e1))
