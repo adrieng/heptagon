@@ -264,7 +264,7 @@ and node_dec funs acc nd =
 
 and ty_it funs acc t = try funs.ty funs acc t with Fallback -> ty funs acc t
 and ty funs acc t = match t with
-  | Tid _ -> t, acc
+  | Tid _ | Tinvalid -> t, acc
   | Tprod t_l -> let t_l, acc = mapfold (ty_it funs) acc t_l in Tprod t_l, acc
   | Tarray (t, e) ->
       let t, acc = ty_it funs acc t in

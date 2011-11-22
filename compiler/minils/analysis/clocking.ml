@@ -19,6 +19,7 @@
 
 open Misc
 open Idents
+open Names
 open Minils
 open Global_printer
 open Mls_printer
@@ -98,6 +99,10 @@ let typing_app h base pat op w_list = match op with
   | Eselect_slice | Econcat | Earray | Efield_update | Eifthenelse ->
       List.iter (expect_extvalue h base) w_list;
       Ck base
+  | Efun { qual = Module "Iostream"; name = "printf" }
+  | Efun { qual = Module "Iostream"; name = "fprintf" } ->
+    List.iter (expect_extvalue h base) w_list;
+    Cprod []
   | ( Efun f | Enode f) ->
       let node = Modules.find_value f in
       let pat_id_list = Mls_utils.ident_list_of_pat pat in

@@ -60,6 +60,7 @@ type ty =
   | Tprod of ty list
   | Tid of qualname
   | Tarray of ty * exp
+  | Tinvalid
 
 and ck =
   | Cbase

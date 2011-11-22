@@ -26,6 +26,9 @@ let tfloat = Types.Tid pfloat
 let pstring = { qual = Pervasives; name = "string" }
 let tstring = Types.Tid pstring
 
+let pfile = { qual = Module "Iostream"; name = "file" }
+let tfile = Types.Tid pfile
+
 let mk_pervasives s = { qual = Pervasives; name = s }
 
 let mk_static_int_op op args =

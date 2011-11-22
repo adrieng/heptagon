@@ -203,7 +203,7 @@ let translate_iterator_type = function
 let rec translate_static_exp se =
   try
     let se_d = translate_static_exp_desc se.se_loc se.se_desc in
-    Types.mk_static_exp Tinvalid ~loc:se.se_loc se_d
+    Types.mk_static_exp Types.Tinvalid ~loc:se.se_loc se_d
   with
     | ScopingError err -> message se.se_loc err
 
@@ -239,6 +239,7 @@ let rec translate_type loc ty =
       | Tarray (ty, e) ->
           let ty = translate_type loc ty in
           Types.Tarray (ty, expect_static_exp e)
+      | Tinvalid -> Types.Tinvalid
     )
   with
     | ScopingError err -> message loc err
