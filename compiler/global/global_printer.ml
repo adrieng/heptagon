@@ -108,7 +108,7 @@ and print_async ff async = match async with
   | Some i_l -> fprintf ff "async@[%a@]" (print_list_r print_static_exp "<<"","">>") i_l
 
 and print_future ff future = match future with
-  | () -> ()
+  | () -> fprintf ff "future "
 
 let print_field ff field =
   fprintf ff "@[%a: %a@]" print_qualname field.f_name  print_type field.f_type

@@ -89,6 +89,9 @@ and edesc funs acc ed = match ed with
   | Econst se ->
       let se, acc = static_exp_it funs acc se in
       Econst se, acc
+  | Easync e ->
+      let e, acc = exp_it funs acc e in
+      Easync e, acc
   | Evar _ | Elast _ -> ed, acc
   | Epre (se, e) ->
       let se, acc = optional_wacc (exp_it funs) acc se in

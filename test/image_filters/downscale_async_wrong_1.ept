@@ -51,8 +51,7 @@ let
   c = merge ck x ((false fby c) whenot ck)
 tel
 
-fun flatten_clock(x :pixel ::.on ck on ck2; ck :bool ::.; ck2 :bool ::.on ck)
-returns (y :pixel :: . on ck2_flat; ck2_flat :bool :: .)
+fun flatten_clock(x :pixel ::.on ck on ck2; ck :bool ::.; ck2 :bool ::.on ck) returns (y :pixel; ck2_flat :bool :: .)
 var x_ck, x_base : pixel;
 let
   x_ck = merge ck2 x pix_o;
@@ -81,6 +80,25 @@ let
   o = store[>o_buff<][>o_y<][>o_x<];
 tel
 
+node transpose_future<<x, y : int>>(i : future pixel) returns (o : future pixel)
+var store : (future pixel)^x^y^2; (*This is the double buffer*)
+    i_x, i_y, o_x, o_y :int; (*These are current buffer indexes*)
+    i_line, o_line, i_img :bool; (*These define line and img beginning*)
+    i_buff, o_buff :int; (*These are used to control the double buffering*)
+let
+  i_x = mod_counter<<x>>() - 1;
+  i_line = i_x = 0;
+  i_y = current (mod_counter<<y>>() - 1, i_line);
+  i_img = (i_x = 0) & (i_y = 0);
+  i_buff = current(mod_counter<<2>>() - 1, i_img);
+  o_buff = (i_buff + 1) % 2;
+  o_y = mod_counter<<y>>() -1;
+  o_line = o_y = 0;
+  o_x = current (mod_counter<<x>>()-1, o_line);
+  store = ((async [1.0,1.0,1.0])^x^y^2) fby [store with [i_buff][i_y][i_x] = i];
+  o = store[>o_buff<][>o_y<][>o_x<];
+tel
+
 
 (* a fby-n would be nice to allow average of the last n pixels *)
 (* returns the average of the last 3 pixels when asked *)
@@ -101,18 +119,20 @@ tel
 
 node down_img <<size_x, size_y, ratio_x, ratio_y :int>> (x :pixel :: .)
 returns (y_flat :pixel; y_clock :bool)
-var y, y_dh, y_dh_t, y_dhv_t :pixel;
-    ck_y_dh, ck_y_dhv :bool;
+var y, y_dhv_t :pixel;
+    y_dh, y_dh_t : future pixel;
+    ck_y_dh : future bool;
+    ck_y_dhv :bool;
     x_line, y_dh_t_line :bool;
 let
     x_line = mod_counter<<size_x>>() = 1;
     reset
-      (y_dh, ck_y_dh) = down_line<<ratio_x>>(x)
+      (y_dh, ck_y_dh) =  async<<size_y, size_x + 1>> down_line<<ratio_x>>(x)
     every x_line;
-    y_dh_t = transpose<<size_x/ratio_x, size_y>>(y_dh);
-    y_dh_t_line = current_bool(mod_counter<<size_y>>() = 1, ck_y_dh);
+    y_dh_t = transpose_future<<size_x/ratio_x, size_y>>(y_dh);
+    y_dh_t_line = current_bool(mod_counter<<size_y>>() = 1, !ck_y_dh);
     reset
-      (y_dhv_t, ck_y_dhv) = down_line<<ratio_y>>(y_dh_t)
+      (y_dhv_t, ck_y_dhv) = down_line<<ratio_y>>(!y_dh_t)
     every y_dh_t_line;
     y = transpose<<size_x/ratio_x, size_y/ratio_y>>(y_dhv_t);
  (*flatten clock of y, in order to return only one, instead of ck_y_dh on ck_y_dhv*)

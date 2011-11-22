@@ -2,10 +2,12 @@ package jeptagon;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class Pervasives {
 
@@ -40,7 +42,43 @@ public class Pervasives {
 		public V get(long timeout, TimeUnit unit) { return v; }
 	}
 
-	//faster version for primitive arrays using serializing
+	public static class FutureOfFuture<V,T> implements Future<V> {
+		Future<T> t;
+		String field;
+		public FutureOfFuture(Future<T> t, String field) {
+			this.t = t;
+			this.field = field;
+		}
+		public boolean cancel(boolean arg0) { return false;	}
+
+		@SuppressWarnings("unchecked")
+		public V get() throws InterruptedException, ExecutionException {
+			T o = t.get();
+			try {
+				return ((V) o.getClass().getField(field).get(o));
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			} catch (SecurityException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (NoSuchFieldException e) {
+				e.printStackTrace();
+			}
+			return null;
+		}
+
+		public V get(long arg0, TimeUnit arg1) throws InterruptedException, ExecutionException {
+			return get();
+		}
+
+		public boolean isCancelled() { return t.isCancelled(); }
+
+		public boolean isDone() { return t.isDone(); }
+
+	}
+
+    //faster version for primitive arrays using serializing
     public static Object copyNd(Object arr) {
         if (arr.getClass().isArray()) {
             int innerArrayLength = Array.getLength(arr);

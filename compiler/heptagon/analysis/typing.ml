@@ -427,6 +427,8 @@ let rec _unify cenv t1 t2 =
          with Solve_failed _ ->
            raise Unify);
         _unify cenv ty1 ty2
+    | Tfuture ((),ty1), Tfuture ((),ty2) ->
+        _unify cenv ty1 ty2
     | _ -> raise Unify
 
 (** { 3 Constraints related functions } *)

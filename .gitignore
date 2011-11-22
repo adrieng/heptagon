@@ -1,6 +1,7 @@
 .external*
 .paths
 .project
+.projectSettings
 _build
 *.DS_Store
 *.cmi
@@ -28,3 +29,4 @@ test/*.ml
 test/_check_builds
 lib/java/.classpath
 test/async/build/*
+test/image_filters/java/*

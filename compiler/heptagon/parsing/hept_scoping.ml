@@ -270,6 +270,7 @@ let rec translate_exp env e =
 
 and translate_desc loc env = function
   | Econst c -> Heptagon.Econst (translate_static_exp c)
+  | Easync c -> Heptagon.Econst (expect_static_exp c)
   | Evar x -> Heptagon.Evar (Rename.var loc env x)
   | Elast x -> Heptagon.Elast (Rename.last loc env x)
   | Epre (None, e) -> Heptagon.Epre (None, translate_exp env e)

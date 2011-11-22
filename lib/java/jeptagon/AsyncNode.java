@@ -38,6 +38,7 @@ public class AsyncNode<T> {
       this.queue[i] = new ArrayBlockingQueue<FutureTask<T>>(queueSize,false);
       t[i] = new AsyncNodeThread(i);
       t[i].setPriority(priority);
+      java.lang.System.out.printf("Priority asked %d, set to %d\n",priority,t[i].getPriority());
       t[i].start();
     }
   }

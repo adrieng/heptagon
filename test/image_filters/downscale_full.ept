@@ -1,6 +1,11 @@
 
 type pixel = float^3
 
+node nat() returns (n :int)
+let
+  n = 0 fby n+1
+tel
+
 fun pix_sum(x1,x2 :pixel) returns (r :pixel)
 let
   r = map<<3>> (+.) (x1,x2);
@@ -45,14 +50,12 @@ node current(x :int; ck :bool) returns (c :int)
 let
   c = merge ck x ((0 fby c) whenot ck)
 tel
-
 node current_bool(x :bool; ck :bool) returns (c :bool)
 let
   c = merge ck x ((false fby c) whenot ck)
 tel
 
-fun flatten_clock(x :pixel ::.on ck on ck2; ck :bool ::.; ck2 :bool ::.on ck)
-returns (y :pixel :: . on ck2_flat; ck2_flat :bool :: .)
+fun flatten_clock(x :pixel ::.on ck on ck2; ck :bool ::.; ck2 :bool ::.on ck) returns (y :pixel; ck2_flat :bool :: .)
 var x_ck, x_base : pixel;
 let
   x_ck = merge ck2 x pix_o;
@@ -100,10 +103,13 @@ tel
 
 
 node down_img <<size_x, size_y, ratio_x, ratio_y :int>> (x :pixel :: .)
-returns (y_flat :pixel; y_clock :bool)
-var y, y_dh, y_dh_t, y_dhv_t :pixel;
-    ck_y_dh, ck_y_dhv :bool;
+returns (y_flat :pixel; y_clock :bool;
+           y, y_dh, y_dh_t, y_dhv_t :pixel;
+         ck_y_dh, ck_y_dhv :bool
+        )
+var
     x_line, y_dh_t_line :bool;
+
 let
     x_line = mod_counter<<size_x>>() = 1;
     reset
@@ -127,10 +133,14 @@ let
   (out, ck_out, ck_out_2) = down_img<<2,2,2,2>>(img);
 tel*)
 
-node main<<size_x, size_y:int>> () returns (img, out : pixel; ck_out :bool)
+node main<<size_x, size_y:int>> () returns (img, out : pixel; ck_out :bool;
+        y, y_dh, y_dh_t, y_dhv_t :pixel;
+        ck_y_dh, ck_y_dhv :bool)
+(*var img : pixel;*)
 let
+  (*ck_out = true fby false fby not ck_out;*)
   img = pix_o fby pix_sum(img, pix_o);
-  (out, ck_out) = down_img<<size_x,size_y,3,3>>(img);
+  (out, ck_out, y, y_dh, y_dh_t, y_dhv_t, ck_y_dh, ck_y_dhv) = down_img<<size_x,size_y,3,3>>(img);
 tel
 
 

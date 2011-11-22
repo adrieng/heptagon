@@ -49,6 +49,8 @@ let exp funs local_const e =
               Sop (op, List.map assert_se e_list)
           | Estruct e_list ->
               Srecord (List.map (fun (f,e) -> f, assert_se e) e_list)
+          | Easync e ->
+              Sasync (assert_se e)
           | _ -> raise Not_static
       in
       { e with e_desc = Econst (mk_static_exp sed e.e_loc) }, local_const
