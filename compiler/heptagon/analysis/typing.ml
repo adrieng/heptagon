@@ -57,6 +57,7 @@ type error =
   | Esplit_enum of ty
   | Esplit_tuple of ty
   | Eenable_memalloc
+  | Ebad_format
   | Eformat_string_not_constant
 
 exception Unify
@@ -200,6 +201,10 @@ let message loc kind =
       eprintf
         "%aThis function was compiled with linear types. \
                Enable linear typing to call it.@."
+          print_location loc
+    | Ebad_format ->
+      eprintf
+        "%aThe format string is invalid@."
           print_location loc
     | Eformat_string_not_constant ->
       eprintf
@@ -990,8 +995,11 @@ and typing_format_args cenv h e args =
     | Econst { se_desc = Sstring s } -> s
     | _ -> raise (TypingError Eformat_string_not_constant)
   in
-  let expected_ty_list = Printf_parser.extract_formatters s in
-  typing_args cenv h expected_ty_list args
+  try
+    let expected_ty_list = Printf_parser.types_of_format_string s in
+    typing_args cenv h expected_ty_list args
+  with
+    | Printf_parser.Bad_format -> raise (TypingError Ebad_format)
 
 let rec typing_pat h acc = function
   | Evarpat(x) ->

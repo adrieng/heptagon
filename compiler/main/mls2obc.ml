@@ -464,6 +464,12 @@ let rec translate_eq map call_context ({ Minils.eq_lhs = pat; Minils.eq_rhs = e 
         let action = mk_ifthenelse cond true_act false_act in
         v, si, j, (control map ck action) :: s
 
+    | pat, Minils.Eapp({ Minils.a_op =
+        Minils.Efun ({ qual = Module "Iostream"; name = "printf" | "fprintf" } as q)},
+                       args, _) ->
+      let action = Aop (q, List.map (translate_extvalue_to_exp map) args) in
+      v, si, j, (control map ck action) :: s
+
     | pat, Minils.Eapp ({ Minils.a_op = Minils.Efun _ | Minils.Enode _ } as app, e_list, r) ->
         let name_list = translate_pat map e.Minils.e_ty pat in
         let c_list = List.map (translate_extvalue_to_exp map) e_list in

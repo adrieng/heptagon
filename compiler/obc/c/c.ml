@@ -277,7 +277,7 @@ and pp_cconst fmt cconst = match cconst with
   | Ccint i -> fprintf fmt "%d" i
   | Ccfloat f -> fprintf fmt "%f" f
   | Ctag t -> pp_string fmt t
-  | Cstrlit t -> fprintf fmt "\"%s\"" t
+  | Cstrlit t -> fprintf fmt "\"%s\"" (String.escaped t)
 
 let pp_cdecl fmt cdecl = match cdecl with
   | Cdecl_enum (s, sl) ->

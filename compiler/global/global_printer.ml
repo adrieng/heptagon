@@ -62,7 +62,7 @@ let rec print_static_exp_desc ff sed = match sed with
   | Sint i -> fprintf ff "%d" i
   | Sbool b -> fprintf ff "%b" b
   | Sfloat f -> fprintf ff "%f" f
-  | Sstring s -> fprintf ff "\"%s\"" s
+  | Sstring s -> fprintf ff "\"%s\"" (String.escaped s)
   | Sconstructor ln -> print_qualname ff ln
   | Sfield ln -> print_qualname ff ln
   | Svar id -> fprintf ff "%a" print_qualname id

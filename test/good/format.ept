@@ -4,8 +4,8 @@ unsafe fun f(a:int) returns (o:int)
 var x:int;
 let
   x = a + 2;
-  () = printf("Int is %d@.", x);
-  () = printf("Bool is %b@.", x = 0);
-  () = printf("Test");
+  () = printf("Int is %d\n", x);
+  () = printf("Bool is %b\n", x = 0);
+  () = printf("Test\n");
   o = x - 1;
 tel

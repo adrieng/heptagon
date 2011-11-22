@@ -112,6 +112,16 @@ let copname = function
   | ">>>" -> ">>" | "<<<" -> "<<" | "&&&" -> "&" | "|||" -> "|"
   | op   -> op
 
+
+let cformat_of_format s =
+  let aux m = match m with
+    | "b" -> "d" (*no booleans in C*)
+    | _ -> m
+  in
+  match s with
+    | Cconst (Cstrlit s) -> Cconst (Cstrlit (Printf_parser.tr_format aux s))
+    | _ -> assert false
+
 (** Translates an Obc var_dec to a tuple (name, cty). *)
 let cvar_of_vd vd =
   name vd.v_ident, ctype_of_otype vd.v_type
@@ -279,6 +289,14 @@ and cop_of_op_aux op_name cexps = match op_name with
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
         end
+    | { qual = Module "Iostream"; name = "printf" } ->
+      let s, args = assert_1min cexps in
+      let s = cformat_of_format s in
+      Cfun_call("printf", s::args)
+    | { qual = Module "Iostream"; name = "fprintf" } ->
+      let file, s, args = assert_2min cexps in
+      let s = cformat_of_format s in
+      Cfun_call("fprintf", file::s::args)
     | { name = op } -> Cfun_call(op,cexps)
 
 and cop_of_op out_env var_env op_name exps =
@@ -801,9 +819,13 @@ let cdefs_and_cdecls_of_program_decl id = match id with
   | Pconst cd -> cdefs_and_cdecls_of_const_decl cd
   | _ -> [], []
 
+let header_of_module m = match m with
+  | Module "Iostream" -> "stdio"
+  | _ -> String.uncapitalize (modul_to_string m)
+
 let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
-  let dependencies = List.map (fun m -> String.uncapitalize (modul_to_string m)) dependencies in
+  let dependencies = List.map header_of_module dependencies in
 
   let classes = program_classes prog in
   let (decls, defs) =
@@ -829,8 +851,7 @@ let global_file_header name prog =
 
 let interface_header name i =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_interface i) in
-  let dependencies =
-    List.map (fun m -> String.uncapitalize (modul_to_string m)) dependencies in
+  let dependencies = List.map header_of_module dependencies in
 
   let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_interface_decl i.i_desc in
 
