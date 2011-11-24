@@ -46,7 +46,7 @@ let print_ident ff id = Format.fprintf ff "%s" (name id)
   | Cbase -> fprintf ff "."
   | Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
   | Cvar { contents = Cindex i } -> fprintf ff "'a%i" i
-  | Cvar { contents = Clink ck } -> print_ck ff ck
+  | Cvar { contents = Clink ck } -> fprintf ff "~> %a" print_ck ck
 
 let rec print_ct ff = function
   | Ck ck -> print_ck ff ck
