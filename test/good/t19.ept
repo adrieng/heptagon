@@ -1,0 +1,10 @@
+
+fun substr<<n:int>> (x: int^n^n) returns (d: int)
+let
+  d = x[0][0] - n;
+tel
+
+fun mean<<n: int>> (i: int) returns (m: int)
+let
+  m = substr<<n>> (i^n^n)
+tel
