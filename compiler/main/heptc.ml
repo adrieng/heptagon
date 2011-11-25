@@ -64,14 +64,14 @@ let compile_program modname source_f =
     let p = Hept_parser_scoper.parse_program modname lexbuf in
   (* Process the Heptagon AST *)
     let p = Hept_compiler.compile_program p in
-  (* Output the .epci *)
-    output_value epci_c (Modules.current_module ());
   (* Compile Heptagon to MiniLS *)
     let p = do_pass "Translation into MiniLs" Hept2mls.program p Mls_compiler.pp in
   (* Output the .mls *)
     Mls_printer.print mls_c p;
   (* Process the MiniLS AST *)
     let p = Mls_compiler.compile_program p in
+  (* Output the .epci *)
+    output_value epci_c (Modules.current_module ());
   (* Generate the sequential code *)
     Mls2seq.program p;
     close_all_files ()

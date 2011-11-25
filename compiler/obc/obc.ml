@@ -77,7 +77,7 @@ type method_name =
 
 type act =
   | Aassgn of pattern * exp
-  | Aop of op_name * exp list
+  | Aop of op_name * exp list (* TODO c'est un peu bizare ce truc *)
   | Acall of pattern list * obj_ref * method_name * exp list
   | Aasync_call of async_t * pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
@@ -91,7 +91,7 @@ and block =
 and var_dec =
     { v_ident : var_ident;
       v_type : ty;
-      v_alias : bool; (* this var_dec only declare a const pointer, no allocation is done *)
+      v_alias : bool; (* this var_dec only declare a const pointer, no allocation is needed *)
       v_linearity : linearity;
       v_mutable : bool;
       v_loc : location }

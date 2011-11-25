@@ -11,9 +11,9 @@ let load_conf () =
   ()
 
 (** returns the vd and the pat of a fresh ident from [name] *)
-let mk_var ty name =
+let mk_var ty is_alias name =
   let id = Idents.gen_var "java_main" name in
-  mk_var_dec id ty, Pvar id, Evar id
+  mk_var_dec id is_alias ty, Pvar id, Evar id
 
 
 let program p =
@@ -45,10 +45,10 @@ let program p =
     let main_methode =
 
       (* step is the current iteration step *)
-      let vd_step, pat_step, exp_step = mk_var Tint "step" in
+      let vd_step, pat_step, exp_step = mk_var Tint false "step" in
 
       let vd_args, _, exp_args =
-        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0])) "args" in
+        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0])) false "args" in
 
       let get_arg i = Earray_elem(exp_args, [Sint i]) in
 
@@ -56,7 +56,7 @@ let program p =
         let vd_main, e_main, q_main, ty_main =
           let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
           let id = Idents.gen_var "java_main" "main" in
-          mk_var_dec id (Tclass q_main), Evar id, q_main, ty_main
+          mk_var_dec id false (Tclass q_main), Evar id, q_main, ty_main
         in
         let acts =
           let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
@@ -65,6 +65,9 @@ let program p =
           let jbool = Eclass(Names.qualname_of_string "Boolean") in
           let jsys = Eclass(Names.qualname_of_string "java.lang.System") in
           let jminus = pervasives_qn "-" in
+
+          (* num args to give to the main *)
+          let rec num_args = List.length ty_main_args in
 
           (* parse arguments to give to the main *)
           let rec parse_args t_l i = match t_l with
@@ -83,17 +86,16 @@ let program p =
           let main_args = parse_args ty_main_args 0 in
 
           let parse_max_iteration =
-            let t_size = List.length ty_main_args in
             (* no more arg to give to main, the last one if it exists is the iteration nb *)
-            Aifelse(Efun(Names.pervasives_qn ">", [ Efield (exp_args, "length"); Sint t_size ]),
+            Aifelse(Efun(Names.pervasives_qn ">", [ Efield (exp_args, "length"); Sint num_args ]),
                     (* given max number of iterations *)
                     mk_block [Aassgn(pat_step,
-                              Emethod_call(jint, "parseInt", [get_arg t_size]))],
+                              Emethod_call(jint, "parseInt", [get_arg num_args]))],
                     (* default max number of iterations *)
                     mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
           in
           let ty_ret = Obc2java.ty NamesEnv.empty ty_main in
-          let vd_ret, pat_ret, exp_ret = mk_var ty_ret "ret" in
+          let vd_ret, pat_ret, exp_ret = mk_var ty_ret false "ret" in
           let call_main = match ty_ret with
             | Tunit -> Aexp(Emethod_call(e_main, "step", []))
             | _ -> Anewvar (vd_ret, Emethod_call(e_main, "step", []))
@@ -105,9 +107,13 @@ let program p =
           in
           let vd_t1, e_t1 =
             let id = Idents.gen_var "java_main" "t" in
-            mk_var_dec id Tlong, Evar id
+            mk_var_dec id false Tlong, Evar id
           in
-          [ Anewvar(vd_main, Enew (Tclass q_main, main_args));
+          [ Aif(Efun(Names.pervasives_qn "<", [ Efield (exp_args, "length"); Sint num_args ]),
+                 mk_block [Aexp (Emethod_call(out, "printf",
+                                              [Sstring "error : not enough arguments.\\n"]));
+                           Areturn Evoid]);
+            Anewvar(vd_main, Enew (Tclass q_main, main_args));
             parse_max_iteration;
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
             Obc2java.fresh_for exp_step main_for_loop;

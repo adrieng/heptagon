@@ -122,7 +122,8 @@ and joinhandlers j h1 h2 =
           with Not_found -> s1, h2 in
         (c1, join_block j s1') :: joinhandlers j h1' h2'
 
-let block _ j b =
+let block funs j b =
+  let b, _ = Obc_mapfold.block funs j b in
   { b with b_body = joinlist j b.b_body }, j
 
 let class_def funs acc cd =

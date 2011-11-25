@@ -13,7 +13,7 @@ COMPILER_DEBUG=heptc.d.byte
 LIB_DIR="$SCRIPT_DIR/lib"
 
 JAVA_LIB_DIR="$LIB_DIR/java"
-JAVAC="javac -cp $JAVA_LIB_DIR"
+JAVAC="javac -Xlint:unchecked -cp $JAVA_LIB_DIR"
 
 #the symlink
 HEPTC="$COMPILER_DIR/$COMPILER"
@@ -61,7 +61,7 @@ java )
     last_arg=$#
     base_f=`basename ${!last_arg} .ept`
     pushd "java/$(echo ${base_f} | sed 's/^./\u&/')" > /dev/null
-    $JAVAC *.java
+    ${JAVAC}:.. *.java
     popd > /dev/null
   fi
 ;;
