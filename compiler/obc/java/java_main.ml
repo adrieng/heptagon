@@ -95,16 +95,21 @@ let program p =
                     mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
           in
           let ty_ret = Obc2java.ty NamesEnv.empty ty_main in
-          let vd_ret, pat_ret, exp_ret = mk_var ty_ret false "ret" in
+          let vd_ret, _, exp_ret = mk_var ty_ret false "ret" in
           let call_main = match ty_ret with
             | Tunit -> Aexp(Emethod_call(e_main, "step", []))
             | _ -> Anewvar (vd_ret, Emethod_call(e_main, "step", []))
           in
-          let print_ret = Emethod_call(java_pervasives, "genToString", [exp_ret]) in
-          let main_for_loop i =
-            [call_main; Aexp (Emethod_call(out, "printf",
-                                [Sstring "%d => %s\\n"; Evar i; print_ret]))]
+          let print_ret i = match ty_ret with
+            | Tunit -> Aexp (Emethod_call(out, "printf", [Sstring "%d => \\n"; Evar i]))
+            | _ ->
+              Aexp (
+                Emethod_call(out, "printf",
+                             [Sstring "%d => %s\\n";
+                              Evar i;
+                              Emethod_call(java_pervasives, "genToString", [exp_ret])]))
           in
+          let main_for_loop i = [call_main; print_ret i] in
           let vd_t1, e_t1 =
             let id = Idents.gen_var "java_main" "t" in
             mk_var_dec id false Tlong, Evar id
