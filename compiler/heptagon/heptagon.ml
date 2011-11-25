@@ -55,7 +55,7 @@ and desc =
 and app = {
   a_op     : op;
   a_params : static_exp list;
-  a_async  : async_t option;
+  a_async  : async_t;
   a_unsafe : bool;
   a_inlined : bool }
 
@@ -100,9 +100,9 @@ and block = {
   b_local     : var_dec list;
   b_equs      : eq list;
   b_defnames  : var_dec Env.t;
-  b_stateful : bool;
+  b_stateful  : bool;
   b_loc       : location;
-  b_async     : async_t option; }
+  b_async     : async_t; }
 
 and state_handler = {
   s_state  : state_name;

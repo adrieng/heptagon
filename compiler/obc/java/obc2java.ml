@@ -32,10 +32,11 @@ let this_field_ident id = Efield (Ethis, Idents.name id)
 
 
 (** Additional classes created during the translation *)
-let add_classe, get_classes =
-  let extra_classes = ref [] in
-   (fun c -> extra_classes := c :: !extra_classes)
-  ,(fun () -> !extra_classes)
+let add_classe, find_classe, get_classes =
+  let extra_classes = ref Names.QualEnv.empty in
+   (fun cname c -> extra_classes := Names.QualEnv.add cname c !extra_classes)
+  ,(fun cname -> Names.QualEnv.find cname !extra_classes)
+  ,(fun () -> Names.QualEnv.fold (fun _ c acc -> c::acc) !extra_classes [])
 
 (** fresh Afor from 0 to [size]
     with [body] a function from [var_ident] (the iterator) to [act] list *)
@@ -266,7 +267,7 @@ let rec act_list param_env act_l acts =
         let assgn = Aassgn (pattern param_env p, ecall) in
         assgn::acts
     | Obc.Acall (p_l, obj, Mstep, e_l)
-    | Obc.Aasync_call (_,p_l, obj, Mstep, e_l) ->
+    | Obc.Aasync_call (_, p_l, obj, Mstep, e_l) ->
         let return_ty = p_l |> pattern_list_to_type |> (ty param_env) in
         let return_id = Idents.gen_var "obc2java" "out" in
         let return_vd = mk_var_dec return_id false return_ty in
@@ -420,26 +421,31 @@ let create_async_classe async base_classe =
   (* Methods *)
 
   let constructor, reset =
-    let body, body_r =
+    let body, async_params, body_r =
       if !Compiler_options.java_queue_size = 0
       then
         let acts_params = copy_to_this vds_params in
         let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
         let act_result = Aassgn (Pthis id_result, Snull) in
         mk_block (act_result::act_inst::acts_params)
+        , []
         , mk_block [act_result; act_inst]
       else
         let acts_params = copy_to_this vds_params in
         let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
-        let async = Misc.assert_2 (List.map (static_exp param_env) async) in
-        let async_node_args = [fst async; snd async] in
+        let async_sig_params = [{ p_name="nb_threads"; p_type = Initial.tint };
+                                { p_name="queue_size"; p_type = Initial.tint }]
+        in
+        let async_vds_params,_ = sig_params_to_vds async_sig_params in
+        let async_node_args = vds_to_exps async_vds_params in
         let act_result = Aassgn (Pthis id_node, Enew (ty_node, async_node_args)) in
         let act_reset = Aexp (Emethod_call (Efield (Ethis, Idents.name id_node), "reset", [])) in
         mk_block (act_result::act_inst::acts_params)
+        , async_vds_params
         , mk_block [act_reset; act_inst]
 
     in
-    mk_methode ~args:vds_params body (shortname classe_name)
+    mk_methode ~args:(async_params@vds_params) body (shortname classe_name)
     , mk_methode body_r "reset"
   in
 
@@ -531,7 +537,17 @@ let class_def_list classes cd_l =
         let aux obj_env od =
           let t = match od.o_async with
             | None -> Tclass (qualname_to_class_name od.o_class)
-            | Some a -> let c = create_async_classe a od in add_classe c; Tclass c.c_name
+            | Some a ->
+                let c =
+                  begin try
+                    find_classe od.o_class
+                  with Not_found ->
+                    let c = create_async_classe a od in
+                    add_classe od.o_class c;
+                    c
+                  end
+                in
+                Tclass c.c_name
           in Idents.Env.add od.o_ident t obj_env
         in List.fold_left aux Idents.Env.empty cd.cd_objs
       in
@@ -539,6 +555,11 @@ let class_def_list classes cd_l =
         (* Function to initialize the objects *)
         let obj_init_act acts od =
           let params = List.map (static_exp param_env) od.o_params in
+          (* add async params (nb_thread,queue_size)*)
+          let params = match od.o_async with
+            | None -> params
+            | Some asy -> (List.map (static_exp param_env) asy)@params
+          in
           match od.o_size with
             | None ->
                 let t = Idents.Env.find od.o_ident obj_env in

@@ -98,7 +98,7 @@ and var_dec =
 
 type obj_dec =
     { o_ident : obj_ident;
-      o_async : async_t option;
+      o_async : async_t;
       o_class : class_name;
       o_params : static_exp list;
       (** size of the array if the declaration is an array of obj *)

@@ -136,7 +136,8 @@ and act funs acc a = match a with
   | Aasync_call(a, lhs_list, obj, n, args) ->
       let lhs_list, acc = mapfold (lhs_it funs) acc lhs_list in
       let args, acc = mapfold (exp_it funs) acc args in
-        Aasync_call(a, lhs_list, obj, n, args), acc
+      let a, acc = Global_mapfold.async_it funs.global_funs acc a in
+      Aasync_call(a, lhs_list, obj, n, args), acc
   | Acase(e, c_b_list) ->
       let aux acc (c,b) =
         let b, acc = block_it funs acc b in

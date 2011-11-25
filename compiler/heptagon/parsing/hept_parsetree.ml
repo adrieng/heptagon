@@ -90,7 +90,7 @@ and edesc =
   | Emerge of var_name * (constructor_name * exp) list
   | Esplit of var_name * exp
 
-and app = { a_op: op; a_params: exp list; a_async : async_t option; a_inlined: bool }
+and app = { a_op: op; a_params: exp list; a_async : async_t; a_inlined: bool }
 
 and op =
   | Etuple
@@ -115,7 +115,7 @@ and pat =
   | Etuplepat of pat list
   | Evarpat of var_name
 
-and async_t = exp list
+and async_t = exp list option
 and future_t = unit
 
 
@@ -135,7 +135,7 @@ and block =
   { b_local : var_dec list;
     b_equs  : eq list;
     b_loc   : location;
-    b_async : async_t option; }
+    b_async : async_t; }
 
 and state_handler =
   { s_state  : state_name;

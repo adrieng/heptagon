@@ -143,7 +143,8 @@ and edesc funs acc ed = match ed with
 and app_it funs acc a = funs.app funs acc a
 and app funs acc a =
   let p, acc = mapfold (static_exp_it funs.global_funs) acc a.a_params in
-  { a with a_params = p }, acc
+  let asy, acc = async_it funs.global_funs acc a.a_async in
+  { a with a_params = p; a_async = asy }, acc
 
 
 and pat_it funs acc p =

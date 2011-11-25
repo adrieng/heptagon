@@ -128,25 +128,35 @@ and print_exp_desc ff = function
         print_app (app, args) print_every reset
   | Estruct(f_e_list) ->
       print_record (print_couple print_qualname print_exp """ = """) ff f_e_list
-  | Eiterator (it, { a_op = (Efun f | Enode f); a_params =f_params },
+  | Eiterator (it, { a_op = (Efun f | Enode f); a_params =f_params; a_async = asy},
                params, pargs, args, reset) ->
     (match f_params with
       | [] ->
-        fprintf ff "@[<2>%s%a %a@,<%a>%a@]%a"
+        fprintf ff "@[<2>%s%a %a%a@,<%a>%a@]%a"
           (iterator_to_string it)
           (print_list_r print_static_exp "<<"","">>") params
+          print_async asy
           print_qualname f
           print_exp_tuple pargs
           print_exp_tuple args
           print_every reset
       | _ ->
-        fprintf ff "@[<2>%s%a (%a%a)@,<%a>%a@]%a"
+        fprintf ff "@[<2>%s%a (%a%a%a)@,<%a>%a@]%a"
           (iterator_to_string it)
           (print_list_r print_static_exp "<<"","">>") params
+          print_async asy
           print_qualname f print_params f_params
           print_exp_tuple pargs
           print_exp_tuple args
           print_every reset)
+| Eiterator (it, { a_op = Ebang; a_async = asy}, params, pargs, args, reset) ->
+        fprintf ff "@[<2>%s%a %a!@,<%a>%a@]%a"
+          (iterator_to_string it)
+          (print_list_r print_static_exp "<<"","">>") params
+          print_async asy
+          print_exp_tuple pargs
+          print_exp_tuple args
+          print_every reset
   | Eiterator _ -> assert false
   | Ewhen (e, c, x) ->
       fprintf ff "@[<2>(%a@ when %a(%a))@]"

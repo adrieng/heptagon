@@ -568,7 +568,7 @@ and mk_node_call map call_context app loc (name_list : Obc.pattern list) args ty
         in
         let s = match app.Minils.a_async with
                   | None -> [Acall (name_list, o, Mstep, args)]
-                  | Some a -> [Aasync_call (a, name_list, o, Mstep, args)]
+                  | Some a -> [Aasync_call (Some a, name_list, o, Mstep, args)]
         in
         [], si, [obj], s
     | _ -> assert false

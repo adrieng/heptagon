@@ -12,7 +12,7 @@ open Misc
 open Location
 
 type future_t = unit
-type async_t = static_exp list
+type async_t = (static_exp list) option
 
 and static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
 

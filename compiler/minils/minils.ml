@@ -82,7 +82,7 @@ and app = { a_op: op;
             a_params: static_exp list;
             a_unsafe: bool;
             a_id: ident option;
-            a_async: async_t option;
+            a_async: async_t;
             a_inlined: bool }
     (** Unsafe applications could have side effects
         and be delicate about optimizations, !be careful! *)

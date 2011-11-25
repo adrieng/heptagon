@@ -8,8 +8,9 @@ open Idents
 type 'a global_it_funs = {
   static_exp         : 'a global_it_funs -> 'a -> static_exp -> static_exp * 'a;
   static_exp_desc    : 'a global_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
+  async              : 'a global_it_funs -> 'a -> async_t -> async_t * 'a;
   ty                 : 'a global_it_funs -> 'a -> ty -> ty * 'a;
-  ct               : 'a global_it_funs -> 'a -> ct -> ct * 'a;
+  ct                 : 'a global_it_funs -> 'a -> ct -> ct * 'a;
   ck                 : 'a global_it_funs -> 'a -> ck -> ck * 'a;
   link               : 'a global_it_funs -> 'a -> link -> link * 'a;
   var_ident          : 'a global_it_funs -> 'a -> var_ident -> var_ident * 'a;
@@ -53,6 +54,9 @@ and static_exp_desc funs acc sd = match sd with
       let se, acc = static_exp_it funs acc se in
       Sasync se, acc
 
+and async_it funs acc a = funs.async funs acc a
+and async funs acc a =
+  Misc.optional_wacc (mapfold (static_exp_it funs)) acc a
 
 and ty_it funs acc t = try funs.ty funs acc t with Fallback -> ty funs acc t
 and ty funs acc t = match t with
@@ -127,6 +131,7 @@ and node funs acc n =
 let defaults = {
   static_exp = static_exp;
   static_exp_desc = static_exp_desc;
+  async = async;
   ty = ty;
   ct = ct;
   ck = ck;
@@ -146,6 +151,7 @@ let stop _ acc x = x, acc
 let defaults_stop = {
   static_exp = stop;
   static_exp_desc = stop;
+  async = stop;
   ty = stop;
   ct = stop;
   ck = stop;
