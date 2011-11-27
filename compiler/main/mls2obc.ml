@@ -434,10 +434,13 @@ let empty_call_context = None
     [j] obj decs
     [s] the actions used in the step method.
     [v] var decs *)
-let rec translate_eq map call_context { Minils.eq_lhs = pat; Minils.eq_rhs = e }
+let rec translate_eq map call_context ({ Minils.eq_lhs = pat; Minils.eq_rhs = e } as eq)
     (v, si, j, s) =
   let { Minils.e_desc = desc; Minils.e_base_ck = ck; Minils.e_loc = loc } = e in
   match (pat, desc) with
+    | pat, Minils.Ewhen (e,_,_) ->
+        translate_eq map call_context {eq with Minils.eq_rhs = e} (v, si, j, s)
+    (* TODO Efby and Eifthenelse should be dealt with in translate_act, no ? *)
     | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
         let x = var_from_name map n in
         let si = (match opt_c with
