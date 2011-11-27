@@ -12,17 +12,13 @@ let
 tel
 
 
-(*
-node clock_on<<pref, per : int>>(w1, w2 : bool) returns (o : bool)
+node when2(x :int; c :bool) returns (y :int)
 let
   automaton
-  state FirstPeriod
-  var w2' : bool; do
-    w2' = w1 when w2;
-    o = false;
+  state FirstPeriod do
+    y = x when c;
     until true then Cruise
   state Cruise do
-    o = true;
+    y = x when c;
   end
 tel
-*)
