@@ -3,6 +3,7 @@
 type bool = true | false
 type int
 type float
+type long
 type string
 val fun (&)(bool;bool) returns (bool)
 val fun ( * )(int;int) returns (int)

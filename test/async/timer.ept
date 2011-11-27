@@ -1,0 +1,19 @@
+open Time
+
+(* [period] is given in milliseconds.
+   [b] should be always equal to [true]
+     otherwise it means we missed a deadline. *)
+node periodic_clock<<period :int>> () returns (b :bool)
+var date : time;
+let
+  b = add_time((get_time()) fby date, 500);
+  b = sleep_until(date);
+tel
+
+
+
+
+node main() returns (b:bool)
+let
+  b = periodic_clock<<50>>();
+tel

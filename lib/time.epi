@@ -1,0 +1,12 @@
+(* The time module *)
+
+(* The time is given in milliseconds *)
+type time = long
+
+val fun add_time(time;int) returns (time)
+
+(* Get current system time in milliseconds *)
+val fun get_time() returns (time)
+
+(* Blocking wait, returns false when interrupted or given time is less than current time. *)
+val fun sleep_until(time) returns (bool)
