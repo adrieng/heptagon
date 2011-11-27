@@ -223,6 +223,10 @@ activate_minils () {
   minils=1
 }
 
+activate_java_gen () {
+  coption="$coption -target java"
+}
+
 activate_java () {
   java=1
   coption="$coption -target java"
@@ -271,6 +275,9 @@ while [ $# -gt 0 ]; do
       shift;;
     "-all" )
       activate_all
+      shift;;
+    "-java_gen")
+      activate_java_gen
       shift;;
     "-java" )
       activate_java
