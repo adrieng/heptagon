@@ -2,11 +2,8 @@
    directory parsing global analysis dataflow sequential sigali simulation translation main
    set arguments -I ../test/good -v ../test/good/t2.ept *)
 
-type t
 
-type r2
-
-(*node hh(x: int) returns ()
+node h(x: int) returns ()
   var y, z: int;
   let
     y = pre z + 1;
@@ -24,7 +21,7 @@ node jj() returns ()
         do k = last k + 1 until k = 1 then S2
     end
   tel
-*)
+
 
 node g(x: bool) returns (o: bool)
   let

@@ -11,7 +11,7 @@
   The initialization analysis only deals with the first instant of flows.
   Things are easy since input/outputs of a node are considered initialized.
   It is allowed to have uninitialized inputs for safe nodes,
-   it will consider the result as unitialized.
+   it will consider the result as uninitialized.
   [last x] is initialized when either it was declared with an initial value
    or when [x] is defined in the initial state of an automaton. *)
 
@@ -108,7 +108,7 @@ struct
   let add_var_dec h vd = _add_var_dec (new_var ()) h vd
 end
 
-(** return the representent of a [typ] ( the max ) *)
+(** return the representative of a [typ] ( the max ) *)
 let rec itype = function
   | Iproduct(ty_list) ->
       List.fold_left (fun acc ty -> imax acc (itype ty)) izero ty_list
@@ -330,28 +330,27 @@ and typing_automaton h state_handlers =
     let env_update x h =
       try
         let xl = IEnv.find_last x h in (* it's a last in the env, good. *)
-        IEnv.add_last x (max xl (IEnv.find_var x h)) h
-      with Not_found -> h (* nothing to do *) in
+        IEnv.add_last x (IEnv.find_var x h) h
+      with Not_found -> h (* nothing to do *)
+    in
     Env.fold (fun x _ h -> env_update x h) l h in
 
-  (* typing the body of the automaton *)
-  let handler h
-      { s_state = _; s_block = b; s_until = suntil; s_unless = sunless } =
-    let escape h { e_cond = e } =
-      initialized_exp h e in
-
+  let handler h { s_state = _; s_block = b; s_until = suntil; s_unless = sunless } =
+    let escape h { e_cond = e } = initialized_exp h e in
     (* typing the body *)
     let h = typing_block h b in
     List.iter (escape h) suntil;
-    List.iter (escape h) sunless in
+    List.iter (escape h) sunless
+  in
 
+  (* typing the body of the automaton *)
   match state_handlers with
       (* we do a special treatment for state variables which *)
-      (* are defined in the initial state if it cannot be immediately *)
-      (* exited *)
+      (* are defined in the initial state if it cannot be immediately exited *)
     | initial :: other_handlers when weak initial ->
         handler h initial; (* first type it *)
-        let h = initialized h initial in (* then update for the orthers *)
+        let h = initialized h initial in
+        (* then type the others in the env of the first one *)
         List.iter (handler h) other_handlers
     | _ -> List.iter (handler h) state_handlers
 
