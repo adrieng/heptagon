@@ -166,8 +166,9 @@ struct
 
   (** Returns a list of memory vars (x in x = v fby e)
       appearing in an equation. *)
-  let memory_vars ({ eq_lhs = _; eq_rhs = e } as eq) = match e.e_desc with
+  let rec memory_vars ({ eq_lhs = _; eq_rhs = e } as eq) = match e.e_desc with
     | Efby(_, _) -> def [] eq
+    | Ewhen(e,_,_) -> memory_vars {eq with eq_rhs = e}
     | _ -> []
 
   let linear_read e =
@@ -189,12 +190,13 @@ end
 
 (* Assumes normal form, all fby are solo rhs *)
 let node_memory_vars n =
-  let eq _ acc ({ eq_lhs = pat; eq_rhs = e } as eq) =
+  let rec eq funs acc ({ eq_lhs = pat; eq_rhs = e } as equ) =
     match pat, e.e_desc with
+    | Evarpat x, Ewhen(e,_,_) -> eq funs acc {equ with eq_rhs = e}
     | Evarpat x, Efby(_, _) ->
         let acc = (x, e.e_ty) :: acc in
-          eq, acc
-    | _, _ -> eq, acc
+        equ, acc
+    | _, _ -> equ, acc
   in
   let funs = { Mls_mapfold.defaults with eq = eq } in
   let _, acc = node_dec_it funs [] n in
