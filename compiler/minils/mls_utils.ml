@@ -188,7 +188,7 @@ struct
     acc
 end
 
-(* Assumes normal form, all fby are solo rhs *)
+(* Assumes normal form, all fby are solo rhs or inside a when *)
 let node_memory_vars n =
   let rec eq funs acc ({ eq_lhs = pat; eq_rhs = e } as equ) =
     match pat, e.e_desc with
