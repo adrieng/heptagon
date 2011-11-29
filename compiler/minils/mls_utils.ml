@@ -202,6 +202,11 @@ let node_memory_vars n =
   let _, acc = node_dec_it funs [] n in
     acc
 
+let rec is_fby e = match e.e_desc with
+  | Ewhen (e, _, _) -> is_fby e
+  | Efby (_, _) -> true
+  | _ -> false
+
 (* data-flow dependences. pre-dependences are discarded *)
 module DataFlowDep = Dep.Make
   (struct
