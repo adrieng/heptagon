@@ -6,16 +6,16 @@ tel
 
 
 node rapide<<n :int>>() returns (z,cpt :int)
-var big_step :bool; r : future int;
+var big_step :bool; r :future int;
 let
   big_step = true fby (cpt = 0);
   reset
     cpt = n fby cpt - 1;
   every big_step;
-  r = async 0 fby async lent<<n>>();
   z = merge big_step
             (true -> !r)
             (false -> do_stuff(20));
+  r = async 0 fby async lent<<n>>();
 tel
 
 

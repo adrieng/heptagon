@@ -1,0 +1,17 @@
+node sense(i :int) returns (o :int)
+let
+  o = i
+tel
+
+node compute(i :int) returns (o :int)
+let
+  o = i
+tel
+
+node main() returns ()
+var i :int; o,r :future int;
+let
+  i = sense(!r);
+  o = async compute(i);
+  r = (async 0) fby (async 0) fby o;
+tel
