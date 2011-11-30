@@ -58,7 +58,7 @@ let rec depends_on x y env =
       else depends_on x z env
 
 let eq funs (env, vds, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs with
-  | Evarpat x, e when is_fby e && depends_on x x env ->
+  | Evarpat x, e when Vars.is_fby e && depends_on x x env ->
         let vd = vd_find x vds in
         let x_mem = Idents.gen_var "normalize_mem" ("mem_"^(Idents.name x)) in
         let vd_mem = { vd with v_ident = x_mem } in

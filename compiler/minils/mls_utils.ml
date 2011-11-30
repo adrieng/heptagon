@@ -149,8 +149,12 @@ struct
          else read_extvalue is_left [] e1
     | _ -> read_exp is_left [] e
 
-  let antidep { eq_rhs = e } =
-    match e.e_desc with Efby _ -> true | _ -> false
+  let rec is_fby e = match e.e_desc with
+    | Ewhen (e, _, _) -> is_fby e
+    | Efby (_, _) -> true
+    | _ -> false
+
+  let antidep { eq_rhs = e } = is_fby e
 
   let clock { eq_rhs = e } = e.e_base_ck
 
@@ -202,10 +206,6 @@ let node_memory_vars n =
   let _, acc = node_dec_it funs [] n in
     acc
 
-let rec is_fby e = match e.e_desc with
-  | Ewhen (e, _, _) -> is_fby e
-  | Efby (_, _) -> true
-  | _ -> false
 
 (* data-flow dependences. pre-dependences are discarded *)
 module DataFlowDep = Dep.Make
