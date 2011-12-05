@@ -109,6 +109,7 @@ let copname = function
   | "+." -> "+" | "-." -> "-" | "<"  -> "<" | ">"  -> ">" | "<=" -> "<="
   | ">=" -> ">=" | "<=." -> "<=" | "<." -> "<" | ">=." -> ">=" | ">." -> ">"
   | "~-" -> "-" | "not" -> "!" | "%" -> "%"
+  | ">>>" -> ">>" | "<<<" -> "<<"
   | op   -> op
 
 (** Translates an Obc var_dec to a tuple (name, cty). *)
@@ -267,12 +268,13 @@ and cop_of_op_aux op_name cexps = match op_name with
     | { qual = Pervasives; name = op } ->
         begin match op,cexps with
           | ("~-" | "~-."), [e] -> Cuop ("-", e)
+          | ("~~"), [e] -> Cuop ("~", e)
           | "not", [e] -> Cuop ("!", e)
           | (
               "=" | "<>"
             | "&" | "or"
             | "+" | "-" | "*" | "/"
-            | "*." | "/." | "+." | "-." | "%"
+            | "*." | "/." | "+." | "-." | "%" | "<<<" | ">>>"
             | "<" | ">" | "<=" | ">=" | "<=." | "<." | ">=." | ">."), [el;er] ->
               Cbop (copname op, el, er)
           | _ -> Cfun_call(op, cexps)
