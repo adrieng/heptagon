@@ -100,6 +100,7 @@ let apply_op partial loc op se_list =
       | "~-", [Sint n] -> Sint (-n)
       | "~~", [Sint n] -> Sint (lnot n)
       | "~-.", [Sfloat f] -> Sfloat (-. f)
+      | "&&&", [Sint n1; Sint n2] -> Sint (n1 land n2)
       | f,_ -> Misc.internal_error ("Static evaluation failed of the pervasive operator "^f)
   )
   else ( (* symbolic evaluation *)
