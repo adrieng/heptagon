@@ -117,6 +117,7 @@ and op ff (f, e_l) =
     | "<<<" -> "<<"
     | ">>>" -> ">>"
     | "&&&" -> "&"
+    | "|||" -> "|"
     | op   -> op
   in
   match Names.modul f with
