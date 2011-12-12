@@ -97,7 +97,7 @@ and cstm =
   | Caffect of clhs * cexpr (** Affect the result of an expression to a lhs. *)
   | Cif of cexpr * cstm list * cstm list (** Alternative *)
   | Cswitch of cexpr * (string * cstm list) list (** Case/switch over an enum.*)
-  | Cwhile of cexpr * cstm list (** While loop. *)
+  | Cwhile of Obc.while_order * cexpr * cstm list (** While loop. *)
   | Cfor of string * cexpr * cexpr * cstm list (** For loop. int <= string < int *)
   | Creturn of cexpr (** Ends a procedure/function by returning an expression.*)
 
@@ -232,8 +232,10 @@ and pp_cstm fmt stm = match stm with
       fprintf fmt "@[<v>@[<v 2>for (int %a = %a; %a < %a; ++%a) {%a@]@ }@]"
         pp_string x  pp_cexpr lower  pp_string x
         pp_cexpr upper  pp_string x  pp_cstm_list e
-  | Cwhile (e, b) ->
+  | Cwhile (Obc.Wwhiledo, e, b) ->
       fprintf fmt "@[<v>@[<v 2>while (%a) {%a@]@ }@]" pp_cexpr e pp_cstm_list b
+  | Cwhile (Obc.Wdowhile, e, b) ->
+      fprintf fmt "@[<v>@[<v 2>do {%a@]@ } while (%a)@]" pp_cstm_list b pp_cexpr e
   | Csblock cb -> pp_cblock fmt cb
   | Cskip -> fprintf fmt ""
   | Creturn e -> fprintf fmt "return %a" pp_cexpr e

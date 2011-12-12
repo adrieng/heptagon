@@ -75,6 +75,8 @@ and act = Anewvar of var_dec * exp
         | Aifelse of exp * block * block
         | Ablock of block
         | Afor of var_dec * exp * exp * block
+        | Awhile of exp * block
+        | Ado_while of exp * block
         | Areturn of exp
 
 and exp = Ethis

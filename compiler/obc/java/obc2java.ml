@@ -330,6 +330,13 @@ let rec act_list param_env act_l acts =
         let afor = Afor (var_dec param_env v,
                         exp param_env se, exp param_env se', block param_env b) in
         afor::acts
+    | Obc.Awhile (o, e, b) ->
+        let e = exp param_env e in
+        let b = block param_env b in
+        begin match o with
+          | Obc.Wwhiledo -> Awhile(e,b)
+          | Obc.Wdowhile -> Ado_while(e,b)
+        end::acts
     | Obc.Ablock b ->
         let ablock = Ablock (block param_env b) in
         ablock::acts
