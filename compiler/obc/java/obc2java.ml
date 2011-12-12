@@ -102,7 +102,7 @@ let translate_constructor_name_2 q q_ty =
   { qual = QualModule classe; name = String.uppercase q.name }
 
 let translate_constructor_name q =
-  match Modules.unalias_type (Modules.find_constrs q) with
+  match Modules.unalias_type (Types.Tid (Modules.find_constrs q)) with
     | Types.Tid q_ty when q_ty = Initial.pbool -> q |> shortname |> local_qn
     | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
     | _ -> assert false

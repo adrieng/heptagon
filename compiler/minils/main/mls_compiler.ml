@@ -31,7 +31,6 @@ let compile_program p =
   let p = pass "Level clock" true Level_clock.program p pp in
 
   (* Dataglow minimization *)
-
   let p =
     let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
     let p = pass "Extended value inlining" call_tomato Inline_extvalues.program p pp in
