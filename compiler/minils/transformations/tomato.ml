@@ -593,7 +593,7 @@ let update_node nd =
   let change_name vd arg = { arg with a_name = Some (name vd.v_ident) } in
   let sign = Modules.find_value nd.n_name in
   let sign = { sign with node_outputs = List.map2 change_name nd.n_output sign.node_outputs } in
-  Signature.check_signature sign;
+  Check_signature.check_signature sign;
   ignore (Modules.replace_value nd.n_name sign)
 
 let node nd =

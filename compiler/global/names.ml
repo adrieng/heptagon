@@ -85,9 +85,12 @@ let is_infix s =
       ["or"; "quo"; "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"]
       StrSet.empty in
   if StrSet.mem s infix_set then true
-  else (match String.get s 0 with
+  else begin
+    try match String.get s 0 with
           | 'a' .. 'z' | 'A' .. 'Z' | '_' | '`' | '~' -> false
-          | _ -> true)
+          | _ -> true
+    with Invalid_argument _ -> (* empty string *) false
+  end
 
 open Format
 

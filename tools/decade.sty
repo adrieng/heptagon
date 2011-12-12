@@ -1,0 +1,39 @@
+\ProvidesPackage{decade}
+
+\RequirePackage{listings}
+
+\lstdefinelanguage{lustre}{
+morekeywords={
+node, returns, var, allocate, mutable, let, tel, const, pre, last,fby,
+merge, at, if, then, else},
+otherkeywords={=, [, ], :, ;, <<, >>, <-},
+sensitive=true,
+morecomment=[n]{(*}{*)},
+morestring=[b]",
+morestring=[b]'
+}
+
+\lstdefinelanguage{decade}{
+morekeywords={
+async,fun,future,node,returns,var,let,tel,const,pre,last,do,reset, every,fby,at,
+type,merge,automaton,end,switch,case,state,until,if,then,else,
+map,with,default,mapfold,fold,new,int,float,init,fun,split,for},
+otherkeywords={->},
+sensitive=true,
+morecomment=[n]{(*}{*)},
+morestring=[b]",
+morestring=[b]'
+}
+
+\lstdefinelanguage{obc}{
+morekeywords={
+machine,registers,instances,switch,step,float,int,var,case,mutable,for,to},
+otherkeywords={},
+sensitive=true,
+morecomment=[n]{(*}{*)},
+morestring=[b]",
+morestring=[b]'
+}
+
+
+\lstset{language=decade}

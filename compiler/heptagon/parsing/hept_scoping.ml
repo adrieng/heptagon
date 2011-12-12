@@ -548,7 +548,7 @@ let translate_signature s =
   let p, _ = params_of_var_decs Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
   let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful s.sig_unsafe p in
-  Signature.check_signature sig_node;
+  Check_signature.check_signature sig_node;
   safe_add s.sig_loc add_value n sig_node;
   mk_signature n i o s.sig_stateful p c s.sig_loc
 

@@ -244,17 +244,6 @@ let typing_contract h contract =
         expect_extvalue h' Cbase e_g;
         append_env h c_list
 
-(* check signature causality and update it in the global env *)
-let update_signature h node =
-  let set_arg_clock vd ad =
-    { ad with a_clock = Signature.ck_to_sck (ck_repr (Env.find vd.v_ident h)) }
-  in
-  let sign = Modules.find_value node.n_name in
-  let sign =
-    { sign with node_inputs = List.map2 set_arg_clock node.n_input sign.node_inputs;
-                node_outputs = List.map2 set_arg_clock node.n_output sign.node_outputs } in
-  Signature.check_signature sign;
-  Modules.replace_value node.n_name sign
 
 let typing_node node =
   let h0 = append_env Env.empty node.n_input in
@@ -270,7 +259,9 @@ let typing_node node =
                          n_output = List.map set_clock node.n_output;
                          n_local = List.map set_clock node.n_local }
   in
-  update_signature h node;
+  let sign = Mls_utils.signature_of_node node in
+  Check_signature.check_signature sign;
+  Modules.replace_value node.n_name sign;
   node
 
 let program p =
