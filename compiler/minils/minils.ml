@@ -128,6 +128,7 @@ type contract = {
 type node_dec = {
   n_name     : qualname;
   n_stateful : bool;
+  n_unsafe   : bool;
   n_input    : var_dec list;
   n_output   : var_dec list;
   n_contract : contract option;
@@ -139,6 +140,7 @@ type node_dec = {
   n_params   : param list;
   n_param_constraints : constrnt list;
   n_mem_alloc : (ty * Interference_graph.ivar list) list; }
+
 
 type const_dec = {
   c_name : qualname;
@@ -202,11 +204,12 @@ let mk_equation ?(loc = no_location) unsafe pat exp =
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(pinst = ([],[]))
     ?(local = []) ?(eq = [])
-    ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
+    ?(stateful = true) ~unsafe ?(loc = no_location) ?(param = []) ?(constraints = [])
     ?(mem_alloc=[])
     name =
   { n_name = name;
     n_stateful = stateful;
+    n_unsafe = unsafe;
     n_input = input;
     n_output = output;
     n_contract = contract;
