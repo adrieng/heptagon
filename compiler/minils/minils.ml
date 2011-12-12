@@ -185,6 +185,17 @@ let mk_extvalue ~ty ~linearity ?(clock = fresh_clock()) ?(loc = no_location) des
   { w_desc = desc; w_ty = ty; w_linearity = linearity;
     w_ck = clock; w_loc = loc }
 
+let extvalue_true, extvalue_false =
+  let extvalue_bool b ck =
+    mk_extvalue ~ty:Initial.tbool ~linearity:Linearity.Ltop
+                ~clock:ck (Wconst (Initial.mk_static_bool b))
+  in
+  extvalue_bool true, extvalue_bool false
+
+let mk_vd_extvalue vd =
+  mk_extvalue ~ty:vd.v_type ~linearity:vd.v_linearity
+              ~clock:vd.v_clock ~loc:vd.v_loc (Wvar vd.v_ident)
+
 let mk_exp level_ck ty ~linearity ?(ck = Cbase)
     ?(ct = fresh_ct ty) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = ty; e_linearity = linearity;
