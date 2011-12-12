@@ -1,0 +1,21 @@
+(* Should work and give 2 12 22 32 42 52 ... *)
+fun f(x :int) returns (y :int)
+let
+  y = x + 1
+tel
+
+node g(x :int) returns (out :int)
+var c :bool; y, last_y :int;
+let
+  c = true fby false fby c;
+  last_y = 0 fby y;
+  y = f(merge c x (last_y whenot c));
+  out = last_y when c;
+tel
+
+node main() returns (out :int)
+var x :int;
+let
+  x = 0 fby (x+10);
+  out = g(x);
+tel
