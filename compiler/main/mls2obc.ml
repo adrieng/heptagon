@@ -699,11 +699,31 @@ let subst_map inputs outputs controllables c_locals locals mem_tys =
   in
   List.fold_left (fun map (x, x_ty) -> Env.add x (mk_pattern x_ty (Lmem x)) map) map mem_tys
 
+let add_oversampler oversampler d_list nd outputs s =
+  match oversampler with
+    | None -> mk_block ~locals:d_list s, outputs
+    | Some oversampler ->
+      let x = mk_ext_value_exp_bool (Wvar oversampler.Minils.v_ident) in
+      let e = mk_exp_bool (Eop (op_from_string "not", [x])) in
+      (* remove the sampler from the node signature *)
+      let n_output =
+        List.filter
+          (fun vd -> vd.Minils.v_ident <> oversampler.Minils.v_ident)
+          nd.Minils.n_output
+      in
+      let nd = { nd with Minils.n_output = n_output } in
+      let sign = Mls_utils.signature_of_node nd in
+      Modules.replace_value nd.Minils.n_name sign;
+      (* remove the oversampler from the outputs *)
+      let outputs, sampler =
+        List.partition (fun vd -> vd.v_ident <> oversampler.Minils.v_ident) outputs in
+      mk_block ~locals:sampler [Awhile (Wdowhile, e, mk_block ~locals:d_list s)], outputs
+
 let translate_node
     ({ Minils.n_name = f; Minils.n_input = i_list; Minils.n_output = o_list;
       Minils.n_local = d_list; Minils.n_equs = eq_list; Minils.n_stateful = stateful;
       Minils.n_contract = contract; Minils.n_params = params; Minils.n_loc = loc;
-      Minils.n_mem_alloc = mem_alloc
+      Minils.n_mem_alloc = mem_alloc; n_base_id = oversampler
     } as n) =
   Idents.enter_node f;
   let mem_var_tys = Mls_utils.node_memory_vars n in
@@ -725,8 +745,9 @@ let translate_node
   let s = s_list @ s_list' in
   let j = j' @ j in
   let si = si @ si' in
+  let body, o_list = add_oversampler oversampler (d_list' @ d_list) n o_list s in
   let stepm = { m_name = Mstep; m_inputs = i_list; m_outputs = o_list;
-                m_body = mk_block ~locals:(d_list' @ d_list) s }
+                m_body = body }
   in
   let resetm = { m_name = Mreset; m_inputs = []; m_outputs = []; m_body = mk_block si } in
   if stateful

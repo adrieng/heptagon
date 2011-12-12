@@ -30,6 +30,9 @@ let compile_program p =
   (* Level clocks *)
   let p = pass "Level clock" true Level_clock.program p pp in
 
+  (* Oversampling *)
+  let p = pass "Add oversampler equations" true Oversampler.program p pp in
+
   (* Dataglow minimization *)
   let p =
     let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
