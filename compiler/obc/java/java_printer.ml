@@ -85,7 +85,6 @@ and exp ff = function
   | Efun (f,e_l) -> op ff (f, e_l)
   | Emethod_call (o,m,e_l) -> fprintf ff "%a.%a%a" exp o method_name m args e_l
   | Enew (c,e_l) -> fprintf ff "new %a%a" new_ty c args e_l
-  | Easync_method_call _ -> Misc.internal_error "java_printer, Easync call not translated" 0
   | Enew_array (t,e_l) ->
     (match e_l with
       | [] -> fprintf ff "new %a" new_ty t

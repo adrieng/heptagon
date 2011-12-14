@@ -67,7 +67,6 @@ let g_env =
 let is_loaded m = List.mem m g_env.loaded_mod
 let is_opened m = List.mem m g_env.opened_mod
 
-
 (** Append a module to the global environnment *)
 let _append_module mo =
   (* Transforms a module object NamesEnv into its qualified version *)
@@ -183,6 +182,12 @@ let find_struct n =
   match find_type n with
     | Tstruct fields -> fields
     | _ -> raise Not_found
+
+
+let is_statefull q =
+  let v = find_value q in
+  v.node_stateful
+
 
 (** { 3 Check functions }
     Try to load the needed module and then to find it,

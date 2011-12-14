@@ -78,27 +78,36 @@ let modul_of_string s =
 (** Are infix
     [or], [quo], [mod], [land], [lor], [lxor], [lsl], [lsr], [asr]
     and every names not beginning with 'a' .. 'z' | 'A' .. 'Z' | '_' | '`'*)
-let is_infix s =
-  let module StrSet = Set.Make(String) in
-  let infix_set =
-    List.fold_right StrSet.add
-      ["or"; "quo"; "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"]
-      StrSet.empty in
-  if StrSet.mem s infix_set then true
-  else begin
-    try match String.get s 0 with
-          | 'a' .. 'z' | 'A' .. 'Z' | '_' | '`' | '~' -> false
-          | _ -> true
-    with Invalid_argument _ -> (* empty string *) false
-  end
+let is_infix q = match q with
+  | { qual = Pervasives; name = s } ->
+      let module StrSet = Set.Make(String) in
+      let infix_set =
+        List.fold_right StrSet.add
+          ["or"; "quo"; "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"]
+          StrSet.empty in
+      if StrSet.mem s infix_set then true
+      else begin
+        try match String.get s 0 with
+              | 'a' .. 'z' | 'A' .. 'Z' | '_' | '`' | '~' -> false
+              | _ -> true
+        with Invalid_argument _ -> (* empty string *) false
+      end
+  | _ -> false
+
+
+let is_op q = match q with
+  | { qual = Pervasives; name = s } -> true
+  | _ -> false
+
 
 open Format
 
+(* printers should prevent printing infix names *)
 let print_name ff n =
-  let n = if is_infix n
+(*  let n = if is_infix n
   then "(" ^ (n ^ ")") (* printers should have a special case to print '*' infix *)
   else n
-  in fprintf ff "%s" n
+  in*) fprintf ff "%s" n
 
 (** Use a printer to generate a string compatible with a name *)
 let print_pp_to_name p x =

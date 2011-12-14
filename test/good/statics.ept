@@ -29,3 +29,7 @@ let
   y = c + g<<c>>() + i<<k>>();
 tel
 
+node main() returns (y:int)
+let
+  y = 0 fby i<<3>>();
+tel

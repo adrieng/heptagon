@@ -121,6 +121,8 @@ let use_old_scheduler = ref false
 
 let normalize_register_outputs = ref true
 let strict_ssa = ref false
+let functions_are_classes = ref true
+(** disable it to generate true functions instead of node with empty memory *)
 
 let optim = ref false
 let do_optim () =

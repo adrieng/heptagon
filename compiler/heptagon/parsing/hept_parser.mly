@@ -466,6 +466,7 @@ _simple_exp:
   | ASYNC c=simple_exp               { Easync c }
   | LBRACE field_exp_list RBRACE     { Estruct $2 }
   | LBRACKET array_exp_list RBRACKET { mk_call Earray $2 }
+  | LPAREN RPAREN                    { mk_call Etuple [] }
   | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
   | e=simple_exp DOT c=qualname
       { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))] Efield [e] }

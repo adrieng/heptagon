@@ -20,7 +20,9 @@ open Signature
 open Location
 
 type class_name = qualname
-type op_name = qualname
+type fun_name = qualname
+(** An op is a function returning one value *)
+type op_name = fun_name
 type obj_ident = var_ident
 
 
@@ -81,7 +83,9 @@ type while_order =
 
 type act =
   | Aassgn of pattern * exp
-  | Aop of op_name * exp list (* TODO c'est un peu bizare ce truc *)
+  (** Note that the return pattern list of Acall_fun and Acall
+       may be empty since side effect functions exist. *)
+  | Acall_fun of pattern list * fun_name * exp list
   | Acall of pattern list * obj_ref * method_name * exp list
   | Aasync_call of async_t * pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list

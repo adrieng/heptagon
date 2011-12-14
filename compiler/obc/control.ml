@@ -59,6 +59,14 @@ let rec is_modified_by_call x args e_list = match args, e_list with
 let is_modified_handlers j x handlers =
   let act _ acc a = match a with
     | Aassgn(l, _) -> a, acc or (appears_in_lhs x l)
+    | Acall_fun(name_list, f, e_list) ->
+        (* first, check if e is one of the output of the function*)
+        if List.exists (appears_in_lhs x) name_list then
+          a, true
+        else (
+          let sig_info = Modules.find_value f in
+            a, acc or (is_modified_by_call x sig_info.node_inputs e_list)
+        )
     | Acall (name_list, o, Mstep, e_list) ->
         (* first, check if e is one of the output of the function*)
         if List.exists (appears_in_lhs x) name_list then

@@ -52,7 +52,7 @@ and print_exps ff e_list = print_list_r print_exp "" "," "" ff e_list
 and print_exp ff e =
   match e.e_desc with
     | Eextvalue lhs -> print_ext_value ff lhs
-    | Eop(op, e_list) -> print_op ff op e_list
+    | Eop(op, e_list) -> print_fun ff (op,e_list)
     | Estruct(_,f_e_list) ->
         fprintf ff "@[<v 1>";
         print_list_r
@@ -67,12 +67,13 @@ and print_exp ff e =
     | Ebang e ->
         fprintf ff "!(%a)" print_exp e
 
-and print_op ff op e_list = match e_list with
-  | [l; r] ->
-      fprintf ff "(@[%a@ %a %a@])" print_qualname op print_exp l print_exp r
-  | _ ->
-      print_qualname ff op;
-      print_list_l print_exp "(" "," ")" ff e_list
+and print_fun ff (f,e_list) =
+  if is_infix f
+  then
+    let (e1,e2) = Misc.assert_2 e_list in
+    fprintf ff "%a %a %a" print_exp e1 print_qualname f print_exp e2
+ else
+    fprintf ff "%a@[<1>%a@]" print_qualname f (print_list_l print_exp "(" "," ")") e_list
 
 let print_asgn ff pref x e =
   fprintf ff "@[%s" pref; print_lhs ff x; fprintf ff " = ";
@@ -116,8 +117,10 @@ let rec print_act ff a =
          fprintf ff "@[<v>@[<v 2>do {@  %a @]@,} while %a @]"
            print_block b
            print_exp e
-    | Aop (op, es) ->
-        print_op ff op es
+    | Acall_fun (var_list, f, es) ->
+        fprintf ff "@[<2>%a%a@]"
+          print_lhs_tuple var_list
+          print_fun (f, es)
     | Acall (var_list, o, meth, es) ->
         fprintf ff "@[<2>%a%a.%a(%a)@]"
           print_lhs_tuple var_list

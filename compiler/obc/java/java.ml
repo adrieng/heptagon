@@ -15,7 +15,7 @@ type const_name = Names.qualname
 type method_name = Names.name
 type field_name = Names.name
 type field_ident = Idents.var_ident
-type op_name = Names.qualname
+type fun_name = Names.qualname
 type var_ident = Idents.var_ident
 
 type ty = Tclass of class_name
@@ -80,9 +80,8 @@ and act = Anewvar of var_dec * exp
         | Areturn of exp
 
 and exp = Ethis
-        | Efun of op_name * exp list
+        | Efun of fun_name * exp list
         | Emethod_call of exp * method_name * exp list
-        | Easync_method_call of exp * method_name * exp list
         | Enew of ty * exp list
         | Enew_array of ty * exp list (** [ty] is the array base type *)
         | Evoid (*printed as nothing*)

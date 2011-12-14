@@ -8,6 +8,7 @@ open Java_printer
 let load_conf () =
   Compiler_options.normalize_register_outputs := true; (* TODO make it work before desactivating *)
   Compiler_options.do_scalarize := true;
+  Compiler_options.functions_are_classes := false;
   ()
 
 (** returns the vd and the pat of a fresh ident from [name] *)
@@ -53,38 +54,48 @@ let program p =
       let get_arg i = Earray_elem(exp_args, [Sint i]) in
 
       let body =
+        let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
+        let jint = Eclass(Names.qualname_of_string "Integer") in
+        let jfloat = Eclass(Names.qualname_of_string "Float") in
+        let jbool = Eclass(Names.qualname_of_string "Boolean") in
+        let jsys = Eclass(Names.qualname_of_string "java.lang.System") in
+        let jminus = pervasives_qn "-" in
+
+        (* num args to give to the main *)
+        let rec num_args = List.length ty_main_args in
+
+        (* parse arguments to give to the main *)
+        let rec parse_args t_l i = match t_l with
+          | [] -> []
+          | t::t_l when t = Initial.tint ->
+              (Emethod_call(jint, "parseInt", [get_arg i]))
+              :: parse_args t_l (i+1)
+          | t::t_l when t = Initial.tfloat ->
+              (Emethod_call(jfloat, "parseFloat", [get_arg i]))
+              :: parse_args t_l (i+1)
+          | t::t_l when t = Initial.tint ->
+              (Emethod_call(jbool, "parseBool", [get_arg i]))
+              :: parse_args t_l (i+1)
+          | _ -> Misc.unsupported "java main does not support parsing complexe static args"
+        in
+        let main_args = parse_args ty_main_args 0 in
         let vd_main, e_main, q_main, ty_main =
-          let q_main = Obc2java.qualname_to_package_classe q_main in (*java qual*)
-          let id = Idents.gen_var "java_main" "main" in
-          mk_var_dec id false (Tclass q_main), Evar id, q_main, ty_main
+          if Modules.is_statefull q_main
+          then
+            let q_main = Obc2java.qualname_to_package_classe q_main in
+            let id = Idents.gen_var "java_main" "main" in
+            Anewvar(mk_var_dec id false (Tclass q_main), Enew (Tclass q_main, main_args)),
+            Emethod_call(Evar id, "step", []),
+            q_main,
+            ty_main
+          else
+            let q_main = Obc2java.translate_fun_name q_main in
+            Aexp Evoid,
+            Efun(q_main, main_args),
+            q_main,
+            ty_main
         in
         let acts =
-          let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
-          let jint = Eclass(Names.qualname_of_string "Integer") in
-          let jfloat = Eclass(Names.qualname_of_string "Float") in
-          let jbool = Eclass(Names.qualname_of_string "Boolean") in
-          let jsys = Eclass(Names.qualname_of_string "java.lang.System") in
-          let jminus = pervasives_qn "-" in
-
-          (* num args to give to the main *)
-          let rec num_args = List.length ty_main_args in
-
-          (* parse arguments to give to the main *)
-          let rec parse_args t_l i = match t_l with
-            | [] -> []
-            | t::t_l when t = Initial.tint ->
-                (Emethod_call(jint, "parseInt", [get_arg i]))
-                :: parse_args t_l (i+1)
-            | t::t_l when t = Initial.tfloat ->
-                (Emethod_call(jfloat, "parseFloat", [get_arg i]))
-                :: parse_args t_l (i+1)
-            | t::t_l when t = Initial.tint ->
-                (Emethod_call(jbool, "parseBool", [get_arg i]))
-                :: parse_args t_l (i+1)
-            | _ -> Misc.unsupported "java main does not support parsing complexe static args"
-          in
-          let main_args = parse_args ty_main_args 0 in
-
           let parse_max_iteration =
             (* no more arg to give to main, the last one if it exists is the iteration nb *)
             Aifelse(Efun(Names.pervasives_qn ">", [ Efield (exp_args, "length"); Sint num_args ]),
@@ -97,8 +108,8 @@ let program p =
           let ty_ret = Obc2java.ty NamesEnv.empty ty_main in
           let vd_ret, _, exp_ret = mk_var ty_ret false "ret" in
           let call_main = match ty_ret with
-            | Tunit -> Aexp(Emethod_call(e_main, "step", []))
-            | _ -> Anewvar (vd_ret, Emethod_call(e_main, "step", []))
+            | Tunit -> Aexp e_main
+            | _ -> Anewvar (vd_ret, e_main)
           in
           let print_ret i = match ty_ret with
             | Tunit -> Aexp (Emethod_call(out, "printf", [Sstring "%d => \\n"; Evar i]))
@@ -118,7 +129,7 @@ let program p =
                  mk_block [Aexp (Emethod_call(out, "printf",
                                               [Sstring "error : not enough arguments.\\n"]));
                            Areturn Evoid]);
-            Anewvar(vd_main, Enew (Tclass q_main, main_args));
+            vd_main;
             parse_max_iteration;
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
             Obc2java.fresh_for exp_step main_for_loop;

@@ -59,7 +59,7 @@ let mk_ext_value_exp_int desc = mk_ext_value_exp Initial.tint desc
 
 let mk_ext_value_exp_bool desc = mk_ext_value_exp Initial.tbool desc
 
-let mk_ext_value_static ty sed = mk_ext_value_exp ty (Wconst sed)
+let mk_ext_value_static sed = mk_ext_value_exp sed.se_ty (Wconst sed)
 
 let mk_evar ty id =
   mk_ext_value_exp ty (Wvar id)

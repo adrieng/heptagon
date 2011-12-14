@@ -73,6 +73,11 @@ let rec translate_modul m = m
 let translate_const_name { qual = m; name = n } =
   { qual = QualModule { qual = translate_modul m; name = "CONSTANTES"}; name = String.uppercase n }
 
+(** a [Module.f] becomes a [module.FUNS.f] except for pervasive functions which are left as is *)
+let translate_fun_name ({ qual = m; name = n } as  f) = match m with
+  | Pervasives -> f
+  | _ -> { qual = QualModule { qual = translate_modul m; name = "FUNS"}; name = n }
+
 (** a [Module.name] becomes a [module.Name]
     used for type_names, class_names, fun_names *)
 let qualname_to_class_name q =
@@ -195,7 +200,7 @@ and var_dec_list param_env vd_l = List.map (var_dec param_env) vd_l
 
 and exp param_env e = match e.e_desc with
   | Obc.Eextvalue p -> ext_value param_env p
-  | Obc.Eop (op,e_l) -> Efun (op, exp_list param_env e_l)
+  | Obc.Eop (op,e_l) -> Efun (translate_fun_name op, exp_list param_env e_l)
   | Obc.Estruct _ -> eprintf "ojEstruct@."; assert false (* TODO java *)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
   | Obc.Ebang e -> Emethod_call (exp param_env e,"get",[])
@@ -253,25 +258,35 @@ let obj_ref param_env o = match o with
       let idx_l = List.map (fun p -> pattern_to_exp param_env p) p_l in
       Earray_elem (Evar id, idx_l)
 
+
+
 let rec act_list param_env act_l acts =
+  let only_call_exp act = match act with
+    | Acall_fun(_, f, e_l) ->
+        Efun (translate_fun_name f, exp_list param_env e_l)
+    | Acall (_, obj, Mstep, e_l)
+    | Aasync_call (_, _, obj, Mstep, e_l) ->
+        Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l)
+    | Acall (_, obj, Mreset, e_l)
+    | Aasync_call (_, _, obj, Mreset, e_l) ->
+        Emethod_call (obj_ref param_env obj, "reset", exp_list param_env e_l)
+    | _ -> Misc.internal_error "only_call_exp fail on non call act."
+  in
   let _act act acts = match act with
-    | Obc.Aassgn (p,e) -> (Aassgn (pattern param_env p, exp param_env e))::acts
-    | Obc.Aop (op,e_l) -> Aexp (Efun (op, exp_list param_env e_l)) :: acts
-    | Obc.Acall ([], obj, Mstep, e_l)
-    | Obc.Aasync_call (_,[], obj, Mstep, e_l) ->
-        let acall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
-        Aexp acall::acts
-    | Obc.Acall ([p], obj, Mstep, e_l)
-    | Obc.Aasync_call (_,[p], obj, Mstep, e_l) ->
-        let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
-        let assgn = Aassgn (pattern param_env p, ecall) in
-        assgn::acts
-    | Obc.Acall (p_l, obj, Mstep, e_l)
-    | Obc.Aasync_call (_, p_l, obj, Mstep, e_l) ->
+    | Obc.Aassgn (p,e) ->
+        Aassgn (pattern param_env p, exp param_env e) :: acts
+    | Obc.Aasync_call (_,[],_,_,_)
+    | Obc.Acall_fun ([],_,_) | Obc.Acall ([],_,_,_) ->
+        Aexp (only_call_exp act)::acts
+    | Obc.Aasync_call (_,[p],_,_,_)
+    | Obc.Acall_fun ([p],_,_) | Obc.Acall ([p],_,_,_) ->
+        Aassgn (pattern param_env p, only_call_exp act) :: acts
+    | Obc.Aasync_call (_,p_l,_,_,_)
+    | Obc.Acall_fun (p_l,_,_) | Obc.Acall (p_l,_,_,_) ->
         let return_ty = p_l |> pattern_list_to_type |> (ty param_env) in
         let return_id = Idents.gen_var "obc2java" "out" in
         let return_vd = mk_var_dec return_id false return_ty in
-        let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
+        let ecall = only_call_exp act in
         let assgn = Anewvar (return_vd, ecall) in
         let copy_return_to_var i p =
           let t = ty param_env p.pat_ty in
@@ -286,10 +301,6 @@ let rec act_list param_env act_l acts =
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
-    | Obc.Acall (_, obj, Mreset, _)
-    | Obc.Aasync_call (_,_, obj, Mreset, _) ->
-        let acall = Emethod_call (obj_ref param_env obj, "reset", []) in
-        Aexp acall::acts
     | Obc.Acase (e, c_b_l) when e.e_ty = Types.Tid Initial.pbool ->
         (match c_b_l with
           | [] -> acts
@@ -683,17 +694,46 @@ let const_dec_list cd_l = match cd_l with
       [mk_classe ~fields: fields classe_name]
 
 
+let fun_dec_list fd_l = match fd_l with
+  | [] -> []
+  | _ ->
+    let mk_fun_method fd =
+      Idents.enter_node fd.cd_name;
+      (* [param_env] is an env mapping local param name to ident *)
+      let vds_params, param_env = sig_params_to_vds fd.cd_params in
+      let ostep = find_step_method fd in
+      let vd_output = var_dec_list param_env ostep.m_outputs in
+      let return_ty = ostep.m_outputs |> vd_list_to_type |> (ty param_env) in
+      let return_act =
+        Areturn (match vd_output with
+                | [] -> Evoid
+                | [vd] -> Evar vd.vd_ident
+                | vd_l -> Enew (return_ty, List.map (fun vd -> Evar vd.vd_ident) vd_l))
+      in
+      let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
+      mk_methode ~args:(vds_params @(var_dec_list param_env ostep.Obc.m_inputs))
+               ~returns:return_ty
+               ~static:true
+               body (shortname fd.cd_name)
+    in
+    let funs = List.map mk_fun_method fd_l in
+    let classe_name = "FUNS" |> name_to_classe_name in
+    [mk_classe ~methodes:funs classe_name]
 
 let program p =
-  let rec program_descs pds (ns,cs,ts) = match pds with
-    | [] -> ns,cs,ts
-    | Obc.Pclass n :: pds -> program_descs pds (n::ns,cs,ts)
-    | Obc.Pconst c :: pds -> program_descs pds (ns,c::cs,ts)
-    | Obc.Ptype t :: pds -> program_descs pds (ns,cs,t::ts)
+  let rec program_descs pds (ns,fs,cs,ts) = match pds with
+    | [] -> ns,fs,cs,ts
+    | Obc.Pclass n :: pds ->
+        if n.cd_stateful
+        then program_descs pds (n::ns,fs,cs,ts)
+        else program_descs pds (ns,n::fs,cs,ts)
+    | Obc.Pconst c :: pds -> program_descs pds (ns,fs,c::cs,ts)
+    | Obc.Ptype t :: pds -> program_descs pds (ns,fs,cs,t::ts)
   in
-  let ns,cs,ts = program_descs p.p_desc ([],[],[]) in
-  let classes = const_dec_list cs in
-  let classes = type_dec_list classes ts in
+  let ns,fs,cs,ts = program_descs p.p_desc ([],[],[],[]) in
+  let consts_classe = const_dec_list cs in
+  let funs_classe = fun_dec_list fs in
+  let classes = type_dec_list (consts_classe@funs_classe) ts in
   let p = class_def_list classes ns in
   get_classes()@p
 

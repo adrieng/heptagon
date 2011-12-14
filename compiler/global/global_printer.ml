@@ -67,7 +67,7 @@ let rec print_static_exp_desc ff sed = match sed with
   | Sfield ln -> print_qualname ff ln
   | Svar id -> fprintf ff "%a" print_qualname id
   | Sop (op, se_list) ->
-      if is_infix (shortname op)
+      if is_infix op
       then
         let e1,e2 = Misc.assert_2 se_list in
         fprintf ff "(@[%a@ %s %a@])" print_static_exp e1  (shortname op)  print_static_exp e2

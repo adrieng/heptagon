@@ -62,9 +62,6 @@ let is_record_type ty = match ty with
         | _ -> false)
   | _ -> false
 
-let is_op = function
-  | { qual = Pervasives; name = _ } -> true | _ -> false
-
 let pat_from_dec_list decs =
   Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) decs)
 

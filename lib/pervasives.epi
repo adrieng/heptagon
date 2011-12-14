@@ -1,5 +1,7 @@
 (* The core module *)
 (* To compile : heptc -nopervasives pervasives.epi *)
+(* Any fun declared here is considered an operator of the target language *)
+
 type bool = true | false
 type int
 type float

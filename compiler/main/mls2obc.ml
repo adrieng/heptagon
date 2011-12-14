@@ -240,8 +240,7 @@ let rec translate map e =
         let w = translate_extvalue map w in Eextvalue w
     | Minils.Eapp ({ Minils.a_op = Minils.Eequal }, w_list, _) ->
       Eop (op_from_string "=", List.map (translate_extvalue_to_exp map) w_list)
-    | Minils.Eapp ({ Minils.a_op = Minils.Efun n }, e_list, _)
-        when Mls_utils.is_op n ->
+    | Minils.Eapp ({ Minils.a_op = Minils.Efun n }, e_list, _) when is_op n ->
         Eop (n, List.map (translate_extvalue_to_exp map ) e_list)
     (* Async operators *)
     | Minils.Eapp ({Minils.a_op = Minils.Ebang }, e_list, _) ->
@@ -449,7 +448,7 @@ let rec translate_eq map call_context ({ Minils.eq_lhs = pat; Minils.eq_rhs = e 
         let x = var_from_name map n in
         let si = (match opt_c with
                     | None -> si
-                    | Some c -> (Aassgn (x, mk_ext_value_static x.pat_ty c)) :: si) in
+                    | Some c -> (Aassgn (x, mk_ext_value_static c)) :: si) in
         let action = Aassgn (var_from_name map n, translate_extvalue_to_exp map e) in
         v, si, j, (control map ck action) :: s
 (* should be unnecessary
@@ -467,12 +466,6 @@ let rec translate_eq map call_context ({ Minils.eq_lhs = pat; Minils.eq_rhs = e 
         let false_act = translate_act_extvalue map pat e3 in
         let action = mk_ifthenelse cond true_act false_act in
         v, si, j, (control map ck action) :: s
-
-    | pat, Minils.Eapp({ Minils.a_op =
-        Minils.Efun ({ qual = Module "Iostream"; name = "printf" | "fprintf" } as q)},
-                       args, _) ->
-      let action = Aop (q, List.map (translate_extvalue_to_exp map) args) in
-      v, si, j, (control map ck action) :: s
 
     | pat, Minils.Eapp ({ Minils.a_op = Minils.Efun _ | Minils.Enode _ } as app, e_list, r) ->
         let name_list = translate_pat map e.Minils.e_ty pat in
@@ -519,14 +512,14 @@ and translate_eq_list map call_context act_list =
 
 and mk_node_call map call_context app loc (name_list : Obc.pattern list) args ty =
   match app.Minils.a_op with
-    | Minils.Efun f when Mls_utils.is_op f ->
+    | Minils.Efun f when is_op f ->
         let act = match name_list with
-          | [] -> Aop (f, args)
+          | [] -> Acall_fun ([], f, args)
           | [name] ->
               let e = mk_exp ty (Eop(f, args)) in
               Aassgn (name, e)
           | _ ->
-            Misc.unsupported "mls2obc: external function with multiple return values" in
+            Misc.unsupported "mls2obc: Operator with multiple return values" in
         [], [], [], [act]
     | Minils.Ebang ->
         let arg = assert_1 args in
@@ -558,8 +551,12 @@ and mk_node_call map call_context app loc (name_list : Obc.pattern list) args ty
         let v, si, j, s = translate_eq_list map call_context nd.Minils.n_equs in
         let env = List.fold_left2 build Env.empty nd.Minils.n_input args in
           v @ nd.Minils.n_local, si, j, subst_act_list env s
-
-    | Minils.Enode f | Minils.Efun f ->
+    | Minils.Efun f when (app.Minils.a_async = None)
+                         & (not !Compiler_options.functions_are_classes) ->
+        let static_params = List.map mk_ext_value_static app.Minils.a_params in
+        [], [], [], [Acall_fun (name_list, f, static_params@args)]
+    | Minils.Efun f (* when a classe is needed *)
+    | Minils.Enode f ->
         let id = match app.Minils.a_id with
           | None -> gen_obj_ident f
           | Some id -> id
