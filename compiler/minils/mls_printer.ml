@@ -213,13 +213,14 @@ let print_contract ff { c_local = l; c_eq = eqs;
     print_vd_tuple c
 
 
-let print_node ff { n_name = n; n_input = ni; n_output = no;
+let print_node ff { n_name = n; n_input = ni; n_output = no; n_base_id = base;
                     n_contract = contract; n_local = nl;
                     n_equs = ne; n_params = params } =
-  fprintf ff "@[node %a%a%a@ returns %a@]@\n%a%a%a@]@\n@."
+  fprintf ff "@[node %a%a%a@ %areturns %a@]@\n%a%a%a@]@\n@."
     print_qualname n
     print_node_params params
-    print_vd_tuple ni
+    print_full_vd_tuple ni
+    (Pp_tools.print_opt print_vd) base
     print_vd_tuple no
     (print_opt print_contract) contract
     print_local_vars nl

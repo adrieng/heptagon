@@ -1,0 +1,7 @@
+node f(a : int) = (o : int)
+var x : int; c : bool;
+let
+  c = true fby false fby c;
+  x = 0 fby ((merge c a (x whenot c)) + 1);
+  o = x when c
+tel

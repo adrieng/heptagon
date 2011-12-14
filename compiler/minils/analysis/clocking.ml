@@ -255,13 +255,22 @@ let typing_node node =
   let h = typing_contract h0 node.n_contract in
   let h = append_env h node.n_local in
   typing_eqs h node.n_equs;
-  (* synchronize input and output on base : find the free vars and set them to base *)
+  (* Find the free vars in signature and set them to base *)
   Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;
-  (*update clock info in variables descriptions *)
-  let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
-  let node = { node with n_input = List.map set_clock node.n_input;
-                         n_output = List.map set_clock node.n_output;
-                         n_local = List.map set_clock node.n_local }
+
+  let vd_to_ck vd = ck_repr (Env.find vd.v_ident h) in
+  let input_cks = List.map vd_to_ck node.n_input in
+  let in_out_cks = List.fold_right (fun vd acc ->(vd_to_ck vd) :: acc) node.n_output input_cks in
+
+  (* Find the best root for the node *)
+  let (new_in_out_cks, root) = Clocks.common_root_ck_list in_out_cks in
+  let (new_in_ck, new_out_ck) = split_nlast (List.length node.n_output) new_in_out_cks in
+  let set_clock vd ck = { vd with v_clock = ck } in
+  let set_clock_h vd = { vd with v_clock = vd_to_ck vd } in
+  let node = { node with n_input = List.map2 set_clock node.n_input new_in_ck;
+                         n_output = List.map2 set_clock node.n_output new_out_ck;
+                         n_local = List.map set_clock_h node.n_local;
+                         n_base_ck = root }
   in
   let sign = Mls_utils.signature_of_node node in
   Check_signature.check_signature sign;

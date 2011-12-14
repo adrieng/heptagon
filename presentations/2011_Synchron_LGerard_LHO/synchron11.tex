@@ -1,0 +1,561 @@
+%% LaTeX Beamer presentation template (requires beamer package)
+%% see http://bitbucket.org/rivanvx/beamer/wiki/Home
+%% idea contributed by H. Turgut Uyar
+%% template based on a template by Till Tantau
+%% this template is still evolving - it might differ in future releases!
+
+\documentclass[xcolor=dvipsnames]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{decade}
+
+\usepackage{pgfpages}
+
+\setbeameroption{show notes on second screen}
+
+
+\mode<presentation>
+{
+\setbeamercovered{transparent}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=true]
+\setbeamertemplate{footline}[frame number]{}
+}
+
+\def\li{\\ \hline}
+
+\newenvironment{itemizec}{\begin{itemize}\setlength{\leftskip}{-2em}}{\end{itemize}}
+\def\lustre{\textsc{lustre}}
+
+\title{Asynchronous computation in \lustre}
+\author{L\'eonard G\'erard}
+
+\def\pre{\ensuremath{\mathtt{pre}}}
+\def\async{\ensuremath{\mathtt{async}}}
+\def\bang{\ensuremath{\mathtt{!}}}
+\newcommand{\code}[1]{\ensuremath{\mathtt{#1}}}
+
+\lstset{language=decade, columns=fixed, basicstyle=\ttfamily\small, mathescape=true,
+showstringspaces=false}
+\lstset{keywordstyle=\color{MidnightBlue}, commentstyle=\color{gray}, stringstyle=\color{red}}
+\lstMakeShortInline`
+
+
+\title{Oversampling in a Dataflow Synchronous Language (Heptagon)}
+
+%\subtitle{}
+
+% - Use the \inst{?} command only if the authors have different
+%   affiliation.
+%\author{F.~Author\inst{1} \and S.~Another\inst{2}}
+\author{Léonard Gérard\inst{1}}
+
+% - Use the \inst command only if there are several affiliations.
+% - Keep it simple, no one is interested in your street address.
+\institute[Universities of]
+{
+\inst{1}%
+PARKAS team\\
+ENS}
+
+\date{Synchron'11}
+
+% If you wish to uncover everything in a step-wise fashion, uncomment
+% the following command:
+
+%\beamerdefaultoverlayspecification{<+->}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}[fragile]{Heptagon}
+\begin{block}{A small Scade v6}
+\begin{itemize}
+      \item Automaton
+      \item Arrays and iterators
+      \item Modular reset
+      \item Static parameters
+\end{itemize}
+\end{block}
+\begin{block}{Novelties}
+\begin{itemize}
+  \item Memory optimization for arrays
+  \item Controller synthesis
+  \item and WIP
+    \begin{itemize}
+      \item asynchronous computations
+      \item oversampling
+      \item lucy-n generation
+      \item ...
+    \end{itemize}
+\end{itemize}
+\end{block}
+Soon to be released as open source...
+\end{frame}
+
+\begin{frame}[fragile]{Classic oversampling example}
+\begin{lstlisting}[escapechar=!]
+node f(x :int) returns (cpt, y :int)
+let
+  y = x + 1
+  cpt = (0 fby cpt) + 1
+tel
+node g(x :int; c :bool) returns (out :int)
+var t, cpt, y, last_y :int;
+let
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = y whenot c;
+tel
+node main() returns (out :int; c :bool) var x :int;
+let
+  x = 0 fby (x+10);
+  c = true fby false fby c;
+  out = g(x,c);
+tel
+\end{lstlisting}
+\end{frame}
+
+
+\begin{frame}[fragile]{Classic oversampling example}
+\begin{lstlisting}
+node g(x :int; c :bool) returns (out :int)
+var t, cpt, y, last_y :int;
+let
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = y whenot c;
+tel
+
+val g:: (. on c, c : .) -> . on not c
+\end{lstlisting}
+
+\[
+\begin{array}{|c|cccccccc} \hline
+c & true & false & true & false & true & \ldots\li
+x & x_0 & & x_1 & & x_2 &\ldots\li
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
+y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
+cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
+out & & f^2(x_0) & & f^2(x_1) & &\ldots \li
+\end{array}
+\]
+\note{Oversampling with clock given as argument.}
+\end{frame}
+
+\begin{frame}[fragile]{Why hiding the oversampling clock?}
+\begin{block}{}
+\begin{itemize}
+  \item It is strange to define the clock outside of `g`.
+  \item The node `g` communicate at each of its steps,\\
+    even if no value for `x` and `out` is meaningful.
+  \item From the outside, the clocks of `x` and `out` are needlessly complex.
+\end{itemize}
+\end{block}
+\begin{block}{We would like}
+\begin{lstlisting}
+val g:: . -> .
+\end{lstlisting}
+\[
+\begin{array}{|c|cccccccc} \hline
+x & x_0 & x_1 & x_2 &\ldots\li
+c & [true\quad false] & [true\quad false] & [true\quad false]& \ldots\li
+t & [x_0\quad f(x_0)] & [x_1\quad f(x_1)] & [x_2\quad f(x_2)] &\ldots\li
+cpt & [1 \quad 2] & [3 \quad 4] & [5 \quad 6] &\ldots\li
+y & [f(x_0)\quad f^2(x_0)] & [f(x_1)\quad f^2(x_1)] & [f(x_2)\quad f(f(x_2))] &\ldots\li
+out & f^2(x_0) & f^2(x_1) &f^2(x_2) &\ldots \li
+\end{array}
+\]
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Local Hiding of Oversampling in Heptagon}
+\begin{block}{}
+Any node which would be given the \emph{usually illegal} signature
+\begin{lstlisting}
+val n:: . on c -> . on c
+\end{lstlisting}
+is transformed into a node with signature
+\begin{lstlisting}
+val n:: . -> .
+\end{lstlisting}
+with a simple transformation in the generated sequential code:
+\end{block}
+\begin{block}{}
+\begin{minipage}{0.4\linewidth}
+\begin{lstlisting}[language=C]
+step_n(x) {
+  [vars_n]
+  [code_n]
+  return y;
+}
+\end{lstlisting}
+\end{minipage}$\Longrightarrow$\qquad
+\begin{minipage}{0.4\linewidth}
+\begin{lstlisting}[language=C]
+step_n(x) {
+  [vars_n]
+  do {
+    [code_n]
+  } while (!c);
+  return y;
+}
+\end{lstlisting}
+\end{minipage}
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Local Hiding of Oversampling in Heptagon (bis)}
+\begin{block}{}
+\begin{lstlisting}[escapechar=!]
+val n:: (c : !\color{gray}{\verb-. on e on d-}!, !\color{gray}{\verb-. on e on d-}! on c)
+        -> !\color{gray}{\verb-. on e on d-}! on c
+\end{lstlisting}
+is transformed into a node with signature
+\begin{lstlisting}
+val n:: ( c : . , . on c) -> . on c
+\end{lstlisting}
+\end{block}
+\begin{block}{}
+\begin{minipage}{0.4\linewidth}
+\begin{lstlisting}[language=C]
+step_n(c,x) {
+  [vars_n]
+  [code_n]
+  return y;
+}
+\end{lstlisting}
+\end{minipage}$\Longrightarrow$\qquad
+\begin{minipage}{0.4\linewidth}
+\begin{lstlisting}[language=C,escapechar=-]
+step_n(x) {
+  [vars_n]
+  do {
+    [code_n]
+  } while (-\color{red}{\verb=!(d && e)=}-);
+  return y;
+}
+\end{lstlisting}
+\end{minipage}
+\end{block}
+PS: The common root of the clocks of the signature is the local oversampling.
+Here `. on e on d`.
+\end{frame}
+
+\begin{frame}[fragile]{First attempt to use LHO, before LHO transformation}
+\begin{lstlisting}[escapechar=!]
+node g(x :int) returns (out :int)
+var c :bool; t, cpt, y, last_y :int;
+let
+  !\color{red}{\verb-c = true fby false fby c;-}!
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = y !\color{red}{\verb-when c-}!;
+tel
+val g:: . !\color{gray}{\verb-on c-}! -> . !\color{gray}{\verb-on c-}!
+\end{lstlisting}
+\[
+\begin{array}{|c|@{\ \ \ }c@{\ \ \ }@{\ \ \ }lr@{\ \ \ }@{\ \ \ }lr@{\ \ \ }@{\ \ \ }lr} \hline
+c & true & false & true & false & true & \ldots\li
+x & x_0 & & x_1 & & x_2 &\ldots\li
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
+y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
+cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
+out & f(x_0) & & f(x_1) & & f(x_2) &\ldots \li
+\end{array}
+\]
+\note{We are asked to give the same sampling to the input and the output. So naively we do so.}
+\end{frame}
+\begin{frame}[fragile]{First attempt to use LHO, LHO done}
+\begin{lstlisting}[escapechar=!]
+node g(x :int) returns (out :int)
+var c :bool; t, cpt, y, last_y :int;
+let
+  c = true fby false fby c;
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = y when c;
+tel
+val g:: . -> .
+\end{lstlisting}
+\[
+\begin{array}{|c|@{\ [\ }c@{\ ]\ }@{\ [\ }cc@{\ ]\ }@{\ [\ }cc@{\ ]\ }@{\ [\ }lr} \hline
+c & true & false & true & false & true & \ldots\li
+x & x_0 & & x_1 & & x_2 &\ldots\li
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
+y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
+cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
+out & f(x_0) & & f(x_1) & & f(x_2) &\ldots \li
+\end{array}
+\]
+\note{
+\begin{itemize}
+  \item The square brackets are used to display the oversampling :
+from the outside of the node,
+the signature hide the inner steps of these brackets.
+  \item Nothing new, to be able to do oversampling, we need to loose one instant.
+See the Lucid V3 manual page 24.
+\end{itemize}
+}
+\end{frame}
+
+\begin{frame}[fragile]{Correct use of LHO}
+\begin{lstlisting}[escapechar=!]
+node g(x :int) returns (out :int)
+var c :bool; t, cpt, y, last_y :int;
+let
+  c = true fby false fby c;
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = !\color{red}{\verb-last_y-}! when c;
+tel
+val g:: . -> .
+\end{lstlisting}
+\[
+\begin{array}{|c|@{\ [\ }c@{\ ]\ }@{\ [\ }lr@{\ ]\ }@{\ [\ }lr@{\ ]\ }@{\ [\ }lr} \hline
+c & true & false & true & false & true & \ldots\li
+x & x_0 & & x_1 & & x_2 &\ldots\li
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
+y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
+cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
+out & 0 & & f^2(x_0) & & f^2(x_1) &\ldots \li
+\end{array}
+\]
+\end{frame}
+
+\begin{frame}[fragile]{Correct use of LHO (bis)}
+\begin{lstlisting}[escapechar=!]
+node g(x :int) returns (out :int)
+var c :bool; t, cpt, y, last_y :int;
+let
+  c = true fby false !\color{red}{fby false}! fby c;
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = last_y when c;
+tel
+val g:: . -> .
+\end{lstlisting}
+\[
+\begin{array}{|c|@{\ [\ }c@{\ ]\ }@{\ [\ }lcr@{\ ]\ }@{\ [\ }lcr@{\ ]\ }l} \hline
+c & true & false & false & true & false & false & true & \ldots\li
+x & x_0 & & & x_1 & & & x_2 &\ldots\li
+t & x_0 & f(x_0) & f^2(x_0) & x_1 & f(x_1) & f^2(x_1) & f^3(x_1)\ldots\li
+y & f(x_0) & f^2(x_0) & f^3(x_0) & f(x_1) & f^2(x_1) & f^3(x_1) & f(x_2) &\ldots\li
+cpt & 1 & 2 & 3 & 4 & 5 & 6 & 7 &\ldots\li
+out & 0 & & & f^3(x_0) & & & f^3(x_1) &\ldots \li
+\end{array}
+\]
+\note{It is now easy to do any number of oversampling steps.}
+\end{frame}
+
+\begin{frame}[fragile]{But can't we do it without delay!?}
+\begin{lstlisting}[escapechar=!]
+node g(x :int) returns (out :int)
+var t, cpt, y, last_y :int; c :bool;
+let
+  c = true fby false fby c;
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = !\color{red}{\verb-y whenot c-}!;
+tel
+
+val g:: . on c -> . on not c
+\end{lstlisting}
+\[
+\begin{array}{|c|lrlrlrlr} \hline
+c &[\ true & false\       ]&[\ true & false\       ]&[\ true & false\       ]\ldots\li
+x &[\ x_0 &               ]&[\ x_1 &               ]&[\ x_2 &               ]\ldots\li
+t &[\ x_0 & f(x_0)\       ]&[\ x_1 & f(x_1)\       ]&[\ x_2 & f(x_2)\       ]\ldots\li
+y &[\ f(x_0) & f^2(x_0)\ ]&[\ f(x_1) & f^2(x_1)\ ]&[\ f(x_2) & f(f(x_2))\ ]\ldots\li
+cpt &[\ 1 & 2 \ ]&[\ 3 & 4\ ]&[\ 5 & 6\ ]\ldots\li
+out &[&f^2(x_0)\         ]&[&f^2(x_1)\           ]&[&f(f(x_2))\         ]\ldots\li
+\end{array}
+\]
+\note{Even if this seems to generate correct code with the LHO transformation,
+the compiler rejects this program... It is not able to recognize the interleaving of the clock.}
+\end{frame}
+
+\begin{frame}[fragile]{No, we cannot generalize LHO}
+\begin{lstlisting}[escapechar=!]
+node g(x :int) returns (out :int)
+var t, cpt, y, last_y :int; c :bool;
+let
+  c = true fby false fby !\color{red}{\verb-false-}! fby c;
+  (cpt, y) = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = y whenot c;
+tel
+\end{lstlisting}
+There are two outputs for one input...
+\[
+\begin{array}{|c|@{\ [\ }lcr@{\ ]\ }@{\ [\ }lcr@{\ ]\ }@{\ [\ }lr@{\ ]\ }c} \hline
+c & true   & false   & false    & true   & false   & false   &     \ldots\li
+x & x_0    &         &          & x_1    &         &         &   \ldots\li
+t & x_0    & f(x_0)  & f^2(x_0) & x_1    & f(x_1)  & f^2(x_1)&       \ldots\li
+y & f(x_0) & f^2(x_0) & f^3(x_0)& f(x_1) & f^2(x_1)& f^3(x_1)&   \ldots\li
+cpt & 1 & 2 & 3 & 4 & 5 & 6 &\ldots\li
+out &      & \color{red}{f^2(x_0)} & \color{red}{f^3(x_0)}&        & \color{red}{f^2(x_1)}& \color{red}{f^3(x_1)}& \ldots\li
+\end{array}
+\]
+\note{The compiler rejects this program rightfully.}
+\end{frame}
+
+\begin{frame}[fragile]{Enumerated clocks are equivalent, but insightful}
+\begin{lstlisting}[escapechar=!]
+type t = In | C | Out
+node g(x :int) returns (out :int)
+var t, cpt, y, last_y :int; c :!\color{red}{t}!;
+let
+  c = !\color{red}{In fby C fby C fby Out}! fby c;
+  (cpt, y) = f(t);
+  t = merge c (In -> x) (C -> last_y when C(c))
+                        (Out -> last_y when Out(c));
+  last_y = 0 fby y;
+  out = y when !\color{red}{Out(c)}!;
+tel
+
+val g:: . on In(c) -> . on Out(c)
+\end{lstlisting}
+\[
+\begin{array}{|c|@{\ [\ }lccr@{\ ]\ }@{\ [\ }lccr@{\ ]\ }@{\ [\ }lr@{\ ]\ }c} \hline
+c & In     & C       & C        & Out     & In     & C       &   \ldots\li
+x & x_0    &         &          &         & x_1    &         &   \ldots\li
+y & f(x_0) & f^2(x_0)& f^3(x_0) & f^4(x_0)& f(x_1) & f^2(x_1)&   \ldots\li
+cpt & 1 & 2 & 3 & 4 & 5 & 6 &\ldots\li
+out &      &         &          & f^4(x_0)&        &         &   \ldots\li
+\end{array}
+\]
+\note{The compiler rejects this program...}
+\end{frame}
+
+\begin{frame}[fragile]{No, we still cannot generalize LHO}
+\begin{lstlisting}[escapechar=!]
+type t = In | C | Out
+node g(x :int) returns (out :int)
+var t, cpt, y, last_y :int; c :t;
+let
+  c = In fby C fby !\color{red}{Out fby Out}! fby c;
+  (cpt, y) = f(t);
+  t = merge c (In -> x) (C -> last_y when C(c))
+                        (Out -> last_y when Out(c));
+  last_y = 0 fby y;
+  out = y when Out(c);
+tel
+
+val g:: . on In(c) -> . on Out(c)
+\end{lstlisting}
+\[
+\begin{array}{|c|@{\ [\ }lccr@{\ ]\ }@{\ [\ }lccr@{\ ]\ }@{\ [\ }lr@{\ ]\ }c} \hline
+c & In      & C       & Out    & Out   & In   & C     &   \ldots\\ \hline
+x &        &         &        &       &      &       &   \ldots\\ \hline
+y & f(x_0)   & f^2(x_0)  & f^3(x_0) & f^4(x_0)& f(x_1) & f^2(x_1)&   \ldots\\ \hline
+cpt & 1 & 2 & 3 & 4 & 5 & 6 &\ldots\li
+out &      &         & f^3(x_0) & f^4(x_0)&      &       &   \ldots\\ \hline
+\end{array}
+\]
+\note{The compiler reject this program rightfully.}
+\end{frame}
+
+\begin{frame}[fragile]{No, we still cannot generalize LHO (ter)}
+\begin{lstlisting}[escapechar=!]
+type t = In | C | Out
+node g(x :int) returns (out :int)
+var t, cpt, y, last_y :int; c :t;
+let
+  c = In fby C fby !\color{red}{C fby C}! fby c;
+  (cpt, y) = f(t);
+  t = merge c (In -> x) (C -> last_y when C(c))
+                        (Out -> last_y when Out(c));
+  last_y = 0 fby y;
+  out = y when Out(c);
+tel
+
+val g:: . on In(c) -> . on Out(c)
+\end{lstlisting}
+\[
+\begin{array}{|c|@{\ [\ }lccr@{\ ]\ }@{\ [\ }lccr@{\ ]\ }@{\ [\ }lr@{\ ]\ }c} \hline
+c & In      & C       & C    & C   & In   & C     &   \ldots\\ \hline
+x & x_0     &         &        &       & x_1     &       &   \ldots\\ \hline
+y & f(x_0)   & f^2(x_0)  & f^3(x_0) & f^4(x_0)& f(x_1) & f^2(x_1)&   \ldots\\ \hline
+cpt & 1 & 2 & 3 & 4 & 5 & 6 &\ldots\li
+out &      &         &  & &      &       &   \ldots\\ \hline
+\end{array}
+\]
+\note{The compiler reject this program rightfully.}
+\end{frame}
+
+\begin{frame}[fragile]{Bursts must be well formed}
+\begin{block}{Observed instant}
+An observed instant of a burst is an instant accessed,\\
+from someone which is observing the burst as one instant.\\
+---`In` and `Out` are observed, `C` isn't.
+\end{block}
+
+\begin{block}{Sufficient and necessary condition to apply LHO}
+  During one burst, every observed instant must appear\\
+  \color{red}{one and only one} time.
+\end{block}
+
+\begin{block}{Burst boundaries}
+\begin{itemize}
+  \item The boundaries of bursts are constrained by the causality.\\
+  \item In the case of causal functions with outputs depending on all inputs,
+the end of the burst is aligned with the last output.
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Back to Heptagon:}
+Note that `on c` $\equiv$ `on true(c)` and `on not c` $\equiv$ `on false(c)`
+\begin{block}{}
+\begin{itemize}
+  \item `. on C(b) -> . on C(b)`: accepted by LHO
+    \begin{itemize}
+      \item Reactivity requires `C(b)` to be true an infinite amount of time.
+      \item Should/how can we ensure it?
+      \item Right now our prototype in Heptagon doesn't check it.
+    \end{itemize}
+  \item `. on C(b) -> . on C2(b)`: rejected by LHO
+    \begin{itemize}
+      \item Only the perfect interleaving of the two constructors is possible.
+    \end{itemize}
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Proposal and questions}
+\begin{block}{Iterator primitive:}
+\begin{itemize}
+  \item Static: `b = iter [In; C; C; Out]`
+  \item Dynamic: `b = iter list`
+\end{itemize}
+\end{block}
+\begin{block}{}
+\begin{itemize}
+  \item How much do we need dynamic iteration?
+  \item What should be dynamic (in increasing difficulty)
+    \begin{itemize}
+      \item the size?
+      \item the order?
+      \item the type?
+  \end{itemize}
+\end{itemize}
+\end{block}
+\begin{block}
+Use a restricted
+\end{block}
+\end{frame}
+
+
+\end{document}

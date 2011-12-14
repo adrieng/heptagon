@@ -196,6 +196,8 @@ and act ff = function
         exp i2
         var_ident x.vd_ident
         block b
+  | Awhile(e, b) -> fprintf ff "@[<hv>@[<hv4>while(%a) {@ %a@]@ }@]" exp e block b
+  | Ado_while(e,b) -> fprintf ff "@[<hv>@[<hv4>do {@ %a@]@ } while(%a);@]" block b exp e
   | Areturn e -> fprintf ff "return %a;" exp e
 
 let methode ff m =

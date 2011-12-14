@@ -1,0 +1,20 @@
+node f(x :int) returns (y :int)
+let
+  y = x + 1
+tel
+
+node g(x :int; c :bool) returns (out :int)
+var t, y, last_y :int;
+let
+  y = f(t);
+  t = merge c x (last_y whenot c);
+  last_y = 0 fby y;
+  out = y whenot c;
+tel
+
+node main() returns (out :int; c :bool) var x :int;
+let
+  x = 0 fby (x+10);
+  c = true fby false fby c;
+  out = g(x,c);
+tel

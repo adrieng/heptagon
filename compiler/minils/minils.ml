@@ -141,7 +141,9 @@ type node_dec = {
   n_loc      : location;
   n_params   : param list;
   n_param_constraints : constrnt list;
-  n_mem_alloc : (ty * Interference_graph.ivar list) list; }
+  n_mem_alloc : (ty * Interference_graph.ivar list) list;
+  n_base_ck : ck;
+  n_base_id : var_dec option }
 
 
 type const_dec = {
@@ -182,6 +184,7 @@ and interface_desc =
 
 
 (*Helper functions to build the AST*)
+
 
 let mk_extvalue ~ty ~linearity ?(clock = fresh_clock()) ?(loc = no_location) desc =
   { w_desc = desc; w_ty = ty; w_linearity = linearity;
@@ -232,7 +235,9 @@ let mk_node
     n_loc = loc;
     n_params = param;
     n_param_constraints = constraints;
-    n_mem_alloc = mem_alloc }
+    n_mem_alloc = mem_alloc;
+    n_base_ck = Cbase;
+    n_base_id = None }
 
 let mk_type_dec type_desc name loc =
   { t_name = name; t_desc = type_desc; t_loc = loc }

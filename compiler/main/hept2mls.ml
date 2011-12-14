@@ -200,7 +200,9 @@ let node n =
     n_loc = n.Heptagon.n_loc ;
     n_params = n.Heptagon.n_params;
     n_param_constraints = n.Heptagon.n_param_constraints;
-    n_mem_alloc = [] }
+    n_mem_alloc = [];
+    n_base_ck = Clocks.Cbase;
+    n_base_id = None }
 
 
 let typedec

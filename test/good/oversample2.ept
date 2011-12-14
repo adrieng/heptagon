@@ -1,0 +1,9 @@
+node g(a : int) = (o : int)
+var x1 :int :: . on c2; x2:int; c1, c2: bool;
+let
+  c1 = true fby false fby c1;
+  c2 = true fby false fby c2;
+  x1 = 0 fby ((merge c1 a (x1 whenot c1)) + 1);
+  x2 = 0 fby ((merge c2 x1 (x2 whenot c2)) + 1);
+  o = x2 when c2 when c1;
+tel

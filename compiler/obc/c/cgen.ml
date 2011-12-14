@@ -553,6 +553,10 @@ let rec cstm_of_act out_env var_env obj_env act =
               cexpr_of_exp out_env var_env i2,
               cstm_of_act_list out_env var_env obj_env act)]
 
+    | Awhile (o, e, act) ->
+        [Cwhile (o, cexpr_of_exp out_env var_env e,
+                 cstm_of_act_list out_env var_env obj_env act)]
+
     (** Translate constant assignment *)
     | Aassgn (vn, { e_desc = Eextvalue { w_desc = Wconst c }; }) ->
         let vn = clhs_of_pattern out_env var_env vn in

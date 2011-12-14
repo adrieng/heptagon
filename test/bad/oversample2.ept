@@ -1,0 +1,25 @@
+(* Should be rejected even if it is correct *)
+fun f(x :int) returns (y :int)
+let
+  y = x + 1
+tel
+
+type t = In | C | Out
+
+node g(x :int) returns (out :int)
+var c :t; y, last_y :int;
+let
+  c = In fby C fby C fby C fby Out fby c;
+  last_y = 0 fby y;
+  y = f(merge c (In -> x)
+                (C -> last_y when C(c))
+                (Out -> last_y when Out(c)));
+  out = y when Out(c);
+tel
+
+node main() returns (out :int)
+var x :int;
+let
+  x = 0 fby (x+10);
+  out = g(x);
+tel

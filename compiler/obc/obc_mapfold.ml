@@ -150,6 +150,10 @@ and act funs acc a = match a with
       let idx2, acc = exp_it funs acc idx2 in
       let b, acc = block_it funs acc b in
         Afor(x, idx1, idx2, b), acc
+  | Awhile(o, e, b) ->
+      let e, acc = exp_it funs acc e in
+      let b, acc = block_it funs acc b in
+        Awhile(o, e, b), acc
   | Ablock b ->
       let b, acc = block_it funs acc b in
       Ablock b, acc

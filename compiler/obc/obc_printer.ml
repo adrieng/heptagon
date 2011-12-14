@@ -108,6 +108,14 @@ let rec print_act ff a =
           print_exp i1
           print_exp i2
           print_block act_list
+    | Awhile (Wwhiledo, e, b) ->
+         fprintf ff "@[<v>@[<v 2>while %a do {@  %a @]@,}@]"
+           print_exp e
+           print_block b
+    | Awhile (Wdowhile, e, b) ->
+         fprintf ff "@[<v>@[<v 2>do {@  %a @]@,} while %a @]"
+           print_block b
+           print_exp e
     | Aop (op, es) ->
         print_op ff op es
     | Acall (var_list, o, meth, es) ->

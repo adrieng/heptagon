@@ -287,11 +287,11 @@ let main_skel var_list prologue body =
         @ prologue
           (* while (!max_step || step_c < max_step) *)
         @ [
-          Cwhile (Cbop ("||",
-                        Cuop ("!", Cvar max_step),
-                        Cbop ("<",
-                              Cvar step_counter,
-                              Cvar max_step)),
+          Cwhile (Wwhiledo, Cbop ("||",
+                                  Cuop ("!", Cvar max_step),
+                                  Cbop ("<",
+                                        Cvar step_counter,
+                                        Cvar max_step)),
                   (* step_counter = step_counter + 1; *)
                   Caffect (CLvar step_counter,
                            Cbop ("+",

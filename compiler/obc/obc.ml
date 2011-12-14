@@ -75,6 +75,10 @@ type method_name =
   | Mreset
   | Mstep
 
+type while_order =
+  | Wdowhile
+  | Wwhiledo
+
 type act =
   | Aassgn of pattern * exp
   | Aop of op_name * exp list (* TODO c'est un peu bizare ce truc *)
@@ -82,6 +86,7 @@ type act =
   | Aasync_call of async_t * pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
   | Afor of var_dec * exp * exp * block
+  | Awhile of while_order * exp * block
   | Ablock of block
 
 and block =

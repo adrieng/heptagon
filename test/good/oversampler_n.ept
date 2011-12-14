@@ -1,0 +1,17 @@
+type t = C0 | C1 | C2
+
+node f(a : int) = (o : int)
+var x :int; c: t;
+let
+  c = C0 fby C1 fby C2 fby c;
+  x = 0 fby (merge c (C0 -> a) (C1 -> x when C1(c) + 1) (C2 -> x when C2(c) + 1));
+  o = x when C0(c);
+tel
+
+node g(a : int) = (o : int)
+var x :int; c: t;
+let
+  c = C0 fby C1 fby C2 fby c;
+  x = 0 fby (merge c (C0 -> a) (C1 -> f(x) when C1(c)) (C2 -> f(x) when C2(c)));
+  o = x when C0(c);
+tel
