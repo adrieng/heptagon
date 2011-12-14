@@ -252,7 +252,7 @@ let update_signature h node =
   let sign =
     { sign with node_inputs = List.map2 set_arg_clock node.n_input sign.node_inputs;
                 node_outputs = List.map2 set_arg_clock node.n_output sign.node_outputs } in
-  Signature.check_signature sign;
+  Check_signature.check_signature sign;
   Modules.replace_value node.n_name sign
 
 let typing_node node =

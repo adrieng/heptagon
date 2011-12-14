@@ -59,6 +59,8 @@ type error =
   | Esplit_enum of ty
   | Esplit_tuple of ty
   | Eenable_memalloc
+  | Ebad_format
+  | Eformat_string_not_constant
 
 exception Unify
 exception Should_be_async of ty
@@ -214,6 +216,14 @@ let message loc kind =
         "%aThis function was compiled with linear types. \
                Enable linear typing to call it.@."
           print_location loc
+    | Ebad_format ->
+      eprintf
+        "%aThe format string is invalid@."
+          print_location loc
+    | Eformat_string_not_constant ->
+      eprintf
+        "%aA static format string was expected@."
+          print_location loc
   end;
   raise Errors.Error
 
@@ -224,7 +234,7 @@ let find_with_error find_fun f =
   with Not_found -> error (Eundefined(fullname f))
 
 let find_value v = find_with_error find_value v
-let find_constrs c = find_with_error find_constrs c
+let find_constrs c = Tid (find_with_error find_constrs c)
 let find_field f = find_with_error find_field f
 
 
@@ -568,7 +578,6 @@ and expect_static_exp cenv exp_ty se =
       _ -> message se.se_loc (Etype_clash(ty, exp_ty))
 
 
-
 (** @return the type of the field with name [f] in the list
     [fields]. [t1] is the corresponding record type and [loc] is
     the location, both used for error reporting. *)
@@ -761,6 +770,19 @@ and typing_app cenv h app e_list =
         let typed_e1, t1 = typing cenv h e1 in
         let typed_e2 = expect cenv h t1 e2 in
         Tid Initial.pbool, app, [typed_e1; typed_e2]
+
+    | Efun { qual = Module "Iostream"; name = "printf" } ->
+        let e1, format_args = assert_1min e_list in
+        let typed_e1 = expect cenv h Initial.tstring e1 in
+        let typed_format_args = typing_format_args cenv h typed_e1 format_args in
+        Tprod [], app, typed_e1::typed_format_args
+
+    | Efun { qual = Module "Iostream"; name = "fprintf" } ->
+        let e1, e2, format_args = assert_2min e_list in
+        let typed_e1 = expect cenv h Initial.tfile e1 in
+        let typed_e2 = expect cenv h Initial.tstring e2 in
+        let typed_format_args = typing_format_args cenv h typed_e1 format_args in
+        Tprod [], app, typed_e1::typed_e2::typed_format_args
 
     | (Efun f | Enode f) ->
         let ty_desc = find_value f in
@@ -1009,6 +1031,16 @@ and typing_node_params cenv params_sig params =
   List.map2 (fun p_sig p -> expect_static_exp cenv
                p_sig.p_type p) params_sig params
 
+and typing_format_args cenv h e args =
+  let s = match e.e_desc with
+    | Econst { se_desc = Sstring s } -> s
+    | _ -> raise (TypingError Eformat_string_not_constant)
+  in
+  try
+    let expected_ty_list = Printf_parser.types_of_format_string s in
+    typing_args cenv h expected_ty_list args
+  with
+    | Printf_parser.Bad_format -> raise (TypingError Ebad_format)
 
 let rec typing_pat h acc = function
   | Evarpat(x) ->

@@ -62,6 +62,7 @@ type ty =
   | Tid of qualname
   | Tarray of ty * exp
   | Tfuture of future_t * ty
+  | Tinvalid
 
 and ck =
   | Cbase

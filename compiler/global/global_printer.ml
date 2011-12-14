@@ -46,7 +46,7 @@ let print_ident ff id = Format.fprintf ff "%s" (name id)
   | Cbase -> fprintf ff "."
   | Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
   | Cvar { contents = Cindex i } -> fprintf ff "'a%i" i
-  | Cvar { contents = Clink ck } -> print_ck ff ck
+  | Cvar { contents = Clink ck } -> fprintf ff "~> %a" print_ck ck
 
 let rec print_ct ff = function
   | Ck ck -> print_ck ff ck
@@ -62,7 +62,7 @@ let rec print_static_exp_desc ff sed = match sed with
   | Sint i -> fprintf ff "%d" i
   | Sbool b -> fprintf ff "%b" b
   | Sfloat f -> fprintf ff "%f" f
-  | Sstring s -> fprintf ff "\"%s\"" s
+  | Sstring s -> fprintf ff "\"%s\"" (String.escaped s)
   | Sconstructor ln -> print_qualname ff ln
   | Sfield ln -> print_qualname ff ln
   | Svar id -> fprintf ff "%a" print_qualname id

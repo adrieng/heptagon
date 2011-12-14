@@ -190,6 +190,7 @@ let translate_contract contract =
 let node n =
   { n_name = n.Heptagon.n_name;
     n_stateful = n.Heptagon.n_stateful;
+    n_unsafe = n.Heptagon.n_unsafe;
     n_input = List.map translate_var n.Heptagon.n_input;
     n_output = List.map translate_var n.Heptagon.n_output;
     n_contract = translate_contract n.Heptagon.n_contract;

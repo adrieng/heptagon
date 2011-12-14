@@ -163,6 +163,7 @@ rule token = parse
   | "<<"            {DOUBLE_LESS}
   | ">>"            {DOUBLE_GREATER}
   | "!"             {BANG}
+  | "..."           {THREE_DOTS}
   | (['A'-'Z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {Constructor id}
   | (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
@@ -180,6 +181,13 @@ rule token = parse
       { INT (int_of_string(Lexing.lexeme lexbuf)) }
   | ['0'-'9']+ ('.' ['0'-'9']+)? (['e' 'E'] ['+' '-']? ['0'-'9']+)?
       { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
+  | "\""
+      { reset_string_buffer();
+        (*let string_start = lexbuf.lex_curr_p in
+        string_start_loc := Location.curr lexbuf;*)
+        string lexbuf;
+        (*lexbuf.lex_start_p <- string_start; *)
+        STRING (get_stored_string()) }
   | "(*@ " (['A'-'Z' 'a'-'z']('_' ? ['A'-'Z' 'a'-'z' ''' '0'-'9']) * as id)
       {
   reset_string_buffer();

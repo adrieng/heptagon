@@ -219,11 +219,14 @@ let main_def_of_class_def cd =
   let cinp = inputlist_of_ovarlist stepm.m_inputs in
   let cout = ["_res", (Cty_id (qn_append cd.cd_name "_out"))] in
 
+  let mem_decl =
+    if cd.cd_stateful
+    then Some (Cvardef ("mem", Cty_id (qn_append cd.cd_name "_mem")))
+    else None
+  in
+
   let varlist =
-    (if cd.cd_stateful
-     then [("mem", Cty_id (qn_append cd.cd_name "_mem"))]
-     else [])
-    @ cinp
+    cinp
     @ cout
     @ concat scanf_decls
     @ concat printf_decls in
@@ -253,7 +256,7 @@ let main_def_of_class_def cd =
                              [Caddrof (Cvar "mem")]))]
     else [] in
 
-  (varlist, rst_i, step_l)
+  (mem_decl, varlist, rst_i, step_l)
 
 (** [main_skel var_list prologue body] generates a C main() function using the
     variable list [var_list], prologue [prologue] and loop body [body]. *)
@@ -319,11 +322,12 @@ let mk_main name p =
         List.fold_right add a_classes ([], [], []) in
 
       let n = !Compiler_options.simulation_node in
-      let (nvar_l, res, nstep_l) = main_def_of_class_def (find_class n) in
+      let (mem, nvar_l, res, nstep_l) = main_def_of_class_def (find_class n) in
+      let defs = match mem with None -> [] | Some m -> [m] in
       let (var_l, res_l, step_l) =
         (nvar_l @ var_l, res @ res_l, nstep_l @ step_l) in
 
-      [("_main.c", Csource [main_skel var_l res_l step_l]);
+      [("_main.c", Csource (defs @ [main_skel var_l res_l step_l]));
        ("_main.h", Cheader ([name], []))];
   ) else
     []

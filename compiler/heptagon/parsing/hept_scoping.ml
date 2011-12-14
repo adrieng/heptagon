@@ -204,7 +204,7 @@ let translate_iterator_type = function
 let rec translate_static_exp se =
   try
     let se_d = translate_static_exp_desc se.se_loc se.se_desc in
-    Types.mk_static_exp Tinvalid ~loc:se.se_loc se_d
+    Types.mk_static_exp Types.Tinvalid ~loc:se.se_loc se_d
   with
     | ScopingError err -> message se.se_loc err
 
@@ -241,7 +241,9 @@ let rec translate_type loc ty =
       | Tarray (ty, e) ->
           let ty = translate_type loc ty in
           Types.Tarray (ty, expect_static_exp e)
-      | Tfuture (a, ty) -> Types.Tfuture (a, translate_type loc ty))
+      | Tfuture (a, ty) -> Types.Tfuture (a, translate_type loc ty)
+      | Tinvalid -> Types.Tinvalid
+    )
   with
     | ScopingError err -> message loc err
 
@@ -555,7 +557,7 @@ let translate_signature s =
   let p, _ = params_of_var_decs Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
   let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful s.sig_unsafe p in
-  Signature.check_signature sig_node;
+  Check_signature.check_signature sig_node;
   safe_add s.sig_loc add_value n sig_node;
   mk_signature n i o s.sig_stateful p c s.sig_loc
 

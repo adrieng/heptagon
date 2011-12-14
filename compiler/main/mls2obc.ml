@@ -468,6 +468,12 @@ let rec translate_eq map call_context ({ Minils.eq_lhs = pat; Minils.eq_rhs = e 
         let action = mk_ifthenelse cond true_act false_act in
         v, si, j, (control map ck action) :: s
 
+    | pat, Minils.Eapp({ Minils.a_op =
+        Minils.Efun ({ qual = Module "Iostream"; name = "printf" | "fprintf" } as q)},
+                       args, _) ->
+      let action = Aop (q, List.map (translate_extvalue_to_exp map) args) in
+      v, si, j, (control map ck action) :: s
+
     | pat, Minils.Eapp ({ Minils.a_op = Minils.Efun _ | Minils.Enode _ } as app, e_list, r) ->
         let name_list = translate_pat map e.Minils.e_ty pat in
         let c_list = List.map (translate_extvalue_to_exp map) e_list in
@@ -724,6 +730,9 @@ let translate_node
   let d_list = translate_var_dec (v @ d_list) in
   let m, d_list = List.partition
     (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) d_list in
+  let m', o_list =
+    List.partition
+      (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) o_list in
   let s = s_list @ s_list' in
   let j = j' @ j in
   let si = si @ si' in
@@ -732,7 +741,7 @@ let translate_node
   in
   let resetm = { m_name = Mreset; m_inputs = []; m_outputs = []; m_body = mk_block si } in
   if stateful
-  then { cd_name = f; cd_stateful = true; cd_mems = m; cd_params = params;
+  then { cd_name = f; cd_stateful = true; cd_mems = m' @ m; cd_params = params;
          cd_objs = j; cd_methods = [stepm; resetm]; cd_loc = loc; cd_mem_alloc = mem_alloc }
   else (
     (* Functions won't have [Mreset] or memories,

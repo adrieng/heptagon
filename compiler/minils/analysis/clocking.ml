@@ -19,6 +19,7 @@
 
 open Misc
 open Idents
+open Names
 open Minils
 open Global_printer
 open Mls_printer
@@ -98,6 +99,10 @@ let typing_app h base pat op w_list = match op with
   | Eselect_slice | Econcat | Earray | Efield_update | Eifthenelse ->
       List.iter (expect_extvalue h base) w_list;
       Ck base
+  | Efun { qual = Module "Iostream"; name = "printf" }
+  | Efun { qual = Module "Iostream"; name = "fprintf" } ->
+    List.iter (expect_extvalue h base) w_list;
+    Cprod []
   | ( Efun f | Enode f) ->
       let node = Modules.find_value f in
       let pat_id_list = Mls_utils.ident_list_of_pat pat in
@@ -135,6 +140,12 @@ let typing_app h base pat op w_list = match op with
       expect_extvalue h base w;
       Ck base
 
+let rec stateful e = match e.e_desc with
+  | Efby _ -> true
+  | Ewhen (e,_,_) -> stateful e
+  | Eapp({a_unsafe = unsafe}, _, _) when unsafe -> true
+  | Eapp({a_op = Enode _}, _, _) -> true
+  | _ -> false
 
 
 let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
@@ -148,7 +159,8 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
       | Ewhen (e,c,n) ->
           let ck_n = ck_of_name h n in
           let base = expect (skeleton ck_n e.e_ty) e in
-          skeleton (Con (ck_n, c, n)) e.e_ty, Con (ck_n, c, n)
+          let base_ck = if stateful e then ck_n else Con (ck_n, c, n) in
+          skeleton (Con (ck_n, c, n)) e.e_ty, base_ck
       | Emerge (x, c_e_list) ->
           let ck = ck_of_name h x in
           List.iter (fun (c,e) -> expect_extvalue h (Con (ck,c,x)) e) c_e_list;
@@ -236,17 +248,6 @@ let typing_contract h contract =
         expect_extvalue h' Cbase e_g;
         append_env h c_list
 
-(* check signature causality and update it in the global env *)
-let update_signature h node =
-  let set_arg_clock vd ad =
-    { ad with a_clock = Signature.ck_to_sck (ck_repr (Env.find vd.v_ident h)) }
-  in
-  let sign = Modules.find_value node.n_name in
-  let sign =
-    { sign with node_inputs = List.map2 set_arg_clock node.n_input sign.node_inputs;
-                node_outputs = List.map2 set_arg_clock node.n_output sign.node_outputs } in
-  Signature.check_signature sign;
-  Modules.replace_value node.n_name sign
 
 let typing_node node =
   let h0 = append_env Env.empty node.n_input in
@@ -262,7 +263,9 @@ let typing_node node =
                          n_output = List.map set_clock node.n_output;
                          n_local = List.map set_clock node.n_local }
   in
-  update_signature h node;
+  let sign = Mls_utils.signature_of_node node in
+  Check_signature.check_signature sign;
+  Modules.replace_value node.n_name sign;
   node
 
 let program p =

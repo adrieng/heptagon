@@ -5,10 +5,15 @@ STATUS=0
 
 RUN_DIR="`pwd`"
 
-SCRIPT_DIR=`dirname $(readlink -f $0)`
+SCRIPT_DIR=`dirname $(python -c "import os, sys; print os.path.realpath(\"$0\")")`
 
 COMPILER_DIR="$SCRIPT_DIR/compiler"
-COMPILER=heptc.byte
+if [ -x $COMPILER_DIR/heptc.native ];
+then
+    COMPILER=heptc.native
+else
+    COMPILER=heptc.byte
+fi
 COMPILER_DEBUG=heptc.d.byte
 LIB_DIR="$SCRIPT_DIR/lib"
 

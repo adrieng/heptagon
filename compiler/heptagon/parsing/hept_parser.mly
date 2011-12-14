@@ -17,6 +17,7 @@ open Hept_parsetree
 %token <int> INT
 %token <float> FLOAT
 %token <bool> BOOL
+%token <string> STRING
 %token <string * string> PRAGMA
 %token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST UNSAFE
 %token FBY PRE SWITCH EVERY
@@ -51,6 +52,7 @@ open Hept_parsetree
 %token MAP MAPI FOLD FOLDI MAPFOLD
 %token ASYNC BANG FUTURE
 %token AT INIT SPLIT REINIT
+%token THREE_DOTS
 %token <string> PREFIX
 %token <string> INFIX0
 %token <string> INFIX1
@@ -629,6 +631,7 @@ _const:
   | INT                { Sint $1 }
   | FLOAT              { Sfloat $1 }
   | BOOL               { Sbool $1 }
+  | STRING             { Sstring $1 }
   | constructor        { Sconstructor $1 }
   | q=qualified(ident) { Svar q }
 ;
@@ -710,6 +713,7 @@ nonmt_params_signature:
 param_signature:
   | IDENT COLON located_ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
   | located_ty_ident ck=ck_annot { mk_arg None $1 ck }
+  | THREE_DOTS ck=ck_annot { mk_arg None (Tinvalid, Linearity.Ltop) ck }
 ;
 
 %%

@@ -174,8 +174,8 @@ let replace_const f v =
 
 let find_value x = QualEnv.find x g_env.values
 let find_type x = QualEnv.find x g_env.types
-let find_constrs x = Tid (QualEnv.find x g_env.constrs)
-let find_field x = QualEnv.find x g_env.fields (* TODO master : the result should be Tid(...) *)
+let find_constrs x = QualEnv.find x g_env.constrs
+let find_field x = QualEnv.find x g_env.fields
 let find_const x = QualEnv.find x g_env.consts
 
 (** @return the fields of a record type. *)

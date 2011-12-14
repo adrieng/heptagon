@@ -26,7 +26,8 @@ open Mls_utils
     Other variables are mapped to None. *)
 let build_env nd =
   let add_none env l = List.fold_left (fun env vd -> Env.add vd.v_ident None env) env l in
-  let add_eq env eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
+  let rec add_eq env eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
+    | _, Ewhen (e, _, _) -> add_eq env { eq with eq_rhs = e }
     | Evarpat x, Efby (_, w) -> Env.add x (ident_of_extvalue w) env
     | _, _ ->
        List.fold_left (fun env id -> Env.add id None env) env (Vars.def [] eq)
@@ -41,6 +42,11 @@ let build_env nd =
   in
   env
 
+let rec replace_fby e exp_mem_x = match e.e_desc with
+  | Ewhen (e1, c, y) -> { e with e_desc = Ewhen (replace_fby e1 exp_mem_x, c, y) }
+  | Efby (_, _) -> exp_mem_x
+  | _ -> assert false
+
 let rec depends_on x y env =
   match Env.find y env with
     | None -> false
@@ -49,17 +55,18 @@ let rec depends_on x y env =
       else if ident_compare y z = 0 then false
       else depends_on x z env
 
-let eq _ (env, vds, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs.e_desc with
-  | Evarpat x, Efby (_, _) when depends_on x x env ->
+let eq funs (env, vds, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs with
+  | Evarpat x, e when Vars.is_fby e && depends_on x x env ->
         let vd = vd_find x vds in
         let x_mem = Idents.gen_var "normalize_mem" ("mem_"^(Idents.name x)) in
         let vd_mem = { vd with v_ident = x_mem } in
-        let exp_mem_x = mk_extvalue_exp vd.v_clock vd.v_type
-          ~clock:vd.v_clock ~linearity:vd.v_linearity (Wvar x_mem) in
+        let ck = Misc.assert_1 (Clocks.unprod e.e_ct) in
+        let exp_mem_x = mk_extvalue_exp e.e_level_ck vd.v_type
+          ~clock:ck ~linearity:vd.v_linearity (Wvar x_mem) in
         (* mem_o = v fby e *)
         let eq_copy = { eq with eq_lhs = Evarpat x_mem } in
         (* o = mem_o *)
-        let eq = { eq with eq_rhs = exp_mem_x } in
+        let eq = { eq with eq_rhs = replace_fby e exp_mem_x } in
         (* remove the dependency in env *)
         let env = Env.add x None env in
         eq, (env, vds, vd_mem::v, eq::eq_copy::eqs)

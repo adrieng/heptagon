@@ -166,6 +166,19 @@ module CompareModulo = Mls_compare.Make(ClockCompareModulo)
 
 let class_ref_of_var is_input w x = if is_input x then Cr_input w else Cr_plain x
 
+let pattern_for_map =
+  let r = ref 0 in
+  (fun patt -> match patt with
+    | Etuplepat [] ->
+      incr r;
+      Etuplepat (repeat_list (Etuplepat []) !r)
+    | _ -> patt)
+
+let map_for_pattern patt = match patt with
+  | Etuplepat p_l when List.for_all ((=) (Etuplepat [])) p_l -> Etuplepat []
+  | _ -> patt
+;;
+
 let rec add_equation is_input (tenv : tom_env) eq =
   let add_clause (cn, w) class_id_list =
     let class_id_list, w = extvalue is_input w class_id_list in
@@ -231,10 +244,15 @@ let rec add_equation is_input (tenv : tom_env) eq =
     decompose eq.eq_rhs
   in
 
+  (* effectful equations (e.g. () = printf(...);) may have only unit patterns on the left.
+     To avoid fusing them all, create a dummy pattern for each
+  *)
+  let lhs = pattern_for_map eq.eq_lhs in
+
   let eq_repr =
     {
       er_class = initial_class;
-      er_pattern = eq.eq_lhs;
+      er_pattern = lhs;
       er_head = { eq.eq_rhs with e_desc = ed; };
       er_children = class_id_list;
       er_add_when = add_when;
@@ -243,7 +261,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
     }
   in
 
-  PatMap.add eq.eq_lhs eq_repr tenv
+  PatMap.add lhs eq_repr tenv
 
 and extvalue is_input w class_id_list =
   let rec decompose w class_id_list =
@@ -449,6 +467,7 @@ and reconstruct_clock_type mapping ct = match ct with
 
 and reconstruct_pattern mapping pat = match pat with
   | Evarpat x -> Evarpat (new_name mapping x)
+  | Etuplepat pat_list when List.for_all ((=) (Etuplepat [])) pat_list -> Etuplepat []
   | Etuplepat pat_list -> Etuplepat (List.map (reconstruct_pattern mapping) pat_list)
 
 
@@ -575,7 +594,7 @@ let update_node nd =
   let change_name vd arg = { arg with a_name = Some (name vd.v_ident) } in
   let sign = Modules.find_value nd.n_name in
   let sign = { sign with node_outputs = List.map2 change_name nd.n_output sign.node_outputs } in
-  Signature.check_signature sign;
+  Check_signature.check_signature sign;
   ignore (Modules.replace_value nd.n_name sign)
 
 let node nd =
@@ -585,6 +604,8 @@ let node nd =
   let tenv =
     let is_input id = List.exists (fun vd -> ident_compare vd.v_ident id = 0) nd.n_input in
     List.fold_left (add_equation is_input) PatMap.empty nd.n_equs in
+
+  debug_do (fun () -> Format.printf "Very first tenv:\n%a@." debug_tenv tenv) ();
 
   (* Compute fix-point of [compute_new_class] *)
   let tenv = separate_classes tenv in

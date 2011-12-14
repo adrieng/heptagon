@@ -130,6 +130,7 @@ type contract = {
 type node_dec = {
   n_name     : qualname;
   n_stateful : bool;
+  n_unsafe   : bool;
   n_input    : var_dec list;
   n_output   : var_dec list;
   n_contract : contract option;
@@ -141,6 +142,7 @@ type node_dec = {
   n_params   : param list;
   n_param_constraints : constrnt list;
   n_mem_alloc : (ty * Interference_graph.ivar list) list; }
+
 
 type const_dec = {
   c_name : qualname;
@@ -185,6 +187,17 @@ let mk_extvalue ~ty ~linearity ?(clock = fresh_clock()) ?(loc = no_location) des
   { w_desc = desc; w_ty = ty; w_linearity = linearity;
     w_ck = clock; w_loc = loc }
 
+let extvalue_true, extvalue_false =
+  let extvalue_bool b ck =
+    mk_extvalue ~ty:Initial.tbool ~linearity:Linearity.Ltop
+                ~clock:ck (Wconst (Initial.mk_static_bool b))
+  in
+  extvalue_bool true, extvalue_bool false
+
+let mk_vd_extvalue vd =
+  mk_extvalue ~ty:vd.v_type ~linearity:vd.v_linearity
+              ~clock:vd.v_clock ~loc:vd.v_loc (Wvar vd.v_ident)
+
 let mk_exp level_ck ty ~linearity ?(ck = Cbase)
     ?(ct = fresh_ct ty) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = ty; e_linearity = linearity;
@@ -204,11 +217,12 @@ let mk_equation ?(loc = no_location) unsafe pat exp =
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(pinst = ([],[]))
     ?(local = []) ?(eq = [])
-    ?(stateful = true) ?(loc = no_location) ?(param = []) ?(constraints = [])
+    ?(stateful = true) ~unsafe ?(loc = no_location) ?(param = []) ?(constraints = [])
     ?(mem_alloc=[])
     name =
   { n_name = name;
     n_stateful = stateful;
+    n_unsafe = unsafe;
     n_input = input;
     n_output = output;
     n_contract = contract;

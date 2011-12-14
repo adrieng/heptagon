@@ -1,0 +1,20 @@
+node f(c :bool; x :int) returns (y :int)
+let
+  y = (0 fby x) when c
+tel
+
+node nn(x:int) returns (y:int)
+let
+  y = 0 fby x
+tel
+
+node ff(x:int) returns (y :int)
+let
+  y = x + 1
+tel
+
+node g(c :bool) returns (y,y2 :int)
+let
+  y = nn(1) when c;
+  y2 = ff(1) when c 
+tel
