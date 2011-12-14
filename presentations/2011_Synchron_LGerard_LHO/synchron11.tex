@@ -103,7 +103,6 @@ let
   y = x + 1
   cpt = (0 fby cpt) + 1
 tel
-
 node g(x :int; c :bool) returns (out :int)
 var t, cpt, y, last_y :int;
 let
@@ -112,7 +111,6 @@ let
   last_y = 0 fby y;
   out = y whenot c;
 tel
-
 node main() returns (out :int; c :bool) var x :int;
 let
   x = 0 fby (x+10);
@@ -141,7 +139,7 @@ val g:: (. on c, c : .) -> . on not c
 \begin{array}{|c|cccccccc} \hline
 c & true & false & true & false & true & \ldots\li
 x & x_0 & & x_1 & & x_2 &\ldots\li
-t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li 
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
 y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
 cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
 out & & f^2(x_0) & & f^2(x_1) & &\ldots \li
@@ -246,7 +244,7 @@ step_n(x) {
 \end{minipage}
 \end{block}
 PS: The common root of the clocks of the signature is the local oversampling.
-Here `. on e on d`. 
+Here `. on e on d`.
 \end{frame}
 
 \begin{frame}[fragile]{First attempt to use LHO, before LHO transformation}
@@ -266,7 +264,7 @@ val g:: . !\color{gray}{\verb-on c-}! -> . !\color{gray}{\verb-on c-}!
 \begin{array}{|c|@{\ \ \ }c@{\ \ \ }@{\ \ \ }lr@{\ \ \ }@{\ \ \ }lr@{\ \ \ }@{\ \ \ }lr} \hline
 c & true & false & true & false & true & \ldots\li
 x & x_0 & & x_1 & & x_2 &\ldots\li
-t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li 
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
 y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
 cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
 out & f(x_0) & & f(x_1) & & f(x_2) &\ldots \li
@@ -291,7 +289,7 @@ val g:: . -> .
 \begin{array}{|c|@{\ [\ }c@{\ ]\ }@{\ [\ }cc@{\ ]\ }@{\ [\ }cc@{\ ]\ }@{\ [\ }lr} \hline
 c & true & false & true & false & true & \ldots\li
 x & x_0 & & x_1 & & x_2 &\ldots\li
-t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li 
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
 y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
 cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
 out & f(x_0) & & f(x_1) & & f(x_2) &\ldots \li
@@ -325,7 +323,7 @@ val g:: . -> .
 \begin{array}{|c|@{\ [\ }c@{\ ]\ }@{\ [\ }lr@{\ ]\ }@{\ [\ }lr@{\ ]\ }@{\ [\ }lr} \hline
 c & true & false & true & false & true & \ldots\li
 x & x_0 & & x_1 & & x_2 &\ldots\li
-t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li 
+t & x_0 & f(x_0) & x_1 & f(x_1) & x_2 &\ldots\li
 y & f(x_0) & f^2(x_0) & f(x_1) & f^2(x_1) & f(x_2) &\ldots\li
 cpt & 1 & 2 & 3 & 4 & 5 &\ldots\li
 out & 0 & & f^2(x_0) & & f^2(x_1) &\ldots \li
@@ -350,7 +348,7 @@ val g:: . -> .
 \begin{array}{|c|@{\ [\ }c@{\ ]\ }@{\ [\ }lcr@{\ ]\ }@{\ [\ }lcr@{\ ]\ }l} \hline
 c & true & false & false & true & false & false & true & \ldots\li
 x & x_0 & & & x_1 & & & x_2 &\ldots\li
-t & x_0 & f(x_0) & f^2(x_0) & x_1 & f(x_1) & f^2(x_1) & f^3(x_1)\ldots\li 
+t & x_0 & f(x_0) & f^2(x_0) & x_1 & f(x_1) & f^2(x_1) & f^3(x_1)\ldots\li
 y & f(x_0) & f^2(x_0) & f^3(x_0) & f(x_1) & f^2(x_1) & f^3(x_1) & f(x_2) &\ldots\li
 cpt & 1 & 2 & 3 & 4 & 5 & 6 & 7 &\ldots\li
 out & 0 & & & f^3(x_0) & & & f^3(x_1) &\ldots \li
@@ -527,7 +525,7 @@ Note that `on c` $\equiv$ `on true(c)` and `on not c` $\equiv$ `on false(c)`
       \item Reactivity requires `C(b)` to be true an infinite amount of time.
       \item Should/how can we ensure it?
       \item Right now our prototype in Heptagon doesn't check it.
-    \end{itemize} 
+    \end{itemize}
   \item `. on C(b) -> . on C2(b)`: rejected by LHO
     \begin{itemize}
       \item Only the perfect interleaving of the two constructors is possible.
@@ -555,7 +553,7 @@ Note that `on c` $\equiv$ `on true(c)` and `on not c` $\equiv$ `on false(c)`
 \end{itemize}
 \end{block}
 \begin{block}
-Use a restricted 
+Use a restricted
 \end{block}
 \end{frame}
 
