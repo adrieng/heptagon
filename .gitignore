@@ -1,9 +1,6 @@
-.external*
-.paths
-.project
-.projectSettings
 _build
 *.DS_Store
+.metadata
 *.cmi
 *.cmo
 *.cmx
