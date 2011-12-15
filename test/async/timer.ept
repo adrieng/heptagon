@@ -1,19 +1,22 @@
 open Time
+open Iostream
+
 
 (* [period] is given in milliseconds.
    [b] should be always equal to [true]
      otherwise it means we missed a deadline. *)
-node periodic_clock<<period :int>> () returns (b :bool)
+unsafe node periodic_clock<<period :int>> () returns (b :bool)
 var date : time;
 let
-  b = add_time((get_time()) fby date, 500);
+  date = add_time((start_time()) fby date, period);
   b = sleep_until(date);
+  () = if b then () else  printf("__ -- Missed deadline -- __");
 tel
 
 
 
 
-node main() returns (b:bool)
+unsafe node main() returns (b:bool)
 let
   b = periodic_clock<<50>>();
 tel

@@ -9,4 +9,7 @@ val fun add_time(time;int) returns (time)
 val fun get_time() returns (time)
 
 (* Blocking wait, returns false when interrupted or given time is less than current time. *)
-val fun sleep_until(time) returns (bool)
+unsafe val fun sleep_until(time) returns (bool)
+
+(* Return the starting date of the program. Will return the same for any instance. *)
+val node start_time() returns (time)

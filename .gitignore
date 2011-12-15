@@ -19,15 +19,13 @@ _build
 *.c
 *.h
 *.o
-*.java
 *.class
 *.log
 *.
 *.epci
 *.epo
 *.dot
+test/**/java
 test/*.ml
 test/_check_builds
-lib/java/.classpath
 test/async/build/*
-test/image_filters/java/*
