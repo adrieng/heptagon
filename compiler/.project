@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>heptc</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>Ocaml.ocamlbuildBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>ocaml.ocamlbuildnature</nature>
+	</natures>
+	<filteredResources>
+		<filter>
+			<id>1324023911664</id>
+			<name></name>
+			<type>26</type>
+			<matcher>
+				<id>org.eclipse.ui.ide.multiFilter</id>
+				<arguments>1.0-name-matches-false-false-_build</arguments>
+			</matcher>
+		</filter>
+	</filteredResources>
+</projectDescription>

@@ -1,6 +1,8 @@
 #!/bin/bash
 #Small wrapper to deal with compilation of the compiler and the stdlib.
 
+export OCAMLRUNPARAM=b
+
 STATUS=0
 
 RUN_DIR="`pwd`"
