@@ -260,11 +260,11 @@ let typing_node node =
 
   let vd_to_ck vd = ck_repr (Env.find vd.v_ident h) in
   let input_cks = List.map vd_to_ck node.n_input in
-  let in_out_cks = List.fold_right (fun vd acc ->(vd_to_ck vd) :: acc) node.n_output input_cks in
+  let out_in_cks = List.fold_right (fun vd acc ->(vd_to_ck vd) :: acc) node.n_output input_cks in
 
   (* Find the best root for the node *)
-  let (new_in_out_cks, root) = Clocks.common_root_ck_list in_out_cks in
-  let (new_in_ck, new_out_ck) = split_nlast (List.length node.n_output) new_in_out_cks in
+  let (new_out_in_cks, root) = Clocks.common_root_ck_list out_in_cks in
+  let (new_out_ck, new_in_ck) = split_nlast (List.length node.n_input) new_out_in_cks in
   let set_clock vd ck = { vd with v_clock = ck } in
   let set_clock_h vd = { vd with v_clock = vd_to_ck vd } in
   let node = { node with n_input = List.map2 set_clock node.n_input new_in_ck;
