@@ -165,13 +165,6 @@ struct
     in
     headrec ck []
 
-  (** Returns a list of memory vars (x in x = v fby e)
-      appearing in an equation. *)
-  let rec memory_vars ({ eq_lhs = _; eq_rhs = e } as eq) = match e.e_desc with
-    | Efby(_, _) -> def [] eq
-    | Ewhen(e,_,_) -> memory_vars {eq with eq_rhs = e}
-    | _ -> []
-
   let linear_read e =
     let extvalue funs acc w = match w.w_desc with
       | Wvar x ->
@@ -189,11 +182,12 @@ struct
     acc
 end
 
+(*TODO now schould return vds*)
 (* Assumes normal form, all fby are solo rhs or inside a when *)
 let node_memory_vars n =
   let rec eq funs acc ({ eq_lhs = pat; eq_rhs = e } as equ) =
     match pat, e.e_desc with
-    | Evarpat x, Ewhen(e,_,_) -> eq funs acc {equ with eq_rhs = e}
+    | _, Ewhen(e,_,_) -> eq funs acc {equ with eq_rhs = e}
     | Evarpat x, Efby(_, _) ->
         let acc = (x, e.e_ty) :: acc in
         equ, acc
@@ -247,7 +241,8 @@ let remove_eqs_from_node nd ids =
 
 let args_of_var_decs =
  List.map
-   (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
+   (fun vd -> Signature.mk_arg ~is_memory:vd.v_is_memory
+                                     (Some (Idents.source_name vd.v_ident))
                                vd.v_type (Linearity.check_linearity vd.v_linearity)
                                (ck_to_sck (Clocks.ck_repr vd.v_clock)))
 

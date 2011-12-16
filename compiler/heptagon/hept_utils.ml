@@ -106,7 +106,8 @@ let rec vd_mem n = function
 let args_of_var_decs =
   (* before the clocking the clock is wrong in the signature *)
  List.map
-   (fun vd -> Signature.mk_arg (Some (Idents.source_name vd.v_ident))
+   (fun vd -> Signature.mk_arg ~is_memory:false
+                               (Some (Idents.source_name vd.v_ident))
                                vd.v_type (Linearity.check_linearity vd.v_linearity) Signature.Cbase)
 
 let signature_of_node n =

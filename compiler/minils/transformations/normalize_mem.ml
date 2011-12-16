@@ -55,7 +55,7 @@ let rec depends_on x y env =
       else if ident_compare y z = 0 then false
       else depends_on x z env
 
-let eq funs (env, vds, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs with
+let eq _ (env, vds, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs with
   | Evarpat x, e when Vars.is_fby e && depends_on x x env ->
         let vd = vd_find x vds in
         let x_mem = Idents.gen_var "normalize_mem" ("mem_"^(Idents.name x)) in
@@ -81,11 +81,13 @@ let node funs acc nd =
   let nd, (_, _, v, eqs) =
     Mls_mapfold.node_dec funs (env, nd.n_local @ nd.n_output, [], []) nd
   in
-  (* return updated node *)
-  { nd with n_local = v @ nd.n_local; n_equs = List.rev eqs }, acc
+  let nd = { nd with n_local = v @ nd.n_local; n_equs = List.rev eqs } in
+  let nd = Is_memory.update_node nd in
+  nd, acc
 
 let program p =
-  let funs = { Mls_mapfold.defaults with
-    eq = eq; node_dec = node; contract = contract } in
+  let funs =
+    { Mls_mapfold.defaults with eq = eq; node_dec = node; contract = contract }
+  in
   let p, _ = Mls_mapfold.program_it funs (Env.empty, [], [], []) p in
-    p
+  p

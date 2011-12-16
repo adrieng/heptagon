@@ -48,9 +48,11 @@ let fresh = Idents.gen_fresh "hept2mls"
   (function Heptagon.Enode f -> (shortname f)
     | _ -> "n")
 
+(* This function set every variable with v_is_memory=false,
+   this is corrected at the end of the pass *)
 let translate_var { Heptagon.v_ident = n; Heptagon.v_type = ty; Heptagon.v_linearity = linearity;
                     Heptagon.v_loc = loc; Heptagon.v_clock = ck } =
-  mk_var_dec ~loc:loc n ty linearity ck
+  mk_var_dec ~loc:loc n ty ~is_memory:false linearity ck
 
 let translate_reset = function
   | Some { Heptagon.e_desc = Heptagon.Evar n } -> Some n
@@ -188,21 +190,22 @@ let translate_contract contract =
                c_controllables = List.map translate_var l_c }
 
 let node n =
-  { n_name = n.Heptagon.n_name;
-    n_stateful = n.Heptagon.n_stateful;
-    n_unsafe = n.Heptagon.n_unsafe;
-    n_input = List.map translate_var n.Heptagon.n_input;
-    n_output = List.map translate_var n.Heptagon.n_output;
-    n_contract = translate_contract n.Heptagon.n_contract;
-    n_controller_call = ([],[]);
-    n_local = List.map translate_var n.Heptagon.n_block.Heptagon.b_local;
-    n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
-    n_loc = n.Heptagon.n_loc ;
-    n_params = n.Heptagon.n_params;
-    n_param_constraints = n.Heptagon.n_param_constraints;
-    n_mem_alloc = [];
-    n_base_ck = Clocks.Cbase;
-    n_base_id = None }
+  Is_memory.update_node
+    { n_name = n.Heptagon.n_name;
+      n_stateful = n.Heptagon.n_stateful;
+      n_unsafe = n.Heptagon.n_unsafe;
+      n_input = List.map translate_var n.Heptagon.n_input;
+      n_output = List.map translate_var n.Heptagon.n_output;
+      n_contract = translate_contract n.Heptagon.n_contract;
+      n_controller_call = ([],[]);
+      n_local = List.map translate_var n.Heptagon.n_block.Heptagon.b_local;
+      n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
+      n_loc = n.Heptagon.n_loc ;
+      n_params = n.Heptagon.n_params;
+      n_param_constraints = n.Heptagon.n_param_constraints;
+      n_mem_alloc = [];
+      n_base_ck = Clocks.Cbase;
+      n_base_id = None }
 
 
 let typedec

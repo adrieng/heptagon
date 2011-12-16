@@ -116,6 +116,7 @@ type eq = {
 type var_dec = {
   v_ident     : var_ident;
   v_type      : ty;
+  v_is_memory : bool;
   v_linearity : linearity;
   v_clock     : ck;
   v_loc       : location }
@@ -206,8 +207,9 @@ let mk_exp level_ck ty ~linearity ?(ck = Cbase)
   { e_desc = desc; e_ty = ty; e_linearity = linearity;
     e_level_ck = level_ck; e_base_ck = ck; e_ct = ct; e_loc = loc }
 
-let mk_var_dec ?(loc = no_location) ident ty linearity ck =
-  { v_ident = ident; v_type = ty; v_linearity = linearity;  v_clock = ck; v_loc = loc }
+let mk_var_dec ?(loc = no_location) ~is_memory ident ty linearity ck =
+  { v_ident = ident; v_type = ty; v_is_memory = is_memory;
+          v_linearity = linearity;  v_clock = ck; v_loc = loc }
 
 let mk_extvalue_exp ?(clock = fresh_clock())
     ?(loc = no_location) level_ck ty ~linearity desc =

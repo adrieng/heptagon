@@ -548,7 +548,7 @@ let translate_signature s =
     | Cbase -> Signature.Cbase
     | Con(ck,c,x) -> Signature.Con(translate_clock ck, qualify_constrs c, x)
   and translate_arg a =
-    Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
+    Signature.mk_arg ~is_memory:false a.a_name (translate_type s.sig_loc a.a_type)
       a.a_linearity (translate_some_clock a.a_clock)
   in
   let n = current_qual s.sig_name in

@@ -491,38 +491,18 @@ let add_init_return_eq f =
     (mk_exp Cbase Tinvalid Ltop (Mls_utils.tuple_from_dec_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
 
-
+(** If we dont't normalize outputs that are registers, we need to spill
+    them because we cannot modify them. *)
 let spill_registers_outputs f =
   let process_eq eq = match eq.eq_rhs.e_desc with
     | Eapp({ a_op = Efun f | Enode f }, _, _) ->
         let info = Modules.find_value f in
           List.iter2
-            (fun x arg ->
-              if arg.a_is_memory
-              then (
-                Format.eprintf "Removing %s@." (name x);
-                remove_from_ivar (Ivar x))
-            )
+            (fun x arg -> if arg.a_is_memory then remove_from_ivar (Ivar x))
             (Mls_utils.Vars.def [] eq) info.node_outputs
     | _ -> ()
   in
     List.iter process_eq f.n_equs
-
-let update_output_registers_sig f =
-  let update_output mems a vd =
-    if List.mem vd.v_ident mems then (
-      Format.eprintf "Ading memory register %s@." (name vd.v_ident);
-      { a with a_is_memory = true }
-    ) else
-      a
-  in
-  if not !Compiler_options.normalize_register_outputs then (
-    let mems, _ = List.split (Mls_utils.node_memory_vars f) in
-    let info = Modules.find_value f.n_name in
-    let outputs = List.map2 (update_output mems) info.node_outputs f.n_output in
-    Modules.replace_value f.n_name { info with node_outputs = outputs }
-  )
-
 
 let build_interf_graph f =
   World.init f;
@@ -542,7 +522,8 @@ let build_interf_graph f =
     add_records_field_interferences ();
     (* Splill inputs that are not modified *)
     spill_inputs f;
-    spill_registers_outputs f;
+    if not !Compiler_options.normalize_register_outputs then
+      spill_registers_outputs f;
 
     (* Return the graphs *)
     !World.igs
@@ -592,7 +573,6 @@ let create_subst_lists igs =
     List.flatten (List.map create_one_ig igs)
 
 let node _ acc f =
-  update_output_registers_sig f;
   (** Build the interference graphs *)
   let igs = build_interf_graph f in
     (** Color the graph *)
