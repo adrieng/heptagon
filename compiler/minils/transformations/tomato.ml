@@ -590,12 +590,6 @@ and fix_output_var_decs tenv (equs, vd_list) =
     List.fold_right (fix_output_var_dec tenv) vd_list (IdentSet.empty, equs, []) in
   eq_list, vd_list
 
-let update_node nd =
-  let change_name vd arg = { arg with a_name = Some (name vd.v_ident) } in
-  let sign = Modules.find_value nd.n_name in
-  let sign = { sign with node_outputs = List.map2 change_name nd.n_output sign.node_outputs } in
-  Check_signature.check_signature sign;
-  ignore (Modules.replace_value nd.n_name sign)
 
 let node nd =
   Idents.enter_node nd.n_name;
@@ -624,7 +618,7 @@ let node nd =
   let eq_list, output = fix_output_var_decs mapping (eq_list, nd.n_output) in
 
   let nd = { nd with n_equs = eq_list; n_output = output; n_local = local; } in
-  update_node nd;
+  update_node_signature nd;
   nd
 
 let program_desc pd pd_list = match pd with

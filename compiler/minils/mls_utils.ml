@@ -242,15 +242,29 @@ let remove_eqs_from_node nd ids =
 let args_of_var_decs =
  List.map
    (fun vd -> Signature.mk_arg ~is_memory:vd.v_is_memory
-                                     (Some (Idents.source_name vd.v_ident))
+                               (Some (Idents.source_name vd.v_ident))
                                vd.v_type (Linearity.check_linearity vd.v_linearity)
                                (ck_to_sck (Clocks.ck_repr vd.v_clock)))
 
-let signature_of_node n =
-  { node_inputs = args_of_var_decs n.n_input;
-    node_outputs  = args_of_var_decs n.n_output;
-    node_stateful = n.n_stateful;
-    node_unsafe = n.n_unsafe;
-    node_params = n.n_params;
-    node_param_constraints = n.n_param_constraints;
-    node_loc = n.n_loc }
+
+(** Update the signature of node [n] in the global environment *)
+let update_node_signature n =
+  let signature_of_node n =
+    (* remove the oversampler from the actual outputs *)
+    let outputs = match n.n_base_id with
+      | None -> n.n_output
+      | Some base_vd ->
+        Format.printf("try to remove base@.");
+        List.filter (fun vd -> vd.v_ident != base_vd.v_ident) n.n_output
+    in
+    { node_inputs = args_of_var_decs n.n_input;
+      node_outputs  = args_of_var_decs outputs;
+      node_stateful = n.n_stateful;
+      node_unsafe = n.n_unsafe;
+      node_params = n.n_params;
+      node_param_constraints = n.n_param_constraints;
+      node_loc = n.n_loc }
+  in
+  let sign = signature_of_node n in
+  Check_signature.check_signature sign;
+  Modules.replace_value n.n_name sign

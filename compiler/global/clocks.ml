@@ -152,7 +152,9 @@ let common_root_ck_list ck_l =
         | _ -> (ck_l, Cbase) (* if the root can't be reduced, common root is Cbase *)
       end
   in
-  find_root (List.hd ck_l)
+  match ck_l with
+    | [] -> [], Cbase
+    | _ -> find_root (List.hd ck_l)
 
 
 let rec last_clock ct = match ct with

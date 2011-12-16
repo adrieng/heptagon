@@ -16,13 +16,17 @@ open Minils
 ]
     This new variable __node_oversampling is needed
     to deal with [c] being a memory or a var transparently.
+
     Moreover, if [n_base_ck = . on c on c'],
       __node_big_step will be [merge c c' false].
     And if [n_base_ck = . on c on c' on c''],
       __node_big_step will be [merge c (merge c' c'' false) false ].
 
-    In the node signature, after this pass, [n_base_id = Some __node_big_step].
-    __node_big_step is added to the outputs to prevent removing from optimizations.
+    After this pass, it may be that [n_base_id = Some __node_big_step],
+    __node_big_step is also added to the outputs,
+    since for the optimization and code generation,
+    it has to be considered as an output.
+    /!\ This is a dummy output, it is only in the node output, not in the signature.
 *)
 
 
@@ -51,7 +55,7 @@ let rec gen_base (new_eqs,new_vds) super_base_vd super_ck = match ck_repr super_
   | Cbase -> (new_eqs, new_vds, super_base_vd)
   | Con (ck, c, v) ->
       let base_id = Idents.gen_var "normalize_mem" "__node_big_step" in
-      let base_vd = mk_var_dec base_id Initial.tbool Linearity.Ltop ck in
+      let base_vd = mk_var_dec ~is_memory:false base_id Initial.tbool Linearity.Ltop ck in
       let super_base_w = match super_base_vd with
         | None -> extvalue_true super_ck
         | Some super_base_vd -> mk_vd_extvalue super_base_vd
@@ -77,8 +81,7 @@ let node_dec _ () nd =
     n_equs = new_eqs;
     n_base_id = base_vd }
   in
-  let sign = Mls_utils.signature_of_node node in
-  Modules.replace_value node.n_name sign;
+  Mls_utils.update_node_signature node;
   node, ()
 
 let program p =

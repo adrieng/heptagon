@@ -272,9 +272,7 @@ let typing_node node =
                          n_local = List.map set_clock_h node.n_local;
                          n_base_ck = root }
   in
-  let sign = Mls_utils.signature_of_node node in
-  Check_signature.check_signature sign;
-  Modules.replace_value node.n_name sign;
+  Mls_utils.update_node_signature node;
   node
 
 let program p =
