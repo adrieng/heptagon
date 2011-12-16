@@ -682,30 +682,25 @@ and translate_iterator map call_context it name_list
 let remove m d_list =
   List.filter (fun { Minils.v_ident = n } -> not (List.mem_assoc n m)) d_list
 
-let translate_contract map mem_var_tys =
-  function
-    | None -> ([], [], [], [])
-    | Some
-        {
-          Minils.c_eq = eq_list;
-          Minils.c_local = d_list;
-        } ->
-        let (v, si, j, s_list) = translate_eq_list map empty_call_context eq_list in
-        let d_list = translate_var_dec (v @ d_list) in
-        let d_list = List.filter
-          (fun vd -> not (List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys)) d_list in
-         (si, j, s_list, d_list)
+let translate_contract map mems = function
+  | None -> ([], [], [], [])
+  | Some c ->
+      let (v, si, j, s_list) = translate_eq_list map empty_call_context c.Minils.c_eq in
+      let d_list = translate_var_dec (v @ c.Minils.c_local) in
+      let d_list = List.filter (fun vd -> not (Is_memory.is_memory mems vd.v_ident)) d_list in
+      (si, j, s_list, d_list)
 
-(** Returns a map, mapping variables names to the variables
-    where they will be stored. *)
-let subst_map inputs outputs controllables c_locals locals mem_tys =
-  (* Create a map that simply maps each var to itself *)
-  let map =
-    List.fold_left
-      (fun m { Minils.v_ident = x; Minils.v_type = ty } -> Env.add x (mk_pattern ty (Lvar x)) m)
-      Env.empty (inputs @ outputs @ controllables @ c_locals @ locals)
+(** Returns a map, mapping variables to the corresponding Obc pattern. *)
+let subst_map inputs outputs controllables c_locals locals =
+  let vd_to_obc_pat vd =
+    let x = vd.Minils.v_ident in
+    let pd = if vd.Minils.v_is_memory then (Lmem x) else (Lvar x) in
+    mk_pattern vd.Minils.v_type pd
   in
-  List.fold_left (fun map (x, x_ty) -> Env.add x (mk_pattern x_ty (Lmem x)) map) map mem_tys
+  List.fold_left
+    (fun m vd -> Env.add vd.Minils.v_ident (vd_to_obc_pat vd) m)
+    Env.empty
+    (inputs @ outputs @ controllables @ c_locals @ locals)
 
 let add_oversampler oversampler d_list nd outputs s =
   match oversampler with
@@ -734,22 +729,19 @@ let translate_node
       Minils.n_mem_alloc = mem_alloc; n_base_id = oversampler
     } as n) =
   Idents.enter_node f;
-  let mem_var_tys = Mls_utils.node_memory_vars n in
+  let mems = Is_memory.memory_set n in
   let c_list, c_locals =
     match contract with
     | None -> [], []
     | Some c -> c.Minils.c_controllables, c.Minils.c_local in
-  let subst_map = subst_map i_list o_list c_list c_locals d_list mem_var_tys in
+  let subst_map = subst_map i_list o_list c_list c_locals d_list in
   let (v, si, j, s_list) = translate_eq_list subst_map empty_call_context eq_list in
-  let (si', j', s_list', d_list') = translate_contract subst_map mem_var_tys contract in
+  let (si', j', s_list', d_list') = translate_contract subst_map mems contract in
   let i_list = translate_var_dec i_list in
   let o_list = translate_var_dec o_list in
   let d_list = translate_var_dec (v @ d_list) in
-  let m, d_list = List.partition
-    (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) d_list in
-  let m', o_list =
-    List.partition
-      (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) o_list in
+  let m, d_list = List.partition (fun vd -> Is_memory.is_memory mems vd.v_ident) d_list in
+  let m', o_list = List.partition (fun vd -> Is_memory.is_memory mems vd.v_ident) o_list in
   let s = s_list @ s_list' in
   let j = j' @ j in
   let si = si @ si' in
