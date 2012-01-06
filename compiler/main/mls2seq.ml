@@ -78,7 +78,8 @@ let generate_target p s =
     | Minils convert_fun ->
         convert_fun p
     | Obc convert_fun ->
-        let o = Mls2obc.program p in
+        let pp p = if !verbose then Obc_printer.print stdout p in
+        let o = do_pass "Convert to Obc" Mls2obc.program p pp in
         let o = Obc_compiler.compile_program o in
           convert_fun o
     | Minils_no_params convert_fun ->

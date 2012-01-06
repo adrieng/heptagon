@@ -254,7 +254,6 @@ let update_node_signature n =
     let outputs = match n.n_base_id with
       | None -> n.n_output
       | Some base_vd ->
-        Format.printf("try to remove base@.");
         List.filter (fun vd -> vd.v_ident != base_vd.v_ident) n.n_output
     in
     { node_inputs = args_of_var_decs n.n_input;
