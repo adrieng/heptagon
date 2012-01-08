@@ -8,7 +8,7 @@ open Java_printer
 let load_conf () =
   Compiler_options.normalize_register_outputs := true; (* TODO make it work before desactivating *)
   Compiler_options.do_scalarize := true;
-  Compiler_options.functions_are_classes := false;
+  Compiler_options.functions_are_classes := true; (* TODO incompatible for now with higher-order *)
   ()
 
 (** returns the vd and the pat of a fresh ident from [name] *)

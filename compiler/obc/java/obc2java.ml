@@ -724,7 +724,7 @@ let program p =
   let rec program_descs pds (ns,fs,cs,ts) = match pds with
     | [] -> ns,fs,cs,ts
     | Obc.Pclass n :: pds ->
-        if n.cd_stateful
+        if n.cd_stateful or !Compiler_options.functions_are_classes
         then program_descs pds (n::ns,fs,cs,ts)
         else program_descs pds (ns,n::fs,cs,ts)
     | Obc.Pconst c :: pds -> program_descs pds (ns,fs,c::cs,ts)

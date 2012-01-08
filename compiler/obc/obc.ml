@@ -85,7 +85,9 @@ type act =
   | Aassgn of pattern * exp
   (** Note that the return pattern list of Acall_fun and Acall
        may be empty since side effect functions exist. *)
+  (** Acall_fun is a call without associate object *)
   | Acall_fun of pattern list * fun_name * exp list
+  (** Acall is the call of a method of an object *)
   | Acall of pattern list * obj_ref * method_name * exp list
   | Aasync_call of async_t * pattern list * obj_ref * method_name * exp list
   | Acase of exp * (constructor_name * block) list
