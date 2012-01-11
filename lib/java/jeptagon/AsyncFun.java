@@ -27,6 +27,7 @@ public class AsyncFun<T> {
     }
   }
 
+
   @SuppressWarnings("unchecked")
   public AsyncFun(int queueNb, int queueSize, int priority) {
     if (queueNb<1) { java.lang.System.err.println("asyncnode given with 0 thread to execute"); }

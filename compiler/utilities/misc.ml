@@ -169,7 +169,7 @@ let rec list_diff l dl = match l with
 
 (** { 3 Compiler iterators } *)
 
-(** Mapfold *) (* TODO optim : in a lot of places we don't need the List.rev *)
+(** Mapfold *)
 let mapfold f acc l =
   let l,acc = List.fold_left
                 (fun (l,acc) e -> let e,acc = f acc e in e::l, acc)

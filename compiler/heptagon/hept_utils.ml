@@ -63,15 +63,6 @@ let mk_simple_equation pat e =
 let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
 
-let mk_signature name ins outs stateful params constraints loc =
-  { sig_name = name;
-    sig_inputs = ins;
-    sig_stateful = stateful;
-    sig_outputs = outs;
-    sig_params = params;
-    sig_param_constraints = constraints;
-    sig_loc = loc }
-
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None)
     ?(stateful = true) ?(unsafe = false) ?(loc = no_location) ?(param = []) ?(constraints = [])
@@ -107,8 +98,10 @@ let args_of_var_decs =
   (* before the clocking the clock is wrong in the signature *)
  List.map
    (fun vd -> Signature.mk_arg ~is_memory:false
-                               (Some (Idents.source_name vd.v_ident))
-                               vd.v_type (Linearity.check_linearity vd.v_linearity) Signature.Cbase)
+                               vd.v_type
+                               (Linearity.check_linearity vd.v_linearity)
+                               Signature.Cbase
+                               (Some (Idents.source_name vd.v_ident)))
 
 let signature_of_node n =
     { node_inputs = args_of_var_decs n.n_input;

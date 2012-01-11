@@ -30,6 +30,8 @@ type 'a hept_it_funs = {
   state_handler   : 'a hept_it_funs -> 'a -> state_handler -> state_handler * 'a;
   switch_handler  : 'a hept_it_funs -> 'a -> switch_handler -> switch_handler * 'a;
   var_dec         : 'a hept_it_funs -> 'a -> var_dec -> var_dec * 'a;
+  param           : 'a hept_it_funs -> 'a -> param -> param * 'a;
+  param_ty        : 'a hept_it_funs -> 'a -> param_ty -> param_ty * 'a;
   arg             : 'a hept_it_funs -> 'a -> arg -> arg * 'a;
   last            : 'a hept_it_funs -> 'a -> last -> last * 'a;
   contract        : 'a hept_it_funs -> 'a -> contract -> contract * 'a;
@@ -236,6 +238,22 @@ and arg funs acc a =
   let a_type, acc = ty_it funs acc a.a_type in
   { a with a_type = a_type }, acc
 
+and param_it funs acc p = funs.param funs acc p
+and param funs acc p =
+  let p_type, acc = param_ty_it funs acc p.p_type in
+  { p with p_type = p_type }, acc
+
+and param_ty_it funs acc pt =
+  try funs.param_ty funs acc pt
+  with Fallback -> param_ty funs acc pt
+and param_ty funs acc pt = match pt with
+  | Ttype t ->
+      let t, acc = ty_it funs acc t in
+      Ttype t, acc
+  | Tsig s ->
+      let s, acc = signature_it funs acc s in
+      Tsig s, acc
+
 and last_it funs acc l =
   try funs.last funs acc l
   with Fallback -> last funs acc l
@@ -260,7 +278,7 @@ and node_dec_it funs acc nd = funs.node_dec funs acc nd
 and node_dec funs acc nd =
   let n_input, acc = mapfold (var_dec_it funs) acc nd.n_input in
   let n_output, acc = mapfold (var_dec_it funs) acc nd.n_output in
-  let n_params, acc = mapfold (var_dec_it funs) acc nd.n_params in
+  let n_params, acc = mapfold (param_it funs) acc nd.n_params in
   let n_contract, acc =  optional_wacc (contract_it funs) acc nd.n_contract in
   let n_constraints, acc = mapfold (exp_it funs) acc nd.n_constraints in
   let n_block, acc = block_it funs acc nd.n_block in
@@ -342,7 +360,7 @@ and signature_it funs acc s = funs.signature funs acc s
 and signature funs acc s =
   let sig_inputs, acc = mapfold (arg_it funs) acc s.sig_inputs in
   let sig_outputs, acc = mapfold (arg_it funs) acc s.sig_outputs in
-  let sig_params, acc = mapfold (var_dec_it funs) acc s.sig_params in
+  let sig_params, acc = mapfold (param_it funs) acc s.sig_params in
   let sig_param_constraints, acc = mapfold (exp_it funs) acc s.sig_param_constraints in
   { s with sig_inputs = sig_inputs;
            sig_outputs = sig_outputs;
@@ -368,6 +386,8 @@ let defaults = {
   state_handler = state_handler;
   switch_handler = switch_handler;
   var_dec = var_dec;
+  param = param;
+  param_ty = param_ty;
   last = last;
   contract = contract;
   node_dec = node_dec;
@@ -400,6 +420,8 @@ let defaults_stop = {
   state_handler = Global_mapfold.stop;
   switch_handler = Global_mapfold.stop;
   var_dec = Global_mapfold.stop;
+  param = Global_mapfold.stop;
+  param_ty = Global_mapfold.stop;
   last = Global_mapfold.stop;
   contract = Global_mapfold.stop;
   node_dec = Global_mapfold.stop;

@@ -65,7 +65,8 @@ let rec print_static_exp_desc ff sed = match sed with
   | Sstring s -> fprintf ff "\"%s\"" (String.escaped s)
   | Sconstructor ln -> print_qualname ff ln
   | Sfield ln -> print_qualname ff ln
-  | Svar id -> fprintf ff "%a" print_qualname id
+  | Svar id -> print_qualname ff id
+  | Sfun f -> print_qualname ff f
   | Sop (op, se_list) ->
       if is_infix op
       then
@@ -120,9 +121,6 @@ let print_constrnt ff c = print_static_exp ff c
 let print_constraints ff c_l =
   fprintf ff "@[%a@]" (print_list_r print_constrnt "|"";"";") c_l
 
-let print_param ff p =
-  fprintf ff "%a:%a"  Names.print_name p.p_name  print_type p.p_type
-
 let print_interface_type ff (name,tdesc) =
   match tdesc with
     | Tabstract -> fprintf ff "@[type %s@]" name
@@ -149,7 +147,10 @@ let print_sarg ff arg = match arg.a_name with
           print_type arg.a_type
           print_sck arg.a_clock
 
-let print_interface_value ff (name,node) =
+let rec print_param ff p =
+  fprintf ff "%a:%a"  Names.print_name p.p_name  print_ptype p.p_type
+
+and print_interface_value ff (name,node) =
 (*  let print_node_params ff (p_list, constraints) =
     fprintf ff "@[<2><<@[%a@]%a>>@]"
       (print_list_r (fun ff p -> print_name ff p.p_name) "" "," "") p_list
@@ -161,6 +162,10 @@ let print_interface_value ff (name,node) =
     print_constraints node.node_param_constraints
     (print_list_r print_sarg "(" ";" ")") node.node_inputs
     (print_list_r print_sarg "(" ";" ")") node.node_outputs
+
+and print_ptype ff = function
+  | Ttype ty -> print_type ff ty
+  | Tsig node -> print_interface_value ff ("",node)
 
 let print_interface ff =
   let m = Modules.current_module () in

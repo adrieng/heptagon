@@ -17,6 +17,7 @@ type async_t = (static_exp list) option
 and static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
 
 and static_exp_desc =
+  | Sfun of fun_name
   | Svar of constant_name
   | Sint of int
   | Sfloat of float

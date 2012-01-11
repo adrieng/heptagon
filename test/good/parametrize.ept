@@ -28,3 +28,7 @@ let
   o = map<<n>> (l<<n>>)(a);
 tel
 
+node main(a:int^n; b:int^z) returns (o,m:int)
+let
+  (o,m) = h(a,b);
+tel

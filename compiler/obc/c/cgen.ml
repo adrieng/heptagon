@@ -246,11 +246,11 @@ let rec cexpr_of_static_exp se =
     | Svar ln ->
         (* (try
           let cd = find_const ln in
-          cexpr_of_static_exp (Static.simplify QualEnv.empty cd.c_value)
+          cexpr_of_static_exp (Static.simplify cd.c_value)
         with Not_found -> assert false) *)
       Cvar (cname_of_qn ln)
     | Sop _ ->
-        let se' = Static.simplify QualEnv.empty se in
+        let se' = Static.simplify se in
           if se = se' then
             Error.message se.se_loc Error.Estatic_exp_compute_failed
           else
@@ -478,7 +478,7 @@ let generate_function_call out_env var_env obj_env outvl objn args =
 let rec create_affect_const var_env (dest : clhs) c =
   match c.se_desc with
     | Svar ln ->
-        let se = Static.simplify QualEnv.empty (find_const ln).c_value in
+        let se = Static.simplify (find_const ln).c_value in
         create_affect_const var_env dest se
     | Sarray_power(c, n_list) ->
         let rec make_loop power_list replace = match power_list with

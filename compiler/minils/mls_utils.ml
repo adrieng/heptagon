@@ -242,9 +242,9 @@ let remove_eqs_from_node nd ids =
 let args_of_var_decs =
  List.map
    (fun vd -> Signature.mk_arg ~is_memory:vd.v_is_memory
-                               (Some (Idents.source_name vd.v_ident))
                                vd.v_type (Linearity.check_linearity vd.v_linearity)
-                               (ck_to_sck (Clocks.ck_repr vd.v_clock)))
+                               (ck_to_sck (Clocks.ck_repr vd.v_clock))
+                               (Some (Idents.source_name vd.v_ident)))
 
 
 (** Update the signature of node [n] in the global environment *)

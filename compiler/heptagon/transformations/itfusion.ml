@@ -42,8 +42,8 @@ let is_anon_node n =
   QualEnv.mem n !anon_nodes
 
 let are_equal n m =
-  let n = simplify QualEnv.empty n in
-  let m = simplify QualEnv.empty m in
+  let n = simplify n in
+  let m = simplify m in
     n = m
 
 let pat_of_vd_list l =

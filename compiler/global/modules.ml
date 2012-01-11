@@ -193,7 +193,7 @@ let is_statefull q =
     Try to load the needed module and then to find it,
     return true if in the table, return false if it can't find it. *)
 
-(* NB : we can't factorize this functions since g_env is changed by _load... *)
+(* NB : we can't factorize these functions since g_env is changed by _load... *)
 let check_value q =
   _load_module q.qual;
   try let _ = QualEnv.find q g_env.values in true with Not_found -> false

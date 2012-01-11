@@ -57,6 +57,34 @@ let message exn =
 
 
 
+let apply_subst_funs env =
+  let stexp_desc funs () = function
+    | Svar ln ->
+      begin try
+        let se = QualEnv.find ln env in
+        (match se.se_desc with
+          | Svar ln' when ln'=ln -> (* prevent basic infinite loop *)
+              Misc.internal_error "Trying to substitute a svar with itself."
+          | _ ->
+              let se, _ = Global_mapfold.static_exp_it funs () se in
+              se.se_desc, ()
+        )
+      with Not_found -> raise Errors.Fallback end
+    | _ -> raise Errors.Fallback
+  in
+  { Global_mapfold.defaults with Global_mapfold.static_exp_desc = stexp_desc }
+
+(** [apply_subst_se env se] apply the substitution given by env to se. *)
+let apply_subst_se env se =
+  let se, _ = Global_mapfold.static_exp_it (apply_subst_funs env) () se in
+  se
+
+(** [apply_subst_ty env t] apply the substitution given by env to t. *)
+let apply_subst_ty env t =
+  let t, _ = Global_mapfold.ty_it (apply_subst_funs env) () t in
+  t
+
+
 (** When not [partial],
       @raise Partial_evaluation when the application of the operator can't be evaluated.
     Otherwise keep as it is unknown operators. *)
@@ -120,84 +148,74 @@ let apply_op partial loc op se_list =
       @raise Partial_evaluation when a static var cannot be evaluated,
       a local static parameter for example.
     Otherwise evaluate in a best effort manner. *)
-let rec eval_core partial env se = match se.se_desc with
-  | Sint _ | Sfloat _ | Sbool _ | Sstring _ | Sconstructor _ | Sfield _ -> se
-  | Svar ln ->
-      (try (* first try to find in global const env *)
-         let cd = find_const ln in
-         eval_core partial env cd.c_value
-       with Not_found -> (* then try to find in local env *)
-         (try
-            let se = QualEnv.find ln env in
-            (match se.se_desc with
-               | Svar ln' when ln'=ln -> (* prevent basic infinite loop *)
-                  if partial then se else raise Not_found
-               | _ -> eval_core partial env se
-            )
-          with Not_found -> (* Could not evaluate the var *)
-            if partial then se
-            else raise (Partial_evaluation (Unknown_param ln, se.se_loc))
+let rec eval_core partial se =
+  let stexp_desc funs loc = function
+    | Svar ln ->
+        (try (* try to find in global const env *)
+           let cd = find_const ln in
+           let se, _ = Global_mapfold.static_exp_it funs loc cd.c_value in
+           se.se_desc, loc
+         with Not_found -> (* Could not evaluate the var *)
+           if partial
+           then raise Errors.Fallback
+           else raise (Partial_evaluation (Unknown_param ln, se.se_loc))
          )
-      )
-  | Sop (op, se_list) ->
-      let se_list = List.map (eval_core partial env) se_list in
-      let se_desc = apply_op partial se.se_loc op se_list in
-      { se with se_desc = se_desc }
-  | Sarray se_list ->
-      { se with se_desc = Sarray (List.map (eval_core partial env) se_list) }
-  | Sarray_power (se, n_list) ->
-       { se with se_desc =
-            Sarray_power (eval_core partial env se, List.map (eval_core partial env) n_list) }
-  | Stuple se_list ->
-       { se with se_desc = Stuple (List.map (eval_core partial env) se_list) }
-  | Srecord f_se_list ->
-      { se with se_desc = Srecord
-          (List.map (fun (f,se) -> f, eval_core partial env se) f_se_list) }
-  | Sasync se' ->
-      { se with se_desc = Sasync (eval_core partial env se') }
+    | Sop (op, se_l) ->
+        let se_l, _ = Misc.mapfold (Global_mapfold.static_exp_it funs) loc se_l in
+        apply_op partial loc op se_l, loc
+    | _ -> raise Errors.Fallback
+  in
+  let static_exp funs _ se = Global_mapfold.static_exp funs se.se_loc se in
+  let funs = { Global_mapfold.defaults with
+               Global_mapfold.static_exp_desc = stexp_desc;
+               Global_mapfold.static_exp = static_exp }
+  in
+  let se, _ = Global_mapfold.static_exp_it funs se.se_loc se in
+  se
 
-(** [simplify env e] returns e simplified with the
-    variables values taken from [env] or from the global env with [find_const].
+
+(** [simplify e] returns e simplified
     Every operator that can be computed is.
     It can return static_exp with uninstanciated variables.*)
-let simplify env se =
-  try eval_core true env se
+let simplify se =
+  try eval_core true se
   with exn -> message exn
 
-(** [eval env e] does the same as [simplify]
-    but if it returns, there are no variables nor op left.
+(** [eval env e] evaluate a static expression with the
+    variable values taken from [env] and the global env.
+    If it returns, there are no variable nor op left.
     @raise [Errors.Error] when it cannot fully evaluate. *)
 let eval env se =
-  try eval_core false env se
+  try eval_core false (apply_subst_se env se)
   with exn -> message exn
 
-(** [int_of_static_exp env e] returns the value of the expression
-    [e] in the environment [env], mapping vars to integers.
+
+
+(** [int_of_static_exp e] returns the value of the expression [e].
     @raise [Errors.Error] if it cannot be computed.*)
-let int_of_static_exp env se = match (eval env se).se_desc with
+let int_of_static_exp se = match (eval QualEnv.empty se).se_desc with
   | Sint i -> i
   | _ -> Misc.internal_error "static int_of_static_exp"
 
-(** [is_true env constr] returns whether the constraint is satisfied
-    in the environment (or None if this can be decided)
-    and a simplified constraint. *)
-let is_true env c =
-  let c = simplify env c in
+(** [is_true constr] returns whether the constraint is satisfied,
+    or None if this can be decided and a simplified constraint. *)
+let is_true c =
+  let c = simplify c in
   match c.se_desc with
     | Sbool b -> Some b, c
     | _ -> None, c
 
 exception Solve_failed of constrnt
 
-(** [solve env constr_list solves a list of constraints. It
+(** [solve constr_list solves a list of constraints. It
     removes equations that can be decided and simplify others.
     If one equation cannot be satisfied, it raises Solve_failed. ]*)
-let rec solve const_env =
+let rec solve =
   function
     | [] -> []
     | c :: l ->
-        let l = solve const_env l in
-        let (res, solved_c) = is_true const_env c in
+        let l = solve l in
+        let (res, solved_c) = is_true c in
         (match res with
            | None -> solved_c :: l
            | Some v -> if not v then raise (Solve_failed c) else l)

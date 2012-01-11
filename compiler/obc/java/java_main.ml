@@ -67,13 +67,13 @@ let program p =
         (* parse arguments to give to the main *)
         let rec parse_args t_l i = match t_l with
           | [] -> []
-          | t::t_l when t = Initial.tint ->
+          | (Ttype t)::t_l when t = Initial.tint ->
               (Emethod_call(jint, "parseInt", [get_arg i]))
               :: parse_args t_l (i+1)
-          | t::t_l when t = Initial.tfloat ->
+          | (Ttype t)::t_l when t = Initial.tfloat ->
               (Emethod_call(jfloat, "parseFloat", [get_arg i]))
               :: parse_args t_l (i+1)
-          | t::t_l when t = Initial.tint ->
+          | (Ttype t)::t_l when t = Initial.tint ->
               (Emethod_call(jbool, "parseBool", [get_arg i]))
               :: parse_args t_l (i+1)
           | _ -> Misc.unsupported "java main does not support parsing complexe static args"

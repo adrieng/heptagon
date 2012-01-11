@@ -93,7 +93,7 @@ let rec find c = function
   | (c1, s1) :: h  ->
       if c = c1 then s1, h else let s, h = find c h in s, (c1, s1) :: h
 
-let is_deadcode = function (* TODO Etrange puisque c'est apres la passe de deadcode ? *)
+let is_deadcode = function
     | Aassgn (lhs, e) ->
         (match e.e_desc with
            | Eextvalue w -> Obc_compare.compare_lhs_extvalue lhs w = 0

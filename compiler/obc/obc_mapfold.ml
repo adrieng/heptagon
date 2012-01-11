@@ -267,10 +267,8 @@ and interface_desc funs acc pd = match pd with
 
 and signature_it funs acc s = funs.signature funs acc s
 and signature funs acc s =
-  let sig_params, acc = mapfold (param_it funs.global_funs) acc s.sig_params in
-  let sig_inputs, acc = mapfold (arg_it funs.global_funs) acc s.sig_inputs in
-  let sig_outputs, acc = mapfold (arg_it funs.global_funs) acc s.sig_outputs in
-  { s with sig_params = sig_params; sig_inputs = sig_inputs; sig_outputs = sig_outputs }, acc
+  let ss, acc = Global_mapfold.node_it funs.global_funs acc s.sig_sig in
+  { s with sig_sig = ss }, acc
 
 
 let defaults = {

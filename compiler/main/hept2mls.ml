@@ -240,12 +240,7 @@ let program
 
 let signature s =
   { sig_name = s.Heptagon.sig_name;
-    sig_inputs = s.Heptagon.sig_inputs;
-    sig_stateful = s.Heptagon.sig_stateful;
-    sig_outputs = s.Heptagon.sig_outputs;
-    sig_params = s.Heptagon.sig_params;
-    sig_param_constraints = s.Heptagon.sig_param_constraints;
-    sig_loc = s.Heptagon.sig_loc }
+    sig_sig = s.Heptagon.sig_sig }
 
 let interface i =
   let interface_decl id = match id with

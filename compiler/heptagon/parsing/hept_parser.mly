@@ -172,8 +172,8 @@ returns: RETURNS | EQUAL {}
 ;
 
 node_dec:
-  | u=unsafe n=node_or_fun f=ident pc=node_params LPAREN i=in_params RPAREN
-    returns LPAREN o=out_params RPAREN
+  | u=unsafe n=node_or_fun f=ident pc=node_params LPAREN i=var_list RPAREN
+    returns LPAREN o=var_last_list RPAREN
     c=contract b=block(LET) TEL
       {{ n_name = f;
          n_stateful = n;
@@ -192,44 +192,6 @@ node_or_fun:
   | FUN { false }
 ;
 
-in_params:
-  | params {$1}
-;
-
-params:
-  | /* empty */  { [] }
-  | nonmt_params { $1 }
-;
-
-nonmt_params:
-  | param               { $1 }
-  | param SEMICOL nonmt_params { $1 @ $3 }
-;
-
-param:
-  | idl=ident_list COLON ty_lin=located_ty_ident ck=ck_annot
-      { List.map (fun id -> mk_var_dec ~linearity:(snd ty_lin)
-        id (fst ty_lin) ck Var (Loc($startpos,$endpos))) idl }
-;
-
-out_params:
-  | /* empty */ { [] }
-  | nonmt_out_params { $1 }
-;
-
-nonmt_out_params:
-  | var_last { $1 }
-  | var_last SEMICOL nonmt_out_params { $1 @ $3 }
-;
-
-constraints:
-  | /*empty*/ {[]}
-  | BAR l=slist(SEMICOL, exp) { l }
-
-node_params:
-  | /* empty */ { [],[] }
-  | DOUBLE_LESS p=nonmt_params c=constraints DOUBLE_GREATER { p,c }
-;
 
 contract:
   | /* empty */ {None}
@@ -252,35 +214,54 @@ opt_enforce:
 
 opt_with:
   | /* empty */ { [] }
-  | WITH LPAREN params RPAREN { $3 }
+  | WITH LPAREN var_list RPAREN { $3 }
 ;
 
 loc_vars(S):
   | /* empty */      { [] }
-  | VAR loc_params S { $2 }
+  | VAR var_last_list S { $2 }
 ;
 
-loc_params:
-  | var_last SEMICOL            { $1 }
-  | var_last SEMICOL loc_params { $1 @ $3 }
+var_last_list:
+  vl_l=snlist(SEMICOL, var_last) { List.flatten vl_l }
 ;
 
+var_list:
+  v_l=snlist(SEMICOL, var) { List.flatten v_l }
+;
 
 var_last:
-  | idl=ident_list COLON ty_lin=located_ty_ident ck=ck_annot
-      { List.map (fun id -> mk_var_dec ~linearity:(snd ty_lin) id (fst ty_lin)
-        ck Var (Loc($startpos,$endpos))) idl }
-  | LAST id=IDENT COLON ty_lin=located_ty_ident ck=ck_annot EQUAL e=exp
-      { [ mk_var_dec ~linearity:(snd ty_lin) id (fst ty_lin)
-            ck (Last(Some(e))) (Loc($startpos,$endpos)) ] }
-  | LAST id=IDENT COLON ty_lin=located_ty_ident ck=ck_annot
-      { [ mk_var_dec ~linearity:(snd ty_lin) id (fst ty_lin)
-            ck (Last(None)) (Loc($startpos,$endpos)) ] }
+  v = var | v = last { v }
 ;
 
-ident_list:
-  | IDENT  { [$1] }
-  | IDENT COMMA ident_list { $1 :: $3 }
+var:
+  | idl=snlist(COMMA,IDENT) COLON ty_lin=located_ty_ident ck=ck_annot
+      { List.map
+          (mk_var_dec ~linearity:(snd ty_lin) (fst ty_lin) ck Var (Loc($startpos,$endpos)))
+          idl }
+;
+
+last:
+  | LAST v=var init=soption(EQUAL,exp)
+      { let change_var_to_last vd = { vd with v_last = Last(init) } in
+        List.map change_var_to_last v }
+;
+
+constraints:
+  | /*empty*/ {[]}
+  | BAR l=slist(SEMICOL, exp) { l }
+;
+
+node_param:
+  | idl=snlist(COMMA,IDENT) COLON t=ty_ident
+      { List.map (mk_param (Ttype t) (Loc($startpos,$endpos))) idl }
+  | n=node_sig
+      { [mk_param (Tsig n) n.sig_loc n.sig_name] }
+;
+
+node_params:
+  | /* empty */ { [],[] }
+  | DOUBLE_LESS p=slist(SEMICOL,node_param) c=constraints DOUBLE_GREATER { List.flatten p, c }
 ;
 
 located_ty_ident:
@@ -342,13 +323,13 @@ opt_bar:
 
 /* delimited block */
 block(S) :
-  | VAR l=loc_params S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
-  | S eq=equs                    { mk_block [] eq (Loc($startpos,$endpos)) }
+  | VAR l=var_last_list S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
+  | S eq=equs                     { mk_block [] eq (Loc($startpos,$endpos)) }
 
 /* separated block */
 sblock(S) :
-  | VAR l=loc_params S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
-  | eq=equs                  { mk_block [] eq (Loc($startpos,$endpos)) }
+  | VAR l=var_last_list S eq=equs { mk_block l eq (Loc($startpos,$endpos)) }
+  | eq=equs                       { mk_block [] eq (Loc($startpos,$endpos)) }
 
 equ:
   | eq=_equ { mk_equation eq (Loc($startpos,$endpos)) }
@@ -687,31 +668,27 @@ unsafe:
   | /*empty*/ { false }
 
 interface_desc:
-  | type_dec         { Itypedef $1 }
-  | const_dec        { Iconstdef $1 }
-  | u=unsafe VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
-    returns LPAREN o=params_signature RPAREN
-    { Isignature({ sig_name = f;
-                   sig_inputs = i;
-                   sig_stateful = n;
-                   sig_unsafe = u;
-                   sig_outputs = o;
-                   sig_params = fst pc;
-                   sig_param_constraints = snd pc;
-                   sig_loc = (Loc($startpos,$endpos)) }) }
+  | t=type_dec         { Itypedef t }
+  | c=const_dec        { Iconstdef c }
+  | s=node_sig         { Isignature s }
+
+node_sig:
+  | u=unsafe VAL n=node_or_fun f=ident pc=node_params LPAREN i=sig_args RPAREN
+    returns LPAREN o=sig_args RPAREN
+      { { sig_name = f;
+          sig_stateful = n;
+          sig_unsafe = u;
+          sig_inputs = i;
+          sig_outputs = o;
+          sig_params = fst pc;
+          sig_param_constraints = snd pc;
+          sig_loc = (Loc($startpos,$endpos)) } }
 ;
 
-params_signature:
-  | /* empty */  {[]}
-  | nonmt_params_signature {$1}
-;
+sig_args:
+  a_l=slist(SEMICOL, sig_arg) { a_l }
 
-nonmt_params_signature:
-  | param_signature            { [$1] }
-  | param_signature SEMICOL nonmt_params_signature { $1 :: $3 }
-;
-
-param_signature:
+sig_arg : (*TODO*)
   | IDENT COLON located_ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
   | located_ty_ident ck=ck_annot { mk_arg None $1 ck }
   | THREE_DOTS ck=ck_annot { mk_arg None (Tinvalid, Linearity.Ltop) ck }

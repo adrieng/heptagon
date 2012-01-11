@@ -24,6 +24,7 @@ let field_name = pp_print_string
 let field_ident = Global_printer.print_ident
 let var_ident = Global_printer.print_ident
 let const_name = Global_printer.print_qualname
+let fun_name = Global_printer.print_qualname
 
 let protection ff = function
   | Ppublic -> fprintf ff "public "
@@ -92,6 +93,7 @@ and exp ff = function
   | Evoid -> ()
   | Ecast (t,e) -> fprintf ff "(%a)(%a)" ty t exp e
   | Svar c -> const_name ff c
+  | Sfun f -> fprintf ff "%a.class" fun_name f
   | Sint i -> pp_print_int ff i
   | Sfloat f -> fprintf ff "%Ff" f
   | Sbool b -> pp_print_bool ff b

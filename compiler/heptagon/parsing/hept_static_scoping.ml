@@ -1,3 +1,4 @@
+open Names
 open Modules
 open Hept_parsetree
 open Hept_parsetree_mapfold
@@ -36,8 +37,8 @@ let exp funs local_const e =
       let sed =
         match e.e_desc with
           | Evar n ->
-              (try Svar (Q (qualify_const local_const (ToQ n)))
-              with Error.ScopingError _ -> raise Not_static)
+              (try Svar (Q (qualify_var_as_const local_const n))
+              with Not_found -> raise Not_static)
           | Eapp({ a_op = Earray_fill; a_params = n_list }, [e]) ->
               Sarray_power (assert_se e, List.map assert_se n_list)
           | Eapp({ a_op = Earray }, e_list) ->
@@ -57,8 +58,27 @@ let exp funs local_const e =
     with
         Not_static -> e, local_const
 
+let app funs local_const a =
+  let a, _ = Hept_parsetree_mapfold.app funs local_const a in
+  try
+    match a.a_op with
+    | Enode (ToQ f) -> {a with a_op = Enode (Q (qualify_var_as_const local_const f))}
+    | Efun (ToQ f) -> {a with a_op = Efun (Q (qualify_var_as_const local_const f))}
+    | _ -> a
+  with Not_found -> a
+
 let node funs _ n =
-  let local_const = Hept_scoping.build_const n.n_loc n.n_params in
+    (** Function to build the defined static parameters set *)
+  let build_const loc p_list =
+    let _add_const_var loc c local_const =
+      if NamesSet.mem c local_const
+      then Error.message loc (Error.Econst_variable_already_defined c)
+      else NamesSet.add c local_const in
+    let build local_const p =
+      _add_const_var loc p.p_name local_const in
+    List.fold_left build NamesSet.empty p_list
+  in
+  let local_const = build_const n.n_loc n.n_params in
   Hept_parsetree_mapfold.node_dec funs local_const n
 
 let const_dec funs local_const cd =

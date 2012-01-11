@@ -30,14 +30,18 @@ type arg = {
   a_is_memory : bool;
 }
 
-(** Node static parameters *)
-type param = { p_name : name; p_type : ty }
-
 (** Constraints on size expressions *)
 type constrnt = static_exp
 
+(** Node static parameters *)
+type param = { p_name : name; p_type : param_ty }
+
+and param_ty =
+  | Ttype of ty
+  | Tsig of node
+
 (** Node signature *)
-type node = {
+and node = {
   node_inputs             : arg list;
   node_outputs            : arg list;
   node_stateful           : bool;
@@ -76,18 +80,18 @@ let types_of_param_list l = List.map (fun p -> p.p_type) l
 
 let linearities_of_arg_list l = List.map (fun ad -> ad.a_linearity) l
 
-let mk_arg ~is_memory name ty linearity ck =
+let mk_arg ~is_memory ty linearity ck name =
   { a_type = ty; a_linearity = linearity; a_name = name; a_clock = ck;
     a_is_memory = is_memory }
 
-let mk_param name ty = { p_name = name; p_type = ty }
+let mk_param ty name = { p_name = name; p_type = ty }
 
-let mk_field n ty = { f_name = n; f_type = ty }
+let mk_field ty name = { f_name = name; f_type = ty }
 
 let mk_const_def ty value =
   { c_type = ty; c_value = value }
 
-let mk_node ?(constraints = []) loc ins outs stateful unsafe params =
+let mk_node constraints loc ins outs stateful unsafe params =
   { node_inputs = ins;
     node_outputs  = outs;
     node_stateful = stateful;

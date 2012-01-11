@@ -16,6 +16,7 @@ type 'a global_it_funs = {
   var_ident          : 'a global_it_funs -> 'a -> var_ident -> var_ident * 'a;
   param              : 'a global_it_funs -> 'a -> param -> param * 'a;
   arg                : 'a global_it_funs -> 'a -> arg -> arg * 'a;
+  param_ty           : 'a global_it_funs -> 'a -> param_ty -> param_ty * 'a;
   node               : 'a global_it_funs -> 'a -> node -> node * 'a;
   structure          : 'a global_it_funs -> 'a -> structure -> structure * 'a;
   field              : 'a global_it_funs -> 'a -> field -> field * 'a; }
@@ -31,7 +32,8 @@ and static_exp_desc_it funs acc sd =
   with Fallback -> static_exp_desc funs acc sd
 
 and static_exp_desc funs acc sd = match sd with
-  | Svar _ | Sint _ | Sfloat _ | Sbool _ | Sstring _ | Sconstructor _ | Sfield _ -> sd, acc
+  | Sfun _ | Svar _ | Sint _ | Sfloat _
+  | Sbool _ | Sstring _ | Sconstructor _ | Sfield _ -> sd, acc
   | Stuple se_l ->
       let se_l, acc = mapfold (static_exp_it funs) acc se_l in
       Stuple se_l, acc
@@ -109,8 +111,19 @@ and field funs acc f =
 
 and param_it funs acc p = funs.param funs acc p
 and param funs acc p =
-  let p_type, acc = ty_it funs acc p.p_type in
-    { p with p_type = p_type }, acc
+  let p_type, acc = param_ty_it funs acc p.p_type in
+  { p with p_type = p_type }, acc
+
+and param_ty_it funs acc p =
+  try funs.param_ty funs acc p with Fallback -> param_ty funs acc p
+and param_ty funs acc p = match p with
+  | Ttype t ->
+      let t, acc = ty_it funs acc t in
+      Ttype t, acc
+  | Tsig node ->
+      let node, acc = node_it funs acc node in
+      Tsig node, acc
+
 
 and arg_it funs acc a = funs.arg funs acc a
 and arg funs acc a =
@@ -133,6 +146,7 @@ let defaults = {
   static_exp_desc = static_exp_desc;
   async = async;
   ty = ty;
+  param_ty = param_ty;
   ct = ct;
   ck = ck;
   link = link;
@@ -153,6 +167,7 @@ let defaults_stop = {
   static_exp_desc = stop;
   async = stop;
   ty = stop;
+  param_ty = stop;
   ct = stop;
   ck = stop;
   link = stop;

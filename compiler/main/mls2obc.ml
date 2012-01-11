@@ -786,12 +786,7 @@ let program { Minils.p_modname = p_modname; Minils.p_opened = p_o; Minils.p_desc
 
 let signature s =
   { sig_name = s.Minils.sig_name;
-    sig_inputs = s.Minils.sig_inputs;
-    sig_stateful = s.Minils.sig_stateful;
-    sig_outputs = s.Minils.sig_outputs;
-    sig_params = s.Minils.sig_params;
-    sig_param_constraints = s.Minils.sig_param_constraints;
-    sig_loc = s.Minils.sig_loc }
+    sig_sig = s.Minils.sig_sig }
 
 let interface i =
   let interface_decl id = match id with

@@ -92,19 +92,22 @@ and static_exp_desc_compare sed1 sed2 =
     | Sasync _, (Svar _ | Sint _ | Sfloat _ | Sbool _ | Sconstructor _ | Sfield _) -> -1
     | Sasync _, _ -> 1
 
-    | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _ ) -> 1
+    | Stuple _, (Srecord _ | Sop _ | Sarray _ | Sarray_power _ | Sfun _) -> 1
     | Stuple _, _ -> -1
 
-    | Sarray_power _, (Srecord _ | Sop _ | Sarray _) -> -1
+    | Sarray_power _, (Srecord _ | Sop _ | Sarray _ | Sfun _) -> -1
     | Sarray_power _, _ -> 1
 
-    | Sarray _, (Srecord _ | Sop _) -> 1
+    | Sarray _, (Srecord _ | Sop _ | Sfun _) -> 1
     | Sarray _, _ -> -1
 
-    | Srecord _, Sop _ -> 1
+    | Srecord _, (Sop _ | Sfun _) -> 1
     | Srecord _, _ -> -1
 
+    | Sop _, Sfun _ -> 1
     | Sop _, _ -> -1
+
+    | Sfun _, _ -> -1
 
 and type_compare ty1 ty2 = match ty1, ty2 with
   | Tprod tyl1, Tprod tyl2 -> list_compare type_compare tyl1 tyl2

@@ -115,6 +115,12 @@ let rec static_exp param_env se = match se.Types.se_desc with
             let n = NamesEnv.find (shortname c) param_env in
             Svar (n |> Idents.name |> local_qn)
         | _ -> Svar (translate_const_name c))
+  | Types.Sfun f ->
+      (match f.qual with
+        | LocalModule ->
+            let f = NamesEnv.find (shortname f) param_env in
+            Sfun (f |> Idents.name |> local_qn)
+        | _ -> Sfun (qualname_to_package_classe f))
   | Types.Sint i -> Sint i
   | Types.Sfloat f -> Sfloat f
   | Types.Sbool b -> Sbool b
@@ -126,7 +132,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
       let pow_list = List.rev pow_list in
       let rec make_array tyl pow_list = match tyl, pow_list with
         | Tarray(t, e::e_l), pow::pow_list ->
-            let pow = (try Static.int_of_static_exp Names.QualEnv.empty pow
+            let pow = (try Static.int_of_static_exp pow
                        with  Errors.Error ->
                                    eprintf "%aStatic power of array should have integer power. \
                                            Please use callgraph or non-static exp in %a.@."
@@ -191,6 +197,7 @@ and ty param_env t =
       Tarray (tin, s_l)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
   | Types.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
+
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type;
                              vd_alias = vd.v_alias;
@@ -348,7 +355,11 @@ and block param_env ?(locals=[]) ?(end_acts=[]) ob =
 let sig_params_to_vds p_l =
   let param_to_arg param_env p =
     let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
-    let p_vd = mk_var_dec p_ident false (ty param_env p.Signature.p_type) in
+    let p_ty = match p.Signature.p_type with
+      | Ttype t -> ty param_env t
+      | Tsig _ -> Tclass (qualname_to_class_name (local_qn p.Signature.p_name))
+    in
+    let p_vd = mk_var_dec p_ident false p_ty in
     let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
     p_vd, param_env
   in Misc.mapfold param_to_arg NamesEnv.empty p_l
@@ -451,8 +462,8 @@ let create_async_classe async base_classe =
       else
         let acts_params = copy_to_this vds_params in
         let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
-        let async_sig_params = [{ p_name="nb_threads"; p_type = Initial.tint };
-                                { p_name="queue_size"; p_type = Initial.tint }]
+        let async_sig_params = [{ p_name="nb_threads"; p_type = Ttype Initial.tint };
+                                { p_name="queue_size"; p_type = Ttype Initial.tint }]
         in
         let async_vds_params,_ = sig_params_to_vds async_sig_params in
         let async_node_args = vds_to_exps async_vds_params in

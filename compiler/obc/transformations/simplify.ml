@@ -25,7 +25,7 @@ let extvaluedesc funs acc evd = match evd with
       let ev, acc = extvalue_it funs acc ev in
       (match ev.w_desc with
         | Wconst se ->
-          let se = simplify QualEnv.empty se in
+          let se = simplify se in
           (match se.se_desc with
             | Sarray_power (sv, [_]) ->
               Wconst sv, acc
@@ -35,7 +35,7 @@ let extvaluedesc funs acc evd = match evd with
               (match e.e_desc with
                 | Eextvalue { w_desc = Wconst i } ->
                   (try
-                     let indice = int_of_static_exp QualEnv.empty i in
+                     let indice = int_of_static_exp i in
                      Wconst (Misc.nth_of_list (indice+1) sv_l), acc
                    with _ -> raise Errors.Fallback)
                 | _ -> raise Errors.Fallback

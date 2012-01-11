@@ -165,13 +165,8 @@ and program_desc =
   | Ptype of type_dec
 
 type signature = {
-  sig_name              : qualname;
-  sig_inputs            : arg list;
-  sig_stateful          : bool;
-  sig_outputs           : arg list;
-  sig_params            : param list;
-  sig_param_constraints : constrnt list;
-  sig_loc               : location }
+  sig_name : qualname;
+  sig_sig  : Signature.node }
 
 type interface =
     { i_modname : modul;
@@ -184,7 +179,7 @@ and interface_desc =
   | Isignature of signature
 
 
-(*Helper functions to build the AST*)
+(* Helper functions to build the AST *)
 
 
 let mk_extvalue ~ty ~linearity ?(clock = fresh_clock()) ?(loc = no_location) desc =

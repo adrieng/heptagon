@@ -87,6 +87,7 @@ and exp = Ethis
         | Evoid (*printed as nothing*)
         | Ecast of ty * exp
         | Svar of const_name
+        | Sfun of fun_name
         | Sint of int
         | Sfloat of float
         | Sbool of bool

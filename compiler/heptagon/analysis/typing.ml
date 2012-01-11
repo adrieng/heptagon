@@ -273,6 +273,22 @@ let typ_of_name h x =
   with
       Not_found -> error (Eundefined(name x))
 
+let typ_of_qual cenv x =
+  try (* it may be in cenv *)
+    match QualEnv.find x cenv with
+    | Ttype t -> t
+    | Tsig _ -> assert false (* TODO better error *)
+  with (* it may be a global const *)
+    | Not_found -> (Modules.find_const x).Signature.c_type
+
+let sig_of_qual cenv f =
+  try (* it may be in cenv *)
+    match QualEnv.find f cenv with
+    | Tsig n -> n
+    | Ttype _ -> assert false (* TODO better error *)
+  with (* it may be a global value *)
+    | Not_found -> Modules.find_value f
+
 let vd_of_name h x =
   try
     let { vd = vd } = Env.find x h in vd
@@ -292,11 +308,6 @@ let build_subst names values =
   then error (Estatic_arity_clash (List.length values, List.length names));
   List.fold_left2 (fun m n v -> QualEnv.add n v m)
     QualEnv.empty names values
-
-let rec subst_type_vars m = function
-  | Tarray(ty, e) -> Tarray(subst_type_vars m ty, simplify m e)
-  | Tprod l -> Tprod (List.map (subst_type_vars m) l)
-  | t -> t
 
 let add_distinct_env id vd env =
   if Env.mem id env then
@@ -445,7 +456,7 @@ let rec _unify cenv t1 t2 =
 and (curr_constrnt : constrnt list ref) = ref []
 
 and solve ?(unsafe=false) c_l =
-  try Static.solve Names.QualEnv.empty c_l
+  try Static.solve c_l
   with Solve_failed c ->
     if unsafe then
       raise (Solve_failed c)
@@ -497,12 +508,8 @@ and typing_static_exp cenv se =
     | Sbool v-> Sbool v, Tid Initial.pbool
     | Sfloat v -> Sfloat v, Tid Initial.pfloat
     | Sstring v -> Sstring v, Tid Initial.pstring
-    | Svar ln ->
-        (try (* this can be a global const*)
-           let cd = Modules.find_const ln in
-             Svar ln, cd.Signature.c_type
-         with Not_found -> (* or a static parameter *)
-           Svar ln, QualEnv.find ln cenv)
+    | Svar ln -> Svar ln, typ_of_qual cenv ln
+    | Sfun f -> Misc.internal_error "cannot type a Sfun"
     | Sconstructor c -> Sconstructor c, find_constrs c
     | Sfield c -> Sfield c, Tid (find_field c)
     | Sop ({name = "="} as op, se_list) ->
@@ -599,9 +606,8 @@ let rec typing cenv h e =
           Elast x, typ_of_name h x
 
       | Eapp(op, e_list, r) ->
-          let ty, op, typed_e_list =
-            typing_app cenv h op e_list in
-            Eapp(op, typed_e_list, r), ty
+          let ty, op, typed_e_list = typing_app cenv h op e_list in
+          Eapp(op, typed_e_list, r), ty
 
       | Estruct(l) ->
           (* find the record type using the first field *)
@@ -640,8 +646,8 @@ let rec typing cenv h e =
             List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
           let m = build_subst node_params params in
           let expected_ty_list =
-            List.map (subst_type_vars m) expected_ty_list in
-          let result_ty_list = List.map (subst_type_vars m) result_ty_list in
+            List.map (apply_subst_ty m) expected_ty_list in
+          let result_ty_list = List.map (apply_subst_ty m) result_ty_list in
           let result_ty_list = asyncify app.a_async result_ty_list in
           let typed_n_list = List.map (expect_static_exp cenv (Tid Initial.pint)) n_list in
           (*typing of partial application*)
@@ -654,7 +660,7 @@ let rec typing cenv h e =
           let typed_params = typing_node_params cenv
             ty_desc.node_params params in
           (* add size constraints *)
-          let constrs = List.map (simplify m) ty_desc.node_param_constraints in
+          let constrs = List.map (apply_subst_se m) ty_desc.node_param_constraints in
           List.iter (add_constraint_leq cenv (mk_static_int 1)) typed_n_list;
           List.iter (add_constraint cenv) constrs;
           (* return the type *)
@@ -789,17 +795,17 @@ and typing_app cenv h app e_list =
         let op, expected_ty_list, result_ty_list = kind f ty_desc in
         let node_params = List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
         let m = build_subst node_params app.a_params in
-        let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
+        let expected_ty_list = List.map (apply_subst_ty m) expected_ty_list in
         let typed_e_list = typing_args cenv h expected_ty_list e_list in
-        let result_ty_list = List.map (subst_type_vars m) result_ty_list in
+        let result_ty_list = List.map (apply_subst_ty m) result_ty_list in
         let result_ty_list = asyncify app.a_async result_ty_list in
         (* Type static parameters and generate constraints *)
         let typed_params = typing_node_params cenv ty_desc.node_params app.a_params in
-        let constrs = List.map (simplify m) ty_desc.node_param_constraints in
+        let constrs = List.map (apply_subst_se m) ty_desc.node_param_constraints in
         List.iter (add_constraint cenv) constrs;
-        prod result_ty_list,
-        { app with a_op = op; a_params = typed_params },
-         typed_e_list
+        (prod result_ty_list,
+          { app with a_op = op; a_params = typed_params },
+          typed_e_list)
 
     | Etuple ->
         let typed_e_list,ty_list =
@@ -1028,8 +1034,21 @@ and typing_args cenv h expected_ty_list e_list =
   typed_e_list
 
 and typing_node_params cenv params_sig params =
-  List.map2 (fun p_sig p -> expect_static_exp cenv
-               p_sig.p_type p) params_sig params
+  let aux p_sig p = match p_sig.p_type, p.se_desc with
+    | Ttype _, Sfun _ -> raise Errors.Error (* TODO add real typing error *)
+    | Ttype t, _ -> expect_static_exp cenv t p
+    | Tsig n, Sfun f ->
+        let n' = find_value f in
+        if (n.node_params != [] or n'.node_params != []
+            or n.node_unsafe != n'.node_unsafe
+            or n.node_stateful != n'.node_stateful)
+        then raise Errors.Error; (* TODO add real typing error *)
+        List.iter2 (fun a a' -> unify cenv a.a_type a'.a_type) n.node_inputs n'.node_inputs;
+        List.iter2 (fun a a' -> unify cenv a.a_type a'.a_type) n.node_outputs n'.node_outputs;
+        p
+    | Tsig _, _ -> raise Errors.Error (* TODO add real typing error *)
+  in
+  List.map2 aux params_sig params
 
 and typing_format_args cenv h e args =
   let s = match e.e_desc with
@@ -1223,25 +1242,36 @@ let typing_contract cenv h contract =
                c_controllables = typed_c }, h
 
 
-let build_node_params cenv l =
-  let check_param env p =
-    let ty = check_type cenv p.p_type in
+let rec build_cenv l =
+  let check_param cenv p =
+    let ty = match p.p_type with
+      | Ttype t -> Ttype (check_type cenv t)
+      | Tsig n -> Tsig (typing_signature n)
+    in
     let p = { p with p_type = ty } in
     let n = Names.local_qn p.p_name in
-    p, QualEnv.add n ty env
+    p, QualEnv.add n ty cenv
   in
-    mapfold check_param cenv l
+  mapfold check_param QualEnv.empty l
 
-let typing_arg cenv a =
+and typing_arg cenv a =
   { a with a_type = check_type cenv a.a_type }
+
+and typing_signature s =
+  let params, cenv = build_cenv s.node_params in
+  let inputs = List.map (typing_arg cenv) s.node_inputs in
+  let outputs = List.map (typing_arg cenv) s.node_outputs in
+  { s with node_params = params;
+           node_inputs = inputs;
+           node_outputs = outputs }
+
 
 let node ({ n_name = f; n_input = i_list; n_output = o_list;
             n_contract = contract;
             n_block = b; n_loc = loc;
             n_params = node_params; } as n) =
   try
-    let typed_params, cenv =
-      build_node_params QualEnv.empty node_params in
+    let typed_params, cenv = build_cenv node_params in
     let typed_i_list, (input_names, h) = build cenv Env.empty i_list in
     let typed_o_list, (output_names, h) = build cenv h o_list in
 
@@ -1297,12 +1327,6 @@ let typing_typedec td =
   in
     { td with t_desc = tydesc }
 
-let typing_signature s =
-  let typed_params, cenv = build_node_params QualEnv.empty s.sig_params in
-  { s with sig_params = typed_params;
-    sig_inputs = List.map (typing_arg cenv) s.sig_inputs;
-    sig_outputs = List.map (typing_arg cenv) s.sig_outputs; }
-
 let program p =
   let program_desc pd = match pd with
     | Pnode n -> Pnode (node n)
@@ -1315,6 +1339,8 @@ let interface i =
   let interface_desc id = match id with
       | Iconstdef c -> Iconstdef (typing_const_dec c)
       | Itypedef t -> Itypedef (typing_typedec t)
-      | Isignature i -> Isignature (typing_signature i)
+      | Isignature i ->
+          let s = typing_signature i.sig_sig in
+          Isignature { i with sig_sig = s }
   in
   { i with i_desc = List.map interface_desc i.i_desc }
