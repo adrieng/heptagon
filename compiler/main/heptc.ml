@@ -34,7 +34,7 @@ let compile_interface modname source_f =
     (* Process the interface *)
     let p = Hept_compiler.compile_interface p in
     (* Output the .epci *)
-    output_value epci_c (Modules.current_module ());
+    output_value epci_c (Modules.get_current_module ());
     (* Translate to Obc *)
     let p = Hept2mls.interface p in
     (* Generate the sequential code *)
@@ -71,7 +71,7 @@ let compile_program modname source_f =
   (* Process the MiniLS AST *)
     let p = Mls_compiler.compile_program p in
   (* Output the .epci *)
-    output_value epci_c (Modules.current_module ());
+    output_value epci_c (Modules.get_current_module ());
   (* Generate the sequential code *)
     Mls2seq.program p;
     close_all_files ()
@@ -81,7 +81,7 @@ let compile_program modname source_f =
 
 let compile source_f =
   let modname = source_f |> Filename.basename |> Filename.chop_extension |> String.capitalize in
-  let modul = Names.modul_of_string modname in
+  let modul = Name_utils.modul_of_string modname in
   Initial.initialize modul;
   source_f |> Filename.dirname |> add_include;
   check_options ();
@@ -94,7 +94,7 @@ let compile source_f =
 
 (** [main] function to be launched *)
 let main () =
-  let read_qualname f = Arg.String (fun s -> f (Names.qualname_of_string s)) in
+  let read_qualname f = Arg.String (fun s -> f (Name_utils.qualname_of_string s)) in
   try
     Arg.parse
       [

@@ -98,7 +98,7 @@ let translate_constructor_name_2 q q_ty =
 
 let translate_constructor_name q =
   match Modules.unalias_type (Types.Tid (Modules.find_constrs q)) with
-    | Types.Tid q_ty when q_ty = Initial.pbool -> q |> shortname |> local_qn
+    | Types.Tid q_ty when q_ty = Initial.pbool -> q |> Names.shortname |> Idents.local_qn
     | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
     | _ -> assert false
 
@@ -111,15 +111,15 @@ let name_to_classe_name n = n |> Modules.current_qual |> qualname_to_package_cla
 let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Svar c ->
       (match c.qual with
-        | LocalModule ->
-            let n = NamesEnv.find (shortname c) param_env in
-            Svar (n |> Idents.name |> local_qn)
+        | LocalModule _ ->
+            let n = NamesEnv.find (Names.shortname c) param_env in
+            Svar (n |> Idents.name |> Idents.local_qn)
         | _ -> Svar (translate_const_name c))
   | Types.Sfun f ->
       (match f.qual with
-        | LocalModule ->
-            let f = NamesEnv.find (shortname f) param_env in
-            Sfun (f |> Idents.name |> local_qn)
+        | LocalModule _->
+            let f = NamesEnv.find (Names.shortname f) param_env in
+            Sfun (f |> Idents.name |> Idents.local_qn)
         | _ -> Sfun (qualname_to_package_classe f))
   | Types.Sint i -> Sint i
   | Types.Sfloat f -> Sfloat f
@@ -157,9 +157,9 @@ let rec static_exp param_env se = match se.Types.se_desc with
 and boxed_ty param_env t = match Modules.unalias_type t with
   | Types.Tprod [] -> Tunit
   | Types.Tprod ty_l -> tuple_ty param_env ty_l
-  | Types.Tid t when t = Initial.pbool -> Tclass (Names.local_qn "Boolean")
-  | Types.Tid t when t = Initial.pint -> Tclass (Names.local_qn "Integer")
-  | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
+  | Types.Tid t when t = Initial.pbool -> Tclass (Idents.local_qn "Boolean")
+  | Types.Tid t when t = Initial.pint -> Tclass (Idents.local_qn "Integer")
+  | Types.Tid t when t = Initial.pfloat -> Tclass (Idents.local_qn "Float")
   | Types.Tid t -> Tclass (qualname_to_class_name t)
   | Types.Tarray _ ->
     let rec gather_array t = match t with
@@ -357,7 +357,7 @@ let sig_params_to_vds p_l =
     let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
     let p_ty = match p.Signature.p_type with
       | Ttype t -> ty param_env t
-      | Tsig _ -> Tclass (qualname_to_class_name (local_qn p.Signature.p_name))
+      | Tsig _ -> Tclass (Name_utils.qualname_of_string "java.lang.Class")
     in
     let p_vd = mk_var_dec p_ident false p_ty in
     let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
@@ -474,7 +474,7 @@ let create_async_classe async base_classe =
         , mk_block [act_reset; act_inst]
 
     in
-    mk_methode ~args:(async_params@vds_params) body (shortname classe_name)
+    mk_methode ~args:(async_params@vds_params) body (Names.shortname classe_name)
     , mk_methode body_r "reset"
   in
 
@@ -520,7 +520,7 @@ let create_async_classe async base_classe =
       let body =
         let acts_init = copy_to_this (vd_inst::vds_step) in
         mk_block acts_init
-      in mk_methode ~args:(vd_inst::vds_step) body (shortname callable_classe_name)
+      in mk_methode ~args:(vd_inst::vds_step) body (Names.shortname callable_classe_name)
     in
     let call =
       let body =
@@ -620,7 +620,7 @@ let class_def_list classes cd_l =
         (* init static params *)
         let acts = (copy_to_this vds_params)@acts in
         { b_locals = []; b_body = acts }
-      in mk_methode ~args:vds_params body (shortname class_name), obj_env
+      in mk_methode ~args:vds_params body (Names.shortname class_name), obj_env
     in
     let fields =
       let mem_to_field fields vd =
@@ -693,8 +693,8 @@ let const_dec_list cd_l = match cd_l with
       Idents.enter_node classe_name;
       let param_env = NamesEnv.empty in
       let mk_const_field { Obc.c_name = oname ; Obc.c_value = ovalue; Obc.c_type = otype } =
-        let name = oname |> translate_const_name |> shortname |> Idents.ident_of_name in
-        (* name should always keep the shortname unchanged
+        let name = oname |> translate_const_name |> Names.shortname |> Idents.ident_of_name in
+        (* name should always keep the Names.shortname unchanged
             since we enter a special node free of existing variables *)
         (* thus [translate_const_name] will gives the right result anywhere it is used. *)
         let value = Some (static_exp param_env ovalue) in
@@ -725,7 +725,7 @@ let fun_dec_list fd_l = match fd_l with
       mk_methode ~args:(vds_params @(var_dec_list param_env ostep.Obc.m_inputs))
                ~returns:return_ty
                ~static:true
-               body (shortname fd.cd_name)
+               body (Names.shortname fd.cd_name)
     in
     let funs = List.map mk_fun_method fd_l in
     let classe_name = "FUNS" |> name_to_classe_name in

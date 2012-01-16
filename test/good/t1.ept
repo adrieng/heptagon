@@ -29,7 +29,7 @@ node mmm(x: int) returns (o2: int)
     o2 = 1 -> pre o
   tel
 
-node m(x: int) returns (o: int)
+node v(x: int) returns (o: int)
   var last o2 : int = 1;
   let
     automaton
@@ -43,14 +43,14 @@ node m(x: int) returns (o: int)
     o = o2;
   tel
 
-node h(z: int; x, y: int) returns (o2: int)
+node hh(z: int; x, y: int) returns (o2: int)
   var o1, o: int;
   let
     (o1, o2) = if z<0 then (1, 2) else (3, 4);
     o = 0 -> pre o + 2
   tel
 
-node i(x, y: int) returns (o: int)
+node ii(x, y: int) returns (o: int)
   var z, k: int;
   let
     reset
@@ -62,7 +62,7 @@ node i(x, y: int) returns (o: int)
     every (x = y)
   tel
 
-node j(x, y: int) returns (o: int)
+node jj(x, y: int) returns (o: int)
   let
     automaton
       state I
@@ -75,7 +75,7 @@ node j(x, y: int) returns (o: int)
     end
   tel
 
-node (++)(up, down: int) returns (o: int)
+node pp(up, down: int) returns (o: int)
   var last cpt: int = 42;
   let
     o = last cpt;

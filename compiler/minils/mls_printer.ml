@@ -1,5 +1,6 @@
 open Misc
 open Names
+open Name_utils
 open Signature
 open Idents
 open Types

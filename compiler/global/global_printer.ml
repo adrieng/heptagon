@@ -1,4 +1,5 @@
 open Names
+open Name_utils
 open Idents
 open Signature
 open Types
@@ -10,7 +11,7 @@ open Pp_tools
 
 let rec _aux_print_modul ?(full=false) ff m = match m with
   | Pervasives -> ()
-  | LocalModule -> ()
+  | LocalModule _ -> ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a." print_name m
   | QualModule { qual = m; name = n } ->
@@ -19,7 +20,7 @@ let rec _aux_print_modul ?(full=false) ff m = match m with
 (** Prints a [modul] with a [.] at the end when not empty *)
 let _print_modul ?(full=false) ff m = match m with
   | Pervasives -> ()
-  | LocalModule -> ()
+  | LocalModule _ -> ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a" print_name m
   | QualModule { qual = m; name = n } ->
@@ -30,7 +31,7 @@ let print_modul ff m = _print_modul ~full:false ff m
 
 let _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
   | Pervasives -> print_name ff n
-  | LocalModule -> print_name ff n
+  | LocalModule _ -> print_name ff n
   | _ when q = g_env.current_mod && not full -> print_name ff n
   | _ -> fprintf ff "%a%a" (_aux_print_modul ~full:full) q print_name n
 
@@ -168,7 +169,7 @@ and print_ptype ff = function
   | Tsig node -> print_interface_value ff ("",node)
 
 let print_interface ff =
-  let m = Modules.current_module () in
+  let m = Modules.get_current_module () in
   Format.fprintf ff "@[<v>";
   NamesEnv.iter
     (fun key typdesc -> Format.fprintf ff "%a@," print_interface_type (key,typdesc)) m.m_types;

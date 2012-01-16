@@ -13,8 +13,8 @@
 open Misc
 open Compiler_options
 open Signature
-open Types
 open Names
+open Types
 
 exception Already_defined
 
@@ -89,13 +89,13 @@ let _append_module mo =
 let _load_module modul =
   if is_loaded modul then ()
   else
-    let modname = match modul with
+    let rec modname m = match m with
       | Names.Pervasives -> "Pervasives"
       | Names.Module n -> n
-      | Names.LocalModule -> Misc.internal_error "modules"
+      | Names.LocalModule m -> modname m (*TODO what should we load, if anything? *)
       | Names.QualModule _ -> Misc.unsupported "modules"
     in
-    let name = String.uncapitalize modname in
+    let name = String.uncapitalize (modname modul) in
     try
       let filename = Compiler_utils.findfile (name ^ ".epci") in
       let ic = open_in_bin filename in
@@ -171,6 +171,7 @@ let replace_const f v =
 
 (** { 3 Find functions look in the global environement, nothing more } *)
 
+(* will find signature of nodes, even local static parameter ones *)
 let find_value x = QualEnv.find x g_env.values
 let find_type x = QualEnv.find x g_env.types
 let find_constrs x = QualEnv.find x g_env.constrs
@@ -234,7 +235,6 @@ let qualify_const name = _qualify g_env.consts name
 (** @return the name as qualified with the current module
   (should not be used..)*)
 let current_qual n = { qual = g_env.current_mod; name = n }
-
 
 (** { 3 Fresh functions return a fresh qualname for the current module } *)
 
@@ -307,7 +307,7 @@ let rec unalias_type t = match t with
 
 
 (** Return the current module as a [module_object] *)
-let current_module () =
+let get_current_module () =
   (* Filter and transform a qualified env into the current module object env *)
   let unqualify env = (* unqualify and filter env keys *)
     QualEnv.fold
@@ -328,4 +328,6 @@ let current_module () =
       m_constrs = unqualify_all g_env.constrs;
       m_fields = unqualify_all g_env.fields;
       m_format_version = g_env.format_version }
+
+
 

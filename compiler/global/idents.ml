@@ -9,11 +9,6 @@
 
 (* naming and local environment *)
 
-(* TODO AG : preprocessing pour avoir un release efficace :
-IFDEF RELEASE type iden = int
-ELSE *)
-
-
 
 type ident = {
   num : int;        (* a unique index *)
@@ -98,10 +93,12 @@ struct
   open Names
   let used_names = ref (ref NamesSet.empty) (** Used strings in the current node *)
   let env = ref Env.empty (** Map idents to their string *)
+  let current_node = ref Names.dummy_qualname (** Stores the current node *)
   let (node_env : NamesSet.t ref QualEnv.t ref) = ref QualEnv.empty
 
   (** This function should be called every time we enter a node *)
   let enter_node n =
+    current_node := n;
     (if not (QualEnv.mem n !node_env)
     then node_env := QualEnv.add n (ref NamesSet.empty) !node_env);
     used_names := QualEnv.find n !node_env
@@ -145,5 +142,8 @@ let ident_of_name ?(reset=false) s =
 let source_name id = id.source
 let name id = UniqueNames.name id
 let enter_node n = UniqueNames.enter_node n
+
+let local_qn name = { Names.qual = Names.LocalModule (Names.QualModule !UniqueNames.current_node);
+                      Names.name = name }
 
 let print_ident ff id = Format.fprintf ff "%s" (name id)

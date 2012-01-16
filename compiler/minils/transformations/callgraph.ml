@@ -1,4 +1,5 @@
 open Names
+open Name_utils
 open Types
 open Misc
 open Location
@@ -9,6 +10,11 @@ open Global_mapfold
 open Mls_mapfold
 open Minils
 open Global_printer
+
+(** Generate all the needed instances,
+    Instances of nodes from other modules are respectively done in their modules,
+    thus the program list *)
+
 
 module Error =
 struct
@@ -34,10 +40,11 @@ module Param_instances :
 sig
   type key = private static_exp (** Fully instantiated param *)
   type env = key QualEnv.t
-  val instantiate: env -> static_exp list -> key list
+  val instantiate_params : env -> static_exp list -> key list
+  val instantiate_node : env -> QualEnv.key -> QualEnv.key
   val get_node_instances : QualEnv.key -> key list list
   val add_node_instance : QualEnv.key -> key list -> unit
-  val build : env -> param list -> key list -> env
+  val build : param list -> key list -> env
   module Instantiate :
   sig
     val program : program -> program
@@ -76,15 +83,26 @@ struct
   (** Maps a node to its list of instances *)
   let nodes_instances = ref QualEnv.empty
 
-  (** create a params instance *)
-  let instantiate m se_l =
-    try List.map (eval m) se_l
+  (** Instantiate the static parameters to create an [instance]. *)
+  let instantiate_params m se_l =
+    try List.map (fun s -> eval (apply_subst_se m s)) se_l
     with Errors.Error ->
       Error.message no_location (Error.Epartial_evaluation se_l)
 
+  (** Instantiate node names *)
+  let instantiate_node m n = match n.qual with
+    | LocalModule _->
+        (match (QualEnv.find n m).se_desc with
+          | Sfun n -> n
+          | _ -> Misc.internal_error "callgraph")
+    | _ -> n
+
   (** @return the name of the node corresponding to the instance of
       [ln] with the static parameters [params]. *)
-  let node_for_params_call ln params = match params with
+  let node_for_params_call m ln params =
+    let ln = instantiate_node m ln in
+    let params = instantiate_params m params in
+    match params with
     | [] -> ln
     | _ -> let ln = M.find (ln,params) !nodes_names in ln
 
@@ -123,9 +141,9 @@ struct
 
 
   (** Build an environment by instantiating the passed params *)
-  let build env params_names params_values =
-    List.fold_left2 (fun m { p_name = n } v -> QualEnv.add (local_qn n) v m)
-      env params_names (instantiate env params_values)
+  let build params_names params_values =
+    List.fold_left2 (fun m { p_name = n } v -> QualEnv.add (Idents.local_qn n) v m)
+      QualEnv.empty params_names (List.map eval params_values)
 
 
   (** This module creates an instance of a node with a given
@@ -138,9 +156,15 @@ struct
       let se = match se.se_desc with
         | Svar q ->
             (match q.qual with
-              | LocalModule -> (* This var is a static parameter, it has to be instanciated *)
+              | LocalModule _ -> (* This var is a static parameter, it has to be instanciated *)
                 (try QualEnv.find q m
                  with Not_found -> Misc.internal_error "callgraph")
+              | _ -> se)
+        | Sfun q ->
+            (match q.qual with
+              | LocalModule _ ->
+                  (try QualEnv.find q m
+                   with Not_found -> Misc.internal_error "callgraph")
               | _ -> se)
         | _ -> se in
       se, m
@@ -150,19 +174,19 @@ struct
       let ed, _ = Mls_mapfold.edesc funs m ed in
       let ed = match ed with
         | Eapp ({ a_op = Efun ln; a_params = params } as app, e_list, r) ->
-            let op = Efun (node_for_params_call ln (instantiate m params)) in
+            let op = Efun (node_for_params_call m ln params) in
             Eapp ({ app with a_op = op; a_params = [] }, e_list, r)
         | Eapp ({ a_op = Enode ln; a_params = params } as app, e_list, r) ->
-            let op = Enode (node_for_params_call ln (instantiate m params)) in
+            let op = Enode (node_for_params_call m ln params) in
             Eapp ({ app with a_op = op; a_params = [] }, e_list, r)
         | Eiterator(it, ({ a_op = Efun ln; a_params = params } as app),
                       n, pe_list, e_list, r) ->
-            let op = Efun (node_for_params_call ln (instantiate m params)) in
+            let op = Efun (node_for_params_call m ln params) in
             Eiterator(it, {app with a_op = op; a_params = [] },
                      n, pe_list, e_list, r)
         | Eiterator(it, ({ a_op = Enode ln; a_params = params } as app),
                      n, pe_list, e_list, r) ->
-            let op = Enode (node_for_params_call ln (instantiate m params)) in
+            let op = Enode (node_for_params_call m ln params) in
             Eiterator(it,{app with a_op = op; a_params = [] },
                      n, pe_list, e_list, r)
         | _ -> ed
@@ -175,7 +199,7 @@ struct
       let funs =
         { Mls_mapfold.defaults with edesc = edesc;
                                     global_funs = global_funs } in
-      let m = build QualEnv.empty n.n_params params in
+      let m = build n.n_params params in
       let n, _ = Mls_mapfold.node_dec_it funs m n in
 
       (* Add to the global environment the signature of the new instance *)
@@ -184,9 +208,8 @@ struct
       let node_sig = { node_sig with node_params = [];
                                      node_param_constraints = [] } in
       (* Find the name that was associated to this instance *)
-      let ln = node_for_params_call n.n_name params in
-        if not (check_value ln) then
-          Modules.add_value ln node_sig;
+      let ln = node_for_params_call m n.n_name params in
+      if not (check_value ln) then Modules.add_value ln node_sig;
       { n with n_name = ln; n_params = []; n_param_constraints = []; }
 
     let node_dec n =
@@ -222,7 +245,7 @@ let load_object_file modul =
   let modname = match modul with
       | Names.Pervasives -> "Pervasives"
       | Names.Module n -> n
-      | Names.LocalModule -> Misc.internal_error "modules"
+      | Names.LocalModule _ -> Misc.internal_error "modules"
       | Names.QualModule _ -> Misc.unsupported "modules"
   in
   let name = String.uncapitalize modname in
@@ -304,14 +327,15 @@ let called_nodes ln =
 let rec call_node (ln, params) =
   (* First, add the instance for this node *)
   let n = node_by_longname ln in
-  let m = build QualEnv.empty n.n_params params in
-(*  List.iter check_no_static_var params; *)
+  Idents.enter_node n.n_name;
+  let m = build n.n_params params in
   add_node_instance ln params;
 
   (* Recursively generate instances for called nodes. *)
   let call_list = called_nodes ln in
   let call_list =
-    List.map (fun (ln, p) -> ln, instantiate m p) call_list in
+    List.map (fun (ln, p) -> instantiate_node m ln, instantiate_params m p) call_list
+  in
   List.iter call_node call_list
 
 let program p =
@@ -323,5 +347,7 @@ let program p =
   (* Creates the list of instances starting from these nodes *)
   List.iter call_node main_nodes;
   let p_list = ModulEnv.fold (fun _ p l -> p::l) info.opened [] in
-  (* Generate all the needed instances *)
+  (* Generate all the needed instances,*)
+  (* Instances of nodes from other modules are respectively done in their modules,*)
+  (* thus the program list *)
   List.map Param_instances.Instantiate.program p_list

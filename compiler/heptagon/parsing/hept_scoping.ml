@@ -104,23 +104,16 @@ let safe_add loc add n x =
 let _qualify_with_error s qfun cqfun hq = match hq with
   | ToQ name ->
       (try qfun name with Not_found -> error (Equal_unbound (s,name)))
-  | Q ({qual = LocalModule} as q) -> (* It has been check by the static scoping *)
+  | Q ({qual = LocalModule _} as q) -> (* It has been check by the static scoping *)
       q
   | Q q ->
       if cqfun q then q else error (Equal_notfound (s,q))
 
 let qualify_value = _qualify_with_error "value" qualify_value check_value
 let qualify_type = _qualify_with_error "type" qualify_type check_type
-let qualify_constrs =
-  _qualify_with_error "constructor" qualify_constrs check_constrs
+let qualify_constrs = _qualify_with_error "constructor" qualify_constrs check_constrs
+let qualify_const = _qualify_with_error "constant" qualify_const check_const
 let qualify_field = _qualify_with_error "field" qualify_field check_field
-
-(** Qualify a var name as a constant variable,
-    if not in local_const or global_const then raise Not_found *)
-let qualify_var_as_const local_const c =
-  if NamesSet.mem c local_const
-  then local_qn c
-  else qualify_const c
 
 (*(** Qualify with [Names.local_qualname] when in local_const,
     otherwise qualify according to the global env *)
@@ -194,8 +187,9 @@ let rec translate_static_exp se =
 and translate_static_exp_desc loc ed =
   let t = translate_static_exp in
   match ed with
-    | Svar (Q q) -> Types.Svar q
-    | Svar (ToQ _) -> assert false
+    | Svar (ToQ _) | Sfun (ToQ _) -> assert false (* parsing and static scoping should prevent it *)
+    | Svar v -> Types.Svar (qualify_const v)
+    | Sfun f -> Types.Sfun (qualify_value f)
     | Sint i -> Types.Sint i
     | Sfloat f -> Types.Sfloat f
     | Sbool b -> Types.Sbool b
@@ -422,7 +416,8 @@ let translate_contract env opt_ct =
 let rec translate_param_type loc pty = match pty with
   | Ttype ty -> Signature.Ttype (translate_type loc ty)
   | Tsig n ->
-      let s = translate_signature n in
+  (* Add to global environment so that find_value will also find those local signatures *)
+      let s = translate_signature n (local_qn n.sig_name) in
       Signature.Tsig s.Heptagon.sig_sig
 
 and translate_params env p_l =
@@ -474,7 +469,7 @@ and translate_node node =
                Heptagon.n_params = params;
                Heptagon.n_param_constraints = constraints; }
   in
-  safe_add node.n_loc add_value n (Hept_utils.signature_of_node nnode);
+  replace_value n (Hept_utils.signature_of_node nnode);
   nnode
 
 and translate_typedec ty =
@@ -524,12 +519,12 @@ and translate_program p =
     | Pnode n -> Heptagon.Pnode (translate_node n)
   in
   let desc = List.map translate_program_desc p.p_desc in
-  { Heptagon.p_modname = Names.modul_of_string p.p_modname;
+  { Heptagon.p_modname = Name_utils.modul_of_string p.p_modname;
     Heptagon.p_opened = p.p_opened;
     Heptagon.p_desc = desc; }
 
 
-and translate_signature s =
+and translate_signature s n =
   let rec translate_some_clock ck = match ck with
     | None -> Signature.Cbase
     | Some ck -> translate_clock ck
@@ -540,7 +535,6 @@ and translate_signature s =
     Signature.mk_arg ~is_memory:false (translate_type s.sig_loc a.a_type)
       a.a_linearity (translate_some_clock a.a_clock) a.a_name
   in
-  let n = current_qual s.sig_name in
   let i = List.map translate_arg s.sig_inputs in
   let o = List.map translate_arg s.sig_outputs in
   let p, _ = translate_params Rename.empty s.sig_params in
@@ -554,10 +548,10 @@ and translate_signature s =
 let translate_interface_desc = function
   | Itypedef tydec -> Heptagon.Itypedef (translate_typedec tydec)
   | Iconstdef const_dec -> Heptagon.Iconstdef (translate_const_dec const_dec)
-  | Isignature s -> Heptagon.Isignature (translate_signature s)
+  | Isignature s -> Heptagon.Isignature (translate_signature s (current_qual s.sig_name))
 
 let translate_interface i =
   let desc = List.map translate_interface_desc i.i_desc in
-  { Heptagon.i_modname = Names.modul_of_string i.i_modname;
+  { Heptagon.i_modname = Name_utils.modul_of_string i.i_modname;
     Heptagon.i_opened = i.i_opened;
     Heptagon.i_desc = desc; }

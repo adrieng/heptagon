@@ -11,6 +11,7 @@
 open Location
 open Misc
 open Names
+open Name_utils
 open Idents
 open Modules
 open Static

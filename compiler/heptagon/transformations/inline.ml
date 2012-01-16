@@ -12,6 +12,7 @@ open Idents
 open Signature
 open Types
 open Names
+open Name_utils
 open Heptagon
 open Hept_utils
 open Hept_mapfold

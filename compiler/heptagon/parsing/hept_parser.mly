@@ -223,11 +223,11 @@ loc_vars(S):
 ;
 
 var_last_list:
-  vl_l=snlist(SEMICOL, var_last) { List.flatten vl_l }
+  vl_l=slist(SEMICOL, var_last) { List.flatten vl_l }
 ;
 
 var_list:
-  v_l=snlist(SEMICOL, var) { List.flatten v_l }
+  v_l=slist(SEMICOL, var) { List.flatten v_l }
 ;
 
 var_last:
@@ -235,7 +235,7 @@ var_last:
 ;
 
 var:
-  | idl=snlist(COMMA,IDENT) COLON ty_lin=located_ty_ident ck=ck_annot
+  | idl=slist(COMMA,IDENT) COLON ty_lin=located_ty_ident ck=ck_annot
       { List.map
           (mk_var_dec ~linearity:(snd ty_lin) (fst ty_lin) ck Var (Loc($startpos,$endpos)))
           idl }
@@ -451,7 +451,7 @@ _simple_exp:
   | LPAREN tuple_exp RPAREN          { mk_call Etuple $2 }
   | e=simple_exp DOT c=qualname
       { mk_call ~params:[mk_field_exp c (Loc($startpos(c),$endpos(c)))] Efield [e] }
-/* TODO : conflict with Eselect_dyn and or const*/
+/* TODO : conflict with Eselect_dyn and or const */
 ;
 
 node_name:
@@ -461,12 +461,13 @@ node_name:
 
 merge_handlers:
   | hs=nonempty_list(merge_handler) { hs }
-  | e1=simple_exp e2=simple_exp { [(Q Initial.ptrue, e1);(Q Initial.pfalse, e2)] }
+  | e1=simple_exp e2=simple_exp
+      { [(Q Initial.ptrue, e1);(Q Initial.pfalse, e2)] }
 merge_handler:
   | LPAREN c=constructor_or_bool ARROW e=exp RPAREN { (c,e) }
 
 exp:
-  | e=simple_exp ct=ct_annot { { e with e_ct_annot = ct } }
+  | e=simple_exp { e }
   | e=_exp { mk_exp e (Loc($startpos,$endpos)) }
 _exp:
   | simple_exp FBY exp

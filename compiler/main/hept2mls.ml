@@ -12,6 +12,7 @@
 open Location
 open Misc
 open Names
+open Name_utils
 open Idents
 open Static
 open Types

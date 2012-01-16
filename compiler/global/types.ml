@@ -57,4 +57,6 @@ let asyncify async ty_list = match async with
 let mk_static_exp ?(loc = no_location) ty desc = (*note ~ty: replace as first arg*)
   { se_desc = desc; se_ty = ty; se_loc = loc }
 
+let dummy_static_exp = mk_static_exp Tinvalid (Sstring "invalid")
+
 

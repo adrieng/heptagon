@@ -91,6 +91,8 @@ let mk_field ty name = { f_name = name; f_type = ty }
 let mk_const_def ty value =
   { c_type = ty; c_value = value }
 
+let dummy_const = mk_const_def Tinvalid dummy_static_exp
+
 let mk_node constraints loc ins outs stateful unsafe params =
   { node_inputs = ins;
     node_outputs  = outs;
@@ -99,6 +101,9 @@ let mk_node constraints loc ins outs stateful unsafe params =
     node_params = params;
     node_param_constraints = constraints;
     node_loc = loc}
+
+let dummy_node =
+  mk_node [] no_location [] [] false false []
 
 let rec field_assoc f = function
   | [] -> raise Not_found

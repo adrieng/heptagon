@@ -119,22 +119,22 @@ let rec default_value ty = match ty with
   | Tarray _ -> Enew_array (ty,[])
 
 
-let java_pervasive_class c = Names.qualname_of_string ("jeptagon.Pervasives."^c)
-let java_pervasives_name = Names.qualname_of_string "jeptagon.Pervasives"
+let java_pervasive_class c = Name_utils.qualname_of_string ("jeptagon.Pervasives."^c)
+let java_pervasives_name = Name_utils.qualname_of_string "jeptagon.Pervasives"
 let java_pervasives = Eclass java_pervasives_name
 
-let java_callable = Names.qualname_of_string "java.util.concurrent.Callable"
+let java_callable = Name_utils.qualname_of_string "java.util.concurrent.Callable"
 
-let import_async = [Names.qualname_of_string "java.util.concurrent.Future";
-                    Names.qualname_of_string "java.util.concurrent.ExecutionException";
-                    Names.qualname_of_string "jeptagon.AsyncNode";
-                    Names.qualname_of_string "jeptagon.AsyncFun"]
+let import_async = [Name_utils.qualname_of_string "java.util.concurrent.Future";
+                    Name_utils.qualname_of_string "java.util.concurrent.ExecutionException";
+                    Name_utils.qualname_of_string "jeptagon.AsyncNode";
+                    Name_utils.qualname_of_string "jeptagon.AsyncFun"]
 
-let throws_async = [Names.qualname_of_string "InterruptedException";
-                    Names.qualname_of_string "ExecutionException"]
+let throws_async = [Name_utils.qualname_of_string "InterruptedException";
+                    Name_utils.qualname_of_string "ExecutionException"]
 
-let async_node = Names.qualname_of_string "AsyncNode"
-let async_fun = Names.qualname_of_string "AsyncFun"
+let async_node = Name_utils.qualname_of_string "AsyncNode"
+let async_fun = Name_utils.qualname_of_string "AsyncFun"
 
 
 

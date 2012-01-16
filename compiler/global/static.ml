@@ -62,13 +62,7 @@ let apply_subst_funs env =
     | Svar ln ->
       begin try
         let se = QualEnv.find ln env in
-        (match se.se_desc with
-          | Svar ln' when ln'=ln -> (* prevent basic infinite loop *)
-              Misc.internal_error "Trying to substitute a svar with itself."
-          | _ ->
-              let se, _ = Global_mapfold.static_exp_it funs () se in
-              se.se_desc, ()
-        )
+        se.se_desc, ()
       with Not_found -> raise Errors.Fallback end
     | _ -> raise Errors.Fallback
   in
@@ -185,15 +179,15 @@ let simplify se =
     variable values taken from [env] and the global env.
     If it returns, there are no variable nor op left.
     @raise [Errors.Error] when it cannot fully evaluate. *)
-let eval env se =
-  try eval_core false (apply_subst_se env se)
+let eval se =
+  try eval_core false se
   with exn -> message exn
 
 
 
 (** [int_of_static_exp e] returns the value of the expression [e].
     @raise [Errors.Error] if it cannot be computed.*)
-let int_of_static_exp se = match (eval QualEnv.empty se).se_desc with
+let int_of_static_exp se = match (eval se).se_desc with
   | Sint i -> i
   | _ -> Misc.internal_error "static int_of_static_exp"
 

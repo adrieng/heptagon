@@ -10,6 +10,7 @@
 
 open Misc
 open Names
+open Name_utils
 open Idents
 open Location
 open Signature
@@ -456,6 +457,7 @@ let rec _unify cenv t1 t2 =
 and (curr_constrnt : constrnt list ref) = ref []
 
 and solve ?(unsafe=false) c_l =
+(*  let c_l = List.map (apply_subst_se m) c_l in *)
   try Static.solve c_l
   with Solve_failed c ->
     if unsafe then
@@ -1246,10 +1248,10 @@ let rec build_cenv l =
   let check_param cenv p =
     let ty = match p.p_type with
       | Ttype t -> Ttype (check_type cenv t)
-      | Tsig n -> Tsig (typing_signature n)
+      | Tsig n -> Tsig (typing_signature n (local_qn n.Heptagon.sig_name))
     in
     let p = { p with p_type = ty } in
-    let n = Names.local_qn p.p_name in
+    let n = local_qn p.p_name in
     p, QualEnv.add n ty cenv
   in
   mapfold check_param QualEnv.empty l
@@ -1257,7 +1259,8 @@ let rec build_cenv l =
 and typing_arg cenv a =
   { a with a_type = check_type cenv a.a_type }
 
-and typing_signature s =
+and typing_signature s n =
+  Idents.enter_node n;
   let params, cenv = build_cenv s.node_params in
   let inputs = List.map (typing_arg cenv) s.node_inputs in
   let outputs = List.map (typing_arg cenv) s.node_outputs in
@@ -1270,6 +1273,7 @@ let node ({ n_name = f; n_input = i_list; n_output = o_list;
             n_contract = contract;
             n_block = b; n_loc = loc;
             n_params = node_params; } as n) =
+  Idents.enter_node f;
   try
     let typed_params, cenv = build_cenv node_params in
     let typed_i_list, (input_names, h) = build cenv Env.empty i_list in
@@ -1340,7 +1344,7 @@ let interface i =
       | Iconstdef c -> Iconstdef (typing_const_dec c)
       | Itypedef t -> Itypedef (typing_typedec t)
       | Isignature i ->
-          let s = typing_signature i.sig_sig in
+          let s = typing_signature i.sig_sig i.sig_name in
           Isignature { i with sig_sig = s }
   in
   { i with i_desc = List.map interface_desc i.i_desc }

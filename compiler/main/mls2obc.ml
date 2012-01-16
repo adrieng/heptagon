@@ -10,6 +10,7 @@
 (* Translation from Minils to Obc. *)
 open Misc
 open Names
+open Name_utils
 open Idents
 open Signature
 open Obc

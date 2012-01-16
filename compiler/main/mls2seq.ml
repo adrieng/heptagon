@@ -56,7 +56,8 @@ let write_obc_file p =
 
 let targets =
   [ (*mk_target ~interface:(IObc Cmain.interface) "c" (Obc_no_params Cmain.program);*)
-    mk_target ~load_conf:(Java_main.load_conf) "java" (Obc Java_main.program);
+    (* TODO callgraph only when high order stuff *)
+    mk_target ~load_conf:(Java_main.load_conf) "java" (Obc_no_params Java_main.program);
     mk_target "z3z" (Minils_no_params Sigalimain.program);
     mk_target "obc" (Obc write_obc_file);
     mk_target "obc_np" (Obc_no_params write_obc_file);
@@ -72,7 +73,7 @@ let generate_target p s =
 (*  let print_unfolded p_list =
     comment "Unfolding";
     if !Compiler_options.verbose
-    then List.iter (Mls_printer.print stderr) p_list in*)
+    then List.iter (Mls_printer.print stderr) p_list in *)
   let target = (find_target s).t_program in
   match target with
     | Minils convert_fun ->
