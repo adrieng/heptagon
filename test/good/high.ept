@@ -1,0 +1,30 @@
+const n: int = 5
+
+node f(x :int^n) returns (y :int^n)
+let
+  y = (0^n) fby x
+tel
+
+(*
+node g<<val node f (x :int^n) returns (y:int^n);>> (x :int^n) returns (y :int^n)
+let
+  y = f(x)
+tel
+
+node g<<val node f (int^n) returns (int^n)>> (x :int^n) returns (y :int^n)
+let
+  y = f(x)
+tel
+*)
+
+node g<<val node h (int^n) returns (int^n);>> (x :int^n) returns (y :int^n)
+let
+  y = h(x)
+tel
+
+
+
+node main(x:int^n) returns (y:int^n)
+let
+  y = g<<f>>(x)
+tel

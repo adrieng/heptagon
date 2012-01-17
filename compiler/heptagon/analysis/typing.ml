@@ -274,21 +274,11 @@ let typ_of_name h x =
   with
       Not_found -> error (Eundefined(name x))
 
-let typ_of_qual cenv x =
-  try (* it may be in cenv *)
-    match QualEnv.find x cenv with
-    | Ttype t -> t
-    | Tsig _ -> assert false (* TODO better error *)
-  with (* it may be a global const *)
-    | Not_found -> (Modules.find_const x).Signature.c_type
+let typ_of_qual x =
+  Format.eprintf "ty of %a@." Global_printer.print_full_qualname x;
+  (Modules.find_const x).Signature.c_type
 
-let sig_of_qual cenv f =
-  try (* it may be in cenv *)
-    match QualEnv.find f cenv with
-    | Tsig n -> n
-    | Ttype _ -> assert false (* TODO better error *)
-  with (* it may be a global value *)
-    | Not_found -> Modules.find_value f
+let sig_of_qual f = Modules.find_value f
 
 let vd_of_name h x =
   try
@@ -434,23 +424,23 @@ let struct_info_from_field f =
   with
       Not_found -> error (Eundefined (fullname f))
 
-let rec _unify cenv t1 t2 =
+let rec _unify t1 t2 =
   match t1, t2 with
     | b1, b2 when b1 = b2 -> ()
     | Tprod t1_list, Tprod t2_list ->
         (try
-           List.iter2 (_unify cenv) t1_list t2_list
+           List.iter2 (_unify ) t1_list t2_list
          with
              _ -> raise Unify
         )
     | Tarray (ty1, e1), Tarray (ty2, e2) ->
         (try
-           add_constraint_eq ~unsafe:true cenv e1 e2
+           add_constraint_eq ~unsafe:true e1 e2
          with Solve_failed _ ->
            raise Unify);
-        _unify cenv ty1 ty2
+        _unify ty1 ty2
     | Tfuture ((),ty1), Tfuture ((),ty2) ->
-        _unify cenv ty1 ty2
+        _unify ty1 ty2
     | _ -> raise Unify
 
 (** { 3 Constraints related functions } *)
@@ -466,19 +456,19 @@ and solve ?(unsafe=false) c_l =
       error (Estatic_constraint c)
 
 (** [cenv] is the constant env which will be used to simplify the given constraints *)
-and add_constraint ?(unsafe=false) cenv c =
-  let c = expect_static_exp cenv Initial.tbool c in
+and add_constraint ?(unsafe=false) c =
+  let c = expect_static_exp Initial.tbool c in
   curr_constrnt := (solve ~unsafe:unsafe [c])@(!curr_constrnt)
 
 (** Add the constraint [c1=c2] *)
-and add_constraint_eq ?(unsafe=false) cenv c1 c2 =
+and add_constraint_eq ?(unsafe=false) c1 c2 =
   let c = mk_static_exp tbool (Sop (mk_pervasives "=",[c1;c2])) in
-  add_constraint ~unsafe:unsafe cenv c
+  add_constraint ~unsafe:unsafe c
 
 (** Add the constraint [c1<=c2] *)
-and add_constraint_leq cenv c1 c2 =
+and add_constraint_leq c1 c2 =
   let c = mk_static_exp tbool (Sop (mk_pervasives "<=",[c1;c2])) in
-  add_constraint cenv c
+  add_constraint c
 
 
 and get_constraints () =
@@ -486,61 +476,61 @@ and get_constraints () =
   curr_constrnt := [];
   l
 
-and unify cenv t1 t2 =
+and unify t1 t2 =
   let ut1 = unalias_type t1 in
   let ut2 = unalias_type t2 in
-  try _unify cenv ut1 ut2 with Unify -> error (Etype_clash(t1, t2))
+  try _unify ut1 ut2 with Unify -> error (Etype_clash(t1, t2))
 
 
 (** [check_type t] checks that t exists *)
-and check_type cenv = function
+and check_type = function
   | Tarray(ty, e) ->
-      let typed_e = expect_static_exp cenv (Tid Initial.pint) e in
-      Tarray(check_type cenv ty, typed_e)
+      let typed_e = expect_static_exp (Tid Initial.pint) e in
+      Tarray(check_type ty, typed_e)
   (* No need to check that the type is defined as it is done by the scoping. *)
   | Tid ty_name -> Tid ty_name
-  | Tprod l -> Tprod (List.map (check_type cenv) l)
+  | Tprod l -> Tprod (List.map (check_type ) l)
   | Tinvalid -> Tinvalid
-  | Tfuture (a, t) -> Tfuture (a, check_type cenv t)
+  | Tfuture (a, t) -> Tfuture (a, check_type t)
 
-and typing_static_exp cenv se =
+and typing_static_exp se =
   try
   let desc, ty = match se.se_desc with
     | Sint v -> Sint v, Tid Initial.pint
     | Sbool v-> Sbool v, Tid Initial.pbool
     | Sfloat v -> Sfloat v, Tid Initial.pfloat
     | Sstring v -> Sstring v, Tid Initial.pstring
-    | Svar ln -> Svar ln, typ_of_qual cenv ln
+    | Svar ln -> Svar ln, typ_of_qual ln
     | Sfun f -> Misc.internal_error "cannot type a Sfun"
     | Sconstructor c -> Sconstructor c, find_constrs c
     | Sfield c -> Sfield c, Tid (find_field c)
     | Sop ({name = "="} as op, se_list) ->
         let se1, se2 = assert_2 se_list in
-        let typed_se1, t1 = typing_static_exp cenv se1 in
-        let typed_se2 = expect_static_exp cenv t1 se2 in
+        let typed_se1, t1 = typing_static_exp se1 in
+        let typed_se2 = expect_static_exp t1 se2 in
         Sop (op, [typed_se1;typed_se2]), Tid Initial.pbool
     | Sop (op, se_list) ->
         let ty_desc = find_value op in
-        let typed_se_list = typing_static_args cenv
+        let typed_se_list = typing_static_args
           (types_of_arg_list ty_desc.node_inputs) se_list
         in
         Sop (op, typed_se_list),
         prod (types_of_arg_list ty_desc.node_outputs)
     | Sarray_power (se, n_list) ->
-        let typed_n_list = List.map (expect_static_exp cenv Initial.tint) n_list in
-        let typed_se, ty = typing_static_exp cenv se in
+        let typed_n_list = List.map (expect_static_exp Initial.tint) n_list in
+        let typed_se, ty = typing_static_exp se in
         let tarray = List.fold_left (fun ty typed_n -> Tarray(ty, typed_n)) ty typed_n_list in
           Sarray_power (typed_se, typed_n_list), tarray
     | Sarray [] ->
         message se.se_loc Eempty_array
     | Sarray (se::se_list) ->
-        let typed_se, ty = typing_static_exp cenv se in
-        let typed_se_list = List.map (expect_static_exp cenv ty) se_list in
+        let typed_se, ty = typing_static_exp se in
+        let typed_se_list = List.map (expect_static_exp ty) se_list in
         Sarray (typed_se::typed_se_list),
         Tarray(ty, mk_static_int ((List.length se_list) + 1))
     | Stuple se_list ->
         let typed_se_list, ty_list = List.split
-          (List.map (typing_static_exp cenv) se_list) in
+          (List.map (typing_static_exp ) se_list) in
         Stuple typed_se_list, prod ty_list
     | Srecord f_se_list ->
         (* find the record type using the first field *)
@@ -553,11 +543,11 @@ and typing_static_exp cenv se =
           if List.length f_se_list <> List.length fields then
             message se.se_loc Esome_fields_are_missing;
           let f_se_list =
-            List.map (typing_static_field cenv fields
+            List.map (typing_static_field fields
                         (Tid q)) f_se_list in
           Srecord f_se_list, Tid q
      | Sasync se ->
-          let typed_se, ty = typing_static_exp cenv se in
+          let typed_se, ty = typing_static_exp se in
           Sasync typed_se, Tfuture ((),ty)
   in
    { se with se_ty = ty; se_desc = desc }, ty
@@ -565,24 +555,24 @@ and typing_static_exp cenv se =
   with
       TypingError kind -> message se.se_loc kind
 
-and typing_static_field cenv fields t1 (f,se) =
+and typing_static_field fields t1 (f,se) =
   try
-    let ty = check_type cenv (field_assoc f fields) in
-    let typed_se = expect_static_exp cenv ty se in
+    let ty = check_type (field_assoc f fields) in
+    let typed_se = expect_static_exp ty se in
       f, typed_se
   with
       Not_found -> message se.se_loc (Eno_such_field (t1, f))
 
-and typing_static_args cenv expected_ty_list e_list =
+and typing_static_args expected_ty_list e_list =
   try
-    List.map2 (expect_static_exp cenv) expected_ty_list e_list
+    List.map2 (expect_static_exp ) expected_ty_list e_list
   with Invalid_argument _ ->
     error (Earity_clash(List.length e_list, List.length expected_ty_list))
 
-and expect_static_exp cenv exp_ty se =
-  let se, ty = typing_static_exp cenv se in
+and expect_static_exp exp_ty se =
+  let se, ty = typing_static_exp se in
     try
-      unify cenv ty exp_ty; se
+      unify ty exp_ty; se
     with
       _ -> message se.se_loc (Etype_clash(ty, exp_ty))
 
@@ -590,17 +580,17 @@ and expect_static_exp cenv exp_ty se =
 (** @return the type of the field with name [f] in the list
     [fields]. [t1] is the corresponding record type and [loc] is
     the location, both used for error reporting. *)
-let field_type cenv f fields t1 loc =
+let field_type f fields t1 loc =
   try
-    check_type cenv (field_assoc f fields)
+    check_type (field_assoc f fields)
   with
       Not_found -> message loc (Eno_such_field (t1, f))
 
-let rec typing cenv h e =
+let rec typing h e =
   try
     let typed_desc,ty = match e.e_desc with
       | Econst c ->
-          let typed_c, ty = typing_static_exp cenv c in
+          let typed_c, ty = typing_static_exp c in
             Econst typed_c, ty
       | Evar x ->
           Evar x, typ_of_name h x
@@ -608,7 +598,7 @@ let rec typing cenv h e =
           Elast x, typ_of_name h x
 
       | Eapp(op, e_list, r) ->
-          let ty, op, typed_e_list = typing_app cenv h op e_list in
+          let ty, op, typed_e_list = typing_app h op e_list in
           Eapp(op, typed_e_list, r), ty
 
       | Estruct(l) ->
@@ -622,21 +612,21 @@ let rec typing cenv h e =
           if List.length l <> List.length fields
           then message e.e_loc Esome_fields_are_missing;
           check_field_unicity l;
-          let l = List.map (typing_field cenv h fields (Tid q)) l in
+          let l = List.map (typing_field h fields (Tid q)) l in
           Estruct l, Tid q
 
       | Epre (None, e) ->
-          let typed_e,ty = typing cenv h e in
+          let typed_e,ty = typing h e in
             Epre (None, typed_e), ty
 
       | Epre (Some c, e) ->
-          let typed_c, t1 = typing_static_exp cenv c in
-          let typed_e = expect cenv h t1 e in
+          let typed_c, t1 = typing_static_exp c in
+          let typed_e = expect h t1 e in
             Epre(Some typed_c, typed_e), t1
 
       | Efby (e1, e2) ->
-          let typed_e1, t1 = typing cenv h e1 in
-          let typed_e2 = expect cenv h t1 e2 in
+          let typed_e1, t1 = typing h e1 in
+          let typed_e2 = expect h t1 e2 in
             Efby (typed_e1, typed_e2), t1
 
       | Eiterator (it, ({ a_op = (Enode f | Efun f);
@@ -651,42 +641,41 @@ let rec typing cenv h e =
             List.map (apply_subst_ty m) expected_ty_list in
           let result_ty_list = List.map (apply_subst_ty m) result_ty_list in
           let result_ty_list = asyncify app.a_async result_ty_list in
-          let typed_n_list = List.map (expect_static_exp cenv (Tid Initial.pint)) n_list in
+          let typed_n_list = List.map (expect_static_exp (Tid Initial.pint)) n_list in
           (*typing of partial application*)
           let p_ty_list, expected_ty_list =
             Misc.split_at (List.length pe_list) expected_ty_list in
-          let typed_pe_list = typing_args cenv h p_ty_list pe_list in
+          let typed_pe_list = typing_args h p_ty_list pe_list in
           (*typing of other arguments*)
-          let ty, typed_e_list = typing_iterator cenv h it typed_n_list
+          let ty, typed_e_list = typing_iterator h it typed_n_list
             expected_ty_list result_ty_list e_list in
-          let typed_params = typing_node_params cenv
-            ty_desc.node_params params in
+          let typed_params = typing_node_params ty_desc.node_params params in
           (* add size constraints *)
           let constrs = List.map (apply_subst_se m) ty_desc.node_param_constraints in
-          List.iter (add_constraint_leq cenv (mk_static_int 1)) typed_n_list;
-          List.iter (add_constraint cenv) constrs;
+          List.iter (add_constraint_leq (mk_static_int 1)) typed_n_list;
+          List.iter (add_constraint ) constrs;
           (* return the type *)
           Eiterator(it, { app with a_op = op; a_params = typed_params }
                       , typed_n_list, typed_pe_list, typed_e_list, reset), ty
       | Eiterator (it, ({ a_op = Ebang; } as app), n_list, [], [e], reset) ->
-          let typed_e, ty = typing cenv h e in
-          let typed_n_list = List.map (expect_static_exp cenv (Tid Initial.pint)) n_list in
+          let typed_e, ty = typing h e in
+          let typed_n_list = List.map (expect_static_exp (Tid Initial.pint)) n_list in
           let result_ty, expect_ty = (match ty with
             | Tarray (Tfuture (a, t), s) -> t, Tfuture(a,t)
             | _ -> message e.e_loc (Eshould_be_async ty))
           in
-          let ty, typed_e_l = typing_iterator cenv h it n_list [expect_ty] [result_ty] [e] in
+          let ty, typed_e_l = typing_iterator h it n_list [expect_ty] [result_ty] [e] in
           (* add size constraints *)
-          List.iter (add_constraint_leq cenv (mk_static_int 1)) typed_n_list;
+          List.iter (add_constraint_leq (mk_static_int 1)) typed_n_list;
           (* return the type *)
           Eiterator(it, app, typed_n_list, [], typed_e_l, reset), ty
       | Eiterator _ -> assert false
 
       | Ewhen (e, c, x) ->
-          let typed_e, t = typing cenv h e in
+          let typed_e, t = typing h e in
           let tn_expected = find_constrs c in
           let tn_actual = typ_of_name h x in
-          unify cenv tn_actual tn_expected;
+          unify tn_actual tn_expected;
           Ewhen (typed_e, c, x), t
 
       | Emerge (x, (c1,e1)::c_e_list) ->
@@ -698,7 +687,7 @@ let rec typing cenv h e =
             List.fold_left
               (fun c_set (c, _) ->
                 if QualSet.mem c c_set then message e.e_loc (Emerge_uniq c);
-                (try unify cenv c_type (find_constrs c)
+                (try unify c_type (find_constrs c)
                 with
                   TypingError(Etype_clash _) -> message e.e_loc (Emerge_mix c));
                 QualSet.add c c_set) c_set c_e_list in
@@ -714,17 +703,17 @@ let rec typing cenv h e =
           if not (QualSet.is_empty c_set_diff)
           then message e.e_loc (Emerge_missing_constrs c_set_diff);
           (* verify [x] is of the right type *)
-          unify cenv (typ_of_name h x) c_type;
+          unify (typ_of_name h x) c_type;
           (* type *)
-          let typed_e1, t = typing cenv h e1 in
+          let typed_e1, t = typing h e1 in
           let typed_c_e_list =
-            List.map (fun (c, e) -> (c, expect cenv h t e)) c_e_list in
+            List.map (fun (c, e) -> (c, expect h t e)) c_e_list in
           Emerge (x, (c1,typed_e1)::typed_c_e_list), t
       | Emerge (_, []) -> assert false
 
       | Esplit(c, e2) ->
-          let typed_c, ty_c = typing cenv h c in
-          let typed_e2, ty = typing cenv h e2 in
+          let typed_c, ty_c = typing h c in
+          let typed_e2, ty = typing h e2 in
           let n =
             match ty_c with
               | Tid tc ->
@@ -742,54 +731,54 @@ let rec typing cenv h e =
   with
       TypingError(kind) -> message e.e_loc kind
 
-and typing_field cenv h fields t1 (f, e) =
+and typing_field h fields t1 (f, e) =
   try
-    let ty = check_type cenv (field_assoc f fields) in
-    let typed_e = expect cenv h ty e in
+    let ty = check_type (field_assoc f fields) in
+    let typed_e = expect h ty e in
       f, typed_e
   with
       Not_found -> message e.e_loc (Eno_such_field (t1, f))
 
-and expect cenv h expected_ty e =
-  let typed_e, actual_ty = typing cenv h e in
+and expect h expected_ty e =
+  let typed_e, actual_ty = typing h e in
   try
-    unify cenv actual_ty expected_ty;
+    unify actual_ty expected_ty;
     typed_e
   with TypingError(kind) -> message e.e_loc kind
 
-and typing_app cenv h app e_list =
+and typing_app h app e_list =
   match app.a_op with
     | Earrow ->
         let e1, e2 = assert_2 e_list in
-        let typed_e1, t1 = typing cenv h e1 in
-        let typed_e2 = expect cenv h t1 e2 in
+        let typed_e1, t1 = typing h e1 in
+        let typed_e2 = expect h t1 e2 in
         t1, app, [typed_e1;typed_e2]
 
     | Eifthenelse ->
         let e1, e2, e3 = assert_3 e_list in
-        let typed_e1 = expect cenv h
+        let typed_e1 = expect h
           (Tid Initial.pbool) e1 in
-        let typed_e2, t1 = typing cenv h e2 in
-        let typed_e3 = expect cenv h t1 e3 in
+        let typed_e2, t1 = typing h e2 in
+        let typed_e3 = expect h t1 e3 in
         t1, app, [typed_e1; typed_e2; typed_e3]
 
     | Efun {name = "="} ->
         let e1, e2 = assert_2 e_list in
-        let typed_e1, t1 = typing cenv h e1 in
-        let typed_e2 = expect cenv h t1 e2 in
+        let typed_e1, t1 = typing h e1 in
+        let typed_e2 = expect h t1 e2 in
         Tid Initial.pbool, app, [typed_e1; typed_e2]
 
     | Efun { qual = Module "Iostream"; name = "printf" } ->
         let e1, format_args = assert_1min e_list in
-        let typed_e1 = expect cenv h Initial.tstring e1 in
-        let typed_format_args = typing_format_args cenv h typed_e1 format_args in
+        let typed_e1 = expect h Initial.tstring e1 in
+        let typed_format_args = typing_format_args h typed_e1 format_args in
         Tprod [], app, typed_e1::typed_format_args
 
     | Efun { qual = Module "Iostream"; name = "fprintf" } ->
         let e1, e2, format_args = assert_2min e_list in
-        let typed_e1 = expect cenv h Initial.tfile e1 in
-        let typed_e2 = expect cenv h Initial.tstring e2 in
-        let typed_format_args = typing_format_args cenv h typed_e1 format_args in
+        let typed_e1 = expect h Initial.tfile e1 in
+        let typed_e2 = expect h Initial.tstring e2 in
+        let typed_format_args = typing_format_args h typed_e1 format_args in
         Tprod [], app, typed_e1::typed_e2::typed_format_args
 
     | (Efun f | Enode f) ->
@@ -798,26 +787,26 @@ and typing_app cenv h app e_list =
         let node_params = List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
         let m = build_subst node_params app.a_params in
         let expected_ty_list = List.map (apply_subst_ty m) expected_ty_list in
-        let typed_e_list = typing_args cenv h expected_ty_list e_list in
+        let typed_e_list = typing_args h expected_ty_list e_list in
         let result_ty_list = List.map (apply_subst_ty m) result_ty_list in
         let result_ty_list = asyncify app.a_async result_ty_list in
         (* Type static parameters and generate constraints *)
-        let typed_params = typing_node_params cenv ty_desc.node_params app.a_params in
+        let typed_params = typing_node_params ty_desc.node_params app.a_params in
         let constrs = List.map (apply_subst_se m) ty_desc.node_param_constraints in
-        List.iter (add_constraint cenv) constrs;
+        List.iter (add_constraint ) constrs;
         (prod result_ty_list,
           { app with a_op = op; a_params = typed_params },
           typed_e_list)
 
     | Etuple ->
         let typed_e_list,ty_list =
-          List.split (List.map (typing cenv h) e_list) in
+          List.split (List.map (typing h) e_list) in
          prod ty_list, app, typed_e_list
 
     | Earray ->
         let exp, e_list = assert_1min e_list in
-        let typed_exp, t1 = typing cenv h exp in
-        let typed_e_list = List.map (expect cenv h t1) e_list in
+        let typed_exp, t1 = typing h exp in
+        let typed_e_list = List.map (expect h t1) e_list in
         let n = mk_static_int (List.length e_list + 1) in
           Tarray(t1, n), app, typed_exp::typed_e_list
 
@@ -828,82 +817,82 @@ and typing_app cenv h app e_list =
           (match f.se_desc with
              | Sfield fn -> fn
              | _ -> assert false) in
-        let typed_e, t1 = typing cenv h e in
+        let typed_e, t1 = typing h e in
         let fields = struct_info t1 in
-        let t2 = field_type cenv fn fields t1 e.e_loc in
+        let t2 = field_type fn fields t1 e.e_loc in
           t2, app, [typed_e]
 
     | Efield_update ->
         let e1, e2 = assert_2 e_list in
         let f = assert_1 app.a_params in
-        let typed_e1, t1 = typing cenv h e1 in
+        let typed_e1, t1 = typing h e1 in
         let fields = struct_info t1 in
         let fn =
           (match f.se_desc with
              | Sfield fn -> fn
              | _ -> assert false) in
-        let t2 = field_type cenv fn fields t1 e1.e_loc in
-        let typed_e2 = expect cenv h t2 e2 in
+        let t2 = field_type fn fields t1 e1.e_loc in
+        let typed_e2 = expect h t2 e2 in
         t1, app, [typed_e1; typed_e2]
 
     | Earray_fill ->
         let _, _ = assert_1min app.a_params in
         let e1 = assert_1 e_list in
-        let typed_n_list = List.map (expect_static_exp cenv Initial.tint) app.a_params in
-        let typed_e1, t1 = typing cenv h e1 in
-        List.iter (fun typed_n -> add_constraint_leq cenv (mk_static_int 1) typed_n) typed_n_list;
+        let typed_n_list = List.map (expect_static_exp Initial.tint) app.a_params in
+        let typed_e1, t1 = typing h e1 in
+        List.iter (fun typed_n -> add_constraint_leq (mk_static_int 1) typed_n) typed_n_list;
         (List.fold_left (fun t1 typed_n -> Tarray (t1, typed_n)) t1 typed_n_list),
           { app with a_params = typed_n_list }, [typed_e1]
 
     | Eselect ->
         let e1 = assert_1 e_list in
-        let typed_e1, t1 = typing cenv h e1 in
+        let typed_e1, t1 = typing h e1 in
         let typed_idx_list, ty =
-          typing_array_subscript cenv h app.a_params t1 in
+          typing_array_subscript h app.a_params t1 in
           ty, { app with a_params = typed_idx_list }, [typed_e1]
 
     | Eselect_dyn ->
         let e1, defe, idx_list = assert_2min e_list in
-        let typed_e1, t1 = typing cenv h e1 in
-        let typed_defe = expect cenv h (element_type t1) defe in
+        let typed_e1, t1 = typing h e1 in
+        let typed_defe = expect h (element_type t1) defe in
         let ty, typed_idx_list =
-          typing_array_subscript_dyn cenv h idx_list t1 in
+          typing_array_subscript_dyn h idx_list t1 in
         ty, app, typed_e1::typed_defe::typed_idx_list
 
     | Eselect_trunc ->
         let e1, idx_list = assert_1min e_list in
-        let typed_e1, t1 = typing cenv h e1 in
+        let typed_e1, t1 = typing h e1 in
         let ty, typed_idx_list =
-          typing_array_subscript_dyn cenv h idx_list t1 in
+          typing_array_subscript_dyn h idx_list t1 in
         ty, app, typed_e1::typed_idx_list
 
     | Eupdate ->
         let e1, e2, idx_list = assert_2min e_list in
-        let typed_e1, t1 = typing cenv h e1 in
+        let typed_e1, t1 = typing h e1 in
         let ty, typed_idx_list =
-          typing_array_subscript_dyn cenv h idx_list t1 in
-        let typed_e2 = expect cenv h ty e2 in
+          typing_array_subscript_dyn h idx_list t1 in
+        let typed_e2 = expect h ty e2 in
           t1, app, typed_e1::typed_e2::typed_idx_list
 
     | Eselect_slice ->
         let e = assert_1 e_list in
         let idx1, idx2 = assert_2 app.a_params in
-        let typed_idx1 = expect_static_exp cenv (Tid Initial.pint) idx1 in
-        let typed_idx2 = expect_static_exp cenv (Tid Initial.pint) idx2 in
-        let typed_e, t1 = typing cenv h e in
+        let typed_idx1 = expect_static_exp (Tid Initial.pint) idx1 in
+        let typed_idx2 = expect_static_exp (Tid Initial.pint) idx2 in
+        let typed_e, t1 = typing h e in
         (*Create the expression to compute the size of the array *)
         let e1 = mk_static_int_op (mk_pervasives "-") [typed_idx2; typed_idx1] in
         let e2 = mk_static_int_op (mk_pervasives "+") [e1;mk_static_int 1 ] in
-        add_constraint_leq cenv (mk_static_int 1) e2;
+        add_constraint_leq (mk_static_int 1) e2;
         Tarray (element_type t1, e2),
         { app with a_params = [typed_idx1; typed_idx2] }, [typed_e]
 
     | Econcat ->
         let e1, e2 = assert_2 e_list in
-        let typed_e1, t1 = typing cenv h e1 in
-        let typed_e2, t2 = typing cenv h e2 in
+        let typed_e1, t1 = typing h e1 in
+        let typed_e2, t2 = typing h e2 in
         begin try
-          unify cenv (element_type t1) (element_type t2)
+          unify (element_type t1) (element_type t2)
         with
             TypingError(kind) -> message e1.e_loc kind
         end;
@@ -912,7 +901,7 @@ and typing_app cenv h app e_list =
         Tarray (element_type t1, n), app, [typed_e1; typed_e2]
     | Ebang ->
         let e = assert_1 e_list in
-        let typed_e, t = typing cenv h e in
+        let typed_e, t = typing h e in
         (match t with
           | Tfuture (_, t) -> t, app, [typed_e]
           | _ -> message e.e_loc (Eshould_be_async t))
@@ -920,11 +909,11 @@ and typing_app cenv h app e_list =
 
       | Ereinit ->
         let e1, e2 = assert_2 e_list in
-        let typed_e1, ty = typing cenv h e1 in
-        let typed_e2 = expect cenv h ty e2 in
+        let typed_e1, ty = typing h e1 in
+        let typed_e2 = expect h ty e2 in
         ty, app, [typed_e1; typed_e2]
 
-and typing_iterator cenv h
+and typing_iterator h
     it n_list args_ty_list result_ty_list e_list =
   let rec array_of_idx_list l ty = match l with
     | [] -> ty
@@ -938,7 +927,7 @@ and typing_iterator cenv h
   | Imap ->
       let args_ty_list = mk_array_type args_ty_list in
       let result_ty_list = mk_array_type result_ty_list in
-      let typed_e_list = typing_args cenv h
+      let typed_e_list = typing_args h
         args_ty_list e_list in
       prod result_ty_list, typed_e_list
 
@@ -949,20 +938,20 @@ and typing_iterator cenv h
       (* Last but one arg of the function should be integer *)
         List.iter
           (fun idx_ty ->
-            ( try unify cenv idx_ty (Tid Initial.pint)
+            ( try unify idx_ty (Tid Initial.pint)
               with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
            idx_ty_list;
-      let typed_e_list = typing_args cenv h
+      let typed_e_list = typing_args h
         args_ty_list e_list in
       prod result_ty_list, typed_e_list
 
   | Ifold ->
       let args_ty_list = mk_array_type_butlast args_ty_list in
       let typed_e_list =
-        typing_args cenv h args_ty_list e_list in
+        typing_args h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
       if List.length result_ty_list > 1 then error Etoo_many_outputs;
-      ( try unify cenv (last_element args_ty_list) (List.hd result_ty_list)
+      ( try unify (last_element args_ty_list) (List.hd result_ty_list)
         with TypingError(kind) -> message (List.hd e_list).e_loc kind );
       (List.hd result_ty_list), typed_e_list
 
@@ -972,94 +961,94 @@ and typing_iterator cenv h
         (* Last but one arg of the function should be integer *)
         List.iter
           (fun idx_ty ->
-            ( try unify cenv idx_ty (Tid Initial.pint)
+            ( try unify idx_ty (Tid Initial.pint)
               with TypingError _ -> raise (TypingError (Emapi_bad_args idx_ty))))
            idx_ty_list;
         let args_ty_list = mk_array_type_butlast (args_ty_list@[acc_ty]) in
       let typed_e_list =
-        typing_args cenv h args_ty_list e_list in
+        typing_args h args_ty_list e_list in
       (*check accumulator type matches in input and output*)
       if List.length result_ty_list > 1 then error Etoo_many_outputs;
-      ( try unify cenv (last_element args_ty_list) (List.hd result_ty_list)
+      ( try unify (last_element args_ty_list) (List.hd result_ty_list)
         with TypingError(kind) -> message (List.hd e_list).e_loc kind );
       (List.hd result_ty_list), typed_e_list
 
     | Imapfold ->
       let args_ty_list = mk_array_type_butlast args_ty_list in
       let result_ty_list = mk_array_type_butlast result_ty_list in
-      let typed_e_list = typing_args cenv h
+      let typed_e_list = typing_args h
         args_ty_list e_list in
       (*check accumulator type matches in input and output*)
-      ( try unify cenv (last_element args_ty_list) (last_element result_ty_list)
+      ( try unify (last_element args_ty_list) (last_element result_ty_list)
         with TypingError(kind) -> message (List.hd e_list).e_loc kind );
       prod result_ty_list, typed_e_list
 
-and typing_array_subscript cenv h idx_list ty  =
+and typing_array_subscript h idx_list ty  =
   match unalias_type ty, idx_list with
     | ty, [] -> [], ty
     | Tarray(ty, exp), idx::idx_list ->
-        ignore (expect_static_exp cenv (Tid Initial.pint) exp);
-        let typed_idx = expect_static_exp cenv (Tid Initial.pint) idx in
-        add_constraint_leq cenv (mk_static_int 0) idx;
+        ignore (expect_static_exp (Tid Initial.pint) exp);
+        let typed_idx = expect_static_exp (Tid Initial.pint) idx in
+        add_constraint_leq (mk_static_int 0) idx;
         let bound = mk_static_int_op (mk_pervasives "-") [exp; mk_static_int 1] in
-        add_constraint_leq cenv idx bound;
-        let typed_idx_list, ty = typing_array_subscript cenv h idx_list ty in
+        add_constraint_leq idx bound;
+        let typed_idx_list, ty = typing_array_subscript h idx_list ty in
         typed_idx::typed_idx_list, ty
     | _, _ -> raise (TypingError (Esubscripted_value_not_an_array ty))
 
 (* This function checks that the array dimensions matches
    the subscript. It returns the base type wrt the nb of indices. *)
-and typing_array_subscript_dyn cenv h idx_list ty =
+and typing_array_subscript_dyn h idx_list ty =
   match unalias_type ty, idx_list with
     | ty, [] -> ty, []
     | Tarray(ty, _), idx::idx_list ->
-        let typed_idx = expect cenv h (Tid Initial.pint) idx in
+        let typed_idx = expect h (Tid Initial.pint) idx in
         let ty, typed_idx_list =
-          typing_array_subscript_dyn cenv h idx_list ty in
+          typing_array_subscript_dyn h idx_list ty in
         ty, typed_idx::typed_idx_list
     | _, _ -> raise (TypingError (Esubscripted_value_not_an_array ty))
 
-and typing_args cenv h expected_ty_list e_list =
+and typing_args h expected_ty_list e_list =
   let typed_e_list, args_ty_list =
-    List.split (List.map (typing cenv h) e_list)
+    List.split (List.map (typing h) e_list)
   in
   let args_ty_list = flatten_ty_list args_ty_list in
   (match args_ty_list, expected_ty_list with
     | [], [] -> ()
     | _, _ ->
       (try
-        unify cenv (prod args_ty_list) (prod expected_ty_list)
+        unify (prod args_ty_list) (prod expected_ty_list)
       with _ ->
         raise (TypingError (Eargs_clash (prod args_ty_list, prod expected_ty_list)))
       )
   );
   typed_e_list
 
-and typing_node_params cenv params_sig params =
+and typing_node_params params_sig params =
   let aux p_sig p = match p_sig.p_type, p.se_desc with
     | Ttype _, Sfun _ -> raise Errors.Error (* TODO add real typing error *)
-    | Ttype t, _ -> expect_static_exp cenv t p
+    | Ttype t, _ -> expect_static_exp t p
     | Tsig n, Sfun f ->
         let n' = find_value f in
         if (n.node_params != [] or n'.node_params != []
             or n.node_unsafe != n'.node_unsafe
             or n.node_stateful != n'.node_stateful)
         then raise Errors.Error; (* TODO add real typing error *)
-        List.iter2 (fun a a' -> unify cenv a.a_type a'.a_type) n.node_inputs n'.node_inputs;
-        List.iter2 (fun a a' -> unify cenv a.a_type a'.a_type) n.node_outputs n'.node_outputs;
+        List.iter2 (fun a a' -> unify a.a_type a'.a_type) n.node_inputs n'.node_inputs;
+        List.iter2 (fun a a' -> unify a.a_type a'.a_type) n.node_outputs n'.node_outputs;
         p
     | Tsig _, _ -> raise Errors.Error (* TODO add real typing error *)
   in
   List.map2 aux params_sig params
 
-and typing_format_args cenv h e args =
+and typing_format_args h e args =
   let s = match e.e_desc with
     | Econst { se_desc = Sstring s } -> s
     | _ -> raise (TypingError Eformat_string_not_constant)
   in
   try
     let expected_ty_list = Printf_parser.types_of_format_string s in
-    typing_args cenv h expected_ty_list args
+    typing_args h expected_ty_list args
   with
     | Printf_parser.Bad_format -> raise (TypingError Ebad_format)
 
@@ -1076,46 +1065,46 @@ let rec typing_pat h acc = function
           pat_list (acc, []) in
       acc, Tprod(ty_list)
 
-let rec typing_eq cenv h acc eq =
+let rec typing_eq h acc eq =
   let typed_desc,acc = match eq.eq_desc with
     | Eautomaton(state_handlers) ->
         let typed_sh,acc =
-          typing_automaton_handlers cenv h acc state_handlers in
+          typing_automaton_handlers h acc state_handlers in
         Eautomaton(typed_sh),
         acc
     | Eswitch(e, switch_handlers) ->
-        let typed_e,ty = typing cenv h e in
+        let typed_e,ty = typing h e in
         let typed_sh,acc =
-          typing_switch_handlers cenv h acc ty switch_handlers in
+          typing_switch_handlers h acc ty switch_handlers in
         Eswitch(typed_e,typed_sh),
         acc
     | Epresent(present_handlers, b) ->
-        let typed_b, def_names, _ = typing_block cenv h b in
+        let typed_b, def_names, _ = typing_block h b in
         let typed_ph, acc =
-          typing_present_handlers cenv h
+          typing_present_handlers h
             acc def_names present_handlers in
         Epresent(typed_ph,typed_b),
         acc
     | Ereset(b, e) ->
-        let typed_e = expect cenv h (Tid Initial.pbool) e in
-        let typed_b, def_names, _ = typing_block cenv h b in
+        let typed_e = expect h (Tid Initial.pbool) e in
+        let typed_b, def_names, _ = typing_block h b in
         Ereset(typed_b, typed_e),
         Env.union def_names acc
     | Eblock b ->
-        let typed_b, def_names, _ = typing_block cenv h b in
+        let typed_b, def_names, _ = typing_block h b in
         Eblock typed_b,
         Env.union def_names acc
     | Eeq(pat, e) ->
         let acc, ty_pat = typing_pat h acc pat in
-        let typed_e = expect cenv h ty_pat e in
+        let typed_e = expect h ty_pat e in
         Eeq(pat, typed_e),
         acc in
   { eq with eq_desc = typed_desc }, acc
 
-and typing_eq_list cenv h acc eq_list =
-  mapfold (typing_eq cenv h) acc eq_list
+and typing_eq_list h acc eq_list =
+  mapfold (typing_eq h) acc eq_list
 
-and typing_automaton_handlers cenv h acc state_handlers =
+and typing_automaton_handlers h acc state_handlers =
   (* checks unicity of states *)
   let addname acc { s_state = n } =
     add_distinct_S n acc in
@@ -1123,12 +1112,12 @@ and typing_automaton_handlers cenv h acc state_handlers =
 
   let escape h ({ e_cond = e; e_next_state = n } as esc) =
     if not (NamesSet.mem n states) then error (Eundefined(n));
-    let typed_e = expect cenv h (Tid Initial.pbool) e in
+    let typed_e = expect h (Tid Initial.pbool) e in
     { esc with e_cond = typed_e } in
 
   let handler ({ s_block = b; s_until = e_list1;
                  s_unless = e_list2 } as s) =
-    let typed_b, defined_names, h0 = typing_block cenv h b in
+    let typed_b, defined_names, h0 = typing_block h b in
     let typed_e_list1 = List.map (escape h0) e_list1 in
     let typed_e_list2 = List.map (escape h) e_list2 in
     { s with
@@ -1144,7 +1133,7 @@ and typing_automaton_handlers cenv h acc state_handlers =
   typed_handlers,
       (add total (add partial acc))
 
-and typing_switch_handlers cenv h acc ty switch_handlers =
+and typing_switch_handlers h acc ty switch_handlers =
   (* checks unicity of states *)
   let addname acc { w_name = n } = add_distinct_qualset n acc in
   let cases = List.fold_left addname QualSet.empty switch_handlers in
@@ -1153,7 +1142,7 @@ and typing_switch_handlers cenv h acc ty switch_handlers =
     error (Epartial_switch (fullname (QualSet.choose d)));
 
   let handler ({ w_block = b } as sh) =
-    let typed_b, defined_names, _ = typing_block cenv h b in
+    let typed_b, defined_names, _ = typing_block h b in
     { sh with w_block = typed_b }, defined_names in
 
   let typed_switch_handlers, defined_names_list =
@@ -1163,11 +1152,11 @@ and typing_switch_handlers cenv h acc ty switch_handlers =
   (typed_switch_handlers,
    add total (add partial acc))
 
-and typing_present_handlers cenv h acc def_names
+and typing_present_handlers h acc def_names
     present_handlers =
   let handler ({ p_cond = e; p_block = b }) =
-    let typed_e = expect cenv h (Tid Initial.pbool) e in
-    let typed_b, defined_names, _ = typing_block cenv h b in
+    let typed_e = expect h (Tid Initial.pbool) e in
+    let typed_b, defined_names, _ = typing_block h b in
     { p_cond = typed_e; p_block = typed_b },
     defined_names
   in
@@ -1179,12 +1168,12 @@ and typing_present_handlers cenv h acc def_names
   (typed_present_handlers,
    (add total (add partial acc)))
 
-and typing_block cenv h (* TODO async deal with it ! *)
+and typing_block h (* TODO async deal with it ! *)
     ({ b_local = l; b_equs = eq_list; b_loc = loc } as b) =
   try
-    let typed_l, (local_names, h0) = build cenv h l in
+    let typed_l, (local_names, h0) = build h l in
     let typed_eq_list, defined_names =
-      typing_eq_list cenv h0 Env.empty eq_list in
+      typing_eq_list h0 Env.empty eq_list in
     let defnames = diff_env defined_names local_names in
     { b with
         b_defnames = defnames;
@@ -1199,13 +1188,13 @@ and typing_block cenv h (* TODO async deal with it ! *)
     @return the typed list of var_dec, an environment mapping
     names to their types (aka defined names) and the environment
     mapping names to types and last that will be used for typing (aka h).*)
-and build cenv h dec =
+and build h dec =
   let var_dec (acc_defined, h) vd =
     try
-      let ty = check_type cenv vd.v_type in
+      let ty = check_type vd.v_type in
 
       let last_dec = match vd.v_last with
-        | Last (Some se) -> Last (Some (expect_static_exp cenv ty se))
+        | Last (Some se) -> Last (Some (expect_static_exp ty se))
         | Var | Last None -> vd.v_last in
 
       if Env.mem vd.v_ident h then
@@ -1220,23 +1209,23 @@ and build cenv h dec =
   in
     mapfold var_dec (Env.empty, h) dec
 
-let typing_contract cenv h contract =
+let typing_contract h contract =
   match contract with
     | None -> None,h
     | Some ({ c_block = b;
               c_assume = e_a;
               c_enforce = e_g;
               c_controllables = c }) ->
-        let typed_b, defined_names, h' = typing_block cenv h b in
+        let typed_b, defined_names, h' = typing_block h b in
           (* check that the equations do not define other unexpected names *)
           included_env defined_names Env.empty;
 
         (* assumption *)
-        let typed_e_a = expect cenv h' (Tid Initial.pbool) e_a in
+        let typed_e_a = expect h' (Tid Initial.pbool) e_a in
         (* property *)
-        let typed_e_g = expect cenv h' (Tid Initial.pbool) e_g in
+        let typed_e_g = expect h' (Tid Initial.pbool) e_g in
 
-        let typed_c, (c_names, h) = build cenv h c in
+        let typed_c, (c_names, h) = build h c in
 
         Some { c_block = typed_b;
                c_assume = typed_e_a;
@@ -1244,26 +1233,26 @@ let typing_contract cenv h contract =
                c_controllables = typed_c }, h
 
 
-let rec build_cenv l =
-  let check_param cenv p =
+let rec check_params_type ps=
+  let check_param p =
     let ty = match p.p_type with
-      | Ttype t -> Ttype (check_type cenv t)
-      | Tsig n -> Tsig (typing_signature n (local_qn n.Heptagon.sig_name))
+      | Ttype t -> Ttype (check_type t)
+      | Tsig n -> Tsig (typing_signature n (local_qn p.p_name))
     in
     let p = { p with p_type = ty } in
     let n = local_qn p.p_name in
-    p, QualEnv.add n ty cenv
+    p
   in
-  mapfold check_param QualEnv.empty l
+  List.map check_param ps
 
-and typing_arg cenv a =
-  { a with a_type = check_type cenv a.a_type }
+and typing_arg a =
+  { a with a_type = check_type a.a_type }
 
 and typing_signature s n =
   Idents.enter_node n;
-  let params, cenv = build_cenv s.node_params in
-  let inputs = List.map (typing_arg cenv) s.node_inputs in
-  let outputs = List.map (typing_arg cenv) s.node_outputs in
+  let params = check_params_type s.node_params in
+  let inputs = List.map (typing_arg ) s.node_inputs in
+  let outputs = List.map (typing_arg ) s.node_outputs in
   { s with node_params = params;
            node_inputs = inputs;
            node_outputs = outputs }
@@ -1275,25 +1264,27 @@ let node ({ n_name = f; n_input = i_list; n_output = o_list;
             n_params = node_params; } as n) =
   Idents.enter_node f;
   try
-    let typed_params, cenv = build_cenv node_params in
-    let typed_i_list, (input_names, h) = build cenv Env.empty i_list in
-    let typed_o_list, (output_names, h) = build cenv h o_list in
+    let typed_params = check_params_type node_params in
+    let typed_i_list, (input_names, h) = build Env.empty i_list in
+    let typed_o_list, (output_names, h) = build h o_list in
 
     (* typing contract *)
-    let typed_contract, h = typing_contract cenv h contract in
+    let typed_contract, h = typing_contract h contract in
 
-    let typed_b, defined_names, _ = typing_block cenv h b in
+    let typed_b, defined_names, _ = typing_block h b in
     (* check that the defined names match exactly the outputs and locals *)
     included_env defined_names output_names;
     included_env output_names defined_names;
 
     (* update the node signature to add static params constraints *)
     let s = find_value f in
-    let cl = List.map (expect_static_exp cenv Initial.tbool) s.node_param_constraints in
+    let cl = List.map (expect_static_exp Initial.tbool) s.node_param_constraints in
     let cl = cl @ get_constraints () in
     let cl = solve cl in
-    let node_inputs = List.map (typing_arg cenv) s.node_inputs in
-    let node_outputs = List.map (typing_arg cenv) s.node_outputs in
+    (*TODO on solve les contraintes que l'on vient d'ajouter.*)
+    (*Pour l'instant, sans apliquer de substitution avec apply_subst, solve n'aura rien a faire.*)
+    let node_inputs = List.map (typing_arg ) s.node_inputs in
+    let node_outputs = List.map (typing_arg ) s.node_outputs in
     replace_value f { s with node_param_constraints = cl;
                              node_inputs = node_inputs; node_outputs = node_outputs };
 
@@ -1307,23 +1298,23 @@ let node ({ n_name = f; n_input = i_list; n_output = o_list;
     | TypingError(error) -> message loc error
 
 let typing_const_dec cd =
-  let ty = check_type QualEnv.empty cd.c_type in
-  let se = expect_static_exp QualEnv.empty ty cd.c_value in
+  let ty = check_type cd.c_type in
+  let se = expect_static_exp ty cd.c_value in
   let const_def = { Signature.c_type = ty; Signature.c_value = se } in
-    Modules.replace_const cd.c_name const_def;
-    { cd with c_value = se; c_type = ty }
+  Modules.replace_const cd.c_name const_def;
+  { cd with c_value = se; c_type = ty }
 
 let typing_typedec td =
   let tydesc = match td.t_desc with
     | Type_abs -> Type_abs
     | Type_enum(tag_list) -> Type_enum tag_list
     | Type_alias t ->
-        let t = check_type QualEnv.empty t in
+        let t = check_type t in
           replace_type td.t_name (Talias t);
           Type_alias t
     | Type_struct(field_ty_list) ->
         let typing_field { f_name = f; f_type = ty } =
-          { f_name = f; f_type = check_type QualEnv.empty ty }
+          { f_name = f; f_type = check_type ty }
         in
         let field_ty_list = List.map typing_field field_ty_list in
           replace_type td.t_name (Tstruct field_ty_list);

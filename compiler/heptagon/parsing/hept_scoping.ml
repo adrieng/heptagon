@@ -413,19 +413,24 @@ let translate_contract env opt_ct =
              Heptagon.c_controllables = translate_vd_list env' ct.c_controllables;
              Heptagon.c_block = b }, env'
 
-let rec translate_param_type loc pty = match pty with
-  | Ttype ty -> Signature.Ttype (translate_type loc ty)
-  | Tsig n ->
-  (* Add to global environment so that find_value will also find those local signatures *)
-      let s = translate_signature n (local_qn n.sig_name) in
-      Signature.Tsig s.Heptagon.sig_sig
 
-and translate_params env p_l =
-  let aux env p =
+let rec translate_params env p_l =
+  let translate_param env p =
+    let name = local_qn p.p_name in
+    let pty = match p.p_type with
+      | Ttype t ->
+          let t = translate_type p.p_loc t in
+          safe_add p.p_loc add_const name (Signature.mk_const_def t (dummy_static_exp t));
+          Signature.Ttype t
+      | Tsig s ->
+          (* this add the signature to the global env, with localqn name. *)
+          let s = translate_signature s name in
+          Signature.Tsig s.Heptagon.sig_sig
+    in
     let env = Rename.add_used_name env p.p_name in
-    Signature.mk_param (translate_param_type p.p_loc p.p_type) p.p_name, env
+    Signature.mk_param pty p.p_name, env
   in
-  Misc.mapfold aux env p_l
+  Misc.mapfold translate_param env p_l
 
 
 and translate_constrnt e = expect_static_exp e

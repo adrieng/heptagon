@@ -689,7 +689,7 @@ node_sig:
 sig_args:
   a_l=slist(SEMICOL, sig_arg) { a_l }
 
-sig_arg : (*TODO*)
+sig_arg :
   | IDENT COLON located_ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
   | located_ty_ident ck=ck_annot { mk_arg None $1 ck }
   | THREE_DOTS ck=ck_annot { mk_arg None (Tinvalid, Linearity.Ltop) ck }

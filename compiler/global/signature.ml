@@ -91,7 +91,7 @@ let mk_field ty name = { f_name = name; f_type = ty }
 let mk_const_def ty value =
   { c_type = ty; c_value = value }
 
-let dummy_const = mk_const_def Tinvalid dummy_static_exp
+let dummy_const ty = mk_const_def ty (dummy_static_exp ty)
 
 let mk_node constraints loc ins outs stateful unsafe params =
   { node_inputs = ins;

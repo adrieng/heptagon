@@ -18,7 +18,7 @@ let rec _aux_print_modul ?(full=false) ff m = match m with
       fprintf ff "%a%a." (_aux_print_modul ~full:full) m print_name n
 
 (** Prints a [modul] with a [.] at the end when not empty *)
-let _print_modul ?(full=false) ff m = match m with
+let rec _print_modul ?(full=false) ff m = match m with
   | Pervasives -> ()
   | LocalModule _ -> ()
   | _ when m = g_env.current_mod && not full -> ()
@@ -31,8 +31,8 @@ let print_modul ff m = _print_modul ~full:false ff m
 
 let _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
   | Pervasives -> print_name ff n
-  | LocalModule _ -> print_name ff n
   | _ when q = g_env.current_mod && not full -> print_name ff n
+  | LocalModule m -> fprintf ff "__local__%a%a" (_aux_print_modul ~full:full) m print_name n
   | _ -> fprintf ff "%a%a" (_aux_print_modul ~full:full) q print_name n
 
 

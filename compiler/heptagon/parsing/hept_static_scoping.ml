@@ -113,7 +113,7 @@ let const_dec funs local_const cd =
   let c_name = current_qual cd.c_name in
   (* /!\ we need to add the consts to detect all the static_exps,*)
   (* /!\ but we can't qualify their types, scoping will correct this *)
-  Hept_scoping.safe_add cd.c_loc add_const c_name Signature.dummy_const;
+  Hept_scoping.safe_add cd.c_loc add_const c_name (Signature.dummy_const Types.Tinvalid);
   cd, local_const
 
 let program p =
