@@ -1,5 +1,5 @@
 open Idents
-open Types
+open Signature
 open Signature
 open Clocks
 open Minils

@@ -2,7 +2,6 @@ open Names
 open Name_utils
 open Idents
 open Signature
-open Types
 open Clocks
 open Modules
 open Format
@@ -58,8 +57,10 @@ let rec print_ct ff = function
   | Signature.Cbase -> fprintf ff "."
   | Signature.Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_sck ck print_qualname c print_name n
 
+let rec print_params ff p_l =
+  fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<" "," ">>") p_l
 
-let rec print_static_exp_desc ff sed = match sed with
+and print_static_exp_desc ff sed = match sed with
   | Sint i -> fprintf ff "%d" i
   | Sbool b -> fprintf ff "%b" b
   | Sfloat f -> fprintf ff "%f" f
@@ -67,7 +68,10 @@ let rec print_static_exp_desc ff sed = match sed with
   | Sconstructor ln -> print_qualname ff ln
   | Sfield ln -> print_qualname ff ln
   | Svar id -> print_qualname ff id
-  | Sfun f -> print_qualname ff f
+  | Sfun (f, se_list) ->
+      fprintf ff "@[<2>%a@,%a@]"
+        print_qualname f
+        print_params se_list
   | Sop (op, se_list) ->
       if is_infix op
       then
@@ -107,7 +111,7 @@ and print_type ff = function
 
 and print_async ff async = match async with
   | None -> ()
-  | Some i_l -> fprintf ff "async@[%a@]" (print_list_r print_static_exp "<<"","">>") i_l
+  | Some i_l -> fprintf ff "async@[%a@]" print_params i_l
 
 and print_future ff future = match future with
   | () -> fprintf ff "future "
@@ -148,8 +152,11 @@ let print_sarg ff arg = match arg.a_name with
           print_type arg.a_type
           print_sck arg.a_clock
 
-let rec print_param ff p =
-  fprintf ff "%a:%a"  Names.print_name p.p_name  print_ptype p.p_type
+let rec print_sig_params ff p_l =
+  let print_param ff p =
+    fprintf ff "%a:%a"  Names.print_name p.p_name  print_ptype p.p_type
+  in
+  fprintf ff "@[<2>%a@]" (print_list_r print_param "<<" "," ">>") p_l
 
 and print_interface_value ff (name,node) =
 (*  let print_node_params ff (p_list, constraints) =
@@ -159,7 +166,7 @@ and print_interface_value ff (name,node) =
   in*)
   fprintf ff "@[<4>val %a@,@[<2>%a@]%a@,@[<1>%a@]@ returns @[<1>%a@]@]"
     print_name name
-    (print_list_r print_param "<<" "," ">>") node.node_params
+    print_sig_params node.node_params
     print_constraints node.node_param_constraints
     (print_list_r print_sarg "(" ";" ")") node.node_inputs
     (print_list_r print_sarg "(" ";" ")") node.node_outputs

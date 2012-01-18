@@ -14,7 +14,7 @@ open Names
 open Idents
 open Obc
 open Obc_utils
-open Types
+open Signature
 open Modules
 open Signature
 open C

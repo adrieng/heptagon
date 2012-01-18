@@ -10,7 +10,7 @@
 open Misc
 open Idents
 open Signature
-open Types
+open Signature
 open Names
 open Name_utils
 open Heptagon

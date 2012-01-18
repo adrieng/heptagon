@@ -22,7 +22,7 @@ open Misc
 open Names
 open Idents
 open Heptagon
-open Types
+open Signature
 open Location
 open Format
 

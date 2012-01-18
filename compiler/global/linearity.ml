@@ -45,9 +45,6 @@ let flatten_lin_list l =
   List.fold_right
     (fun arg args -> match arg with Ltuple l -> l@args | a -> a::args ) l []
 
-let rec lin_skeleton lin = function
-  | Types.Tprod l -> Ltuple (List.map (lin_skeleton lin) l)
-  | _ -> lin
 
 (** Same as Misc.split_last but on a linearity. *)
 let split_last_lin = function

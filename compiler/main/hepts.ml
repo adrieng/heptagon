@@ -16,7 +16,7 @@ open Errors
 open Modules
 open Signature
 open Names
-open Types
+open Signature
 
 let print_debug s =
   Printf.printf "%s\n" s;

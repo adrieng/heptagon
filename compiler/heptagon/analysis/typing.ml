@@ -17,7 +17,7 @@ open Signature
 open Modules
 open Initial
 open Static
-open Types
+open Signature
 open Global_printer
 open Heptagon
 open Hept_mapfold
@@ -501,7 +501,7 @@ and typing_static_exp se =
     | Sfloat v -> Sfloat v, Tid Initial.pfloat
     | Sstring v -> Sstring v, Tid Initial.pstring
     | Svar ln -> Svar ln, typ_of_qual ln
-    | Sfun f -> Misc.internal_error "cannot type a Sfun"
+    | Sfun _ -> Misc.internal_error "cannot type a Sfun"
     | Sconstructor c -> Sconstructor c, find_constrs c
     | Sfield c -> Sfield c, Tid (find_field c)
     | Sop ({name = "="} as op, se_list) ->
@@ -565,7 +565,7 @@ and typing_static_field fields t1 (f,se) =
 
 and typing_static_args expected_ty_list e_list =
   try
-    List.map2 (expect_static_exp ) expected_ty_list e_list
+    List.map2 expect_static_exp expected_ty_list e_list
   with Invalid_argument _ ->
     error (Earity_clash(List.length e_list, List.length expected_ty_list))
 
@@ -784,7 +784,7 @@ and typing_app h app e_list =
     | (Efun f | Enode f) ->
         let ty_desc = find_value f in
         let op, expected_ty_list, result_ty_list = kind f ty_desc in
-        let node_params = List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
+        let node_params = List.map (fun { p_name = n } -> local_qn_of f n) ty_desc.node_params in
         let m = build_subst node_params app.a_params in
         let expected_ty_list = List.map (apply_subst_ty m) expected_ty_list in
         let typed_e_list = typing_args h expected_ty_list e_list in
@@ -1028,8 +1028,12 @@ and typing_node_params params_sig params =
   let aux p_sig p = match p_sig.p_type, p.se_desc with
     | Ttype _, Sfun _ -> raise Errors.Error (* TODO add real typing error *)
     | Ttype t, _ -> expect_static_exp t p
-    | Tsig n, Sfun f ->
+    | Tsig n, Sfun (f, se_l) ->
         let n' = find_value f in
+        
+        let typed_se_l = typing_node_params n'.node_params se_l in
+        
+        
         if (n.node_params != [] or n'.node_params != []
             or n.node_unsafe != n'.node_unsafe
             or n.node_stateful != n'.node_stateful)

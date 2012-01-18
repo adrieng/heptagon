@@ -52,7 +52,7 @@ match l with
   | _ -> Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) l)
 
 let type_of_vd_list l =
-  Types.prod (List.map (fun vd -> vd.v_type) l)
+  Signature.prod (List.map (fun vd -> vd.v_type) l)
 
 let linearity_of_vd_list l =
   Linearity.prod (List.map (fun vd -> vd.v_linearity) l)

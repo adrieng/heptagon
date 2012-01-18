@@ -14,7 +14,7 @@
 
 open Names
 open Format
-open Types
+open Signature
 open Signature
 open Modules
 open Location

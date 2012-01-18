@@ -14,7 +14,7 @@ open Names
 open Idents
 open Signature
 open Static
-open Types
+open Signature
 open Linearity
 open Clocks
 

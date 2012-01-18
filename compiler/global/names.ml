@@ -53,6 +53,8 @@ let modul { qual = m; } = m
 
 let pervasives_qn name = { qual = Pervasives; name = name }
 
+let local_qn_of f n = { qual = LocalModule (QualModule f); name = n }
+
 let dummy_qualname = pervasives_qn "dummy"
 
 let fullname {qual = q; name = n} = modul_to_string q ^ "." ^ n

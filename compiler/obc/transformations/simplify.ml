@@ -15,7 +15,7 @@
 
 
 open Names
-open Types
+open Signature
 open Static
 open Obc
 open Obc_mapfold

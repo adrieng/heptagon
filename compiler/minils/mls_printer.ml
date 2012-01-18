@@ -3,7 +3,7 @@ open Names
 open Name_utils
 open Signature
 open Idents
-open Types
+open Signature
 open Linearity
 open Clocks
 open Static
@@ -49,11 +49,8 @@ let print_const_dec ff c =
   fprintf ff "@."
 
 
-let rec print_params ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") l
-
-and print_node_params ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_param "<<"","">>") l
+let rec print_node_params ff l =
+  fprintf ff "@[<2>%a@]" print_sig_params l
 
 and print_exp_tuple ff l =
   fprintf ff "@[<2>(%a)@]" (print_list_r print_exp """,""") l

@@ -45,7 +45,7 @@ open Names
 open Location
 open Idents
 open Signature
-open Types
+open Signature
 open Clocks
 open Heptagon
 open Hept_utils

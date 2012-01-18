@@ -71,7 +71,7 @@ struct
 end
 
 type interference_graph = {
-  g_type : Types.ty;
+  g_type : Signature.ty;
   g_graph : G.t;
   g_hash : (ivar, G.V.t) Hashtbl.t
 }

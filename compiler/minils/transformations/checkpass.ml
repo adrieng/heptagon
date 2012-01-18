@@ -15,7 +15,7 @@ open Minils
 open Mls_utils
 open Mls_printer
 open Global_printer
-open Types
+open Signature
 open Clocks
 
 let add_check prefix pass nd nd_list =

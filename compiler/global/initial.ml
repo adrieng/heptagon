@@ -9,25 +9,25 @@
 (* initialization of the typing environment *)
 
 open Names
-open Types
+open Signature
 
 let tglobal = []
 let cglobal = []
 
 let pbool = { qual = Pervasives; name = "bool" }
-let tbool = Types.Tid pbool
+let tbool = Tid pbool
 let ptrue = { qual = Pervasives; name = "true" }
 let pfalse = { qual = Pervasives; name = "false" }
 let por = { qual = Pervasives; name = "or" }
 let pint = { qual = Pervasives; name = "int" }
-let tint = Types.Tid pint
+let tint = Tid pint
 let pfloat = { qual = Pervasives; name = "float" }
-let tfloat = Types.Tid pfloat
+let tfloat = Tid pfloat
 let pstring = { qual = Pervasives; name = "string" }
-let tstring = Types.Tid pstring
+let tstring = Tid pstring
 
 let pfile = { qual = Module "Iostream"; name = "file" }
-let tfile = Types.Tid pfile
+let tfile = Tid pfile
 
 let mk_pervasives s = { qual = Pervasives; name = s }
 

@@ -16,7 +16,7 @@ open Compiler_utils
 open Names
 open Name_utils
 open Idents
-open Types
+open Signature
 open Clocks
 open Sigali
 

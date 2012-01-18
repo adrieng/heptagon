@@ -11,7 +11,7 @@ open Names
 open Idents
 open Location
 open Misc
-open Types
+open Signature
 open Linearity
 open Obc
 open Obc_mapfold

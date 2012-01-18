@@ -97,9 +97,9 @@ let translate_constructor_name_2 q q_ty =
   { qual = QualModule classe; name = String.uppercase q.name }
 
 let translate_constructor_name q =
-  match Modules.unalias_type (Types.Tid (Modules.find_constrs q)) with
-    | Types.Tid q_ty when q_ty = Initial.pbool -> q |> Names.shortname |> Idents.local_qn
-    | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
+  match Modules.unalias_type (Signature.Tid (Modules.find_constrs q)) with
+    | Signature.Tid q_ty when q_ty = Initial.pbool -> q |> Names.shortname |> Idents.local_qn
+    | Signature.Tid q_ty -> translate_constructor_name_2 q q_ty
     | _ -> assert false
 
 let translate_field_name f = f |> Names.shortname |> String.lowercase
@@ -108,27 +108,27 @@ let translate_field_name f = f |> Names.shortname |> String.lowercase
 let name_to_classe_name n = n |> Modules.current_qual |> qualname_to_package_classe
 
 (** translate an ostatic_exp into an jexp *)
-let rec static_exp param_env se = match se.Types.se_desc with
-  | Types.Svar c ->
+let rec static_exp param_env se = match se.Signature.se_desc with
+  | Signature.Svar c ->
       (match c.qual with
         | LocalModule _ ->
             let n = NamesEnv.find (Names.shortname c) param_env in
             Svar (n |> Idents.name |> Idents.local_qn)
         | _ -> Svar (translate_const_name c))
-  | Types.Sfun f ->
+  | Signature.Sfun (f, se_l) -> (* TODO remove all this stuff *)
       (match f.qual with
         | LocalModule _->
             let f = NamesEnv.find (Names.shortname f) param_env in
             Sfun (f |> Idents.name |> Idents.local_qn)
         | _ -> Sfun (qualname_to_package_classe f))
-  | Types.Sint i -> Sint i
-  | Types.Sfloat f -> Sfloat f
-  | Types.Sbool b -> Sbool b
-  | Types.Sstring s -> Sstring s
-  | Types.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
-  | Types.Sfield _ -> Misc.unsupported "field acces in Java backend. ojSfield @."
-  | Types.Stuple se_l -> tuple param_env se_l
-  | Types.Sarray_power (see,pow_list) ->
+  | Signature.Sint i -> Sint i
+  | Signature.Sfloat f -> Sfloat f
+  | Signature.Sbool b -> Sbool b
+  | Signature.Sstring s -> Sstring s
+  | Signature.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
+  | Signature.Sfield _ -> Misc.unsupported "field acces in Java backend. ojSfield @."
+  | Signature.Stuple se_l -> tuple param_env se_l
+  | Signature.Sarray_power (see,pow_list) ->
       let pow_list = List.rev pow_list in
       let rec make_array tyl pow_list = match tyl, pow_list with
         | Tarray(t, e::e_l), pow::pow_list ->
@@ -136,42 +136,42 @@ let rec static_exp param_env se = match se.Types.se_desc with
                        with  Errors.Error ->
                                    eprintf "%aStatic power of array should have integer power. \
                                            Please use callgraph or non-static exp in %a.@."
-                              Location.print_location se.Types.se_loc
+                              Location.print_location se.Signature.se_loc
                               Global_printer.print_static_exp se;
                               raise Errors.Error)
             in
             Enew_array (tyl, Misc.repeat_list (make_array (Tarray(t,e_l)) pow_list) pow)
         | _ -> static_exp param_env see
       in
-      make_array (ty param_env se.Types.se_ty) pow_list
-  | Types.Sarray se_l ->
-      Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
-  | Types.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
-  | Types.Sop (f, se_l) ->
+      make_array (ty param_env se.Signature.se_ty) pow_list
+  | Signature.Sarray se_l ->
+      Enew_array (ty param_env se.Signature.se_ty, List.map (static_exp param_env) se_l)
+  | Signature.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
+  | Signature.Sop (f, se_l) ->
       Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
-  | Types.Sasync se ->
-      let t_c = Tgeneric (java_pervasive_class "StaticFuture", [boxed_ty param_env se.Types.se_ty])
+  | Signature.Sasync se ->
+      let t_c = Tgeneric (java_pervasive_class "StaticFuture", [boxed_ty param_env se.Signature.se_ty])
       in
       Enew (t_c, [static_exp param_env se])
 
 and boxed_ty param_env t = match Modules.unalias_type t with
-  | Types.Tprod [] -> Tunit
-  | Types.Tprod ty_l -> tuple_ty param_env ty_l
-  | Types.Tid t when t = Initial.pbool -> Tclass (Idents.local_qn "Boolean")
-  | Types.Tid t when t = Initial.pint -> Tclass (Idents.local_qn "Integer")
-  | Types.Tid t when t = Initial.pfloat -> Tclass (Idents.local_qn "Float")
-  | Types.Tid t -> Tclass (qualname_to_class_name t)
-  | Types.Tarray _ ->
+  | Signature.Tprod [] -> Tunit
+  | Signature.Tprod ty_l -> tuple_ty param_env ty_l
+  | Signature.Tid t when t = Initial.pbool -> Tclass (Idents.local_qn "Boolean")
+  | Signature.Tid t when t = Initial.pint -> Tclass (Idents.local_qn "Integer")
+  | Signature.Tid t when t = Initial.pfloat -> Tclass (Idents.local_qn "Float")
+  | Signature.Tid t -> Tclass (qualname_to_class_name t)
+  | Signature.Tarray _ ->
     let rec gather_array t = match t with
-      | Types.Tarray (t,size) ->
+      | Signature.Tarray (t,size) ->
           let t, s_l = gather_array t in
           t, (static_exp param_env size)::s_l
       | _ -> ty param_env t, []
     in
     let t, s_l = gather_array t in
     Tarray (t, s_l)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
-  | Types.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
+  | Signature.Tinvalid -> Misc.internal_error "obc2java invalid type"
+  | Signature.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
 
 and tuple_ty param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
@@ -180,23 +180,23 @@ and tuple_ty param_env ty_l =
 and ty param_env t =
   let t = Modules.unalias_type t in
   match t with
-  | Types.Tprod [] -> Tunit
-  | Types.Tprod ty_l -> tuple_ty param_env ty_l
-  | Types.Tid t when t = Initial.pbool -> Tbool
-  | Types.Tid t when t = Initial.pint -> Tint
-  | Types.Tid t when t = Initial.pfloat -> Tfloat
-  | Types.Tid t -> Tclass (qualname_to_class_name t)
-  | Types.Tarray _ ->
+  | Signature.Tprod [] -> Tunit
+  | Signature.Tprod ty_l -> tuple_ty param_env ty_l
+  | Signature.Tid t when t = Initial.pbool -> Tbool
+  | Signature.Tid t when t = Initial.pint -> Tint
+  | Signature.Tid t when t = Initial.pfloat -> Tfloat
+  | Signature.Tid t -> Tclass (qualname_to_class_name t)
+  | Signature.Tarray _ ->
       let rec gather_array t = match t with
-        | Types.Tarray (t,size) ->
+        | Signature.Tarray (t,size) ->
             let tin, s_l = gather_array t in
             tin, (static_exp param_env size)::s_l
         | _ -> ty param_env t, []
       in
       let tin, s_l = gather_array t in
       Tarray (tin, s_l)
-  | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
-  | Types.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
+  | Signature.Tinvalid -> Misc.internal_error "obc2java invalid type"
+  | Signature.Tfuture (_,t) -> Tgeneric (Names.pervasives_qn "Future", [boxed_ty param_env t])
 
 
 and var_dec param_env vd = { vd_type = ty param_env vd.v_type;
@@ -215,7 +215,7 @@ and exp param_env e = match e.e_desc with
 and exp_list param_env e_l = List.map (exp param_env) e_l
 
 and tuple param_env se_l =
-  let t = tuple_ty param_env (List.map (fun e -> Modules.unalias_type e.Types.se_ty) se_l) in
+  let t = tuple_ty param_env (List.map (fun e -> Modules.unalias_type e.Signature.se_ty) se_l) in
   Enew (t, List.map (static_exp param_env) se_l)
 
 
@@ -308,7 +308,7 @@ let rec act_list param_env act_l acts =
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
-    | Obc.Acase (e, c_b_l) when e.e_ty = Types.Tid Initial.pbool ->
+    | Obc.Acase (e, c_b_l) when e.e_ty = Signature.Tid Initial.pbool ->
         (match c_b_l with
           | [] -> acts
           | [(c,b)] when c = Initial.ptrue ->
@@ -410,9 +410,9 @@ let create_async_classe async base_classe =
 
   (* [result] : field used to stock the asynchronous result (only for threadpool)*)
   let field_result, ty_aresult, ty_result, id_result, var_result =
-    let t = b_out |> Signature.types_of_arg_list |> Types.prod in
+    let t = b_out |> Signature.types_of_arg_list |> Signature.prod in
     let ty_result = boxed_ty param_env t in
-    let t = Types.Tfuture((), t) in
+    let t = Signature.Tfuture((), t) in
     let aty = ty param_env t in
     let result_id = Idents.gen_var "obc2java" "result" in
     mk_field ~protection:Pprotected aty result_id, aty, ty_result, result_id, mk_var result_id
@@ -421,14 +421,14 @@ let create_async_classe async base_classe =
 
   (* [node] : field used to store the current asyncnode (only for asyncnode)*)
   let field_node, ty_node, ty_result, aty_result, id_node =
-    let t = b_out |> Signature.types_of_arg_list |> Types.prod in
+    let t = b_out |> Signature.types_of_arg_list |> Signature.prod in
     let ty_result = boxed_ty param_env t in
     let ty_node =
       if b_stateful
       then Tgeneric (async_node, [ty_result])
       else Tgeneric (async_fun, [ty_result])
     in
-    let aty_result = ty param_env (Types.Tfuture((), t)) in
+    let aty_result = ty param_env (Signature.Tfuture((), t)) in
     let id_node = Idents.gen_var "obc2java" "node" in
     mk_field ~protection:Pprotected ty_node id_node, ty_node, ty_result, aty_result, id_node
   in
@@ -605,7 +605,7 @@ let class_def_list classes cd_l =
         in
         (* function to allocate the arrays *)
         let allocate acts vd = match Modules.unalias_type vd.v_type with
-          | Types.Tarray _ ->
+          | Signature.Tarray _ ->
               let t = ty param_env vd.v_type in
               ( Aassgn (Pthis vd.v_ident, Enew_array (t,[])) ):: acts
           | _ -> acts

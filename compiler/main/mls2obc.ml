@@ -16,7 +16,7 @@ open Signature
 open Obc
 open Obc_utils
 open Obc_mapfold
-open Types
+open Signature
 open Clocks
 open Static
 open Initial

@@ -1,11 +1,11 @@
-open Obc
 open Format
 open Pp_tools
-open Types
+open Signature
 open Idents
 open Names
 open Name_utils
 open Global_printer
+open Obc
 
 let print_vd ff vd =
   fprintf ff "@[<v>";

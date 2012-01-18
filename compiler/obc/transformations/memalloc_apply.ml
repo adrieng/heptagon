@@ -1,4 +1,4 @@
-open Types
+open Signature
 open Idents
 open Signature
 open Linearity
@@ -109,7 +109,7 @@ let extvalue funs (env, mut, j) w = match w.w_desc with
   | Warray _ | Wfield _ -> Obc_mapfold.extvalue funs (env, mut, j) w
   | Wvar x ->
     (* replace with representative *)
-    let lhs, _ = lhs funs (env, mut, j) (mk_pattern Types.invalid_type (Lvar x)) in
+    let lhs, _ = lhs funs (env, mut, j) (mk_pattern Signature.invalid_type (Lvar x)) in
     let neww = ext_value_of_pattern lhs in
     { w with w_desc = neww.w_desc }, (env, mut, j)
 

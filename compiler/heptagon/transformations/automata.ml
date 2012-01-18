@@ -11,7 +11,7 @@
 (* TODO deal correctly with [stateful] and [unsafe] *)
 
 open Misc
-open Types
+open Signature
 open Names
 open Idents
 open Heptagon

@@ -13,7 +13,7 @@ open Location
 open Heptagon
 open Hept_utils
 open Hept_mapfold
-open Types
+open Signature
 open Clocks
 open Linearity
 open Format

@@ -36,7 +36,7 @@ let program p =
         raise Errors.Error
     in
     let sig_main = find_value q_main in
-    let ty_main = sig_main.node_outputs |> types_of_arg_list |> Types.prod in
+    let ty_main = sig_main.node_outputs |> types_of_arg_list |> prod in
     let ty_main_args = sig_main.node_params |> types_of_param_list in
     let class_name = Obc2java.fresh_classe (!Compiler_options.simulation_node ^ "_sim") in
     Idents.enter_node class_name;

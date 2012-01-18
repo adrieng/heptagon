@@ -24,7 +24,7 @@ open Hept_utils
 open Global_printer
 open Hept_printer
 open Signature
-open Types
+open Signature
 open Clocks
 open Location
 open Format
@@ -246,7 +246,7 @@ let typing_contract h contract =
 (* check signature causality and update it in the global env *)
 let update_signature h node =
   let set_arg_clock vd ad =
-    { ad with a_clock = Signature.ck_to_sck (ck_repr (Env.find vd.v_ident h)) }
+    { ad with a_clock = Clocks.ck_to_sck (ck_repr (Env.find vd.v_ident h)) }
   in
   let sign = Modules.find_value node.n_name in
   let sign =

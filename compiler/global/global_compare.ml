@@ -7,8 +7,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
+open Signature
 open Clocks
-open Types
 open Idents
 open Misc
 
@@ -46,7 +46,7 @@ let rec static_exp_compare se1 se2 =
 and static_exp_desc_compare sed1 sed2 =
   let c = Pervasives.compare in
   match sed1, sed2 with
-    | Svar cn1, Svar cn2 -> Pervasives.compare cn1 cn2
+    | Svar cn1, Svar cn2 -> c cn1 cn2
     | Sint i1, Sint i2 -> c i1 i2
     | Sfloat f1, Sfloat f2 -> c f1 f2
     | Sbool b1, Sbool b2 -> c b1 b2
@@ -65,6 +65,7 @@ and static_exp_desc_compare sed1 sed2 =
           let cr = c fn1 fn2 in
           if cr <> 0 then cr else static_exp_compare se1 se2 in
         list_compare compare_field fnsel1 fnsel2
+    | Sfun (fn1, sel1), Sfun (fn2, sel2)
     | Sop (fn1, sel1), Sop (fn2, sel2) ->
         let cr = c fn1 fn2 in
         if cr <> 0 then cr else list_compare static_exp_compare sel1 sel2

@@ -14,7 +14,7 @@
 open Misc
 open Names
 open Idents
-open Types
+open Signature
 open Linearity
 open Signature
 open Location

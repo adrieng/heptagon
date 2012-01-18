@@ -38,7 +38,7 @@ let fresh_for = fresh_for "scalarize"
 let act funs () a = match a with
   | Aassgn (p, e) ->
       (match Modules.unalias_type e.e_ty with
-        | Types.Tarray (t, size) ->
+        | Signature.Tarray (t, size) ->
             let new_vd, new_eq, w_from_e = match e.e_desc with
               | Eextvalue w -> [], [], w
               | _ ->

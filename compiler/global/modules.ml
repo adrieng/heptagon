@@ -14,7 +14,7 @@ open Misc
 open Compiler_options
 open Signature
 open Names
-open Types
+open Signature
 
 exception Already_defined
 

@@ -24,7 +24,7 @@ open Minils
 open Global_printer
 open Mls_printer
 open Signature
-open Types
+open Signature
 open Clocks
 open Location
 open Format

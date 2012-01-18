@@ -1,9 +1,9 @@
+open Signature
 open Linearity
 open Idents
 open Names
 open Location
 open Misc
-open Signature
 open Modules
 open Heptagon
 
@@ -133,6 +133,10 @@ end
 let flatten_lin_list l =
   List.fold_right
     (fun arg args -> match arg with Ltuple l -> l@args | a -> a::args ) l []
+
+let rec lin_skeleton lin = function
+  | Signature.Tprod l -> Ltuple (List.map (lin_skeleton lin) l)
+  | _ -> lin
 
 let lin_of_ident x (env, _, _) =
   Env.find x env
@@ -513,7 +517,7 @@ and expect_args env expected_lin_list e_list =
     | [], [] -> []
     | e::e_list, lin::rem_lin_list ->
       (match e.e_ty with
-        | Types.Tprod tyl ->
+        | Signature.Tprod tyl ->
           let linl, lin_list = split_at (List.length tyl) lin_list in
           let lin_list = mk_lin_list e_list lin_list in
           Ltuple linl::lin_list

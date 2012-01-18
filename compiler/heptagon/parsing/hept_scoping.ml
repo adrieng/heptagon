@@ -26,8 +26,6 @@
     op<a1,a2> (a3) ==> op <a1> (a2,a3) ==> op (a1,a2,a3) *)
 
 open Location
-open Signature
-open Types
 open Hept_parsetree
 open Names
 open Idents
@@ -180,30 +178,30 @@ let translate_iterator_type = function
 let rec translate_static_exp se =
   try
     let se_d = translate_static_exp_desc se.se_loc se.se_desc in
-    Types.mk_static_exp Types.Tinvalid ~loc:se.se_loc se_d
+    Signature.mk_static_exp ~loc:se.se_loc Signature.Tinvalid se_d
   with
     | ScopingError err -> message se.se_loc err
 
 and translate_static_exp_desc loc ed =
   let t = translate_static_exp in
   match ed with
-    | Svar (ToQ _) | Sfun (ToQ _) -> assert false (* parsing and static scoping should prevent it *)
-    | Svar v -> Types.Svar (qualify_const v)
-    | Sfun f -> Types.Sfun (qualify_value f)
-    | Sint i -> Types.Sint i
-    | Sfloat f -> Types.Sfloat f
-    | Sbool b -> Types.Sbool b
-    | Sstring s -> Types.Sstring s
-    | Sconstructor c -> Types.Sconstructor (qualify_constrs c)
-    | Sfield c -> Types.Sfield (qualify_field c)
-    | Stuple se_list -> Types.Stuple (List.map t se_list)
-    | Sarray_power (se,sn) -> Types.Sarray_power (t se, List.map t sn)
-    | Sarray se_list -> Types.Sarray (List.map t se_list)
+    | Svar (ToQ _) | Sfun (ToQ _,_) -> assert false (* parsing and static scoping should prevent it *)
+    | Svar v -> Signature.Svar (qualify_const v)
+    | Sfun (f,se_l) -> Signature.Sfun (qualify_value f, List.map t se_l)
+    | Sint i -> Signature.Sint i
+    | Sfloat f -> Signature.Sfloat f
+    | Sbool b -> Signature.Sbool b
+    | Sstring s -> Signature.Sstring s
+    | Sconstructor c -> Signature.Sconstructor (qualify_constrs c)
+    | Sfield c -> Signature.Sfield (qualify_field c)
+    | Stuple se_list -> Signature.Stuple (List.map t se_list)
+    | Sarray_power (se,sn) -> Signature.Sarray_power (t se, List.map t sn)
+    | Sarray se_list -> Signature.Sarray (List.map t se_list)
     | Srecord se_f_list ->
         let qualf (f, se) = (qualify_field f, t se) in
-        Types.Srecord (List.map qualf se_f_list)
-    | Sop (fn, se_list) -> Types.Sop (qualify_value fn, List.map t se_list)
-    | Sasync se -> Types.Sasync (t se)
+        Signature.Srecord (List.map qualf se_f_list)
+    | Sop (fn, se_list) -> Signature.Sop (qualify_value fn, List.map t se_list)
+    | Sasync se -> Signature.Sasync (t se)
 
 let expect_static_exp e = match e.e_desc with
   | Econst se -> translate_static_exp se
@@ -213,13 +211,13 @@ let rec translate_type loc ty =
   try
     (match ty with
       | Tprod ty_list ->
-          Types.Tprod(List.map (translate_type loc) ty_list)
-      | Tid ln -> Types.Tid (qualify_type ln)
+          Signature.Tprod(List.map (translate_type loc) ty_list)
+      | Tid ln -> Signature.Tid (qualify_type ln)
       | Tarray (ty, e) ->
           let ty = translate_type loc ty in
-          Types.Tarray (ty, expect_static_exp e)
-      | Tfuture (a, ty) -> Types.Tfuture (a, translate_type loc ty)
-      | Tinvalid -> Types.Tinvalid
+          Signature.Tarray (ty, expect_static_exp e)
+      | Tfuture (a, ty) -> Signature.Tfuture (a, translate_type loc ty)
+      | Tinvalid -> Signature.Tinvalid
     )
   with
     | ScopingError err -> message loc err
@@ -240,7 +238,7 @@ let rec translate_ct loc env ct = match ct with
 let rec translate_exp env e =
   try
     { Heptagon.e_desc = translate_desc e.e_loc env e.e_desc;
-      Heptagon.e_ty = Types.invalid_type;
+      Heptagon.e_ty = Signature.invalid_type;
       Heptagon.e_linearity = Linearity.Ltop;
       Heptagon.e_level_ck = Clocks.Cbase;
       Heptagon.e_ct_annot = Misc.optional (translate_ct e.e_loc env) e.e_ct_annot;
@@ -420,7 +418,7 @@ let rec translate_params env p_l =
     let pty = match p.p_type with
       | Ttype t ->
           let t = translate_type p.p_loc t in
-          safe_add p.p_loc add_const name (Signature.mk_const_def t (dummy_static_exp t));
+          safe_add p.p_loc add_const name (Signature.mk_const_def t (Signature.dummy_static_exp t));
           Signature.Ttype t
       | Tsig s ->
           (* this add the signature to the global env, with localqn name. *)

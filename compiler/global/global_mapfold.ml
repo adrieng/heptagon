@@ -1,6 +1,6 @@
 open Misc
 open Errors
-open Types
+open Signature
 open Signature
 open Clocks
 open Idents

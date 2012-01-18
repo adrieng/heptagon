@@ -18,7 +18,7 @@ open Static
 open Format
 open Global_printer
 open Pp_tools
-open Types
+open Signature
 open Linearity
 open Signature
 open Heptagon
@@ -78,13 +78,8 @@ let print_ct_annot ff = function
   | None -> ()
   | Some ct -> fprintf ff " :: %a" print_ct ct
 
-let rec print_params ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<"","">>") l
 
-and print_node_params ff l =
-  fprintf ff "@[<2>%a@]" (print_list_r print_param "<<"","">>") l
-
-and print_exp_tuple ff l =
+let rec print_exp_tuple ff l =
   fprintf ff "@[<2>(%a)@]" (print_list_r print_exp """,""") l
 
 and print_vd_tuple ff l =
@@ -347,7 +342,7 @@ let print_node ff
       n_params = params } =
   fprintf ff "@[node %a%a%a@ returns %a@]@\n%a%a@[<v2>let@ %a@]@\ntel@]@\n@."
     print_qualname n
-    print_node_params params
+    print_sig_params params
     print_vd_tuple ni
     print_vd_tuple no
     (print_opt print_contract) contract

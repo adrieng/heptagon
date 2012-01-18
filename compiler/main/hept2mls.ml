@@ -15,7 +15,7 @@ open Names
 open Name_utils
 open Idents
 open Static
-open Types
+open Signature
 open Clocks
 open Format
 

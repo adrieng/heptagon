@@ -6,7 +6,7 @@ open Names
 open Idents
 open Signature
 open Static
-open Types
+open Signature
 open Clocks
 open Misc
 

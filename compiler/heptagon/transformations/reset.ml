@@ -14,7 +14,7 @@ open Misc
 open Idents
 open Heptagon
 open Hept_utils
-open Types
+open Signature
 open Initial
 
 (* We introduce an initialization variable for each reset block  *)
