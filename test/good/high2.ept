@@ -1,0 +1,34 @@
+node f<<n:int>>(x :int^n) returns (y :int^n)
+let
+  y = ((x[8])^n) fby x
+tel
+
+(*
+node g<<val node f (x :int^n) returns (y:int^n);>> (x :int^n) returns (y :int^n)
+let
+  y = f(x)
+tel
+
+node g<<val node f (int^n) returns (int^n)>> (x :int^n) returns (y :int^n)
+let
+  y = f(x)
+tel
+*)
+
+node g<<n:int;val node h (int^n) returns (int^n) >> (x :int^n) returns (y :int^n)
+let
+  y = h(x)
+tel
+
+
+
+node gg<<n:int>> (x:int^n) returns (y:int^n)
+let
+  y = g<< n, f<<n>> >> (x)
+tel
+
+
+node main(x:int^3) returns (y:int^3)
+let
+  y = gg<<3>>(x)
+tel

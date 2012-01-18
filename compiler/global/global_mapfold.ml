@@ -32,8 +32,11 @@ and static_exp_desc_it funs acc sd =
   with Fallback -> static_exp_desc funs acc sd
 
 and static_exp_desc funs acc sd = match sd with
-  | Sfun _ | Svar _ | Sint _ | Sfloat _
+  | Svar _ | Sint _ | Sfloat _
   | Sbool _ | Sstring _ | Sconstructor _ | Sfield _ -> sd, acc
+  | Sfun (f, se_l) ->
+      let se_l, acc = mapfold (static_exp_it funs) acc se_l in
+      Sfun (f, se_l), acc
   | Stuple se_l ->
       let se_l, acc = mapfold (static_exp_it funs) acc se_l in
       Stuple se_l, acc

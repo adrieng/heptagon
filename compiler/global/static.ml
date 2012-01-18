@@ -57,7 +57,7 @@ let message exn =
 
 
 
-let apply_subst_funs env =
+let funs_apply_subst env =
   let stexp_desc funs () = function
     | Svar ln ->
       begin try
@@ -70,12 +70,12 @@ let apply_subst_funs env =
 
 (** [apply_subst_se env se] apply the substitution given by env to se. *)
 let apply_subst_se env se =
-  let se, _ = Global_mapfold.static_exp_it (apply_subst_funs env) () se in
+  let se, _ = Global_mapfold.static_exp_it (funs_apply_subst env) () se in
   se
 
 (** [apply_subst_ty env t] apply the substitution given by env to t. *)
 let apply_subst_ty env t =
-  let t, _ = Global_mapfold.ty_it (apply_subst_funs env) () t in
+  let t, _ = Global_mapfold.ty_it (funs_apply_subst env) () t in
   t
 
 
@@ -144,6 +144,10 @@ let apply_op partial loc op se_list =
     Otherwise evaluate in a best effort manner. *)
 let rec eval_core partial se =
   let stexp_desc funs loc = function
+    | Svar ({qual = LocalModule _} as ln) ->
+        if partial
+        then raise Errors.Fallback
+        else raise (Partial_evaluation (Unknown_param ln, se.se_loc))
     | Svar ln ->
         (try (* try to find in global const env *)
            let cd = find_const ln in

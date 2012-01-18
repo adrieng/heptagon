@@ -454,7 +454,7 @@ _simple_exp:
 /* TODO : conflict with Eselect_dyn and or const */
 ;
 
-node_name:
+%inline node_name:
   | a=async q=qualname c=call_params { mk_app (Enode q) a c false }
   /* inlined can't be async */
   | INLINED q=qualname c=call_params { mk_app (Enode q) None c true }
@@ -477,6 +477,7 @@ _exp:
   /* node call*/
   | n=node_name LPAREN args=exps RPAREN
       { Eapp(n, args) }
+  | q=qualname DOUBLE_LESS p=array_exp_list DOUBLE_GREATER { Esfun (q,p) }
   | SPLIT n=ident LPAREN e=exp RPAREN
       { Esplit(n, e) }
   | BANG e=exp
@@ -554,9 +555,9 @@ _exp:
 
 
 
-call_params:
+%inline call_params:
   | /* empty */ { [] }
-  | DOUBLE_LESS array_exp_list DOUBLE_GREATER { $2 }
+  | DOUBLE_LESS a=array_exp_list DOUBLE_GREATER { a }
 ;
 
 %inline async:

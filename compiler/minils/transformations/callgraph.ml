@@ -38,10 +38,9 @@ end
 
 module Param_instances :
 sig
-  type key = private static_exp (** Fully instantiated param *)
+  type key = (*private*) static_exp (** Fully instantiated param *)
   type env = key QualEnv.t
-  val instantiate_params : env -> static_exp list -> key list
-  val instantiate_node : env -> QualEnv.key -> QualEnv.key
+  val instantiate_node : env -> QualEnv.key -> static_exp list -> QualEnv.key * key list
   val get_node_instances : QualEnv.key -> key list list
   val add_node_instance : QualEnv.key -> key list -> unit
   val build : param list -> key list -> env
@@ -56,16 +55,14 @@ struct
 
   (** An instance is a list of instantiated params *)
   type instance = key list
-  (** two instances are equal if the desc of keys are equal *)
-  let compare_instances =
-    let compare se1 se2 = compare se1.se_desc se2.se_desc in
-    Misc.list_compare compare
+  
+  let compare_instance x y = list_compare Global_compare.static_exp_compare x y
 
   module S = (** Instances set *)
     Set.Make(
       struct
         type t = instance
-        let compare = compare_instances
+        let compare = compare_instance
       end)
 
   module M = (** Map instance to its instantiated node *)
@@ -74,7 +71,7 @@ struct
         type t = qualname * instance
         let compare (l1,i1) (l2,i2) =
           let cl = compare l1 l2 in
-          if cl = 0 then compare_instances i1 i2 else cl
+          if cl = 0 then compare_instance i1 i2 else cl
       end)
 
   (** Maps a couple (node name, params) to the name of the instantiated node *)
@@ -84,27 +81,26 @@ struct
   let nodes_instances = ref QualEnv.empty
 
   (** Instantiate the static parameters to create an [instance]. *)
-  let instantiate_params m se_l =
+  let apply_subst_params m se_l =
     try List.map (fun s -> eval (apply_subst_se m s)) se_l
     with Errors.Error ->
       Error.message no_location (Error.Epartial_evaluation se_l)
 
-  (** Instantiate node names *)
-  let instantiate_node m n = match n.qual with
+  (** Instantiate node, should correctly deal with partial application. *)
+  let rec instantiate_node m n params = match n.qual with
     | LocalModule _->
         (match (QualEnv.find n m).se_desc with
-          | Sfun n -> n
+          | Sfun (n,se_l) -> n, apply_subst_params m (se_l@params) (* concatenate the static args *)
           | _ -> Misc.internal_error "callgraph")
-    | _ -> n
+    | _ -> n, apply_subst_params m params
 
   (** @return the name of the node corresponding to the instance of
       [ln] with the static parameters [params]. *)
-  let node_for_params_call m ln params =
-    let ln = instantiate_node m ln in
-    let params = instantiate_params m params in
+  and node_for_params_call m ln params =
+    let ln, params = instantiate_node m ln params in
     match params with
     | [] -> ln
-    | _ -> let ln = M.find (ln,params) !nodes_names in ln
+    | _ -> M.find (ln,params) !nodes_names
 
   (** Generates a fresh name for the the instance of
       [ln] with the static parameters [params] and stores it. *)
@@ -160,11 +156,15 @@ struct
                 (try QualEnv.find q m
                  with Not_found -> Misc.internal_error "callgraph")
               | _ -> se)
-        | Sfun q ->
+        | Sfun (q,se_l) ->
             (match q.qual with
               | LocalModule _ ->
-                  (try QualEnv.find q m
-                   with Not_found -> Misc.internal_error "callgraph")
+                  (try
+                    assert (se_l = []); (* TODO better error handling,
+                                          it prevents q to be a partial application...
+                                          could be accepted, but require to modify the typing *)
+                    QualEnv.find q m
+                    with Not_found -> Misc.internal_error "callgraph")
               | _ -> se)
         | _ -> se in
       se, m
@@ -194,11 +194,9 @@ struct
 
     let node_dec_instance n params =
       Idents.enter_node n.n_name;
-      let global_funs =
-        { Global_mapfold.defaults with static_exp = static_exp } in
-      let funs =
-        { Mls_mapfold.defaults with edesc = edesc;
-                                    global_funs = global_funs } in
+      let global_funs = { Global_mapfold.defaults with static_exp = static_exp } in
+      let funs = { Mls_mapfold.defaults with edesc = edesc;
+                                             global_funs = global_funs } in
       let m = build n.n_params params in
       let n, _ = Mls_mapfold.node_dec_it funs m n in
 
@@ -292,12 +290,11 @@ let node_by_longname node =
     corresponding params (static parameters appear as free variables). *)
 let collect_node_calls ln =
   let add_called_node ln params acc =
-    match params with
-      | [] -> acc
-      | _ ->
-          (match ln with
-            | { qual = Pervasives } -> acc
-            | _ -> (ln, params)::acc)
+  (* do not add pervasives, add even without params,*)
+  (* since after substitution, it could be with static params *)
+    match ln with
+      | { qual = Pervasives } -> acc
+      | _ -> (ln, params)::acc
   in
   let edesc _ acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
@@ -330,12 +327,12 @@ let rec call_node (ln, params) =
   Idents.enter_node n.n_name;
   let m = build n.n_params params in
   add_node_instance ln params;
-
   (* Recursively generate instances for called nodes. *)
   let call_list = called_nodes ln in
-  let call_list =
-    List.map (fun (ln, p) -> instantiate_node m ln, instantiate_params m p) call_list
-  in
+  let call_list = List.map (fun (ln, p) -> instantiate_node m ln p) call_list in
+  (* Filters the node which doesn't have static params*)
+  (* since they are already instanciated/compiled *)
+  let call_list = List.filter (fun (_, p) -> p != []) call_list in
   List.iter call_node call_list
 
 let program p =

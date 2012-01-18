@@ -25,6 +25,11 @@
    This scoping set the static params as the first static args :
     op<a1,a2> (a3) ==> op <a1> (a2,a3) ==> op (a1,a2,a3) *)
 
+(* Are also set in the global env the local params :
+   as value (signature) if it is a sig or as a const def.
+   Const def for static args are dummy values since
+   no values are given until application, the correct type is still set.*) 
+
 open Location
 open Hept_parsetree
 open Names
@@ -247,6 +252,7 @@ let rec translate_exp env e =
 
 and translate_desc loc env = function
   | Econst c -> Heptagon.Econst (translate_static_exp c)
+  | Esfun (f,e_l) -> Misc.internal_error "Esfun should already be converted into Sfun"
   | Easync c -> Heptagon.Econst (expect_static_exp c)
   | Evar x -> Heptagon.Evar (Rename.var loc env x)
   | Elast x -> Heptagon.Elast (Rename.last loc env x)
@@ -418,6 +424,7 @@ let rec translate_params env p_l =
     let pty = match p.p_type with
       | Ttype t ->
           let t = translate_type p.p_loc t in
+          (* this add the const to the global env, with localqn name and dummy value *)
           safe_add p.p_loc add_const name (Signature.mk_const_def t (Signature.dummy_static_exp t));
           Signature.Ttype t
       | Tsig s ->

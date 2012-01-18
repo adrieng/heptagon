@@ -91,6 +91,7 @@ and edesc =
   | Econst of static_exp
   | Easync of exp
   | Evar of var_name (* can be a constant_name *)
+  | Esfun of fun_name * exp list (* should become a Sfun *)
   | Elast of var_name
   | Epre of exp option * exp
   | Efby of exp * exp

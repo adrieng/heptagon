@@ -48,6 +48,15 @@ let exp funs local_const e =
                 then Sfun (Q q, [])
                 else Svar (Q q)
               with Not_found -> raise Not_static)
+          | Esfun (ToQ n, se_l) ->
+              (try
+                let is_fun, q = qualify_var local_const n in
+                if not is_fun
+                then assert false (* TODO better error *)
+                else Sfun (Q q, List.map assert_se se_l)
+              with Not_found -> assert false (* TODO better error *))
+          | Esfun (Q f, se_l) ->
+              Sfun (Q f, List.map assert_se se_l)
           | Eapp({ a_op = Earray_fill; a_params = n_list }, [e]) ->
               Sarray_power (assert_se e, List.map assert_se n_list)
           | Eapp({ a_op = Earray }, e_list) ->

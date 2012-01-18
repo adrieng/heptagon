@@ -28,10 +28,10 @@ let rec _print_modul ?(full=false) ff m = match m with
 let print_full_modul ff m = _print_modul ~full:true ff m
 let print_modul ff m = _print_modul ~full:false ff m
 
-let _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
+let rec _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
   | Pervasives -> print_name ff n
   | _ when q = g_env.current_mod && not full -> print_name ff n
-  | LocalModule m -> fprintf ff "__local__%a%a" (_aux_print_modul ~full:full) m print_name n
+  | LocalModule m -> print_name ff n
   | _ -> fprintf ff "%a%a" (_aux_print_modul ~full:full) q print_name n
 
 

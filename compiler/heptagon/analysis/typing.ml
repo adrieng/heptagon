@@ -13,7 +13,6 @@ open Names
 open Name_utils
 open Idents
 open Location
-open Signature
 open Modules
 open Initial
 open Static
@@ -274,9 +273,7 @@ let typ_of_name h x =
   with
       Not_found -> error (Eundefined(name x))
 
-let typ_of_qual x =
-  Format.eprintf "ty of %a@." Global_printer.print_full_qualname x;
-  (Modules.find_const x).Signature.c_type
+let typ_of_qual x = (Modules.find_const x).Signature.c_type
 
 let sig_of_qual f = Modules.find_value f
 
@@ -291,7 +288,7 @@ let desc_of_ty = function
   | Tid ty_name -> find_type ty_name
   | _  -> Tabstract
 let set_of_constr = function
-  | Tabstract | Tstruct _ | Talias _ -> assert false
+  | Tabstract | Tstruct _ | Talias _ -> Misc.internal_error "set_of_constr"
   | Tenum tag_list -> List.fold_right QualSet.add tag_list QualSet.empty
 
 let build_subst names values =
@@ -481,6 +478,24 @@ and unify t1 t2 =
   let ut2 = unalias_type t2 in
   try _unify ut1 ut2 with Unify -> error (Etype_clash(t1, t2))
 
+and unify_pty pt1 pt2 = match pt1, pt2 with
+  | Ttype t1, Ttype t2 -> unify t1 t2
+  | Tsig n1, Tsig n2 -> unify_sig n1 n2
+  | _ -> raise Unify
+
+and unify_arg a1 a2 =
+  unify a1.a_type a2.a_type;
+  if a1.a_linearity != a2.a_linearity then raise Unify; (* TODO better errors *)
+  if a1.a_is_memory != a2.a_is_memory then raise Unify (* TODO better errors *)
+
+and unify_sig n1 n2 =
+  List.iter2 unify_arg n1.node_inputs n2.node_inputs;
+  List.iter2 unify_arg n1.node_outputs n2.node_outputs;
+  if n1.node_stateful != n2.node_stateful then raise Unify; (* TODO better errors *)
+  if n1.node_unsafe != n2.node_unsafe then raise Unify; (* TODO better errors *)
+  List.iter2 (fun p1 p2 -> unify_pty p1.p_type p2.p_type) n1.node_params n2.node_params
+  (* TODO do something with the constraints ! *)
+
 
 (** [check_type t] checks that t exists *)
 and check_type = function
@@ -500,6 +515,8 @@ and typing_static_exp se =
     | Sbool v-> Sbool v, Tid Initial.pbool
     | Sfloat v -> Sfloat v, Tid Initial.pfloat
     | Sstring v -> Sstring v, Tid Initial.pstring
+(*    | Svar {qual = LocalModule _ } -> (* static param of the node *)
+        se.se_desc, se.se_ty *)
     | Svar ln -> Svar ln, typ_of_qual ln
     | Sfun _ -> Misc.internal_error "cannot type a Sfun"
     | Sconstructor c -> Sconstructor c, find_constrs c
@@ -1026,22 +1043,14 @@ and typing_args h expected_ty_list e_list =
 
 and typing_node_params params_sig params =
   let aux p_sig p = match p_sig.p_type, p.se_desc with
-    | Ttype _, Sfun _ -> raise Errors.Error (* TODO add real typing error *)
+    | Ttype _, Sfun _ -> Misc.internal_error "better typing error" (* TODO add real typing error *)
     | Ttype t, _ -> expect_static_exp t p
     | Tsig n, Sfun (f, se_l) ->
         let n' = find_value f in
-        
         let typed_se_l = typing_node_params n'.node_params se_l in
-        
-        
-        if (n.node_params != [] or n'.node_params != []
-            or n.node_unsafe != n'.node_unsafe
-            or n.node_stateful != n'.node_stateful)
-        then raise Errors.Error; (* TODO add real typing error *)
-        List.iter2 (fun a a' -> unify a.a_type a'.a_type) n.node_inputs n'.node_inputs;
-        List.iter2 (fun a a' -> unify a.a_type a'.a_type) n.node_outputs n'.node_outputs;
-        p
-    | Tsig _, _ -> raise Errors.Error (* TODO add real typing error *)
+        unify_sig n {n' with node_params = []}; (* for now prevent partial application *)
+        {p with se_desc = Sfun (f, typed_se_l)}
+    | Tsig _, _ -> Misc.internal_error "better typing error" (* TODO add real typing error *)
   in
   List.map2 aux params_sig params
 
@@ -1237,11 +1246,16 @@ let typing_contract h contract =
                c_controllables = typed_c }, h
 
 
-let rec check_params_type ps=
+let rec check_params_type ps =
   let check_param p =
+    let name = local_qn p.p_name in
     let ty = match p.p_type with
-      | Ttype t -> Ttype (check_type t)
-      | Tsig n -> Tsig (typing_signature n (local_qn p.p_name))
+      | Ttype t ->
+          let t = check_type t in
+          let cd = find_const name in
+          replace_const name { cd with Signature.c_type = t };
+          Ttype t
+      | Tsig n -> Tsig (typing_signature n name)
     in
     let p = { p with p_type = ty } in
     let n = local_qn p.p_name in
@@ -1257,9 +1271,12 @@ and typing_signature s n =
   let params = check_params_type s.node_params in
   let inputs = List.map (typing_arg ) s.node_inputs in
   let outputs = List.map (typing_arg ) s.node_outputs in
-  { s with node_params = params;
-           node_inputs = inputs;
-           node_outputs = outputs }
+  let s = { s with node_params = params;
+                   node_inputs = inputs;
+                   node_outputs = outputs }
+  in
+  replace_value n s;
+  s
 
 
 let node ({ n_name = f; n_input = i_list; n_output = o_list;

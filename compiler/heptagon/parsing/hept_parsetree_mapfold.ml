@@ -91,6 +91,9 @@ and edesc funs acc ed = match ed with
   | Econst se ->
       let se, acc = static_exp_it funs acc se in
       Econst se, acc
+  | Esfun (f, se_l) ->
+      let se_l, acc = mapfold (exp_it funs) acc se_l in
+      Esfun (f, se_l), acc
   | Easync e ->
       let e, acc = exp_it funs acc e in
       Easync e, acc

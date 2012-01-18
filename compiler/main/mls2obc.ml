@@ -16,7 +16,6 @@ open Signature
 open Obc
 open Obc_utils
 open Obc_mapfold
-open Signature
 open Clocks
 open Static
 open Initial
@@ -406,7 +405,7 @@ and translate_act map pat
         then ssa_update_record x e1' f e2
         else (
           let copy = Aassgn (x, translate_extvalue_to_exp map e1) in
-          let action = Aassgn (mk_pattern (Types.Tid (Modules.find_field f)) (Lfield (x, f)), e2) in
+          let action = Aassgn (mk_pattern (Tid (Modules.find_field f)) (Lfield (x, f)), e2) in
           [copy; action]
         )
     | Minils.Evarpat n, _ ->
@@ -610,9 +609,9 @@ and translate_iterator map call_context it name_list
   match it with
     | Minils.Imap ->
         let c_list = array_of_input c_list in
-        let ty_list = List.map unarray (Types.unprod ty) in
-        let name_list = array_of_output name_list (Types.unprod ty) in
-        let node_out_ty = Types.prod ty_list in
+        let ty_list = List.map unarray (Signature.unprod ty) in
+        let name_list = array_of_output name_list (Signature.unprod ty) in
+        let node_out_ty = Signature.prod ty_list in
         let v, si, j, action = mk_node_call map call_context
           app loc name_list (p_list@c_list) node_out_ty in
         let v = translate_var_dec v in
@@ -622,9 +621,9 @@ and translate_iterator map call_context it name_list
 
     | Minils.Imapi ->
         let c_list = array_of_input c_list in
-        let ty_list = List.map unarray (Types.unprod ty) in
-        let name_list = array_of_output name_list (Types.unprod ty) in
-        let node_out_ty = Types.prod ty_list in
+        let ty_list = List.map unarray (Signature.unprod ty) in
+        let name_list = array_of_output name_list (Signature.unprod ty) in
+        let node_out_ty = Signature.prod ty_list in
         let v, si, j, action = mk_node_call map call_context
           app loc name_list (p_list@c_list@(List.map mk_evar_int xl)) node_out_ty in
         let v = translate_var_dec v in
@@ -635,11 +634,11 @@ and translate_iterator map call_context it name_list
     | Minils.Imapfold ->
         let (c_list, acc_in) = split_last c_list in
         let c_list = array_of_input c_list in
-        let ty_list = Types.unprod ty in
+        let ty_list = Signature.unprod ty in
         let ty_name_list, _ = Misc.split_last ty_list in
         let (name_list, acc_out) = Misc.split_last name_list in
         let name_list = array_of_output name_list ty_name_list in
-        let node_out_ty = Types.prod (Misc.map_butlast unarray ty_list) in
+        let node_out_ty = Signature.prod (Misc.map_butlast unarray ty_list) in
         let v, si, j, action = mk_node_call map call_context app loc
           (name_list @ [ acc_out ])
           (p_list @ c_list @ [ exp_of_pattern acc_out ])
