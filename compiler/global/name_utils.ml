@@ -18,4 +18,3 @@ let modul_of_string s =
   let q_l = Misc.split_string s "." in
   let q = modul_of_string_list (List.rev q_l) "" in
   q.qual
-

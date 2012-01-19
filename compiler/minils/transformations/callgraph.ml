@@ -153,7 +153,9 @@ struct
         | Svar q ->
             (match q.qual with
               | LocalModule _ -> (* This var is a static parameter, it has to be instanciated *)
-                (try QualEnv.find q m
+                (try
+                  Format.eprintf "rr %a@." (Global_printer.print_qualenv Global_printer.print_static_exp) m;
+                  QualEnv.find q m
                  with Not_found -> Misc.internal_error "callgraph")
               | _ -> se)
         | Sfun (q,se_l) ->

@@ -80,6 +80,8 @@ let java_queue_nb = ref 1
 
 let full_type_info = ref false
 
+let full_qual_info = ref false
+
 let stateful_info = ref false
 
 let full_name = ref false
@@ -157,6 +159,7 @@ and doc_target =
   "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
   ^ " java or z3z)"
 and doc_full_type_info = "\t\t\tPrint full type information"
+and doc_full_qual_info = "\t\t\tPrint full qualifier information"
 and doc_stateful_info = "\t\tPrint stateful information"
 and doc_full_name = "\t\tPrint full variable name information"
 and doc_target_path =

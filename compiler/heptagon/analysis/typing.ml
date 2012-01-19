@@ -652,7 +652,7 @@ let rec typing h e =
           let ty_desc = find_value f in
           let op, expected_ty_list, result_ty_list = kind f ty_desc in
           let node_params =
-            List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
+            List.map (fun { p_name = n } -> local_qn_of f n) ty_desc.node_params in
           let m = build_subst node_params params in
           let expected_ty_list =
             List.map (apply_subst_ty m) expected_ty_list in

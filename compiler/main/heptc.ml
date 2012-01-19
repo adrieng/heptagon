@@ -121,6 +121,7 @@ let main () =
         "-nocaus", Arg.Clear causality, doc_nocaus;
         "-noinit", Arg.Clear init, doc_noinit;
         "-fti", Arg.Set full_type_info, doc_full_type_info;
+        "-fqi", Arg.Set full_qual_info, doc_full_qual_info;
         "-statefuli", Arg.Set stateful_info, doc_stateful_info;
         "-fname", Arg.Set full_name, doc_full_name;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;

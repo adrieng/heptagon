@@ -9,8 +9,14 @@ open Pp_tools
 
 
 let rec _aux_print_modul ?(full=false) ff m = match m with
-  | Pervasives -> ()
-  | LocalModule _ -> ()
+  | Pervasives ->
+      if !Compiler_options.full_qual_info
+      then fprintf ff "_Pervasives."
+      else ()
+  | LocalModule m ->
+      if !Compiler_options.full_qual_info
+      then fprintf ff "_local_%a" (_aux_print_modul ~full:full) m
+      else ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a." print_name m
   | QualModule { qual = m; name = n } ->
@@ -18,8 +24,14 @@ let rec _aux_print_modul ?(full=false) ff m = match m with
 
 (** Prints a [modul] with a [.] at the end when not empty *)
 let rec _print_modul ?(full=false) ff m = match m with
-  | Pervasives -> ()
-  | LocalModule _ -> ()
+  | Pervasives ->
+      if !Compiler_options.full_qual_info
+      then fprintf ff "_Pervasives"
+      else ()
+  | LocalModule m ->
+      if !Compiler_options.full_qual_info
+      then fprintf ff "_local_%a" (_aux_print_modul ~full:full) m
+      else ()
   | _ when m = g_env.current_mod && not full -> ()
   | Module m -> fprintf ff "%a" print_name m
   | QualModule { qual = m; name = n } ->
@@ -31,12 +43,20 @@ let print_modul ff m = _print_modul ~full:false ff m
 let rec _print_qualname ?(full=false) ff { qual = q; name = n} = match q with
   | Pervasives -> print_name ff n
   | _ when q = g_env.current_mod && not full -> print_name ff n
-  | LocalModule m -> print_name ff n
+  | LocalModule m ->
+      if !Compiler_options.full_qual_info
+      then fprintf ff "_local_%a%a" (_aux_print_modul ~full:full) m print_name n
+      else print_name ff n
   | _ -> fprintf ff "%a%a" (_aux_print_modul ~full:full) q print_name n
 
 
-let print_qualname ff qn = _print_qualname ~full:false ff qn
+let print_qualname ff qn = _print_qualname ~full:(!Compiler_options.full_qual_info) ff qn
 let print_full_qualname ff qn = _print_qualname ~full:true ff qn
+
+let print_qualenv print_value ff env =
+  fprintf ff "@[<2>";
+  QualEnv.iter (fun k v -> fprintf ff "%a -> %a@ " print_full_qualname k print_value v) env;
+  fprintf ff "@]"
 
 let print_shortname ff {name = n} = print_name ff n
 
