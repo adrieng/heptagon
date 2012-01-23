@@ -251,7 +251,12 @@ let number_uses iv uses =
   try
     IvarEnv.find iv uses
   with
-    | Not_found -> 0
+    | Not_found ->
+        (* add one use for memories without any use to make sure they interfere
+           with other memories and outputs. *)
+        (match iv with
+          | Ivar x when World.is_memory x -> 1
+          | _ -> 0)
 
 let add_uses uses iv env =
   let ivars = all_ivars IvarSet.empty iv (World.ivar_type iv) in
