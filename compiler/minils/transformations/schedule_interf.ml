@@ -140,6 +140,9 @@ let node _ () f =
     f, ()
 
 let program p =
+  let mall = !Compiler_options.interf_all in
+  (* Compiler_options.interf_all := false; *)
   let funs = { Mls_mapfold.defaults with Mls_mapfold.node_dec = node } in
   let p, () = Mls_mapfold.program_it funs () p in
-    p
+  Compiler_options.interf_all := mall;
+  p

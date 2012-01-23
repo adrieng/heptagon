@@ -134,7 +134,7 @@ let check_options () =
     if !do_linear_typing then err "Unable to activate linear typing with strict SSA activated."
   )
 
-
+let interf_all = ref false
 
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
@@ -170,3 +170,4 @@ and doc_memalloc_only = "\tEnable memory allocation"
 and doc_linear_only = "\t\tEnable linear annotations"
 and doc_interf_scheduler = "\tUse the old scheduler"
 and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
+and doc_interf_all = "\t\tPerform memory allocation on all types"

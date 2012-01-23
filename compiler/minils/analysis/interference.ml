@@ -142,13 +142,14 @@ module World = struct
           Signature.field_assoc f fields
 
   let is_optimized_ty ty =
-    match Modules.unalias_type ty with
-      | Tarray _ -> true
-      | Tid n ->
+    !Compiler_options.interf_all ||
+      match Modules.unalias_type ty with
+        | Tarray _ -> true
+        | Tid n ->
           (match Modules.find_type n with
             | Signature.Tstruct _ -> true
             | _ -> false)
-      | _ -> false
+        | _ -> false
 
   let is_optimized iv =
     is_optimized_ty (ivar_type iv)
