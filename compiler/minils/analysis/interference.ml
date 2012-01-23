@@ -289,7 +289,7 @@ let compute_live_vars eqs =
 
 
 let rec disjoint_clock is_mem ck1 ck2 =
-  match ck1, ck2 with
+  match Clocks.ck_repr ck1, Clocks.ck_repr ck2 with
     | Cbase, Cbase -> false
     | Con(ck1, c1, n1), Con(ck2,c2,n2) ->
         if ck1 = ck2 & n1 = n2  & c1 <> c2 & not is_mem then
