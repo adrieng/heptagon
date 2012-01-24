@@ -35,6 +35,23 @@ module TyEnv =
       let compare = Global_compare.type_compare
     end)
 
+(** @return whether [ty] corresponds to a record type. *)
+let is_record_type ty = match ty with
+  | Tid n ->
+      (match Modules.find_type n with
+        | Tstruct _ -> true
+        | _ -> false)
+  | _ -> false
+
+let is_array_or_struct ty =
+  match Modules.unalias_type ty with
+    | Tarray _ -> true
+    | Tid n ->
+        (match Modules.find_type n with
+          | Signature.Tstruct _ -> true
+          | _ -> false)
+    | _ -> false
+
 module InterfRead = struct
   exception Const_extvalue
 
@@ -142,14 +159,7 @@ module World = struct
           Signature.field_assoc f fields
 
   let is_optimized_ty ty =
-    !Compiler_options.interf_all ||
-      match Modules.unalias_type ty with
-        | Tarray _ -> true
-        | Tid n ->
-          (match Modules.find_type n with
-            | Signature.Tstruct _ -> true
-            | _ -> false)
-        | _ -> false
+    !Compiler_options.interf_all || is_array_or_struct ty
 
   let is_optimized iv =
     is_optimized_ty (ivar_type iv)
@@ -353,20 +363,27 @@ let rec add_interferences_from_list force vars =
 let add_interferences live_vars =
   List.iter (fun (_, vars) -> add_interferences_from_list false vars) live_vars
 
+(** Spill non linear inputs. *)
 let spill_inputs f =
   let spilled_inp = List.filter (fun vd -> not (is_linear vd.v_linearity)) f.n_input in
   let spilled_inp = List.fold_left
     (fun s vd -> IvarSet.add (Ivar vd.v_ident) s) IvarSet.empty spilled_inp in
-    IvarSet.iter remove_from_ivar (all_ivars_set spilled_inp)
+  let spilled_inp = all_ivars_set spilled_inp in
+    IvarSet.iter remove_from_ivar spilled_inp
 
-
-(** @return whether [ty] corresponds to a record type. *)
-let is_record_type ty = match ty with
-  | Tid n ->
-      (match Modules.find_type n with
-        | Tstruct _ -> true
-        | _ -> false)
-  | _ -> false
+(** If we optimize all types, we need to spill outputs and memories so
+    that register allocation by the C compiler is not disturbed. *)
+let spill_mems_outputs f =
+  let add_output s vd =
+    if not (is_array_or_struct vd.v_type) then IvarSet.add (Ivar vd.v_ident) s else s
+  in
+  let add_memory iv s =
+    if not (is_array_or_struct (World.ivar_type iv)) then IvarSet.add iv s else s
+  in
+  let spilled_vars = List.fold_left add_output IvarSet.empty f.n_output in
+  let spilled_vars = IvarSet.fold add_memory spilled_vars !World.memories in
+  let spilled_vars = all_ivars_set spilled_vars in
+  IvarSet.iter remove_from_ivar spilled_vars
 
 (** [filter_vars l] returns a list of variables whose fields appear in
     a list of ivar.*)
@@ -516,6 +533,9 @@ let build_interf_graph f =
     add_records_field_interferences ();
     (* Splill inputs that are not modified *)
     spill_inputs f;
+    (* Spill outputs and memories that are not arrays or struts*)
+    if !Compiler_options.interf_all then
+      spill_mems_outputs f;
 
     (* Return the graphs *)
     !World.igs
