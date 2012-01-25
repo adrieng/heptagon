@@ -46,7 +46,7 @@ let compile_program p =
   let p = pass "Reset" true Reset.program p pp in
 
   (* Remove switch statements *)
-  let p = pass "switch" true Switch.program p pp in
+  let p = pass "Switch" true Switch.program p pp in
 
   (* Every *)
   let p = pass "Every" true Every.program p pp in
