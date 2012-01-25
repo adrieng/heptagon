@@ -60,6 +60,10 @@ module InterfRead = struct
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
+  let rec vars_ct acc ct = match ct with
+    | Ck ck -> vars_ck acc ck
+    | Cprod ct_list -> List.fold_left vars_ct acc ct_list
+
   let rec ivar_of_extvalue w = match w.w_desc with
     | Wvar x -> Ivar x
     | Wfield(w, f) -> Ifield (ivar_of_extvalue w, f)
@@ -100,7 +104,7 @@ module InterfRead = struct
       | Eiterator (_, _, _, _, _, Some x) -> IvarSet.add (Ivar x) acc
       | _ -> acc
     in
-      e, vars_ck acc e.e_base_ck
+      e, vars_ct acc e.e_ct
 
   let rec vars_pat acc = function
     | Evarpat x -> IvarSet.add (Ivar x) acc

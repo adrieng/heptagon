@@ -20,9 +20,8 @@ open Minils
    indeed if it was Con (Cvar,c,x) x would have to be defined with an expression of clock Cvar.*)
 
 let eq _ acc eq =
-  let e = eq.eq_rhs in
-  let _ = match ck_repr e.e_base_ck with
-    | Cvar {contents = Cindex _} -> unify_ck e.e_base_ck e.e_level_ck
+  let _ = match ck_repr eq.eq_base_ck with
+    | Cvar {contents = Cindex _} -> unify_ck eq.eq_base_ck eq.eq_rhs.e_level_ck
     | _ -> ()
   in
   eq,acc (* no recursion since in minils exps are not recursive *)

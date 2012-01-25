@@ -173,10 +173,10 @@ and print_tag_w_list ff tag_w_list =
   fprintf ff "@[%a@]" (print_list print_handler """""") tag_w_list
 
 
-and print_eq ff { eq_lhs = p; eq_rhs = e } =
+and print_eq ff { eq_lhs = p; eq_rhs = e; eq_base_ck = base_ck } =
   if !Compiler_options.full_type_info
   then fprintf ff "@[<2>%a :: %a =@ %a@]"
-    print_pat p  print_ck e.e_base_ck  print_exp e
+    print_pat p  print_ck base_ck  print_exp e
   else fprintf ff "@[<2>%a =@ %a@]" print_pat p  print_exp e
 
 

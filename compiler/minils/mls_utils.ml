@@ -156,7 +156,7 @@ struct
 
   let antidep { eq_rhs = e } = is_fby e
 
-  let clock { eq_rhs = e } = e.e_base_ck
+  let clock eq = eq.eq_base_ck
 
   let head ck =
     let rec headrec ck l =

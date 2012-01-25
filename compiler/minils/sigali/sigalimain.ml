@@ -184,13 +184,13 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
 
 let rec translate_eq env f
     (acc_dep,acc_states,acc_init,acc_inputs,acc_ctrl,acc_cont,acc_eqs)
-    { Minils.eq_lhs = pat; Minils.eq_rhs = e } =
+    { Minils.eq_lhs = pat; Minils.eq_rhs = e; eq_base_ck = ck } =
 
   let prefix = f ^ "_" in
 
   let prefixed n = prefix ^ n in
 
-  let { Minils.e_desc = desc; Minils.e_base_ck = ck } = e in
+  let { Minils.e_desc = desc } = e in
   match pat, desc with
   | Minils.Evarpat(n), Minils.Efby(opt_c, e) ->
       let sn = prefixed (name n) in

@@ -211,7 +211,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let ed, add_when, when_count, class_id_list = decompose e' in
         ed, (fun e' -> { e with e_desc = Ewhen (add_when e', cn, x) }), when_count + 1,
         class_ref_of_var is_input
-          (mk_extvalue ~clock:e'.e_base_ck ~ty:Initial.tbool
+          (mk_extvalue ~clock:(Clocks.first_ck e'.e_ct) ~ty:Initial.tbool
                        ~linearity:Linearity.Ltop (Wvar x)) x
         :: class_id_list
 
@@ -219,7 +219,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let class_id_list, clause_list = mapfold_right add_clause clause_list [] in
         let x_id =
           class_ref_of_var is_input
-            (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool
+            (mk_extvalue ~clock:(Clocks.first_ck e.e_ct) ~ty:Initial.tbool
                          ~linearity:Linearity.Ltop (Wvar x)) x
         in
         Emerge (dummy_var, clause_list), id, 0, x_id :: class_id_list
@@ -363,12 +363,11 @@ let rec reconstruct ((tenv, cenv) as env) mapping =
         Misc.take (List.length repr.er_children - repr.er_when_count) repr.er_children in
 
       let ed = reconstruct_exp_desc mapping repr.er_head.e_desc repr.er_children in
-      let ck = reconstruct_clock mapping repr.er_head.e_base_ck in
       let level_ck =
         reconstruct_clock mapping repr.er_head.e_level_ck in (* not strictly needed, done for
                                                             consistency reasons *)
       let ct = reconstruct_clock_type mapping repr.er_head.e_ct in
-      { repr.er_head with e_desc = ed; e_base_ck = ck; e_level_ck = level_ck; e_ct = ct; } in
+      { repr.er_head with e_desc = ed; e_level_ck = level_ck; e_ct = ct; } in
 
     let e = repr.er_add_when e in
 
@@ -577,7 +576,7 @@ let rec fix_output_var_dec mapping vd (seen, equs, vd_list) =
       mk_equation false
         (Evarpat new_id)
         (mk_exp new_clock vd.v_type ~ct:(Ck new_clock)
-           ~ck:new_clock ~linearity:Linearity.Ltop (Eextvalue w))
+            ~linearity:Linearity.Ltop (Eextvalue w))
     in
     (seen, new_eq :: equs, new_vd :: vd_list)
   else

@@ -7,9 +7,6 @@ open Misc
 open Sgraph
 
 
-let eq_clock eq =
-  eq.eq_rhs.e_base_ck
-
 module Cost =
 struct
   open Interference_graph
@@ -76,7 +73,10 @@ struct
             min_same_ck (min_eq, min_c, min_same_ctrl) l
     in
     let eqs_wcost =
-      List.map (fun eq -> (eq, cost eq, Clocks.same_control (eq_clock eq) ck)) rem_eqs in
+      List.map
+        (fun eq -> (eq, cost eq, Clocks.same_control (Mls_utils.Vars.clock eq) ck))
+        rem_eqs
+    in
     let (eq, c, same_ctrl), eqs_wcost = Misc.assert_1min eqs_wcost in
     min_same_ck (eq, c, same_ctrl) eqs_wcost
 end
@@ -125,7 +125,7 @@ let schedule eq_list inputs node_list =
         let rem_eqs = free_eqs node_list in
         (* compute new costs for the next step *)
         let costs = Cost.update_cost eq uses costs in
-          schedule_aux rem_eqs (eq::sched_eqs) node_list (eq_clock eq) costs
+          schedule_aux rem_eqs (eq::sched_eqs) node_list (Mls_utils.Vars.clock eq) costs
   in
   let costs = Cost.init_cost uses inputs in
   let rem_eqs = free_eqs node_list in

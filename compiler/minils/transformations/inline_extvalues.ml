@@ -98,14 +98,16 @@ let form_new_extvalue_node nd =
   let rec form_new_extvalue e =
     try
       let se = form_new_const e in
-      mk_extvalue ~ty:e.e_ty ~linearity:e.e_linearity ~clock:e.e_base_ck ~loc:e.e_loc (Wconst se)
+      mk_extvalue ~ty:e.e_ty ~linearity:e.e_linearity
+        ~clock:(Clocks.first_ck e.e_ct) ~loc:e.e_loc (Wconst se)
     with Errors.Fallback ->
       let w_d = match e.e_desc with
         | Eextvalue w -> w.w_desc
         | Ewhen (e, v, x) -> Wwhen (form_new_extvalue e, v, x)
         | _ -> raise Errors.Fallback
       in
-      mk_extvalue ~ty:e.e_ty ~linearity:e.e_linearity ~clock:e.e_base_ck ~loc:e.e_loc w_d
+      mk_extvalue ~ty:e.e_ty ~linearity:e.e_linearity
+        ~clock:(Clocks.first_ck e.e_ct) ~loc:e.e_loc w_d
 
   and form_new_const e =
     let se_d = match e.e_desc with
@@ -135,7 +137,7 @@ let form_new_extvalue_node nd =
 
   and form_new_const_w w =
     let mk_exp w =
-      mk_exp w.w_ck w.w_ty ~linearity:w.w_linearity ~ck:w.w_ck ~ct:(Ck w.w_ck) (Eextvalue w) in
+      mk_exp w.w_ck w.w_ty ~linearity:w.w_linearity ~ct:(Ck w.w_ck) (Eextvalue w) in
     form_new_const (mk_exp w)
 
   and form_new_extvalue_eq _ n eq = match eq.eq_rhs.e_desc with
