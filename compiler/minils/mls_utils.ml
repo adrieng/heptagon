@@ -236,6 +236,11 @@ let ident_list_of_pat pat =
   in
   List.rev (f [] pat)
 
+let find_var_node nd x =
+  try vd_find x nd.n_input with Not_found ->
+  try vd_find x nd.n_output with Not_found ->
+  vd_find x nd.n_local
+
 let remove_eqs_from_node nd ids =
   let walk_vd vd vd_list = if IdentSet.mem vd.v_ident ids then vd_list else vd :: vd_list in
   let walk_eq eq eq_list =
