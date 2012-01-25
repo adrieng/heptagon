@@ -22,6 +22,7 @@ CC="gcc -std=c99 -I../../../lib/c -I../t1_c"
 # par defaut : pas de test de generation de code
 
 tomato=0
+memalloc=0
 java=0
 lustre=0
 c=0
@@ -248,7 +249,14 @@ activate_tomato () {
   coption="$coption -tomato"
 }
 
+activate_memalloc () {
+  memalloc=1
+  caption="$coption -memalloc"
+}
+
 activate_all () {
+  activate_tomato
+  activate_memalloc
   activate_java
   activate_c
 }
@@ -290,6 +298,9 @@ while [ $# -gt 0 ]; do
     "-tomato" )
       activate_tomato
       shift;;
+    "-memalloc")
+      activate_memalloc
+      shift;;
     "-bool" )
       activate_boolean
       shift;;
@@ -307,6 +318,7 @@ while [ $# -gt 0 ]; do
       echo "-bool     : test of boolean translation"
       echo "-deadcode : test of deadcode removal"
       echo "-tomato   : test of automata minimization"
+      echo "-memalloc : test of memory allocation"
       echo "-c        : test of code generation (c code)"
       echo "-all      : test all"
       echo "-v        : verbose"
