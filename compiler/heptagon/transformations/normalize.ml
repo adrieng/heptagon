@@ -90,14 +90,27 @@ let equation (d_list, eq_list) e =
 
 (* [(e1,...,ek) when C(n) = (e1 when C(n),...,ek when C(n))] *)
 let rec whenc context e c n e_orig =
-  let when_on_c c n e =
-    { e_orig with e_desc = Ewhen(e, c, n); }
+  let when_on_c c n context e =
+    (* If memalloc is activated, there cannot be a stateful exp inside a when. Indeed,
+       the expression inside the when will be called on a fast rhythm and write its result
+       in a variable that is slow because of the when. Although this value won't be used,
+       we have to be careful not to share this variable with another on the same clock as
+       the value of the latter will be overwritten.  *)
+    let context, e =
+      if !Compiler_options.do_mem_alloc && Stateful.exp_is_stateful e then
+        let context, n = equation context e in
+        context, { e with e_desc = n }
+      else
+        context, e
+    in
+    { e_orig with e_desc = Ewhen(e, c, n) }, context
   in
     if is_list e then (
-      let e_list = List.map (when_on_c c n) (e_to_e_list e) in
+      let e_list, context = Misc.mapfold (when_on_c c n) context (e_to_e_list e) in
           context, { e_orig with e_desc = Eapp(mk_app Etuple, e_list, None) }
     ) else
-      context, when_on_c c n e
+      let e, context = when_on_c c n context e in
+      context, e
 
 type kind = ExtValue | Any
 
@@ -138,7 +151,7 @@ let rec translate kind context e =
           context, { e with e_desc = Estruct l }
     | Ewhen(e1, c, n) ->
         let context, e1 = translate kind context e1 in
-          whenc context e1 c n e
+        whenc context e1 c n e
     | Emerge(n, tag_e_list) ->
         merge context e n tag_e_list
     | Eapp({ a_op = Eifthenelse }, [e1; e2; e3], _) ->

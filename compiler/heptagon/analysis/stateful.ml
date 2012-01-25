@@ -105,6 +105,10 @@ let funs =
       block = block;
       node_dec = node_dec; }
 
+let exp_is_stateful e =
+  let _, res = Hept_mapfold.edesc_it funs false e.e_desc in
+  res
+
 let program p =
   let p, _ = Hept_mapfold.program_it funs false p in
   p
