@@ -28,7 +28,7 @@ let debug_do f () = if debug then f () else ()
   Data-flow minimization on MiniLS:
 
    1. Put each equation into a big map. It maps variable names to triples (class_id * truncated
-   expression * class_id list). Initially, each local variable is in the same class.
+   expression * class_id list). Initially, all local variables are mapped to the same class .
 
    2. Compute the new class_id of each equation: two equations are in the same class if they are
    equal and have the same child equations.
@@ -63,6 +63,7 @@ struct
       {
         mutable er_class : int;
         er_clock_type : ct;
+        er_base_ck : ck;
         er_pattern : pat;
         er_head : exp;
         er_children : class_ref list;
@@ -258,6 +259,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
       er_add_when = add_when;
       er_when_count = when_count;
       er_clock_type = eq.eq_rhs.e_ct;
+      er_base_ck = eq.eq_base_ck;
     }
   in
 
@@ -365,7 +367,7 @@ let rec reconstruct ((tenv, cenv) as env) mapping =
       let ed = reconstruct_exp_desc mapping repr.er_head.e_desc repr.er_children in
       let level_ck =
         reconstruct_clock mapping repr.er_head.e_level_ck in (* not strictly needed, done for
-                                                            consistency reasons *)
+                                                                consistency reasons *)
       let ct = reconstruct_clock_type mapping repr.er_head.e_ct in
       { repr.er_head with e_desc = ed; e_level_ck = level_ck; e_ct = ct; } in
 
@@ -373,7 +375,7 @@ let rec reconstruct ((tenv, cenv) as env) mapping =
 
     let pat = reconstruct_pattern mapping repr.er_pattern in
 
-    mk_equation false pat e :: eq_list in
+    mk_equation ~base_ck:(reconstruct_clock mapping repr.er_base_ck) false pat e :: eq_list in
   IntMap.fold reconstruct_class cenv []
 
 and reconstruct_exp_desc mapping headd children =
