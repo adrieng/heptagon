@@ -102,6 +102,14 @@ struct
     (if not (QualEnv.mem n !node_env)
     then node_env := QualEnv.add n (ref NamesSet.empty) !node_env);
     used_names := QualEnv.find n !node_env
+  
+  let clone_node f f' =
+    let f'env =
+      try QualEnv.find f' !node_env
+      with Not_found -> ref NamesSet.empty
+    in
+    NamesSet.iter (fun s -> f'env := NamesSet.add s !f'env) !(QualEnv.find f !node_env);
+    node_env := QualEnv.add f' f'env !node_env
 
   (** @return a unique string for each identifier. Idents corresponding
       to variables defined in the source file have the same name unless
@@ -142,6 +150,7 @@ let ident_of_name ?(reset=false) s =
 let source_name id = id.source
 let name id = UniqueNames.name id
 let enter_node n = UniqueNames.enter_node n
+let clone_node f f' = UniqueNames.clone_node f f'
 
 let local_qn name = { Names.qual = Names.LocalModule (Names.QualModule !UniqueNames.current_node);
                       Names.name = name }

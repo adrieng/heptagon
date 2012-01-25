@@ -154,9 +154,11 @@ struct
             (match q.qual with
               | LocalModule _ -> (* This var is a static parameter, it has to be instanciated *)
                 (try
-                  Format.eprintf "rr %a@." (Global_printer.print_qualenv Global_printer.print_static_exp) m;
                   QualEnv.find q m
-                 with Not_found -> Misc.internal_error "callgraph")
+                 with Not_found ->
+                  Format.eprintf "rr %a@."
+                    (Global_printer.print_qualenv Global_printer.print_static_exp) m;
+                  Misc.internal_error "callgraph")
               | _ -> se)
         | Sfun (q,se_l) ->
             (match q.qual with
@@ -210,6 +212,8 @@ struct
       (* Find the name that was associated to this instance *)
       let ln = node_for_params_call m n.n_name params in
       if not (check_value ln) then Modules.add_value ln node_sig;
+      (* Clone the idents *)
+      Idents.clone_node n.n_name ln;
       { n with n_name = ln; n_params = []; n_param_constraints = []; }
 
     let node_dec n =
@@ -217,7 +221,7 @@ struct
 
     let program p =
       let program_desc pd acc = match pd with
-        | Pnode n ->
+        | Pnode n -> (* for every node in the program p, search for instance *)
             let nds = node_dec n in
             List.fold_left (fun pds n -> Pnode n :: pds) acc nds
         | _ -> pd :: acc
