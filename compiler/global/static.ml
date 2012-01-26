@@ -83,6 +83,8 @@ let apply_op partial loc op se_list =
       | "/", [Sint n1; Sint n2] ->
           if n2 = 0 then raise (Evaluation_failed (Division_by_zero, loc));
           Sint (n1 / n2)
+      | "+.", [Sfloat f1; Sfloat f2] -> Sfloat (f1 +. f2)
+      | "-.", [Sfloat f1; Sfloat f2] -> Sfloat (f1 -. f2)
       | "*.", [Sfloat f1; Sfloat f2] -> Sfloat (f1 *. f2)
       | "/.", [Sfloat f1; Sfloat f2] ->
           if f2 = 0.0 then raise (Evaluation_failed (Division_by_zero, loc));
