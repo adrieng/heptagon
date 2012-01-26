@@ -17,7 +17,6 @@ open Obc_utils
 open Signature
 
 open Modules
-open Signature
 open C
 open Location
 open Format
@@ -63,7 +62,7 @@ let rec struct_name ty =
   | _ -> assert false
 
 let int_of_static_exp se =
-  Static.int_of_static_exp QualEnv.empty se
+  Static.int_of_static_exp se
 
 
 let output_names_list sig_info =
@@ -95,9 +94,9 @@ let is_stateful n =
 *)
 let rec ctype_of_otype oty =
   match oty with
-    | Types.Tid id when id = Initial.pint -> Cty_int
-    | Types.Tid id when id = Initial.pfloat -> Cty_float
-    | Types.Tid id when id = Initial.pbool -> Cty_int
+    | Signature.Tid id when id = Initial.pint -> Cty_int
+    | Signature.Tid id when id = Initial.pfloat -> Cty_float
+    | Signature.Tid id when id = Initial.pbool -> Cty_int
     | Tid id -> Cty_id id
     | Tarray(ty, n) -> Cty_arr(int_of_static_exp n, ctype_of_otype ty)
     | Tprod _ -> assert false
@@ -235,7 +234,7 @@ let rec cexpr_of_static_exp se =
     | Srecord fl ->
         let ty_name =
           match Modules.unalias_type se.se_ty with
-            | Types.Tid n -> cname_of_qn n
+            | Signature.Tid n -> cname_of_qn n
             | _ -> assert false
         in
           Cstructlit (ty_name,
@@ -249,6 +248,7 @@ let rec cexpr_of_static_exp se =
           cexpr_of_static_exp (Static.simplify cd.c_value)
         with Not_found -> assert false) *)
       Cvar (cname_of_qn ln)
+    | Sfun _ -> assert false
     | Sop _ ->
         let se' = Static.simplify se in
           if se = se' then
@@ -572,8 +572,15 @@ let rec cstm_of_act out_env var_env obj_env act =
 
     (** Our Aop marks an operator invocation that will perform side effects. Just
         translate to a simple C statement. *)
-    | Aop (op_name, args) ->
-        [Csexpr (cop_of_op out_env var_env op_name args)]
+    | Acall_fun (p, op_name, args) ->
+        let call = cop_of_op out_env var_env op_name args in
+        begin match p with
+          | [] -> [Csexpr call]
+          | [vn] ->
+              let vn = clhs_of_pattern out_env var_env vn in
+              [Caffect(vn, call)]
+          | _ -> assert false
+        end
 
     (** Reinitialization of an object variable, extracting the reset
         function's name from our environment [obj_env]. *)

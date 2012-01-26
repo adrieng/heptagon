@@ -98,9 +98,9 @@ let assert_node_res cd =
 let main_def_of_class_def cd =
   let format_for_type ty = match ty with
     | Tarray _ | Tprod _ | Tinvalid -> assert false
-    | Types.Tid id when id = Initial.pfloat -> "%f"
-    | Types.Tid id when id = Initial.pint -> "%d"
-    | Types.Tid id when id = Initial.pbool -> "%d"
+    | Signature.Tid id when id = Initial.pfloat -> "%f"
+    | Signature.Tid id when id = Initial.pint -> "%d"
+    | Signature.Tid id when id = Initial.pbool -> "%d"
     | Tid _ -> "%s"
     | Tfuture _ -> assert false (* TODO async *) in
 
@@ -108,9 +108,9 @@ let main_def_of_class_def cd =
       [need_buf_for_ty] also returns the type's name. *)
   let need_buf_for_ty ty = match ty with
     | Tarray _ | Tprod _ | Tinvalid -> assert false
-    | Types.Tid id when id = Initial.pfloat -> None
-    | Types.Tid id when id = Initial.pint -> None
-    | Types.Tid id when id = Initial.pbool -> None
+    | Signature.Tid id when id = Initial.pfloat -> None
+    | Signature.Tid id when id = Initial.pint -> None
+    | Signature.Tid id when id = Initial.pbool -> None
     | Tid { name = n } -> Some n
     | Tfuture _ -> assert false (* TODO async *) in
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in

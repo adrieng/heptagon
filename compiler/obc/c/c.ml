@@ -161,7 +161,7 @@ let pp_string fmt s =
   fprintf fmt "%s" (cname_of_name s)
 
 let rec modul_to_cname q = match q with
-  | Pervasives | LocalModule -> ""
+  | Pervasives | LocalModule _ -> ""
   | Module m -> m ^ "__"
   | QualModule { qual = q; name = n } ->
       (modul_to_cname q)^n^"__"

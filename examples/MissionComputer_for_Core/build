@@ -1,9 +1,9 @@
 #!/bin/bash
 HEPTC=../../heptc
-HEPTC_OPTIONS=""
+HEPTC_OPTIONS="-O -flatten"
 
 GCC=gcc
-GCC_OPTIONS="-g -O2 -std=c99 -I ../../../lib/c"
+GCC_OPTIONS="-g -O2 -std=c99 -I ../../../lib/c -lm"
 
 VERBOSE=1
 
