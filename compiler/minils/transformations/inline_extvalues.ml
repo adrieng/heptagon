@@ -85,7 +85,7 @@ let inline_extvalue_node env nd =
 
   let inline_edesc env funs () e_d =
     let e_d', () = Mls_mapfold.edesc funs () e_d in
-    Format.eprintf "From %a to %a@." print_exp_desc e_d print_exp_desc e_d';
+    (* Format.eprintf "From %a to %a@." print_exp_desc e_d print_exp_desc e_d'; *)
     let e_d = e_d' in
     (try match e_d with
       | Emerge (x, cl) -> Emerge (find_sampler env x, cl)
