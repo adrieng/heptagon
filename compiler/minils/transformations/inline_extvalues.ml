@@ -35,7 +35,7 @@ open Mls_compare
 
 let gather_extvalues_node nd =
   let ty_env =
-    let add env vd = Env.add vd.v_ident vd.v_type env in
+    let add env vd = Env.add vd.v_ident vd.v_linearity env in
     let add_l env vd_list = List.fold_left add env vd_list in
     (add_l (add_l (add_l Env.empty nd.n_output) nd.n_local) nd.n_input)
   in
@@ -51,7 +51,7 @@ let gather_extvalues_node nd =
     in
     match var_of_extvalue w with
       | Some x ->
-        let { v_linearity = lin; } = Mls_utils.find_var_node nd x in
+        let lin = Env.find x ty_env in
         Linearity.is_linear lin
       | _ -> false
   in
@@ -84,7 +84,9 @@ let inline_extvalue_node env nd =
   in
 
   let inline_edesc env funs () e_d =
-    let e_d, () = Mls_mapfold.edesc funs () e_d in
+    let e_d', () = Mls_mapfold.edesc funs () e_d in
+    Format.eprintf "From %a to %a@." print_exp_desc e_d print_exp_desc e_d';
+    let e_d = e_d' in
     (try match e_d with
       | Emerge (x, cl) -> Emerge (find_sampler env x, cl)
       | Ewhen (e, v, x) -> Ewhen (e, v, find_sampler env x)
@@ -104,15 +106,18 @@ let inline_extvalue_node env nd =
   let env =
     let funs =
       { Mls_mapfold.defaults with
+        Mls_mapfold.extvalue_desc = inline_extvalue_desc env;
+        Mls_mapfold.edesc = inline_edesc env;
         Mls_mapfold.global_funs =
           { Global_mapfold.defaults with
-            Global_mapfold.ck = inline_ck env; };
-        Mls_mapfold.edesc = inline_edesc env;
-        Mls_mapfold.extvalue_desc = inline_extvalue_desc env; } in
+            Global_mapfold.ck = inline_ck env; }; } in
 
     let tclose x w new_env =
-      let w, () = Mls_mapfold.extvalue funs () w in
-      Env.add x w new_env
+      let rec fix w =
+        let w', () = Mls_mapfold.extvalue funs () w in
+        if Mls_compare.extvalue_compare w w' = 0 then w else fix w'
+      in
+      Env.add x (fix w) new_env
     in
     Env.fold tclose env Env.empty
   in
@@ -228,6 +233,9 @@ let id_set_of_env nd env =
 
 let rec node funs () nd =
   let env = gather_extvalues_node nd in
+  (* Format.eprintf "Env:@\n"; *)
+  (* Env.iter (fun k w -> Format.eprintf "  %a => %a@\n" print_ident k print_extvalue w) env; *)
+  (* Format.eprintf "@."; *)
   let nd = inline_extvalue_node env nd in
   let nd = remove_eqs_from_node nd (id_set_of_env nd env) in
   let nd, changed = form_new_extvalue_node nd in

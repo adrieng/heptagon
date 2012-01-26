@@ -310,7 +310,7 @@ let new_name mapping x =
   with Not_found -> x
 
 (* Takes a tomato env and returns a renaming environment *)
-let construct_mapping (tenv, cenv) =
+let construct_mapping (_, cenv) =
   let construct_mapping_eq_repr _ eq_repr_list mapping =
     let rec ty_list_of_ty ty acc = match ty with
         | Tprod ty_list -> List.fold_right ty_list_of_ty ty_list acc
@@ -339,7 +339,7 @@ let construct_mapping (tenv, cenv) =
     let fused_ident_list = List.map (Misc.fold_right_1 concat_idents) idents_list in
 
     Misc.fold_left4
-      (fun mapping x_list fused_x ty ck ->
+      (fun mapping x_list fused_x _ _ ->
         List.fold_left
           (fun mapping x ->
             Env.add x (Info fused_x) mapping)
@@ -523,7 +523,9 @@ let compute_new_class (tenv : tom_env) =
   let add_eq_repr _ eqr classes =
     let map_class_ref cref = match cref with
       | Cr_input _ -> None
-      | Cr_plain x -> Some (Env.find x mapping)
+      | Cr_plain x ->
+        try Some (Env.find x mapping)
+        with Not_found -> Format.eprintf "Unknown class %a@." print_ident x; assert false
     in
     let children = List.map map_class_ref eqr.er_children in
 
@@ -598,6 +600,7 @@ let update_node nd =
   ignore (Modules.replace_value nd.n_name sign)
 
 let node nd =
+  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name);
   Idents.enter_node nd.n_name;
 
   (* Initial environment *)
