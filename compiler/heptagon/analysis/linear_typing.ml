@@ -816,8 +816,8 @@ and expect env lin e =
     | Ewhen (e, _, _) ->
         expect env lin e
 
-    | Esplit (c, e) ->
-        let env = safe_expect env Ltop c in
+    | Esplit (_, _, e) ->
+   (*     let env = safe_expect env Ltop c in *) (* TODO Cedric, que faire ici ? j'ai fait comme when *)
         let l = linearity_list_of_linearity lin in
         let env = safe_expect env (List.hd l) e in
           lin, env

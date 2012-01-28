@@ -55,7 +55,7 @@ struct
 
   (** An instance is a list of instantiated params *)
   type instance = key list
-  
+
   let compare_instance x y = list_compare Global_compare.static_exp_compare x y
 
   module S = (** Instances set *)

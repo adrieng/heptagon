@@ -151,20 +151,11 @@ let rec translate kind context e =
         let context, e_list = translate_list ExtValue context e_list in
         context, { e with e_desc = Eiterator(it, app, n, flatten_e_list pe_list,
                                              flatten_e_list e_list, reset) }
-    | Esplit (x, e1) ->
+    | Esplit (x, cl, e1) ->
         let context, e1 = translate ExtValue context e1 in
-        let context, x = translate ExtValue context x in
-        let id = match x.e_desc with Evar x -> x | _ -> assert false in
-        let mk_when c = mk_exp ~linearity:e1.e_linearity (Ewhen (e1, c, id)) e1.e_ty in
-          (match x.e_ty with
-            | Tid t ->
-                (match Modules.find_type t with
-                  | Signature.Tenum cl ->
-                      let el = List.map mk_when cl in
-                        context, { e with e_desc = Eapp(mk_app Etuple, el, None) }
-                  | _ -> Misc.internal_error "normalize split")
-            | _ -> Misc.internal_error "normalize split")
-
+        let mk_when c = mk_exp ~linearity:e1.e_linearity (Ewhen (e1, c, x)) e1.e_ty in
+        let el = List.map mk_when cl in
+        context, { e with e_desc = Eapp(mk_app Etuple, el, None) }
     | Elast _ | Efby _ ->
         Error.message e.e_loc Error.Eunsupported_language_construct
   in add context kind e'

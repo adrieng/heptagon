@@ -728,21 +728,20 @@ let rec typing h e =
           Emerge (x, (c1,typed_e1)::typed_c_e_list), t
       | Emerge (_, []) -> assert false
 
-      | Esplit(c, e2) ->
-          let typed_c, ty_c = typing h c in
+      | Esplit(c, _, e2) ->
+          let ty_c = typ_of_name h c in
           let typed_e2, ty = typing h e2 in
-          let n =
-            match ty_c with
-              | Tid tc ->
-                  (match find_type tc with | Tenum cl-> List.length cl | _ -> -1)
-              | _ ->  -1 in
-            if n < 0 then
-              message e.e_loc (Esplit_enum ty_c);
-            (*the type of e should not be a tuple *)
-            (match ty with
-              | Tprod _ -> message e.e_loc (Esplit_tuple ty)
-              | _ -> ());
-            Esplit(typed_c, typed_e2), Tprod (repeat_list ty n)
+          let cl = match ty_c with
+            | Tid tc -> (match find_type tc with | Tenum cl-> cl | _ -> [])
+            | _ -> []
+          in
+          if cl = []
+          then message e.e_loc (Esplit_enum ty_c);
+          begin match ty with
+            | Tprod _ -> message e.e_loc (Esplit_tuple ty)
+            | _ -> ()
+          end;
+          Esplit(c, cl, typed_e2), Tprod (repeat_list ty (List.length cl))
     in
       { e with e_desc = typed_desc; e_ty = ty; }, ty
   with

@@ -599,10 +599,12 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
                 (context,[]) l in
             context,Emerge(ck,l)
         end
-    | Esplit(e1,e2) ->
-        let context,e1 = translate env context e1 in
+    | Esplit(e1,cl,e2) ->
+        (* TODO !let context,e1 = translate env context e1 in *)
+        Misc.internal_error "the boolean pass doesn't handle\
+          the split operator for now (so no automaton nor switch...)";
         let context,e2 = translate env context e2 in
-        context,Esplit(e1,e2)
+        context,Esplit(e1,cl,e2)
     | Estruct(l) ->
         let context,acc =
           List.fold_left

@@ -28,7 +28,7 @@
 (* Are also set in the global env the local params :
    as value (signature) if it is a sig or as a const def.
    Const def for static args are dummy values since
-   no values are given until application, the correct type is still set.*) 
+   no values are given until application, the correct type is still set.*)
 
 open Location
 open Hept_parsetree
@@ -298,9 +298,9 @@ and translate_desc loc env = function
         List.map fun_c_e c_e_list in
       Heptagon.Emerge (x, c_e_list)
   | Esplit (x, e1) ->
-     let x = translate_exp env (mk_exp (Evar x) loc) in
+     let x = Rename.var loc env x in
      let e1 = translate_exp env e1 in
-       Heptagon.Esplit(x, e1)
+     Heptagon.Esplit(x, [], e1) (* The correct constructor list will be set by the typing *)
 
 and translate_op = function
   | Earrow -> Heptagon.Earrow

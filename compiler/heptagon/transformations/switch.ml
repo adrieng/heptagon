@@ -23,6 +23,7 @@ with one defined var y ( defnames = {y} ) and used var x
 
     becomes :
 
+    x_up, x_down = split ck x
     block : {
       var ck, y_up, y_down in
       ck = e
@@ -33,7 +34,7 @@ with one defined var y ( defnames = {y} ) and used var x
 *)
 
 (* e_level_ck is used to have correct behavior for side effects :
-   it keep track of the fact that a call
+   it keeps track of the fact that a call
    without interaction with the dataflow was in a case of the switch *)
 
 

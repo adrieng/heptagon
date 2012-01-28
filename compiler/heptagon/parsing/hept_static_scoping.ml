@@ -9,7 +9,7 @@ open Hept_parsetree_mapfold
 
 exception Not_static
 
-(** Qualify a var name as a constant variable, 
+(** Qualify a var name as a constant variable,
     if not in local_const or global_const then raise Not_found.
     returns [true, c] if c is a fun
     returns [false, c] if c is a constant *)

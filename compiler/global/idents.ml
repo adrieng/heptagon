@@ -102,7 +102,7 @@ struct
     (if not (QualEnv.mem n !node_env)
     then node_env := QualEnv.add n (ref NamesSet.empty) !node_env);
     used_names := QualEnv.find n !node_env
-  
+
   let clone_node f f' =
     let f'env =
       try QualEnv.find f' !node_env
