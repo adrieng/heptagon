@@ -132,27 +132,36 @@ struct
     Env.find id !env
 end
 
-let gen_fresh pass_name kind_to_string ?(reset=false) kind =
-  let s = kind_to_string kind in
+let gen_fresh pass_name kind_to_string kind =
+  let reset, s = kind_to_string kind in
   let s = if !Compiler_options.full_name then "__"^pass_name ^ "_" ^ s else s in
+  if reset then Format.eprintf "reset ! %s@." s;
   num := !num + 1;
   let id = { num = !num; source = s; is_generated = true; is_reset = reset } in
     UniqueNames.assign_name id; id
 
 let gen_var pass_name ?(reset=false) name =
-  gen_fresh pass_name (fun () -> name) ~reset:reset ()
+  gen_fresh pass_name (fun () -> reset, name) ()
 
 let ident_of_name ?(reset=false) s =
   num := !num + 1;
+  if reset then Format.eprintf "reset ! %s@." s;
   let id = { num = !num; source = s; is_generated = false; is_reset = reset } in
     UniqueNames.assign_name id; id
 
 let source_name id = id.source
-let name id = UniqueNames.name id
+let name id =
+  if id.is_reset
+  then (UniqueNames.name id)^"___r"
+  else UniqueNames.name id
+
 let enter_node n = UniqueNames.enter_node n
 let clone_node f f' = UniqueNames.clone_node f f'
 
 let local_qn name = { Names.qual = Names.LocalModule (Names.QualModule !UniqueNames.current_node);
                       Names.name = name }
 
-let print_ident ff id = Format.fprintf ff "%s" (name id)
+let print_ident ff id =
+  if id.is_reset
+  then  Format.fprintf ff "%s___r" (name id)
+  else  Format.fprintf ff "%s" (name id)

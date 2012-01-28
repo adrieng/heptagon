@@ -46,8 +46,8 @@ struct
 end
 
 let fresh = Idents.gen_fresh "hept2mls"
-  (function Heptagon.Enode f -> (shortname f)
-    | _ -> "n")
+  (function Heptagon.Enode f -> false, (shortname f)
+    | _ -> false, "n")
 
 (* This function set every variable with v_is_memory=false,
    this is corrected at the end of the pass *)

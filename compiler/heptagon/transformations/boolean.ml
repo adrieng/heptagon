@@ -50,7 +50,7 @@ open Clocks
 open Heptagon
 open Hept_utils
 
-let fresh = Idents.gen_fresh "bool" (fun s -> s)
+let fresh = Idents.gen_var "bool"
 
 let ty_bool = Tid({ qual = Pervasives; name = "bool"})
 

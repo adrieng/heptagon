@@ -24,7 +24,7 @@ val source_name : ident -> string
 (** [gen_fresh pass_name kind_to_string kind]
     generate a fresh ident with a sweet [name].
     It should be used to define a [fresh] function specific to a pass. *)
-val gen_fresh : string -> ('a -> string) -> ?reset:bool -> 'a -> ident
+val gen_fresh : string -> ('a -> bool * string) -> 'a -> ident
 
 (** [gen_var pass_name name]
     generates a fresh ident with a sweet [name] *)

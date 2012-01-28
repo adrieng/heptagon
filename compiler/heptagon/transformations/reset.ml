@@ -22,7 +22,7 @@ open Initial
 
 
 
-let fresh = Idents.gen_fresh "reset" ~reset:true (fun () -> "r")
+let fresh () = Idents.gen_var "reset" ~reset:true "reset"
 
 (* get e and return r, var_dec_r, r = e *)
 let reset_var_from_exp e =

@@ -22,7 +22,9 @@ open Modules
 
 type var = S | NS | R | NR | PNR
 let fresh = Idents.gen_fresh "automata"
-  (function S -> "s" | NS -> "ns" | R -> "r" | NR -> "nr" | PNR -> "pnr")
+  (function
+    | S -> false, "s" | NS -> false, "ns"
+    | R -> true, "r" | NR -> false, "nr" | PNR -> false, "pnr")
 
 let mk_var_exp n ty =
   mk_exp (Evar n) ty ~linearity:Linearity.Ltop

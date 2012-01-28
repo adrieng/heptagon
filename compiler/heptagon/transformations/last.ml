@@ -13,7 +13,7 @@ open Hept_mapfold
 open Idents
 
 
-let fresh = Idents.gen_fresh "last" Idents.name
+let fresh id = Idents.gen_var "last" (Idents.name id)
 
 
 (* introduce a fresh equation [last_x = pre(x)] for every *)

@@ -252,16 +252,15 @@ let load_object_file modul =
       | Names.LocalModule _ -> Misc.internal_error "modules"
       | Names.QualModule _ -> Misc.unsupported "modules"
   in
-  let name = String.uncapitalize modname in
     try
-      let filename = Compiler_utils.findfile (name ^ ".epo") in
+      let filename = Compiler_utils.findfile (modname ^ ".epo") in
       let ic = open_in_bin filename in
         try
           let (p : program) = input_value ic in
             if p.p_format_version <> minils_format_version then (
               Format.eprintf "The file %s was compiled with \
                        an older version of the compiler.@\n\
-                       Please recompile %s.ept first.@." filename name;
+                       Please recompile %s.ept first.@." filename modname;
               raise Errors.Error
             );
             close_in ic;
@@ -270,7 +269,7 @@ let load_object_file modul =
           | End_of_file | Failure _ ->
               close_in ic;
               Format.eprintf "Corrupted object file %s.@\n\
-                        Please recompile %s.ept first.@." filename name;
+                        Please recompile %s.ept first.@." filename modname;
               raise Errors.Error
     with
       | Compiler_utils.Cannot_find_file(filename) ->

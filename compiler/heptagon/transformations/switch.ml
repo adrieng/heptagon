@@ -47,7 +47,8 @@ open Hept_mapfold
 (** Give the var [name] and a [constructor], returns fresh [name_constr] *)
 let fresh_case_var name constr =
   let tmp (n,c) =
-    n^"_"^(Names.print_pp_to_name Global_printer.print_qualname c) in
+    false, n^"_"^(Names.print_pp_to_name Global_printer.print_qualname c)
+  in
   Idents.gen_fresh "switch" tmp (name,constr)
 
 let fresh_clock_id () =

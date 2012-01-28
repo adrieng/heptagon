@@ -18,8 +18,8 @@ let mk_fresh_node_name () = Modules.fresh_value "itfusion" "temp"
 let fresh_vd_of_arg a =
   Idents.gen_fresh "itfusion"
                    (fun a -> match a.a_name with
-                             | None -> "v"
-                             | Some n -> n) a
+                             | None -> false, "v"
+                             | Some n -> false, n) a
 
 let fresh_var () = Idents.gen_var "itfusion" "x"
 

@@ -81,20 +81,20 @@ let program p =
         in
         let main_args = parse_args ty_main_args 0 in
         let vd_main, e_main, q_main, ty_main =
-          if Modules.is_statefull q_main
-          then
+       (*   if Modules.is_statefull q_main
+          then *)
             let q_main = Obc2java.qualname_to_package_classe q_main in
             let id = Idents.gen_var "java_main" "main" in
             Anewvar(mk_var_dec id false (Tclass q_main), Enew (Tclass q_main, main_args)),
             Emethod_call(Evar id, "step", []),
             q_main,
             ty_main
-          else
+          (*else
             let q_main = Obc2java.translate_fun_name q_main in
             Aexp Evoid,
             Efun(q_main, main_args),
             q_main,
-            ty_main
+            ty_main*)
         in
         let acts =
           let parse_max_iteration =
