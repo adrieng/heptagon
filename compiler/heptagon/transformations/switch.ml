@@ -119,7 +119,12 @@ let add_vd vd (h,vdt) = match vdt with
       (h, Level(ck, Idents.Env.add vd.v_ident vd vds, ed))
 
 let rec _get_vd v vdt = match vdt with
-  | Base vds -> Idents.Env.find v vds
+  | Base vds ->
+      (try Idents.Env.find v vds
+      with Not_found ->
+        Misc.internal_error
+          (Format.sprintf
+            "Switch could not find %s" (Idents.name v)))
   | Level (_,vds, vdt) ->
       try Idents.Env.find v vds
       with Not_found -> _get_vd v vdt
@@ -187,6 +192,13 @@ let rename x (used,env) =
   then x', (Idents.IdentSet.add x used, env)
   else x', (used, env)
 
+let ck funs uenv c =
+  let c, uenv = Global_mapfold.ck funs uenv c in
+  match c with
+  | Clocks.Con (c', cc, x) ->
+    let x, uenv = rename x uenv in
+    Clocks.Con (c', cc, x), uenv
+  | _ -> c, uenv
 
 (* apply the renaming for shared defined variables *)
 let pattern _ uenv pat = match pat with
@@ -218,11 +230,22 @@ let exp funs (used,env) e =
   let e = Env.annot_exp e env in
   Hept_mapfold.exp funs (used,env) e
 
-let edesc _ uenv ed = match ed with
+let edesc funs uenv ed =
+  let ed, uenv = Hept_mapfold.edesc funs uenv ed in
+  match ed with
   | Evar x ->
       let x, uenv = rename x uenv in
       Evar x, uenv
-  | _ -> raise Errors.Fallback
+  | Ewhen (e,c,x) ->
+      let x, uenv = rename x uenv in
+      Ewhen (e,c,x), uenv
+  | Emerge (x, c_e_l) ->
+      let x, uenv = rename x uenv in
+      Emerge (x, c_e_l), uenv
+  | Esplit (x, c_l, e) ->
+      let x, uenv = rename x uenv in
+      Esplit (x, c_l, e), uenv
+  | _ -> ed, uenv
 
 (* update stateful and loc *)
 let eq funs uenv eq =
@@ -242,13 +265,15 @@ let eqdesc funs (used, env) eqd = match eqd with
       let e, (used,env) = exp_it funs (used,env) e in
 
       (* create, if needed, a clock var corresponding to the switch condition [e] *)
-      let ck, locals, equs = match e.e_desc with
-        | Evar x -> x, [], []
+      let ck, locals, equs, env = match e.e_desc with
+        | Evar x -> x, [], [], env
         | _ ->
             let ck = fresh_clock_id () in
-            let locals = [mk_var_dec ck e.e_ty e.e_linearity] in
+            let vd = mk_var_dec ck e.e_ty e.e_linearity in
+            let env = Env.add_vd vd env in
+            let locals = [vd] in
             let equs = [mk_equation (Eeq (Evarpat ck, e))] in
-            ck, locals, equs
+            ck, locals, equs, env
       in
 
       (* typing have proved that defined variables are the same among states *)
@@ -256,9 +281,9 @@ let eqdesc funs (used, env) eqd = match eqd with
       let defnames = (List.hd sw_h_l).w_block.b_defnames in
 
 
-      let (c_env_l, locals, equs, used) =
+      let (c_env_l, equs, used) =
         (* deal with the handlers, return the list of pair of constructor, associated environment *)
-        let switch_handler (c_env_l, locals, equs, used) sw_h =
+        let switch_handler (c_env_l, equs, used) sw_h =
           let constr = sw_h.w_name in
           (* level up *)
           let env = Env.level_up constr ck defnames env in
@@ -266,12 +291,10 @@ let eqdesc funs (used, env) eqd = match eqd with
           let b_eq, (used,env) = block_it funs (used,env) sw_h.w_block in
           (* inline the handler as a block *)
           let equs = (mk_equation (Eblock b_eq))::equs in
-          (* add to the locals the needed vars *)
-          let locals = Env.update_locals locals env in
-          ((constr,env)::c_env_l, locals, equs, used)
+          ((constr,env)::c_env_l, equs, used)
         in
         (* fold over used in order to collect all the used vars *)
-        List.fold_left switch_handler ([], locals, equs, used) sw_h_l
+        List.fold_left switch_handler ([], equs, used) sw_h_l
       in
 
 
@@ -279,7 +302,7 @@ let eqdesc funs (used, env) eqd = match eqd with
         (* create a merge equation for each defnames *)
         let new_merge n vd equs =
           let c_env_to_c_e (constr,env) =
-            let new_n,_, n = Env.rename n env in
+            let new_n, _, n = Env.rename n env in
             (* rename should not change the env since we deal with defnames *)
             assert (not new_n);
             constr, mk_exp (Evar n) vd.v_type ~linearity:vd.v_linearity
@@ -294,9 +317,9 @@ let eqdesc funs (used, env) eqd = match eqd with
         Idents.Env.fold new_merge defnames equs
       in
 
-      let (uenv,equs) =
+      let (uenv, c_env_l, equs) =
         (* create a split equation for each used names *)
-        let new_split n ((used,env), equs) =
+        let new_split n ((used,env), c_env_l, equs) =
           (* fold over used in order to collect all the used vars *)
           (*let c_env_to_pat (c,cenv) (used, (n_list,c_l)) =
             let n, (used,cenv) = rename n (used,cenv) in
@@ -304,24 +327,27 @@ let eqdesc funs (used, env) eqd = match eqd with
           in
           let used, (pat, c_l) = List.fold_right c_env_to_pat c_env_l (used,([],[])) in
           *)
-          let c_env_to_pat (c,cenv) (n_list,c_l) =
-            let _,_,n = Env.rename n cenv in
-            ((Evarpat n)::n_list, c::c_l)
+          let c_env_to_pat (n_list,c_l, c_env_l) (c,cenv) =
+            let _, cenv, n = Env.rename n cenv in
+            ((Evarpat n)::n_list, c::c_l, (c,cenv)::c_env_l)
           in
-          let (pat, c_l) = List.fold_right c_env_to_pat c_env_l ([],[]) in
+          let (pat, c_l, c_env_l) = List.fold_left c_env_to_pat ([],[],[]) c_env_l in
           let vd = Env.get_vd n env in
           let n, (used,env) = rename n (used,env) in
           let v = mk_exp (Evar n) vd.v_type ~linearity:vd.v_linearity in
           let v_t = Signature.prod (repeat_list vd.v_type (List.length c_l)) in
           let v_lt = Linearity.prod (repeat_list vd.v_linearity (List.length c_l)) in
           let split = mk_exp (Esplit (ck, c_l, v)) v_t ~linearity:v_lt in
-          ((used,env), (mk_equation (Eeq (Etuplepat pat, split)))::equs)
+          ((used,env), c_env_l, (mk_equation (Eeq (Etuplepat pat, split)))::equs)
         in
         (* update the environment, but deal with [used] from the handlers *)
-        Idents.IdentSet.fold new_split used ((used,env),equs)
+        Idents.IdentSet.fold new_split used ((used,env), c_env_l, equs)
       in
-
-        (* return the transformation in a block *)
+      (* now that the env of each child will not change, gather the locals *)
+      let locals =
+        List.fold_left (fun locals (_,env) -> Env.update_locals locals env) locals c_env_l
+      in
+      (* return the transformation in a block *)
       let b = mk_block ~defnames:defnames ~locals:locals equs in
       Eblock b, uenv
   | _ -> raise Errors.Fallback
@@ -329,7 +355,8 @@ let eqdesc funs (used, env) eqd = match eqd with
 let program p =
   let funs = { Hept_mapfold.defaults
                with pat = pattern; var_dec = var_dec; block = block;
-                    exp = exp; edesc = edesc; eq = eq; eqdesc = eqdesc } in
+                    exp = exp; edesc = edesc; eq = eq; eqdesc = eqdesc;
+                    global_funs = { Global_mapfold.defaults with Global_mapfold.ck = ck } } in
   let p, _ = program_it funs (Idents.IdentSet.empty,Env.empty) p in
     p
 

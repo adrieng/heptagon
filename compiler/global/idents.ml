@@ -150,10 +150,7 @@ let ident_of_name ?(reset=false) s =
     UniqueNames.assign_name id; id
 
 let source_name id = id.source
-let name id =
-  if id.is_reset
-  then (UniqueNames.name id)^"___r"
-  else UniqueNames.name id
+let name id = UniqueNames.name id
 
 let enter_node n = UniqueNames.enter_node n
 let clone_node f f' = UniqueNames.clone_node f f'
@@ -161,7 +158,4 @@ let clone_node f f' = UniqueNames.clone_node f f'
 let local_qn name = { Names.qual = Names.LocalModule (Names.QualModule !UniqueNames.current_node);
                       Names.name = name }
 
-let print_ident ff id =
-  if id.is_reset
-  then  Format.fprintf ff "%s___r" (name id)
-  else  Format.fprintf ff "%s" (name id)
+let print_ident ff id = Format.fprintf ff "%s" (name id)
