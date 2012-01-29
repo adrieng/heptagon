@@ -819,7 +819,7 @@ and expect env lin e =
     | Esplit (_, _, e) ->
    (*     let env = safe_expect env Ltop c in *) (* TODO Cedric, que faire ici ? j'ai fait comme when *)
         let l = linearity_list_of_linearity lin in
-        let env = safe_expect env (List.hd l) e in
+        let env = safe_expect env (List.hd l) e in (* TODO on en verifie qu'un seul ? *)
           lin, env
 
     | Eapp ({ a_op = Etuple }, e_list, _) ->

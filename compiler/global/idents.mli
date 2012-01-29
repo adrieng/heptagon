@@ -26,6 +26,7 @@ val source_name : ident -> string
     It should be used to define a [fresh] function specific to a pass. *)
 val gen_fresh : string -> ('a -> bool * string) -> 'a -> ident
 
+(* TODO now : make reset compulsory *)
 (** [gen_var pass_name name]
     generates a fresh ident with a sweet [name] *)
 val gen_var : string -> ?reset:bool -> string -> ident

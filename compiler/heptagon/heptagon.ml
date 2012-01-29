@@ -13,7 +13,6 @@ open Names
 open Idents
 open Static
 open Signature
-open Signature
 open Linearity
 open Clocks
 open Initial
