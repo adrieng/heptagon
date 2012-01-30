@@ -1,0 +1,6 @@
+node f(x:int) returns (y:int on ck; ck:bool)
+let
+  ck = true;
+  y = (x :: ck)
+tel
+
