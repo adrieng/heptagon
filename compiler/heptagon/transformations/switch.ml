@@ -258,11 +258,11 @@ let eq funs uenv eq =
 
 
 (* remove the Eswitch *)
-let eqdesc funs (used, env) eqd = match eqd with
+let eqdesc funs (old_used, env) eqd = match eqd with
   | Eswitch (e, sw_h_l) ->
 
       (* Recursive call only on [e] since the handlers need new environments. *)
-      let e, (used,env) = exp_it funs (used,env) e in
+      let e, (old_used,env) = exp_it funs (old_used,env) e in
 
       (* create, if needed, a clock var corresponding to the switch condition [e] *)
       let ck, locals, equs, env = match e.e_desc with
@@ -294,7 +294,7 @@ let eqdesc funs (used, env) eqd = match eqd with
           ((constr,env)::c_env_l, equs, used)
         in
         (* fold over used in order to collect all the used vars *)
-        List.fold_left switch_handler ([], equs, used) sw_h_l
+        List.fold_left switch_handler ([], equs, Idents.IdentSet.empty) sw_h_l
       in
 
 
@@ -349,6 +349,7 @@ let eqdesc funs (used, env) eqd = match eqd with
       in
       (* return the transformation in a block *)
       let b = mk_block ~defnames:defnames ~locals:locals equs in
+      let uenv = (Idents.IdentSet.union old_used used, env) in
       Eblock b, uenv
   | _ -> raise Errors.Fallback
 
