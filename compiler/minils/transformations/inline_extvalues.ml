@@ -56,9 +56,14 @@ let gather_extvalues_node nd =
       | _ -> false
   in
 
+  let inlinable w = match w.w_desc with
+    | Wconst { se_desc = Sarray _ | Sarray_power _ } -> false
+    | _ -> true
+  in
+
   let gather_extvalues_eq _ env eq =
     let env = match eq.eq_lhs, eq.eq_rhs.e_desc with
-      | Evarpat x, Eextvalue w when not (is_linear w) -> Env.add x w env
+      | Evarpat x, Eextvalue w when not (is_linear w) && inlinable w -> Env.add x w env
       | _ -> env
     in
     eq, env
