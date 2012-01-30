@@ -36,7 +36,7 @@ module TyEnv =
     end)
 
 (** @return whether [ty] corresponds to a record type. *)
-let is_record_type ty = match ty with
+let is_record_type ty = match Modules.unalias_type ty with
   | Tid n ->
       (match Modules.find_type n with
         | Tstruct _ -> true
@@ -51,6 +51,13 @@ let is_array_or_struct ty =
           | Signature.Tstruct _ -> true
           | _ -> false)
     | _ -> false
+
+let is_enum ty = match Modules.unalias_type ty with
+  | Tid n ->
+      (match Modules.find_type n with
+        | Tenum _ -> true
+        | _ -> false)
+  | _ -> false
 
 module InterfRead = struct
   exception Const_extvalue
@@ -163,7 +170,7 @@ module World = struct
           Signature.field_assoc f fields
 
   let is_optimized_ty ty =
-    !Compiler_options.interf_all || is_array_or_struct ty
+    (!Compiler_options.interf_all && not (is_enum ty)) || is_array_or_struct ty
 
   let is_optimized iv =
     is_optimized_ty (ivar_type iv)
