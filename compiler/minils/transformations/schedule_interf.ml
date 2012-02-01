@@ -6,6 +6,13 @@ open Mls_utils
 open Misc
 open Sgraph
 
+(** In order to put together equations with the same control structure, we have to take into
+    account merge equations, that will to be translated to two instructions on slow clocks
+    although the activation clock of the equation is fast. *)
+let control_ck eq =
+  match eq.eq_rhs.e_desc with
+    | Emerge (_, (_, w)::_) ->  w.w_ck
+    | _ -> Mls_utils.Vars.clock eq
 
 module Cost =
 struct
@@ -74,7 +81,7 @@ struct
     in
     let eqs_wcost =
       List.map
-        (fun eq -> (eq, cost eq, Clocks.same_control (Mls_utils.Vars.clock eq) ck))
+        (fun eq -> (eq, cost eq, Clocks.same_control (control_ck eq) ck))
         rem_eqs
     in
     let (eq, c, same_ctrl), eqs_wcost = Misc.assert_1min eqs_wcost in
@@ -125,7 +132,7 @@ let schedule eq_list inputs node_list =
         let rem_eqs = free_eqs node_list in
         (* compute new costs for the next step *)
         let costs = Cost.update_cost eq uses costs in
-          schedule_aux rem_eqs (eq::sched_eqs) node_list (Mls_utils.Vars.clock eq) costs
+          schedule_aux rem_eqs (eq::sched_eqs) node_list (control_ck eq) costs
   in
   let costs = Cost.init_cost uses inputs in
   let rem_eqs = free_eqs node_list in
