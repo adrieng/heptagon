@@ -148,7 +148,7 @@ let rec static_exp param_env se = match se.Signature.se_desc with
       Enew_array (ty param_env se.Signature.se_ty, List.map (static_exp param_env) se_l)
   | Signature.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
   | Signature.Sop (f, se_l) ->
-      Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
+      Efun (translate_fun_name f, List.map (static_exp param_env) se_l)
   | Signature.Sasync se ->
       let t_c = Tgeneric (java_pervasive_class "StaticFuture", [boxed_ty param_env se.Signature.se_ty])
       in
