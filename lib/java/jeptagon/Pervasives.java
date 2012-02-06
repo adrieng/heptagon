@@ -2,10 +2,12 @@ package jeptagon;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -135,6 +137,18 @@ public class Pervasives {
 			return "(" + genToString(c0) + ", " + genToString(c1) + ")";
 		}
 	}
+	
+	public static Tuple2 at_to_ta2 ( final Future<Tuple2> at) {
+		FutureTask t0 = new FutureTask(new Callable () {
+			public Object call() throws Exception {
+				return at.get().c0;
+			} });
+		FutureTask t1 = new FutureTask(new Callable () {
+			public Object call() throws Exception {
+				return at.get().c1;
+			} });
+		return new Tuple2(t0,t1);
+	}
 
 	public static class Tuple3 {
 		public final Object c0;
@@ -148,6 +162,22 @@ public class Pervasives {
 		public String toString() {
 			return "(" + genToString(c0) + ", " + genToString(c1) + ", " + genToString(c2) + ")";
 		}
+	}
+
+	public static Tuple3 at_to_ta3 ( final Future<Tuple3> at) {
+		FutureTask t0 = new FutureTask(new Callable () {
+			public Object call() throws Exception {
+				return at.get().c0;
+			} });
+		FutureTask t1 = new FutureTask(new Callable () {
+			public Object call() throws Exception {
+				return at.get().c1;
+			} });
+		FutureTask t2 = new FutureTask(new Callable () {
+			public Object call() throws Exception {
+				return at.get().c2;
+			} });
+		return new Tuple3(t0,t1,t2);
 	}
 
 	public static class Tuple4 {

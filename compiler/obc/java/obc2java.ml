@@ -294,6 +294,13 @@ let rec act_list param_env act_l acts =
         let return_id = Idents.gen_var "obc2java" "out" in
         let return_vd = mk_var_dec return_id false return_ty in
         let ecall = only_call_exp act in
+        let unasync act ecall = match act with
+          | Obc.Aasync_call (Some _, p_l, _,_,_) ->
+            let ln = p_l |> List.length |> Pervasives.string_of_int in
+            Efun ((java_pervasive_class ("at_to_ta"^ln)),[ecall])
+          | _ -> ecall
+        in
+        let ecall = unasync act ecall in
         let assgn = Anewvar (return_vd, ecall) in
         let copy_return_to_var i p =
           let t = ty param_env p.pat_ty in
