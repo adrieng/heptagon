@@ -243,7 +243,7 @@ let rec cexpr_of_static_exp se =
           (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n)))
                      (cexpr_of_static_exp c) n_list)
     | Svar ln ->
-      if !Compiler_options.unroll_loops
+      if !Compiler_options.unroll_loops && se.se_ty = Initial.tint
       then cexpr_of_static_exp (Static.simplify QualEnv.empty (find_const ln).c_value)
       else Cvar (cname_of_qn ln)
     | Sop _ ->
