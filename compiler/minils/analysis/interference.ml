@@ -170,7 +170,7 @@ module World = struct
           Signature.field_assoc f fields
 
   let is_optimized_ty ty =
-    (!Compiler_options.interf_all && not (is_enum ty)) || is_array_or_struct ty
+    (!Compiler_options.interf_all (* && not (is_enum ty)) *) ) || is_array_or_struct ty
 
   let is_optimized iv =
     is_optimized_ty (ivar_type iv)
