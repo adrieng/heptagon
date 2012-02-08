@@ -32,4 +32,7 @@ let compile_program p =
   (*Control optimization*)
   let p = pass "Control optimization" true Control.program p pp in
 
+  (*Loop unrolling*)
+  let p = pass "Loop unrolling" !Compiler_options.unroll_loops Unroll.program p pp in
+
   p

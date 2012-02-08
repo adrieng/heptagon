@@ -117,6 +117,7 @@ let use_old_scheduler = ref false
 
 let strict_ssa = ref false
 
+let unroll_loops = ref false
 
 let optim = ref false
 let do_optim () =
@@ -151,7 +152,7 @@ and doc_target =
   "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
   ^ " java or z3z)"
 and doc_full_type_info = "\t\t\tPrint full type information"
-and doc_stateful_info = "\t\t\tPrint stateful information"
+and doc_stateful_info = "\t\tPrint stateful information"
 and doc_full_name = "\t\tPrint full variable name information"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
@@ -171,3 +172,4 @@ and doc_linear_only = "\t\tEnable linear annotations"
 and doc_interf_scheduler = "\tUse the old scheduler"
 and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
 and doc_interf_all = "\t\tPerform memory allocation on all types"
+and doc_unroll = "\t\tUnroll all loops"

@@ -59,7 +59,9 @@ let mk_ext_value_exp_int desc = mk_ext_value_exp Initial.tint desc
 
 let mk_ext_value_exp_bool desc = mk_ext_value_exp Initial.tbool desc
 
-let mk_ext_value_static ty sed = mk_ext_value_exp ty (Wconst sed)
+let mk_ext_value_exp_static ty sed = mk_ext_value_exp ty (Wconst sed)
+
+let mk_ext_value_const_int i = mk_ext_value Initial.tint (Wconst (Initial.mk_static_int i))
 
 let mk_evar ty id =
   mk_ext_value_exp ty (Wvar id)
@@ -155,7 +157,7 @@ struct
     | Module _ | QualModule _ -> ModulSet.add qn.qual deps
     | _ -> deps
 
-  let deps_ty funs deps ty = match ty with
+  let deps_ty _ deps ty = match ty with
     | Tid ln -> ty, deps_longname deps ln
     | _ -> raise Errors.Fallback
 

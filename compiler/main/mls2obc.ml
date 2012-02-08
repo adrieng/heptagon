@@ -446,7 +446,7 @@ let rec translate_eq map call_context
         let x = var_from_name map n in
         let si = (match opt_c with
                     | None -> si
-                    | Some c -> (Aassgn (x, mk_ext_value_static x.pat_ty c)) :: si) in
+                    | Some c -> (Aassgn (x, mk_ext_value_exp_static x.pat_ty c)) :: si) in
         let action = Aassgn (var_from_name map n, translate_extvalue_to_exp map e) in
         v, si, j, (control map ck action) :: s
 (* should be unnecessary
