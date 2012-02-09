@@ -29,6 +29,13 @@ let print_debug_ivar_env name env =
     Format.printf "@."
   )
 
+let print_debug_ivar_set name env =
+  if verbose_mode then (
+    Format.printf "%s:  " name;
+    IvarSet.iter (fun k -> Format.printf "%s; " (ivar_to_string k) ) env;
+    Format.printf "@."
+  )
+
 module TyEnv =
     ListMap(struct
       type t = ty
@@ -392,7 +399,7 @@ let spill_mems_outputs f =
     if not (is_array_or_struct (World.ivar_type iv)) then IvarSet.add iv s else s
   in
   let spilled_vars = List.fold_left add_output IvarSet.empty f.n_output in
-  let spilled_vars = IvarSet.fold add_memory spilled_vars !World.memories in
+  let spilled_vars = IvarSet.fold add_memory !World.memories spilled_vars in
   let spilled_vars = all_ivars_set spilled_vars in
   IvarSet.iter remove_from_ivar spilled_vars
 
