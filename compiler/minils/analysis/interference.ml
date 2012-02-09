@@ -70,7 +70,7 @@ module InterfRead = struct
   exception Const_extvalue
 
   let rec vars_ck acc = function
-    | Con(_, _, n) -> IvarSet.add (Ivar n) acc
+    | Con(ck2, _, n) -> IvarSet.add (Ivar n) (vars_ck acc ck2)
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
@@ -118,7 +118,7 @@ module InterfRead = struct
       | Eiterator (_, _, _, _, _, Some x) -> IvarSet.add (Ivar x) acc
       | _ -> acc
     in
-      e, vars_ct acc e.e_ct
+      e, acc
 
   let rec vars_pat acc = function
     | Evarpat x -> IvarSet.add (Ivar x) acc
