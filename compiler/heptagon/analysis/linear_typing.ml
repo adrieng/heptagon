@@ -802,8 +802,18 @@ and expect env lin e =
         found_lin, env
 
     | Emerge (_, c_e_list) ->
-        let env = List.fold_left (fun env (_, e) -> safe_expect env lin e) env c_e_list in
-        lin, env
+      (* Idea: one of the branches should be of linear type [lin], the others can be of linear type
+         Top *)
+      (* TODO: Cedric, avis ?*)
+      let type_clause (env, no_lin) (_, e) =
+        try
+          let _, env = expect env lin e in env, false
+        with _ ->
+          safe_expect env Ltop e, no_lin
+      in
+      let env, no_lin = List.fold_left type_clause (env, true) c_e_list in
+      if no_lin then message e.e_loc (Eunify_failed_one lin);
+      lin, env
 
     | Ewhen (e, _, _) ->
         expect env lin e
