@@ -65,7 +65,7 @@
 
 ;; (regexp-opt '(
 ;;               "with" "merge" "when" "whenot"
-;;               "fby" "pre" "on" "end" "automaton" "state"
+;;               "fby" "pre" "on" "onot" "not" "end" "automaton" "state"
 ;;               "switch" "every" "reset" "until" "unless"
 ;;               "last" "if" "then" "else" "default" "do" "done" "in" "continue"
 ;;               "contract" "assume" "enforce" "with"
@@ -83,7 +83,7 @@
      .
      font-lock-builtin-face)
    '(
-     "\\<\\(a\\(?:ssume\\|utomaton\\)\\|cont\\(?:inue\\|ract\\)\\|d\\(?:efault\\|o\\(?:ne\\)?\\)\\|e\\(?:lse\\|n\\(?:d\\|force\\)\\|very\\)\\|f\\(?:by\\|oldi?\\)\\|i[fn]\\|last\\|m\\(?:ap\\(?:foldi?\\|i\\)?\\|erge\\)\\|on\\|pre\\|reset\\|s\\(?:tate\\|witch\\)\\|then\\|un\\(?:less\\|til\\)\\|w\\(?:hen\\(?:ot\\)?\\|ith\\)\\)\\>"
+     "\\<\\(a\\(?:ssume\\|utomaton\\)\\|cont\\(?:inue\\|ract\\)\\|d\\(?:efault\\|o\\(?:ne\\)?\\)\\|e\\(?:lse\\|n\\(?:d\\|force\\)\\|very\\)\\|f\\(?:by\\|oldi?\\)\\|i[fn]\\|last\\|m\\(?:ap\\(?:foldi?\\|i\\)?\\|erge\\)\\|on\\(?:ot\\)?\\|pre\\|reset\\|s\\(?:tate\\|witch\\)\\|not\\|then\\|un\\(?:less\\|til\\)\\|w\\(?:hen\\(?:ot\\)?\\|ith\\)\\)\\>"
      .
      font-lock-keyword-face)
    )
@@ -115,7 +115,7 @@
       (save-excursion
         (while not-indented
           (forward-line -1)
-          (if (looking-at "^[ \t]*\\(tel\\|end\\|done\\)")
+          (if (looking-at "^[ \t]*\\(tel\\|end\\|done\\|every\\)")
               (progn
                 (setq cur-indent (current-indentation))
                 (setq not-indented nil))
@@ -125,7 +125,7 @@
                 (progn
                   (setq cur-indent (+ (current-indentation) default-tab-width))
                   (setq not-indented nil))
-              (if (looking-at "^[ \t]*\\(do\\)")
+              (if (looking-at "^[ \t]*\\(do\\|reset\\)")
                   (progn
                     (setq cur-indent (+ (current-indentation) 3))
                     (setq not-indented nil))
