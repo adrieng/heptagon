@@ -135,7 +135,6 @@ end
 let gen_fresh pass_name kind_to_string kind =
   let reset, s = kind_to_string kind in
   let s = if !Compiler_options.full_name then "__"^pass_name ^ "_" ^ s else s in
-  if reset then Format.eprintf "reset ! %s@." s;
   num := !num + 1;
   let id = { num = !num; source = s; is_generated = true; is_reset = reset } in
     UniqueNames.assign_name id; id
@@ -145,7 +144,6 @@ let gen_var pass_name ?(reset=false) name =
 
 let ident_of_name ?(reset=false) s =
   num := !num + 1;
-  if reset then Format.eprintf "reset ! %s@." s;
   let id = { num = !num; source = s; is_generated = false; is_reset = reset } in
     UniqueNames.assign_name id; id
 
