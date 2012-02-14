@@ -83,7 +83,7 @@ let present_handler funs acc ph =
   let p_block, acc = Hept_mapfold.block_it funs acc ph.p_block in
     { p_cond = p_cond; p_block = p_block }, acc
 
-
+(*
 (* Funs with states are rejected, nodes without state are set as funs *)
 let node_dec funs _ n =
   Idents.enter_node n.n_name;
@@ -93,6 +93,20 @@ let node_dec funs _ n =
   then Modules.replace_value n.n_name
          { (Modules.find_value n.n_name) with Signature.node_stateful = false };
   { n with n_stateful = stateful }, false (* set stateful only if needed *)
+*)
+
+let param stateful p = match p.p_type with
+  | Tsig { node_stateful = true } -> true
+  | _ -> stateful
+
+
+let node_dec funs _ n =
+  Idents.enter_node n.n_name;
+  let n, stateful = Hept_mapfold.node_dec funs false n in
+  let stateful = List.fold_left param stateful n.n_params in
+  if stateful & (not n.n_stateful) then message n.n_loc Eshould_be_a_node;
+  n, n.n_stateful (* keep stateful even if unecessary *)
+
 
 let funs =
   { Hept_mapfold.defaults with

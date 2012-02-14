@@ -742,11 +742,10 @@ let program p =
   let rec program_descs pds (ns,fs,cs,ts) = match pds with
     | [] -> ns,fs,cs,ts
     | Obc.Pclass n :: pds ->
-(*        if n.cd_stateful or !Compiler_options.functions_are_classes
+        if n.cd_stateful or !Compiler_options.functions_are_classes
         then program_descs pds (n::ns,fs,cs,ts)
-        else program_descs pds (ns,n::fs,cs,ts) *)
-(* Compile the two versions to allow direct function calls and higher_order functions *)
-        program_descs pds (n::ns,n::fs,cs,ts)
+        else (* Compile the two versions to allow direct function calls and higher_order functions *)
+          program_descs pds (n::ns,n::fs,cs,ts)
     | Obc.Pconst c :: pds -> program_descs pds (ns,fs,c::cs,ts)
     | Obc.Ptype t :: pds -> program_descs pds (ns,fs,cs,t::ts)
   in

@@ -296,22 +296,12 @@ let node_by_longname node =
 (** @return the list of nodes called by the node named [ln], with the
     corresponding params (static parameters appear as free variables). *)
 let collect_node_calls ln =
-  let add_called_node ln params acc = match params with
-    | [] -> acc (* do not add nodes without params since, no instance is needed *)
-    | _ ->
+  let add_called_node ln params acc =
       (* do not add pervasives, add even without params,*)
       (* since after substitution, it could be with static params *)
-        (match ln with
-          | { qual = Pervasives } -> acc
-          | { qual = LocalModule _ } ->
-            (* when local param, it is higherorder, we need to generate this one *)
-              (ln, params)::acc
-          | _ ->
-            (* only generate non Pervasives and non LocalModule when asked *)
-            if !Compiler_options.callgraph_only_on_higherorder
-            then acc
-            else (ln, params)::acc
-        )
+    match ln with
+      | { qual = Pervasives } -> acc
+      | _ -> (ln, params)::acc
   in
   let edesc _ acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
