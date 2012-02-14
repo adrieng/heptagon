@@ -77,7 +77,7 @@ c )
   set -e
   compile -target c "$@"
   base_f=`basename ${!#} .ept`
-  cd ${base_f}_c && cc -I`$HEPTC -where`/c *.c -o ../${base_f}
+  cd ${base_f}_c && cc -std=c99 -I`$HEPTC -where`/c *.c -o ../${base_f}
 ;;
 -- | * )
   compile "$@"
