@@ -13,7 +13,7 @@ open Global_printer
 
 (** Generate all the needed instances,
     Instances of nodes from other modules are respectively done in their modules,
-    thus the program list *)
+    thus the program list as output of [Callgraph.program] *)
 
 
 module Error =
@@ -176,24 +176,26 @@ struct
     (** Replaces nodes call with the call to the correct instance. *)
     let edesc funs m ed =
       let ed, _ = Mls_mapfold.edesc funs m ed in
-      let ed = match ed with
-        | Eapp ({ a_op = Efun ln; a_params = params } as app, e_list, r) ->
-            let op = Efun (node_for_params_call m ln params) in
-            Eapp ({ app with a_op = op; a_params = [] }, e_list, r)
-        | Eapp ({ a_op = Enode ln; a_params = params } as app, e_list, r) ->
-            let op = Enode (node_for_params_call m ln params) in
-            Eapp ({ app with a_op = op; a_params = [] }, e_list, r)
-        | Eiterator(it, ({ a_op = Efun ln; a_params = params } as app),
-                      n, pe_list, e_list, r) ->
-            let op = Efun (node_for_params_call m ln params) in
-            Eiterator(it, {app with a_op = op; a_params = [] },
-                     n, pe_list, e_list, r)
-        | Eiterator(it, ({ a_op = Enode ln; a_params = params } as app),
-                     n, pe_list, e_list, r) ->
-            let op = Enode (node_for_params_call m ln params) in
-            Eiterator(it,{app with a_op = op; a_params = [] },
-                     n, pe_list, e_list, r)
-        | _ -> ed
+      let ed =
+        try begin match ed with
+          | Eapp ({ a_op = Efun ln; a_params = params } as app, e_list, r) ->
+              let op = Efun (node_for_params_call m ln params) in
+              Eapp ({ app with a_op = op; a_params = [] }, e_list, r)
+          | Eapp ({ a_op = Enode ln; a_params = params } as app, e_list, r) ->
+              let op = Enode (node_for_params_call m ln params) in
+              Eapp ({ app with a_op = op; a_params = [] }, e_list, r)
+          | Eiterator(it, ({ a_op = Efun ln; a_params = params } as app),
+                        n, pe_list, e_list, r) ->
+              let op = Efun (node_for_params_call m ln params) in
+              Eiterator(it, {app with a_op = op; a_params = [] },
+                       n, pe_list, e_list, r)
+          | Eiterator(it, ({ a_op = Enode ln; a_params = params } as app),
+                       n, pe_list, e_list, r) ->
+              let op = Enode (node_for_params_call m ln params) in
+              Eiterator(it,{app with a_op = op; a_params = [] },
+                       n, pe_list, e_list, r)
+          | _ -> ed
+        end with Not_found -> ed (* the calls were not to be replaced *)
       in ed, m
 
     let node_dec_instance n params =
@@ -294,12 +296,22 @@ let node_by_longname node =
 (** @return the list of nodes called by the node named [ln], with the
     corresponding params (static parameters appear as free variables). *)
 let collect_node_calls ln =
-  let add_called_node ln params acc =
-  (* do not add pervasives, add even without params,*)
-  (* since after substitution, it could be with static params *)
-    match ln with
-      | { qual = Pervasives } -> acc
-      | _ -> (ln, params)::acc
+  let add_called_node ln params acc = match params with
+    | [] -> acc (* do not add nodes without params since, no instance is needed *)
+    | _ ->
+      (* do not add pervasives, add even without params,*)
+      (* since after substitution, it could be with static params *)
+        (match ln with
+          | { qual = Pervasives } -> acc
+          | { qual = LocalModule _ } ->
+            (* when local param, it is higherorder, we need to generate this one *)
+              (ln, params)::acc
+          | _ ->
+            (* only generate non Pervasives and non LocalModule when asked *)
+            if !Compiler_options.callgraph_only_on_higherorder
+            then acc
+            else (ln, params)::acc
+        )
   in
   let edesc _ acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
@@ -336,8 +348,8 @@ let rec call_node (ln, params) =
   let call_list = called_nodes ln in
   let call_list = List.map (fun (ln, p) -> instantiate_node m ln p) call_list in
   (* Filters the node which doesn't have static params*)
-  (* since they are already instanciated/compiled *)
-  let call_list = List.filter (fun (_, p) -> p != []) call_list in
+(*  (* since they are already instanciated/compiled *)
+  let call_list = List.filter (fun (_, p) -> p != []) call_list in *)
   List.iter call_node call_list
 
 let program p =
