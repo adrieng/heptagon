@@ -1,0 +1,22 @@
+const n:int = 15
+
+
+fun f(i:int) returns (r:int)
+let
+  r = do_stuff(i);
+tel
+
+node main (i :int) returns (o :int)
+let
+  automaton
+    state S1 do
+      o = ! (async 0 fby async f(i))
+    until true then S2
+    state S2 do
+      o = ! (async 0 fby async f(i))
+    until true then S3
+    state S3 do
+      o = ! (async 0 fby async f(i))
+    until true then S1
+  end
+tel
