@@ -96,7 +96,7 @@ and exp ff = function
   | Sfloat f -> fprintf ff "%Ff" f
   | Sbool b -> pp_print_bool ff b
   | Sconstructor c -> constructor_name ff c
-  | Sstring s -> fprintf ff "\"%s\"" s
+  | Sstring s -> fprintf ff "\"%s\"" (String.escaped s)
   | Snull -> fprintf ff "null"
   | Efield (p,f) -> fprintf ff "%a.%a" exp p field_name f
   | Evar v -> var_ident ff v
