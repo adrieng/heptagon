@@ -62,9 +62,6 @@ struct
       let cr = Linearity.linearity_compare e1.e_linearity e2.e_linearity in
       if cr <> 0 then cr
       else
-      let cr = C.clock_compare e1.e_base_ck e2.e_base_ck in
-      if cr <> 0 then cr
-      else
         match e1.e_desc, e2.e_desc with
         | Eextvalue w1, Eextvalue w2 ->
           extvalue_compare w1 w2

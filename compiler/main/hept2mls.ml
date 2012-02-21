@@ -241,7 +241,7 @@ let program
 
 let signature s =
   { sig_name = s.Heptagon.sig_name;
-    sig_sig = s.Heptagon.sig_sig }
+    sig_sig = s.Heptagon.sig_sig}
 
 let interface i =
   let interface_decl id = match id with

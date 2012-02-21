@@ -171,7 +171,6 @@ let mk_app ?(async = None) ?(params=[]) ?(unsafe=false) ?(inlined = false) op =
     Heptagon.a_async = async;
     Heptagon.a_inlined = inlined }
 
-
 (** { 3 Translate the AST into Heptagon. } *)
 let translate_iterator_type = function
   | Imap -> Heptagon.Imap
@@ -549,7 +548,7 @@ and translate_signature s n =
   let o = List.map translate_arg s.sig_outputs in
   let p, _ = translate_params Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
-  let sig_node = Signature.mk_node c s.sig_loc i o s.sig_stateful s.sig_unsafe p in
+  let sig_node = Signature.mk_node ~extern:s.sig_external c s.sig_loc i o s.sig_stateful s.sig_unsafe p in
   Check_signature.check_signature sig_node;
   safe_add s.sig_loc add_value n sig_node;
   { Heptagon.sig_name = n; Heptagon.sig_sig = sig_node }

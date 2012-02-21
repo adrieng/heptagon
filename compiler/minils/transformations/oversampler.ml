@@ -46,7 +46,7 @@ let gen_merge v (c, w) =
     List.map (fun c -> (c, extvalue_false (ck_c c))) c_false_list
   in
   mk_exp Cbase Initial.tbool
-         ~linearity:Linearity.Ltop ~ck:ck ~ct:(Ck ck) (Emerge (v, (c,w)::false_cases))
+         ~linearity:Linearity.Ltop ~ct:(Ck ck) (Emerge (v, (c,w)::false_cases))
 
 
 (** returns [new_eqs, new_vds, base_vd], base_vd is not in new_vds, and is an option :

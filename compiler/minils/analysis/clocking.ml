@@ -148,7 +148,7 @@ let rec stateful e = match e.e_desc with
   | _ -> false
 
 
-let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
+let typing_eq h ({ eq_lhs = pat; eq_rhs = e; eq_loc = loc } as eq) =
   (* typing the expression, returns ct, ck_base *)
   let rec typing e =
     let ct,base = match e.e_desc with
@@ -205,7 +205,6 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
           in
           ct, base_ck
     in
-    e.e_base_ck <- base;
     (try unify ct e.e_ct
      with Unify ->
        eprintf "Inconsistent clock annotation for exp %a.@\n"
@@ -219,14 +218,15 @@ let typing_eq h { eq_lhs = pat; eq_rhs = e; eq_loc = loc } =
      with Unify -> error_message e.e_loc (Etypeclash (actual_ct, expected_ct)));
     base
   in
-  let ct,_ = typing e in
+  let ct,base_ck = typing e in
   let pat_ct = typing_pat h pat in
   (try unify ct pat_ct
     with Unify ->
       eprintf "Incoherent clock between right and left side of the equation.@\n";
-      error_message loc (Etypeclash (ct, pat_ct)))
+      error_message loc (Etypeclash (ct, pat_ct)));
+  { eq with eq_base_ck = base_ck }
 
-let typing_eqs h eq_list = List.iter (typing_eq h) eq_list
+let typing_eqs h eq_list = List.map (typing_eq h) eq_list
 
 let append_env h vds =
   List.fold_left (fun h { v_ident = n; v_clock = ck } -> Env.add n ck h) h vds
@@ -234,27 +234,28 @@ let append_env h vds =
 
 let typing_contract h contract =
   match contract with
-    | None -> h
-    | Some { c_local = l_list;
+    | None -> None, h
+    | Some ({ c_local = l_list;
              c_eq = eq_list;
              c_assume = e_a;
              c_enforce = e_g;
-             c_controllables = c_list } ->
+             c_controllables = c_list } as contract) ->
         let h' = append_env h l_list in
         (* assumption *)
         (* property *)
-        typing_eqs h' eq_list;
+        let eq_list = typing_eqs h' eq_list in
         expect_extvalue h' Cbase e_a;
         expect_extvalue h' Cbase e_g;
-        append_env h c_list
+        let h = append_env h c_list in
+        Some { contract with c_eq = eq_list }, h
 
 
 let typing_node node =
   let h0 = append_env Env.empty node.n_input in
   let h0 = append_env h0 node.n_output in
-  let h = typing_contract h0 node.n_contract in
+  let contract, h = typing_contract h0 node.n_contract in
   let h = append_env h node.n_local in
-  typing_eqs h node.n_equs;
+  let equs = typing_eqs h node.n_equs in
   (* Find the free vars in signature and set them to base *)
   Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;
 
@@ -270,7 +271,9 @@ let typing_node node =
   let node = { node with n_input = List.map2 set_clock node.n_input new_in_ck;
                          n_output = List.map2 set_clock node.n_output new_out_ck;
                          n_local = List.map set_clock_h node.n_local;
-                         n_base_ck = root }
+                         n_base_ck = root;
+                         n_equs = equs;
+                         n_contract = contract; }
   in
   Mls_utils.update_node_signature node;
   node

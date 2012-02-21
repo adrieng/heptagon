@@ -347,7 +347,8 @@ let program p =
   let dirname = build_path (filename ^ "_c") in
   let dir = clean_dir dirname in
   let c_ast = translate filename p in
-    C.output dir c_ast
+  let c_ast = if !Compiler_options.unroll_loops then List.map Cunroll.cfile c_ast else c_ast in
+  C.output dir c_ast
 
 let interface i =
   let filename =

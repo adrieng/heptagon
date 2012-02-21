@@ -57,7 +57,6 @@ and extvalue_desc =
 and exp = {
   e_desc            : edesc;
   e_level_ck        : ck; (*when no data dep, execute the exp on this clock (set by [switch] *)
-  mutable e_base_ck : ck;
   mutable e_ct      : ct;
   e_ty              : ty;
   e_linearity : linearity;
@@ -111,6 +110,7 @@ type eq = {
   eq_lhs    : pat;
   eq_rhs    : exp;
   eq_unsafe : bool;
+  eq_base_ck : ck;
   eq_loc    : location }
 
 type var_dec = {
@@ -197,10 +197,10 @@ let mk_vd_extvalue vd =
   mk_extvalue ~ty:vd.v_type ~linearity:vd.v_linearity
               ~clock:vd.v_clock ~loc:vd.v_loc (Wvar vd.v_ident)
 
-let mk_exp level_ck ty ~linearity ?(ck = Cbase)
+let mk_exp level_ck ty ~linearity
     ?(ct = fresh_ct ty) ?(loc = no_location) desc =
   { e_desc = desc; e_ty = ty; e_linearity = linearity;
-    e_level_ck = level_ck; e_base_ck = ck; e_ct = ct; e_loc = loc }
+    e_level_ck = level_ck; e_ct = ct; e_loc = loc }
 
 let mk_var_dec ?(loc = no_location) ~is_memory ident ty linearity ck =
   { v_ident = ident; v_type = ty; v_is_memory = is_memory;
@@ -208,11 +208,11 @@ let mk_var_dec ?(loc = no_location) ~is_memory ident ty linearity ck =
 
 let mk_extvalue_exp ?(clock = fresh_clock())
     ?(loc = no_location) level_ck ty ~linearity desc =
-  mk_exp ~ck:clock ~loc:loc level_ck ty ~linearity:linearity
+  mk_exp ~loc:loc level_ck ty ~linearity:linearity
     (Eextvalue (mk_extvalue ~clock:clock ~loc:loc ~linearity:linearity ~ty:ty desc))
 
-let mk_equation ?(loc = no_location) unsafe pat exp =
-  { eq_lhs = pat; eq_rhs = exp; eq_unsafe = unsafe; eq_loc = loc }
+let mk_equation ?(loc = no_location) ?(base_ck=fresh_clock()) unsafe pat exp =
+  { eq_lhs = pat; eq_rhs = exp; eq_unsafe = unsafe; eq_base_ck = base_ck; eq_loc = loc }
 
 let mk_node
     ?(input = []) ?(output = []) ?(contract = None) ?(pinst = ([],[]))

@@ -296,12 +296,14 @@ let node_by_longname node =
 (** @return the list of nodes called by the node named [ln], with the
     corresponding params (static parameters appear as free variables). *)
 let collect_node_calls ln =
+  (** only add nodes when not external and with params *)
   let add_called_node ln params acc =
-      (* do not add pervasives, add even without params,*)
-      (* since after substitution, it could be with static params *)
-    match ln with
-      | { qual = Pervasives } -> acc
-      | _ -> (ln, params)::acc
+    match params with
+      | [] -> acc
+      | _ ->
+        if (Modules.find_value ln).node_external
+        then acc
+        else (ln, params)::acc
   in
   let edesc _ acc ed = match ed with
     | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
@@ -314,7 +316,7 @@ let collect_node_calls ln =
   let funs = { Mls_mapfold.defaults with edesc = edesc } in
   let n = node_by_longname ln in
   let _, acc = Mls_mapfold.node_dec funs [] n in
-    acc
+  acc
 
 (** @return the list of nodes called by the node named [ln]. This list is
     computed lazily the first time it is needed. *)

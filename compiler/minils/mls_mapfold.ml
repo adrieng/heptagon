@@ -41,11 +41,10 @@ let rec exp_it funs acc e = funs.exp funs acc e
 and exp funs acc e =
   let e_ty, acc = ty_it funs.global_funs acc e.e_ty in
   let e_level_ck, acc = ck_it funs.global_funs acc e.e_level_ck in
-  let e_base_ck, acc = ck_it funs.global_funs acc e.e_base_ck in
   let e_ct, acc = ct_it funs.global_funs acc e.e_ct in
   let ed, acc = edesc_it funs acc e.e_desc in
   { e with e_desc = ed; e_ty = e_ty; e_level_ck = e_level_ck;
-           e_base_ck = e_base_ck; e_ct = e_ct }, acc
+           e_ct = e_ct }, acc
 
 and extvalue_it funs acc w = funs.extvalue funs acc w
 and extvalue funs acc w =
@@ -142,8 +141,9 @@ and pat funs acc p = match p with
 and eq_it funs acc eq = funs.eq funs acc eq
 and eq funs acc eq =
   let eq_lhs, acc = pat_it funs acc eq.eq_lhs in
+  let eq_base_ck, acc = ck_it funs.global_funs acc eq.eq_base_ck in
   let eq_rhs, acc = exp_it funs acc eq.eq_rhs in
-    { eq with eq_lhs = eq_lhs; eq_rhs = eq_rhs }, acc
+    { eq with eq_lhs = eq_lhs; eq_rhs = eq_rhs; eq_base_ck = eq_base_ck }, acc
 
 and eqs_it funs acc eqs = funs.eqs funs acc eqs
 and eqs funs acc eqs = mapfold (eq_it funs) acc eqs

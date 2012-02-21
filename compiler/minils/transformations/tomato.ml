@@ -28,7 +28,7 @@ let debug_do f () = if debug then f () else ()
   Data-flow minimization on MiniLS:
 
    1. Put each equation into a big map. It maps variable names to triples (class_id * truncated
-   expression * class_id list). Initially, each local variable is in the same class.
+   expression * class_id list). Initially, all local variables are mapped to the same class .
 
    2. Compute the new class_id of each equation: two equations are in the same class if they are
    equal and have the same child equations.
@@ -63,6 +63,7 @@ struct
       {
         mutable er_class : int;
         er_clock_type : ct;
+        er_base_ck : ck;
         er_pattern : pat;
         er_head : exp;
         er_children : class_ref list;
@@ -211,7 +212,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let ed, add_when, when_count, class_id_list = decompose e' in
         ed, (fun e' -> { e with e_desc = Ewhen (add_when e', cn, x) }), when_count + 1,
         class_ref_of_var is_input
-          (mk_extvalue ~clock:e'.e_base_ck ~ty:Initial.tbool
+          (mk_extvalue ~clock:(Clocks.first_ck e'.e_ct) ~ty:Initial.tbool
                        ~linearity:Linearity.Ltop (Wvar x)) x
         :: class_id_list
 
@@ -219,7 +220,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
         let class_id_list, clause_list = mapfold_right add_clause clause_list [] in
         let x_id =
           class_ref_of_var is_input
-            (mk_extvalue ~clock:e.e_base_ck ~ty:Initial.tbool
+            (mk_extvalue ~clock:(Clocks.first_ck e.e_ct) ~ty:Initial.tbool
                          ~linearity:Linearity.Ltop (Wvar x)) x
         in
         Emerge (dummy_var, clause_list), id, 0, x_id :: class_id_list
@@ -258,6 +259,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
       er_add_when = add_when;
       er_when_count = when_count;
       er_clock_type = eq.eq_rhs.e_ct;
+      er_base_ck = eq.eq_base_ck;
     }
   in
 
@@ -308,7 +310,7 @@ let new_name mapping x =
   with Not_found -> x
 
 (* Takes a tomato env and returns a renaming environment *)
-let construct_mapping (tenv, cenv) =
+let construct_mapping (_, cenv) =
   let construct_mapping_eq_repr _ eq_repr_list mapping =
     let rec ty_list_of_ty ty acc = match ty with
         | Tprod ty_list -> List.fold_right ty_list_of_ty ty_list acc
@@ -337,7 +339,7 @@ let construct_mapping (tenv, cenv) =
     let fused_ident_list = List.map (Misc.fold_right_1 concat_idents) idents_list in
 
     Misc.fold_left4
-      (fun mapping x_list fused_x ty ck ->
+      (fun mapping x_list fused_x _ _ ->
         List.fold_left
           (fun mapping x ->
             Env.add x (Info fused_x) mapping)
@@ -363,19 +365,18 @@ let rec reconstruct ((tenv, cenv) as env) mapping =
         Misc.take (List.length repr.er_children - repr.er_when_count) repr.er_children in
 
       let ed = reconstruct_exp_desc mapping repr.er_head.e_desc repr.er_children in
-      let ck = reconstruct_clock mapping repr.er_head.e_base_ck in
       let level_ck =
         reconstruct_clock mapping repr.er_head.e_level_ck in (* not strictly needed, done for
-                                                            consistency reasons *)
+                                                                consistency reasons *)
       let ct = reconstruct_clock_type mapping repr.er_head.e_ct in
-      { repr.er_head with e_desc = ed; e_base_ck = ck; e_level_ck = level_ck; e_ct = ct; }
+      { repr.er_head with e_desc = ed; e_level_ck = level_ck; e_ct = ct; }
     in
 
     let e = repr.er_add_when e in
 
     let pat = reconstruct_pattern mapping repr.er_pattern in
 
-    mk_equation false pat e :: eq_list in
+    mk_equation ~base_ck:(reconstruct_clock mapping repr.er_base_ck) false pat e :: eq_list in
   IntMap.fold reconstruct_class cenv []
 
 and reconstruct_exp_desc mapping headd children =
@@ -523,7 +524,9 @@ let compute_new_class (tenv : tom_env) =
   let add_eq_repr _ eqr classes =
     let map_class_ref cref = match cref with
       | Cr_input _ -> None
-      | Cr_plain x -> Some (Env.find x mapping)
+      | Cr_plain x ->
+        try Some (Env.find x mapping)
+        with Not_found -> Format.eprintf "Unknown class %a@." print_ident x; assert false
     in
     let children = List.map map_class_ref eqr.er_children in
 
@@ -578,7 +581,7 @@ let rec fix_output_var_dec mapping vd (seen, equs, vd_list) =
       mk_equation false
         (Evarpat new_id)
         (mk_exp new_clock vd.v_type ~ct:(Ck new_clock)
-           ~ck:new_clock ~linearity:Linearity.Ltop (Eextvalue w))
+            ~linearity:Linearity.Ltop (Eextvalue w))
     in
     (seen, new_eq :: equs, new_vd :: vd_list)
   else
@@ -592,6 +595,7 @@ and fix_output_var_decs tenv (equs, vd_list) =
 
 
 let node nd =
+  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name);
   Idents.enter_node nd.n_name;
 
   (* Initial environment *)

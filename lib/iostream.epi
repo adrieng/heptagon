@@ -9,5 +9,5 @@ const file stderr
 *)
 
 (* Basic Printing *)
-unsafe val fun printf(string;...) returns ()
-unsafe val fun fprintf(file;string;...) returns ()
+external unsafe val fun printf(string;...) returns ()
+external unsafe val fun fprintf(file;string;...) returns ()

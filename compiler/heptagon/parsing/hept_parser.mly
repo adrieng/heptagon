@@ -19,7 +19,7 @@ open Hept_parsetree
 %token <bool> BOOL
 %token <string> STRING
 %token <string * string> PRAGMA
-%token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST UNSAFE
+%token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST UNSAFE EXTERNAL
 %token FBY PRE SWITCH EVERY
 %token OR STAR NOT
 %token AMPERSAND
@@ -669,13 +669,17 @@ unsafe:
   | UNSAFE    { true }
   | /*empty*/ { false }
 
+extern:
+  | EXTERNAL  { true }
+  | /*empty*/ { false }
+
 interface_desc:
   | t=type_dec         { Itypedef t }
   | c=const_dec        { Iconstdef c }
   | s=node_sig         { Isignature s }
 
 node_sig:
-  | u=unsafe VAL n=node_or_fun f=ident pc=node_params LPAREN i=sig_args RPAREN
+  | e=extern u=unsafe VAL n=node_or_fun f=ident pc=node_params LPAREN i=sig_args RPAREN
     returns LPAREN o=sig_args RPAREN
       { { sig_name = f;
           sig_stateful = n;
@@ -684,6 +688,7 @@ node_sig:
           sig_outputs = o;
           sig_params = fst pc;
           sig_param_constraints = snd pc;
+          sig_external = e;
           sig_loc = (Loc($startpos,$endpos)) } }
 ;
 

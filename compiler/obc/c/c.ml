@@ -149,12 +149,12 @@ and cfile_desc =
     elements of the list [l] via the function [f], separated by [sep] strings
     and breakable spaces. *)
 let rec pp_list1 f sep fmt l = match l with
-  | [] -> fprintf fmt ""
+  | [] -> ()
   | [x] -> fprintf fmt "%a" f x
   | h :: t -> fprintf fmt "%a%s@ %a" f h sep (pp_list1 f sep) t
 
 let rec pp_list f sep fmt l = match l with
-  | [] -> fprintf fmt ""
+  | [] -> ()
   | h :: t -> fprintf fmt "@ %a%s%a" f h sep (pp_list f sep) t
 
 let pp_string fmt s =
@@ -229,7 +229,9 @@ and pp_cstm fmt stm = match stm with
       fprintf fmt "@[<v>@[<v 2>if (%a) {%a@]@ @[<v 2>} else {%a@]@ }@]"
         pp_cexpr c pp_cstm_list t pp_cstm_list e
   | Cfor(x, lower, upper, e) ->
-      fprintf fmt "@[<v>@[<v 2>for (int %a = %a; %a < %a; ++%a) {%a@]@ }@]"
+      fprintf fmt
+        "@[<v>@[<v 2>{@\nint %a;@\n@[<v 2>for (%a = %a; %a < %a; ++%a) {%a@]@ }@]@\n}@]"
+        pp_string x
         pp_string x  pp_cexpr lower  pp_string x
         pp_cexpr upper  pp_string x  pp_cstm_list e
   | Cwhile (Obc.Wwhiledo, e, b) ->

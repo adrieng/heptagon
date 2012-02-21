@@ -232,14 +232,15 @@ and arg =
     a_name  : var_name option }
 
 and signature =
-  { sig_name        : dec_name;
-    sig_inputs      : arg list;
-    sig_stateful    : bool;
-    sig_unsafe      : bool;
-    sig_outputs     : arg list;
-    sig_params      : param list;
+  { sig_name              : dec_name;
+    sig_inputs            : arg list;
+    sig_stateful          : bool;
+    sig_unsafe            : bool;
+    sig_outputs           : arg list;
+    sig_params            : param list;
     sig_param_constraints : exp list;
-    sig_loc         : location }
+    sig_external          : bool;
+    sig_loc               : location }
 
 type interface =
     { i_modname : dec_name;

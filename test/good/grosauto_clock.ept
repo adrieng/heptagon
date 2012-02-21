@@ -1,0 +1,9 @@
+node main() returns (o: int)
+let
+  automaton
+    state State1
+      var c : bool;
+      do o = merge c (1 fby (o when c)) 27;
+         c = false;
+  end
+tel

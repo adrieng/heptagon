@@ -435,9 +435,10 @@ let empty_call_context = None
     [j] obj decs
     [s] the actions used in the step method.
     [v] var decs *)
-let rec translate_eq map call_context ({ Minils.eq_lhs = pat; Minils.eq_rhs = e } as eq)
+let rec translate_eq map call_context
+    ({ Minils.eq_lhs = pat; Minils.eq_base_ck = ck; Minils.eq_rhs = e } as eq)
     (v, si, j, s) =
-  let { Minils.e_desc = desc; Minils.e_base_ck = ck; Minils.e_loc = loc } = e in
+  let { Minils.e_desc = desc; Minils.e_loc = loc } = e in
   match (pat, desc) with
     | _, Minils.Ewhen (e,_,_) ->
         translate_eq map call_context {eq with Minils.eq_rhs = e} (v, si, j, s)

@@ -169,6 +169,11 @@ let same_control ck1 ck2 = match ck_repr ck1, ck_repr ck2 with
   | Cvar {contents = Cindex i1}, Cvar {contents = Cindex i2} -> i1 = i2
   | _ -> false
 
+(** returns the first clock of a ct. *)
+let rec first_ck ct = match ct with
+  | Ck ck -> ck
+  | Cprod [] -> assert false
+  | Cprod (ct::_) -> first_ck ct
 
 (** Generate a signature clock from a clock *)
 let rec ck_to_sck ck =
@@ -177,4 +182,3 @@ let rec ck_to_sck ck =
     | Cbase -> Signature.Cbase
     | Con (ck,c,x) -> Signature.Con(ck_to_sck ck, c, Idents.source_name x)
     | _ -> Misc.internal_error "Signature couldn't translate ck"
-

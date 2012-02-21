@@ -29,19 +29,54 @@ let print_debug_ivar_env name env =
     Format.printf "@."
   )
 
+let print_debug_ivar_set name env =
+  if verbose_mode then (
+    Format.printf "%s:  " name;
+    IvarSet.iter (fun k -> Format.printf "%s; " (ivar_to_string k) ) env;
+    Format.printf "@."
+  )
+
 module TyEnv =
     ListMap(struct
       type t = ty
       let compare = Global_compare.type_compare
     end)
 
+(** @return whether [ty] corresponds to a record type. *)
+let is_record_type ty = match Modules.unalias_type ty with
+  | Tid n ->
+      (match Modules.find_type n with
+        | Tstruct _ -> true
+        | _ -> false)
+  | _ -> false
+
+let is_array_or_struct ty =
+  match Modules.unalias_type ty with
+    | Tarray _ -> true
+    | Tid n ->
+        (match Modules.find_type n with
+          | Signature.Tstruct _ -> true
+          | _ -> false)
+    | _ -> false
+
+let is_enum ty = match Modules.unalias_type ty with
+  | Tid n ->
+      (match Modules.find_type n with
+        | Tenum _ -> true
+        | _ -> false)
+  | _ -> false
+
 module InterfRead = struct
   exception Const_extvalue
 
   let rec vars_ck acc = function
-    | Con(_, _, n) -> IvarSet.add (Ivar n) acc
+    | Con(ck2, _, n) -> IvarSet.add (Ivar n) (vars_ck acc ck2)
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
+
+  let rec vars_ct acc ct = match ct with
+    | Ck ck -> vars_ck acc ck
+    | Cprod ct_list -> List.fold_left vars_ct acc ct_list
 
   let rec ivar_of_extvalue w = match w.w_desc with
     | Wvar x -> Ivar x
@@ -83,7 +118,7 @@ module InterfRead = struct
       | Eiterator (_, _, _, _, _, Some x) -> IvarSet.add (Ivar x) acc
       | _ -> acc
     in
-      e, vars_ck acc e.e_base_ck
+      e, acc
 
   let rec vars_pat acc = function
     | Evarpat x -> IvarSet.add (Ivar x) acc
@@ -142,13 +177,7 @@ module World = struct
           Signature.field_assoc f fields
 
   let is_optimized_ty ty =
-    match Modules.unalias_type ty with
-      | Tarray _ -> true
-      | Tid n ->
-          (match Modules.find_type n with
-            | Signature.Tstruct _ -> true
-            | _ -> false)
-      | _ -> false
+    (!Compiler_options.interf_all (* && not (is_enum ty)) *) ) || is_array_or_struct ty
 
   let is_optimized iv =
     is_optimized_ty (ivar_type iv)
@@ -250,7 +279,12 @@ let number_uses iv uses =
   try
     IvarEnv.find iv uses
   with
-    | Not_found -> 0
+    | Not_found ->
+        (* add one use for memories without any use to make sure they interfere
+           with other memories and outputs. *)
+        (match iv with
+          | Ivar x when World.is_memory x -> 1
+          | _ -> 0)
 
 let add_uses uses iv env =
   let ivars = all_ivars IvarSet.empty iv (World.ivar_type iv) in
@@ -283,7 +317,7 @@ let compute_live_vars eqs =
 
 
 let rec disjoint_clock is_mem ck1 ck2 =
-  match ck1, ck2 with
+  match Clocks.ck_repr ck1, Clocks.ck_repr ck2 with
     | Cbase, Cbase -> false
     | Con(ck1, c1, n1), Con(ck2,c2,n2) ->
         if ck1 = ck2 & n1 = n2  & c1 <> c2 & not is_mem then
@@ -347,20 +381,27 @@ let rec add_interferences_from_list force vars =
 let add_interferences live_vars =
   List.iter (fun (_, vars) -> add_interferences_from_list false vars) live_vars
 
+(** Spill non linear inputs. *)
 let spill_inputs f =
   let spilled_inp = List.filter (fun vd -> not (is_linear vd.v_linearity)) f.n_input in
   let spilled_inp = List.fold_left
     (fun s vd -> IvarSet.add (Ivar vd.v_ident) s) IvarSet.empty spilled_inp in
-    IvarSet.iter remove_from_ivar (all_ivars_set spilled_inp)
+  let spilled_inp = all_ivars_set spilled_inp in
+    IvarSet.iter remove_from_ivar spilled_inp
 
-
-(** @return whether [ty] corresponds to a record type. *)
-let is_record_type ty = match ty with
-  | Tid n ->
-      (match Modules.find_type n with
-        | Tstruct _ -> true
-        | _ -> false)
-  | _ -> false
+(** If we optimize all types, we need to spill outputs and memories so
+    that register allocation by the C compiler is not disturbed. *)
+let spill_mems_outputs f =
+  let add_output s vd =
+    if not (is_array_or_struct vd.v_type) then IvarSet.add (Ivar vd.v_ident) s else s
+  in
+  let add_memory iv s =
+    if not (is_array_or_struct (World.ivar_type iv)) then IvarSet.add iv s else s
+  in
+  let spilled_vars = List.fold_left add_output IvarSet.empty f.n_output in
+  let spilled_vars = IvarSet.fold add_memory !World.memories spilled_vars in
+  let spilled_vars = all_ivars_set spilled_vars in
+  IvarSet.iter remove_from_ivar spilled_vars
 
 (** [filter_vars l] returns a list of variables whose fields appear in
     a list of ivar.*)
@@ -524,6 +565,9 @@ let build_interf_graph f =
     spill_inputs f;
     if not !Compiler_options.normalize_register_outputs then
       spill_registers_outputs f;
+    (* Spill outputs and memories that are not arrays or struts*)
+    if !Compiler_options.interf_all then
+      spill_mems_outputs f;
 
     (* Return the graphs *)
     !World.igs

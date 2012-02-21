@@ -126,6 +126,8 @@ let strict_ssa = ref false
 
 let functions_are_classes = ref true
 
+let unroll_loops = ref false
+
 
 let callgraph = ref true
 let callgraph_only_on_higherorder = ref false
@@ -147,7 +149,7 @@ let check_options () =
     if !do_linear_typing then err "Unable to activate linear typing with strict SSA activated."
   )
 
-
+let interf_all = ref false
 
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
@@ -187,3 +189,5 @@ and doc_java_queue_nb = "\t\tSet the default thread number for async nodes, defa
 and doc_linear_only = "\t\tEnable linear annotations"
 and doc_interf_scheduler = "\tUse the old scheduler"
 and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
+and doc_interf_all = "\t\tPerform memory allocation on all types"
+and doc_unroll = "\t\tUnroll all loops"

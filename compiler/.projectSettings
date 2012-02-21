@@ -6,6 +6,6 @@
 		<item value="" key="ocamlbuildProjectCompilerFlags"/>
 		<item value="-j 0" key="ocamlbuildProjectOtherFlags"/>
 		<item value="true" key="ocamlbuildGenerateTypeInfo"/>
-		<item value="heptc.d.byte" key="ocamlbuildProjectTargets"/>
+		<item value="heptc.byte" key="ocamlbuildProjectTargets"/>
 	</section>
 </section>
