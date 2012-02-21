@@ -239,6 +239,7 @@ let signature s =
     sig_outputs = s.Heptagon.sig_outputs;
     sig_params = s.Heptagon.sig_params;
     sig_param_constraints = s.Heptagon.sig_param_constraints;
+    sig_external = s.Heptagon.sig_external;
     sig_loc = s.Heptagon.sig_loc }
 
 let interface i =

@@ -166,6 +166,7 @@ type signature = {
   sig_outputs           : arg list;
   sig_params            : param list;
   sig_param_constraints : constrnt list;
+  sig_external          : bool;
   sig_loc               : location }
 
 type interface =

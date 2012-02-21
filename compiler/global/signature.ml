@@ -14,7 +14,7 @@ open Linearity
 
 (** Warning: Whenever these types are modified,
     interface_format_version should be incremented. *)
-let interface_format_version = "30"
+let interface_format_version = "4"
 
 type ck =
   | Cbase
@@ -42,6 +42,7 @@ type node = {
   node_unsafe             : bool;
   node_params             : param list;
   node_param_constraints  : constrnt list;
+  node_external           : bool;
   node_loc                : location}
 
 type field = { f_name : field_name; f_type : ty }
@@ -84,13 +85,14 @@ let mk_field n ty = { f_name = n; f_type = ty }
 let mk_const_def ty value =
   { c_type = ty; c_value = value }
 
-let mk_node ?(constraints = []) loc ins outs stateful unsafe params =
+let mk_node ?(constraints = []) loc ~extern ins outs stateful unsafe params =
   { node_inputs = ins;
     node_outputs  = outs;
     node_stateful = stateful;
     node_unsafe = unsafe;
     node_params = params;
     node_param_constraints = constraints;
+    node_external = extern;
     node_loc = loc}
 
 let rec field_assoc f = function

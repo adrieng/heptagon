@@ -69,6 +69,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "split", SPLIT;
  "reinit", REINIT;
  "unsafe", UNSAFE;
+ "external", EXTERNAL;
  "quo", INFIX3("quo");
  "mod", INFIX3("mod");
  "land", INFIX3("land");

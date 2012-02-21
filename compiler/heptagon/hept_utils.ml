@@ -63,13 +63,14 @@ let mk_simple_equation pat e =
 let mk_switch_equation e l =
   mk_equation (Eswitch (e, l))
 
-let mk_signature name ins outs stateful params constraints loc =
+let mk_signature name ~extern ins outs stateful params constraints loc =
   { sig_name = name;
     sig_inputs = ins;
     sig_stateful = stateful;
     sig_outputs = outs;
     sig_params = params;
     sig_param_constraints = constraints;
+    sig_external = extern;
     sig_loc = loc }
 
 let mk_node
@@ -116,5 +117,6 @@ let signature_of_node n =
       node_unsafe = n.n_unsafe;
       node_params = n.n_params;
       node_param_constraints = n.n_param_constraints;
+      node_external = false;
       node_loc = n.n_loc }
 

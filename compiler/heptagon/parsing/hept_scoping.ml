@@ -171,13 +171,14 @@ let mk_app ?(params=[]) ?(unsafe=false) ?(inlined = false) op =
     Heptagon.a_unsafe = unsafe;
     Heptagon.a_inlined = inlined }
 
-let mk_signature name ins outs stateful params constraints loc =
+let mk_signature name ~extern ins outs stateful params constraints loc =
   { Heptagon.sig_name = name;
     Heptagon.sig_inputs = ins;
     Heptagon.sig_stateful = stateful;
     Heptagon.sig_outputs = outs;
     Heptagon.sig_params = params;
     Heptagon.sig_param_constraints = constraints;
+    Heptagon.sig_external = extern;
     Heptagon.sig_loc = loc }
 
 
@@ -547,10 +548,10 @@ let translate_signature s =
   let o = List.map translate_arg s.sig_outputs in
   let p, _ = params_of_var_decs Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
-  let sig_node = Signature.mk_node s.sig_loc i o s.sig_stateful s.sig_unsafe p in
+  let sig_node = Signature.mk_node ~extern:s.sig_external s.sig_loc i o s.sig_stateful s.sig_unsafe p in
   Check_signature.check_signature sig_node;
   safe_add s.sig_loc add_value n sig_node;
-  mk_signature n i o s.sig_stateful p c s.sig_loc
+  mk_signature n i o s.sig_stateful p c s.sig_loc ~extern:s.sig_external
 
 
 let translate_interface_desc = function
