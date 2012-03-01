@@ -484,6 +484,11 @@ module EqClasses = Map.Make(
       | Eapp (app, _, _) | Eiterator (_, app, _, _, _, _) -> app.a_unsafe
       | _ -> false
 
+    let compare_children c1 c2 = match c1, c2 with
+      | None, _ -> -1
+      | _, None -> 1
+      | Some c1', Some c2' -> Pervasives.compare c1' c2'
+
     let compare (e1, ck1, cr_list1) (e2, ck2, cr_list2) =
       let cr = ClockCompareModulo.clock_type_compare ck1 ck2 in
       if cr <> 0 then cr
@@ -493,7 +498,7 @@ module EqClasses = Map.Make(
          else
            if unsafe e1 then 1
            else
-             (if unsafe e2 then -1 else list_compare Pervasives.compare cr_list1 cr_list2))
+             (if unsafe e2 then -1 else list_compare compare_children cr_list1 cr_list2))
   end)
 
 let rec path_environment tenv =
