@@ -168,7 +168,7 @@ and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_exp "("" -> "")") c
 
 and print_tag_e_list ff tag_e_list =
-  fprintf ff "@[%a@]" (print_list print_handler """""") tag_e_list
+  fprintf ff "@[%a@]" (print_list print_handler "" " " "") tag_e_list
 
 and print_every ff reset =
   print_opt (fun ff id -> fprintf ff " every %a" print_exp id) ff reset

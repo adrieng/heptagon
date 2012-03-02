@@ -173,7 +173,7 @@ and print_handler ff c =
   fprintf ff "@[<2>%a@]" (print_couple print_qualname print_extvalue "("" -> "")") c
 
 and print_tag_w_list ff tag_w_list =
-  fprintf ff "@[%a@]" (print_list print_handler """""") tag_w_list
+  fprintf ff "@[%a@]" (print_list print_handler "" " " "") tag_w_list
 
 
 and print_eq ff { eq_lhs = p; eq_rhs = e; eq_base_ck = base_ck } =
