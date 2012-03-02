@@ -56,7 +56,12 @@ let error_message loc = function
 let ck_of_name h x =
   if is_reset x
   then fresh_clock()
-  else Env.find x h
+  else
+    try Env.find x h
+    with Not_found ->
+      (* Format.eprintf "looking for %a/%d@." print_ident x x.num; *)
+      (* Env.iter (fun k ck -> Format.eprintf "%a/%d => %a@." print_ident k k.num print_ck ck) h; *)
+      Misc.internal_error ("clocking: unknown clock name " ^ name x)
 
 let rec typing_extvalue h w =
   let ck = match w.w_desc with
