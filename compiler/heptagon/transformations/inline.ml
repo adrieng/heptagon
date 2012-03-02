@@ -27,11 +27,19 @@ let mk_unique_node nd =
   let subst = List.map mk_bind (nd.n_block.b_local
                                 @ nd.n_input @ nd.n_output) in
 
-  let subst_var_dec _ () vd =
-    (List.assoc vd.v_ident subst, ()) in
-  let subst_edesc _ () ed = match ed with
-      | Evar vn -> (Evar (List.assoc vn subst).v_ident, ())
-      | _ -> raise Errors.Fallback in
+  let subst_var_dec _ () vd = (List.assoc vd.v_ident subst, ()) in
+
+  let subst_edesc funs () ed =
+    let ed, () = Hept_mapfold.edesc funs () ed in
+    let find vn = (List.assoc vn subst).v_ident in
+    (match ed with
+      | Evar vn -> Evar (find vn)
+      | Elast vn -> Elast (find vn)
+      | Ewhen (e, cn, vn) -> Ewhen (e, cn, find vn)
+      | Emerge (vn, e_l) -> Emerge (find vn, e_l)
+      | _ -> ed), ()
+  in
+
   let subst_eqdesc funs () eqd =
     let (eqd, ()) = Hept_mapfold.eqdesc funs () eqd in
     match eqd with
