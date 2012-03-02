@@ -40,7 +40,7 @@ let print_full_qualname ff qn = _print_qualname ~full:true ff qn
 
 let print_shortname ff {name = n} = print_name ff n
 
-let print_ident ff id = Format.fprintf ff "%s" (name id)
+let print_ident = Idents.print_ident
 
  let rec print_ck ff = function
   | Cbase -> fprintf ff "."
