@@ -6,11 +6,11 @@ else
 BIN:=heptc.$(TARGET)
 endif
 
-.PHONY: all clean opt byte clean debug install
+.PHONY: all clean native byte clean debug install
 
 all: $(TARGET)
 
-opt:
+native:
 ifeq ($(ENABLE_SIMULATOR), yes)
 	$(OCAMLBUILD) $(COMPILER).native $(SIMULATOR).native
 else
