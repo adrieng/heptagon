@@ -24,7 +24,7 @@ let message loc (s,e) =
         a name ck_name
   end;
   Format.eprintf "@.";
-  raise Errors.Error
+  if not !Compiler_options.no_clocking_error then raise Errors.Error
 
 
 (** @raise Errors.Error after printing the error *)
