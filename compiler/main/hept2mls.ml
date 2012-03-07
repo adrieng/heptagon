@@ -191,6 +191,7 @@ let translate_contract contract =
                c_controllables = List.map translate_var l_c }
 
 let node n =
+  enter_node n.Heptagon.n_name;
   Is_memory.update_node
     { n_name = n.Heptagon.n_name;
       n_stateful = n.Heptagon.n_stateful;
