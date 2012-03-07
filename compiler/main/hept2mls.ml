@@ -187,6 +187,7 @@ let translate_contract contract =
                c_controllables = List.map translate_var l_c }
 
 let node n =
+  enter_node n.Heptagon.n_name;
   { n_name = n.Heptagon.n_name;
     n_stateful = n.Heptagon.n_stateful;
     n_unsafe = n.Heptagon.n_unsafe;
