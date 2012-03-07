@@ -121,10 +121,10 @@ let exp funs (env, newvars, newequs) exp =
   | _ -> exp, (env, newvars, newequs)
 
 let block funs (env, newvars, newequs) blk =
-  let (blk, (env, newvars, newequs)) =
-    Hept_mapfold.block funs (env, newvars, newequs) blk in
-  ({ blk with b_local = newvars @ blk.b_local; b_equs = newequs @ blk.b_equs; },
-   (env, [], []))
+  let (blk, (env, newvars', newequs')) =
+    Hept_mapfold.block funs (env, [], []) blk in
+  ({ blk with b_local = newvars' @ blk.b_local; b_equs = newequs' @ blk.b_equs; },
+   (env, newvars, newequs))
 
 let node_dec funs (env, newvars, newequs) nd =
   let nd, (env, newvars, newequs) =
