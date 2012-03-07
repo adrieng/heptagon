@@ -40,10 +40,12 @@ let comment ?(sep=separateur) s =
   if !verbose then Format.printf "%s%s@." sep s
 
 let do_pass d f p pp =
-  comment (d^" ...\n");
-  let r = f p in
+  comment (d ^ " ...\n");
+  let start = Unix.gettimeofday () in
+  let r = Compiler_timings.time_pass d f p in
+  let stop = Unix.gettimeofday () in
   pp r;
-  comment ~sep:"*** " (d^" done.");
+  comment ~sep:"*** " (d ^ " done.");
   r
 
 let do_silent_pass d f p = do_pass d f p (fun _ -> ())

@@ -50,7 +50,7 @@ let write_object_file p =
 let write_obc_file p =
   let obc_name = (Names.modul_to_string p.Obc.p_modname)^".obc" in
   let obc = open_out obc_name in
-    Obc_printer.print obc p;
+    do_silent_pass "Obc serialization" (Obc_printer.print obc) p;
     close_out obc;
     comment "Generation of Obc code"
 
@@ -80,27 +80,30 @@ let generate_target p s =
     if !Compiler_options.verbose
     then List.iter (Mls_printer.print stderr) p_list in*)
   let target = (find_target s).t_program in
+  let callgraph p = do_silent_pass "Callgraph" Callgraph.program p in
+  let mls2obc p = do_silent_pass "Translation into MiniLS" Mls2obc.program p in
+  let mls2obc_list p_l = do_silent_pass "Translation into MiniLS" (List.map Mls2obc.program) p_l in
   match target with
     | Minils convert_fun ->
-        convert_fun p
+        do_silent_pass "Code generation from MiniLS" convert_fun p
     | Obc convert_fun ->
-        let o = Mls2obc.program p in
+        let o = mls2obc p in
         let o = Obc_compiler.compile_program o in
-          convert_fun o
+        do_silent_pass "Code generation from Obc" convert_fun o
     | Minils_no_params convert_fun ->
-        let p_list = Callgraph.program p in
-          List.iter convert_fun p_list
+        let p_list = callgraph p in
+        do_silent_pass "Code generation from Obc (w/o params)" (List.iter convert_fun) p_list
     | Obc_no_params convert_fun ->
-        let p_list = Callgraph.program p in
-        let o_list = List.map Mls2obc.program p_list in
+        let p_list = callgraph p in
+        let o_list = mls2obc_list p_list in
         let o_list = List.map Obc_compiler.compile_program o_list in
-        List.iter convert_fun o_list
+        do_silent_pass "Code generation from Obc (w/o params)"         List.iter convert_fun o_list
 
 let generate_interface i s =
   let target = (find_target s).t_interface  in
   match target with
     | IObc convert_fun ->
-      let o = Mls2obc.interface i in
+      let o = do_silent_pass "Translation into Obc (interfaces)" Mls2obc.interface i in
       convert_fun o
     | IMinils convert_fun -> convert_fun i
 

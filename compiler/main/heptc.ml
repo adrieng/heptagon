@@ -60,21 +60,24 @@ let compile_program modname source_f =
   try
   (* Activates passes according to the backend used *)
     Mls2seq.load_conf ();
+  (* Record timing information *)
+    Compiler_timings.start_compiling modname;
   (* Process the [lexbuf] to an Heptagon AST *)
     let p = Hept_parser_scoper.parse_program modname lexbuf in
   (* Process the Heptagon AST *)
     let p = Hept_compiler.compile_program p in
   (* Compile Heptagon to MiniLS *)
-    let p = do_pass "Translation into MiniLs" Hept2mls.program p Mls_compiler.pp in
+    let p = do_pass "Translation into MiniLS" Hept2mls.program p Mls_compiler.pp in
   (* Output the .mls *)
-    Mls_printer.print mls_c p;
+    do_silent_pass "MiniLS serialization" (fun () -> Mls_printer.print mls_c p) ();
   (* Process the MiniLS AST *)
     let p = Mls_compiler.compile_program p in
   (* Output the .epci *)
     output_value epci_c (Modules.current_module ());
   (* Generate the sequential code *)
     Mls2seq.program p;
-    close_all_files ()
+    close_all_files ();
+    Compiler_timings.report_statistics ()
   with x -> close_all_files (); raise x
 
 
@@ -132,6 +135,7 @@ let main () =
         "-unroll", Arg.Set unroll_loops, doc_unroll;
         "-O", Arg.Unit do_optim, doc_optim;
         "-mall", Arg.Set interf_all, doc_interf_all;
+        "-time", Arg.Set time_passes, doc_time_passes;
       ]
         compile errmsg;
   with

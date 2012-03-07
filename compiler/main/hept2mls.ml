@@ -88,29 +88,30 @@ let translate_app app =
     ~id:(Some (fresh app.Heptagon.a_op))
     (translate_op app.Heptagon.a_op)
 
-let rec translate_extvalue e =
-  let mk_extvalue =
-    let clock = match e.Heptagon.e_ct_annot with
-      | None -> fresh_clock ()
-      | Some ct -> assert_1 (unprod ct)
-    in
-    mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity
-                ~ty:e.Heptagon.e_ty ~clock:clock
+let mk_extvalue e w =
+  let clock = match e.Heptagon.e_ct_annot with
+    | None -> fresh_clock ()
+    | Some ct -> assert_1 (unprod ct)
   in
+  mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity
+    ~ty:e.Heptagon.e_ty ~clock:clock w
+
+
+let rec translate_extvalue e =
   match e.Heptagon.e_desc with
-    | Heptagon.Econst c -> mk_extvalue (Wconst c)
-    | Heptagon.Evar x -> mk_extvalue (Wvar x)
+    | Heptagon.Econst c -> mk_extvalue e (Wconst c)
+    | Heptagon.Evar x -> mk_extvalue e (Wvar x)
     | Heptagon.Ewhen (e, c, x) ->
-        mk_extvalue (Wwhen (translate_extvalue e, c, x))
+        mk_extvalue e (Wwhen (translate_extvalue e, c, x))
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield;
                       Heptagon.a_params = params }, e_list, _) ->
         let e = assert_1 e_list in
         let f = assert_1 params in
         let fn = match f.se_desc with Sfield fn -> fn | _ -> assert false in
-          mk_extvalue (Wfield (translate_extvalue e, fn))
+          mk_extvalue e (Wfield (translate_extvalue e, fn))
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Ereinit }, e_list, _) ->
         let e1, e2 = assert_2 e_list in
-          mk_extvalue (Wreinit (translate_extvalue e1, translate_extvalue e2))
+          mk_extvalue e (Wreinit (translate_extvalue e1, translate_extvalue e2))
     | _ -> Error.message e.Heptagon.e_loc Error.Enormalization
 
 let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
@@ -139,10 +140,10 @@ let rec translate ({ Heptagon.e_desc = desc; Heptagon.e_ty = ty;
         Eapp (translate_app app, List.map translate_extvalue e_list, translate_reset reset)
     | Heptagon.Eiterator(it, app, n, pe_list, e_list, reset) ->
         Eiterator (translate_iterator_type it,
-                    translate_app app, n,
-                    List.map translate_extvalue pe_list,
-                    List.map translate_extvalue e_list,
-                    translate_reset reset)
+                   translate_app app, n,
+                   List.map translate_extvalue pe_list,
+                   List.map translate_extvalue e_list,
+                   translate_reset reset)
     | Heptagon.Efby _ | Heptagon.Esplit _
     | Heptagon.Elast _ ->
         Error.message loc Error.Eunsupported_language_construct

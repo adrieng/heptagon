@@ -137,6 +137,8 @@ let check_options () =
 
 let interf_all = ref false
 
+let time_passes = ref false
+
 let doc_verbose = "\t\t\tSet verbose mode"
 and doc_version = "\t\tThe version of the compiler"
 and doc_print_types = "\t\t\tPrint types"
@@ -173,3 +175,4 @@ and doc_interf_scheduler = "\tUse the old scheduler"
 and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
 and doc_interf_all = "\t\tPerform memory allocation on all types"
 and doc_unroll = "\t\tUnroll all loops"
+and doc_time_passes = "\t\tTime compilation passes"
