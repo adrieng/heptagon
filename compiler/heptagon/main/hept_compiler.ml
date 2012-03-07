@@ -21,6 +21,9 @@ let compile_program p =
   let p = pass "Typing" true Typing.program p pp in
   let p = pass "Linear Typing" !do_linear_typing Linear_typing.program p pp in
 
+  (* Inlining *)
+  let p = pass "Inlining" true Inline.program p pp in
+
   (* Causality check *)
   let p = silent_pass "Causality check" !causality Causality.program p in
 
@@ -29,9 +32,6 @@ let compile_program p =
 
   (* Completion of partial definitions *)
   let p = pass "Completion" true Completion.program p pp in
-
-  (* Inlining *)
-  let p = pass "Inlining" true Inline.program p pp in
 
   (* Automata *)
   let p = pass "Automata" true Automata.program p pp in
