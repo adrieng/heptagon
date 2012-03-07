@@ -95,6 +95,7 @@ struct
   let env = ref Env.empty (** Map idents to their string *)
   let current_node = ref Names.dummy_qualname (** Stores the current node *)
   let (node_env : NamesSet.t ref QualEnv.t ref) = ref QualEnv.empty
+  let name_counters = Hashtbl.create 500
 
   (** This function should be called every time we enter a node *)
   let enter_node n =
@@ -115,13 +116,19 @@ struct
       to variables defined in the source file have the same name unless
       there is a collision. *)
   let assign_name n =
-    let num = ref 1 in
-    let fresh s =
-      num := !num + 1;
-      s ^ "_" ^ (string_of_int !num) in
-    let rec fresh_string base =
-      let fs = fresh base in
-      if NamesSet.mem fs !(!used_names) then fresh_string base else fs in
+
+    let find_and_increment_counter s =
+      let num = try Hashtbl.find name_counters s with Not_found -> 1 in
+      Hashtbl.add name_counters s (num + 1);
+      num
+    in
+
+    let rec fresh_string s =
+      let num = find_and_increment_counter s in
+      let new_name = s ^ "_" ^ string_of_int num in
+      if NamesSet.mem new_name !(!used_names) then fresh_string s else new_name
+    in
+
     if not (Env.mem n !env) then
       (let s = n.source in
        let s = if NamesSet.mem s !(!used_names) then fresh_string s else s in
