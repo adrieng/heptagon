@@ -63,6 +63,8 @@ let mk_ext_value_static sed = mk_ext_value_exp sed.se_ty (Wconst sed)
 
 let mk_ext_value_const_int i = mk_ext_value Initial.tint (Wconst (Initial.mk_static_int i))
 
+let mk_ext_value_const_int32 i = mk_ext_value Initial.tint (Wconst (Initial.mk_static_int32 i))
+
 let mk_evar ty id =
   mk_ext_value_exp ty (Wvar id)
 

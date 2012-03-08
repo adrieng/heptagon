@@ -94,7 +94,7 @@ and exp ff = function
   | Ecast (t,e) -> fprintf ff "(%a)(%a)" ty t exp e
   | Svar c -> const_name ff c
   | Sfun f -> fprintf ff "%a.class" fun_name f
-  | Sint i -> pp_print_int ff i
+  | Sint i -> pp_print_int32 ff i
   | Sfloat f -> fprintf ff "%Ff" f
   | Sbool b -> pp_print_bool ff b
   | Sconstructor c -> constructor_name ff c

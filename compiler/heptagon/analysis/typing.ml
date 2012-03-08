@@ -898,7 +898,7 @@ and typing_app h app e_list =
         let typed_e, t1 = typing h e in
         (*Create the expression to compute the size of the array *)
         let e1 = mk_static_int_op (mk_pervasives "-") [typed_idx2; typed_idx1] in
-        let e2 = mk_static_int_op (mk_pervasives "+") [e1;mk_static_int 1 ] in
+        let e2 = mk_static_int_op (mk_pervasives "+") [e1; mk_static_int 1] in
         add_constraint_leq (mk_static_int 1) e2;
         Tarray (element_type t1, e2),
         { app with a_params = [typed_idx1; typed_idx2] }, [typed_e]

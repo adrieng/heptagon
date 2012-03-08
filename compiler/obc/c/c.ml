@@ -47,7 +47,7 @@ type cty =
   | Cty_id of qualname
   (** Previously defined C type, such as an enum or struct.*)
   | Cty_ptr of cty (** C points-to-other-type type. *)
-  | Cty_arr of int * cty (** A static array of the specified size. *)
+  | Cty_arr of Int32.t * cty (** A static array of the specified size. *)
   | Cty_void (** Well, [void] is not really a C type. *)
 
 (** A C block: declarations and statements. In source code form, it begins with
@@ -79,7 +79,7 @@ and cexpr =
   | Cfield of cexpr * qualname (** Field access to left-hand-side. *)
   | Carray of cexpr * cexpr (** Array access cexpr[cexpr] *)
 and cconst =
-  | Ccint of int (** Integer constant. *)
+  | Ccint of Int32.t (** Integer constant. *)
   | Ccfloat of float (** Floating-point number constant. *)
   | Ctag of string (** Tag, member of a previously declared enumeration. *)
   | Cstrlit of string (** String literal, enclosed in double-quotes. *)
@@ -181,7 +181,7 @@ let rec pp_cty fmt cty = match cty with
   | Cty_char -> fprintf fmt "char"
   | Cty_id s -> pp_qualname fmt s
   | Cty_ptr cty' -> fprintf fmt "%a*" pp_cty cty'
-  | Cty_arr (n, cty') -> fprintf fmt "%a[%d]" pp_cty cty' n
+  | Cty_arr (n, cty') -> fprintf fmt "%a[%ld]" pp_cty cty' n
   | Cty_void -> fprintf fmt "void"
 
 (** [pp_array_decl cty] returns the base type of a (multidimensionnal) array
@@ -190,7 +190,7 @@ let rec pp_array_decl cty =
   match cty with
     | Cty_arr(n, cty') ->
         let ty, s = pp_array_decl cty' in
-        ty, sprintf "[%d]%s" n s
+        ty, sprintf "[%ld]%s" n s
     | _ -> cty, ""
 
 let rec pp_param_cty fmt = function
@@ -278,7 +278,7 @@ and pp_clhs fmt clhs = match clhs with
         pp_cexpr e
 
 and pp_cconst fmt cconst = match cconst with
-  | Ccint i -> fprintf fmt "%d" i
+  | Ccint i -> fprintf fmt "%ld" i
   | Ccfloat f -> fprintf fmt "%f" f
   | Ctag t -> pp_string fmt t
   | Cstrlit t -> fprintf fmt "\"%s\"" (String.escaped t)

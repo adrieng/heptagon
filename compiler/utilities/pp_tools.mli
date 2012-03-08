@@ -48,6 +48,7 @@ val print_opt2 :
   (Format.formatter -> 'a -> unit) ->
   string -> Format.formatter -> 'a option -> unit
 
+val pp_print_int32 : Format.formatter -> Int32.t -> unit
 
 (** {2 Common and usual syntax} *)
 (** Theses functions are not exporting breaks

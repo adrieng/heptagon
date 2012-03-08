@@ -51,7 +51,7 @@ let rec unroll id start stop body =
 
     in
 
-    if i = stop then List.rev l else aux (i + 1) (List.map stm body @ l)
+    if i = stop then List.rev l else aux (Int32.succ i) (List.map stm body @ l)
 
   in
 

@@ -88,7 +88,7 @@ and exp = Ethis
         | Ecast of ty * exp
         | Svar of const_name
         | Sfun of fun_name
-        | Sint of int
+        | Sint of Int32.t
         | Sfloat of float
         | Sbool of bool
         | Sconstructor of constructor_name
@@ -112,8 +112,8 @@ let rec default_value ty = match ty with
   | Tclass _ -> Snull
   | Tgeneric _ -> Snull
   | Tbool -> Sbool true
-  | Tint -> Sint 0
-  | Tlong -> Sint 0
+  | Tint -> Sint 0l
+  | Tlong -> Sint 0l
   | Tfloat -> Sfloat 0.0
   | Tunit -> Evoid
   | Tarray _ -> Enew_array (ty,[])

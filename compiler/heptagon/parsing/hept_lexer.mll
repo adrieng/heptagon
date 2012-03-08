@@ -179,7 +179,7 @@ rule token = parse
   | '0' ['x' 'X'] ['0'-'9' 'A'-'F' 'a'-'f']+
   | '0' ['o' 'O'] ['0'-'7']+
   | '0' ['b' 'B'] ['0'-'1']+
-      { INT (int_of_string(Lexing.lexeme lexbuf)) }
+      { INT (Int32.of_string (Lexing.lexeme lexbuf)) }
   | ['0'-'9']+ ('.' ['0'-'9']+)? (['e' 'E'] ['+' '-']? ['0'-'9']+)?
       { FLOAT (float_of_string(Lexing.lexeme lexbuf)) }
   | "\""

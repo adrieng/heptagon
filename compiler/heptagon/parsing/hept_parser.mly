@@ -14,7 +14,7 @@ open Hept_parsetree
 %token EQUAL EQUALEQUAL LESS_GREATER BARBAR COMMA BAR ARROW LET TEL
 %token <string> Constructor
 %token <string> IDENT
-%token <int> INT
+%token <Int32.t> INT
 %token <float> FLOAT
 %token <bool> BOOL
 %token <string> STRING

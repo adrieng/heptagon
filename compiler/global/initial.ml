@@ -35,6 +35,9 @@ let mk_static_int_op op args =
   mk_static_exp tint (Sop (op,args))
 
 let mk_static_int i =
+  mk_static_exp tint (Sint (Int32.of_int i))
+
+let mk_static_int32 i =
   mk_static_exp tint (Sint i)
 
 let mk_static_bool b =
@@ -43,6 +46,8 @@ let mk_static_bool b =
 let mk_static_string s =
   mk_static_exp  tstring (Sstring s)
 
+let mk_static_float f =
+  mk_static_exp tfloat (Sfloat f)
 
 (* build the initial environment *)
 let initialize modul =

@@ -86,7 +86,7 @@ let assert_node_res cd =
                                                             ^ "\\\" failed at step" ^
                                                               " %d.\\n"));
                                       Cvar step_counter]));
-                  Creturn (mk_int 1)],
+                  Creturn (mk_int 1l)],
                  []);
           ];
       } in
@@ -121,7 +121,7 @@ let main_def_of_class_def cd =
         let iter_var = fresh "i" in
         let lhs = Carray (lhs, Cvar iter_var) in
         let (reads, bufs) = read_lhs_of_ty lhs ty in
-        ([Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, reads)], bufs)
+        ([Cfor (iter_var, mk_int 0l, cexpr_of_static_exp n, reads)], bufs)
     | _ ->
         let rec mk_prompt lhs = match lhs with
           | Cvar vn -> (vn, [])
@@ -140,7 +140,7 @@ let main_def_of_class_def cd =
       if !Compiler_options.hepts_simulation
       then (* hepts: systematically test and quit when EOF *)
         [Cif(Cbop("==",exp_scanf,Cvar("EOF")),
-       [Creturn(mk_int 0)],[])]
+       [Creturn(mk_int 0l)],[])]
       else
         [Csexpr (exp_scanf);] in
     let body =
@@ -160,7 +160,7 @@ let main_def_of_class_def cd =
               ([scan_exp;
                 Csexpr (Cfun_call (tyn ^ "_of_string",
                                    [Cvar varn]))],
-               [(varn, Cty_arr (20, Cty_char))]) in
+               [(varn, Cty_arr (20l, Cty_char))]) in
 
   (** Generates printf statements and buffer declarations needed for printing
       resulting values of enum types. *)
@@ -170,7 +170,7 @@ let main_def_of_class_def cd =
         let lhs = Carray (lhs, Cvar iter_var) in
         let (writes, bufs) = write_lhs_of_ty lhs ty in
   let writes_loop =
-    Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, writes) in
+    Cfor (iter_var, mk_int 0l, cexpr_of_static_exp n, writes) in
   if !Compiler_options.hepts_simulation then
     ([writes_loop], bufs)
   else
@@ -195,7 +195,7 @@ let main_def_of_class_def cd =
                              :: ep))],
          match nbuf_opt with
            | None -> []
-           | Some _ -> [(varn, Cty_arr (20, Cty_char))]) in
+           | Some _ -> [(varn, Cty_arr (20l, Cty_char))]) in
 
   let stepm = find_step_method cd in
   let (scanf_calls, scanf_decls) =
@@ -276,13 +276,13 @@ let main_skel var_list prologue body =
             if (argc == 2)
               max_step = atoi(argv[1]);
           *)
-          Caffect (CLvar step_counter, mk_int 0);
-          Caffect (CLvar max_step, mk_int 0);
-          Cif (Cbop ("==", Cvar "argc", mk_int 2),
+          Caffect (CLvar step_counter, mk_int 0l);
+          Caffect (CLvar max_step, mk_int 0l);
+          Cif (Cbop ("==", Cvar "argc", mk_int 2l),
                [Caffect (CLvar max_step,
                          Cfun_call ("atoi",
                                     [Carray (Cvar "argv",
-                                             mk_int 1)]))], []);
+                                             mk_int 1l)]))], []);
         ]
         @ prologue
           (* while (!max_step || step_c < max_step) *)
@@ -296,9 +296,9 @@ let main_skel var_list prologue body =
                   Caffect (CLvar step_counter,
                            Cbop ("+",
                                  Cvar step_counter,
-                                 mk_int 1))
+                                 mk_int 1l))
                   :: body);
-          Creturn (mk_int 0);
+          Creturn (mk_int 0l);
         ];
     }
   }

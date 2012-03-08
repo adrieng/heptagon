@@ -26,7 +26,7 @@ let unroll vd start stop b =
   let rec add c l =
     let ext_value funs () w = match w.w_desc with
       | Wvar vi ->
-        (if Idents.ident_compare vi vd.v_ident = 0 then mk_ext_value_const_int c else w), ()
+        (if Idents.ident_compare vi vd.v_ident = 0 then mk_ext_value_const_int32 c else w), ()
       | _ -> Obc_mapfold.extvalue funs () w
     in
 
@@ -35,7 +35,7 @@ let unroll vd start stop b =
     else
       let funs = { Obc_mapfold.defaults with extvalue = ext_value; } in
       let new_b, () = Obc_mapfold.block funs () b in
-      add (c + 1) (new_b.b_body @ l)
+      add (Int32.succ c) (new_b.b_body @ l)
   in
   let l = add start [] in
   { b with b_body = List.rev l; }

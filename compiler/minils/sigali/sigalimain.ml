@@ -39,12 +39,12 @@ let dummy_prefix = "d"
 
 let translate_static_exp se =
   match se.se_desc with
-  | Sint(v) -> Cint(v)
+  | Sint(v) -> Cint (Int32.to_int v) (* TODO: use Int32s in Sigali?! *)
   | Sfloat(_) -> failwith("Sigali: floats not implemented")
   | Sbool(true) -> Ctrue
   | Sbool(false) -> Cfalse
   | Sop({ qual = Pervasives; name = "~-" },[{se_desc = Sint(v)}]) ->
-      Cint(-v)
+      Cint(- (Int32.to_int v))
   | _ ->
       Format.printf "Constant %a@\n"
         Global_printer.print_static_exp se;
@@ -117,7 +117,7 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
               let sig_e =
                 begin match e2.Minils.w_desc with
                 | Minils.Wconst({se_desc = Sint(v)}) ->
-                    op e1 (Sconst(Cint(v+modv)))
+                    op e1 (Sconst(Cint(Int32.to_int v + modv)))
                 | _ ->
                     let e2 = translate_ext prefix e2 in
                     op (Sminus(e1,e2)) (Sconst(Cint(modv)))

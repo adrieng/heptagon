@@ -67,4 +67,4 @@ let print_map iter print_key print_element ff map =
   iter (fun k x -> fprintf ff "| %a -> %a@ " print_key k print_element x) map;
   fprintf ff "]@]"
 
-
+let pp_print_int32 fmt i = fprintf fmt "%ld" i

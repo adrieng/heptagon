@@ -38,7 +38,7 @@ type static_exp = { se_desc: static_exp_desc; se_loc: location }
 and static_exp_desc =
   | Svar of constant_name
   | Sfun of fun_name * static_exp list
-  | Sint of int
+  | Sint of Int32.t
   | Sfloat of float
   | Sbool of bool
   | Sstring of string

@@ -81,7 +81,7 @@ let rec print_params ff p_l =
   fprintf ff "@[<2>%a@]" (print_list_r print_static_exp "<<" "," ">>") p_l
 
 and print_static_exp_desc ff sed = match sed with
-  | Sint i -> fprintf ff "%d" i
+  | Sint i -> fprintf ff "%ld" i
   | Sbool b -> fprintf ff "%b" b
   | Sfloat f -> fprintf ff "%f" f
   | Sstring s -> fprintf ff "\"%s\"" (String.escaped s)

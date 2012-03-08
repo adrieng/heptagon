@@ -61,7 +61,7 @@ let rec struct_name ty =
   | Cty_id n -> n
   | _ -> assert false
 
-let int_of_static_exp se =
+let int_of_static_exp se = Static.int_of_static_exp QualEnv.empty se
   Static.int_of_static_exp se
 
 
@@ -193,9 +193,9 @@ let rec create_affect_lit dest l ty =
     | [] -> []
     | v::l ->
         let stm = create_affect_stm (CLarray (dest, Cconst (Ccint i))) v ty in
-        stm@(_create_affect_lit dest (i+1) l)
+        stm@(_create_affect_lit dest (Int32.succ i) l)
   in
-  _create_affect_lit dest 0 l
+  _create_affect_lit dest 0l l
 
 (** Creates the expression dest <- src (copying arrays if necessary). *)
 and create_affect_stm dest src ty =
@@ -206,7 +206,7 @@ and create_affect_stm dest src ty =
            | src ->
              let x = gen_symbol () in
              [Cfor(x,
-                   Cconst (Ccint 0), Cconst (Ccint n),
+                   Cconst (Ccint 0l), Cconst (Ccint n),
                    create_affect_stm
                      (CLarray (dest, Cvar x))
                      (Carray (src, Cvar x)) bty)]
@@ -240,7 +240,7 @@ let rec cexpr_of_static_exp se =
           Cstructlit (ty_name,
                      List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
     | Sarray_power(c,n_list) ->
-          (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n)))
+          (List.fold_left (fun cc n -> Carraylit (repeat_list cc (Int32.to_int (int_of_static_exp n))))
                      (cexpr_of_static_exp c) n_list)
     | Svar ln ->
         if !Compiler_options.unroll_loops && se.se_ty = Initial.tint
@@ -485,7 +485,7 @@ let rec create_affect_const var_env (dest : clhs) c =
             let x = gen_symbol () in
             let e, replace =
               make_loop power_list
-                        (fun y -> [Cfor(x, Cconst (Ccint 0), cexpr_of_static_exp p, replace y)]) in
+                        (fun y -> [Cfor(x, Cconst (Ccint 0l), cexpr_of_static_exp p, replace y)]) in
             let e =  (CLarray (e, Cvar x)) in
             e, replace
         in
@@ -494,9 +494,9 @@ let rec create_affect_const var_env (dest : clhs) c =
     | Sarray cl ->
         let create_affect_idx c (i, affl) =
           let dest = CLarray (dest, Cconst (Ccint i)) in
-            (i - 1, create_affect_const var_env dest c @ affl)
+            (Int32.pred i, create_affect_const var_env dest c @ affl)
         in
-          snd (List.fold_right create_affect_idx cl (List.length cl - 1, []))
+          snd (List.fold_right create_affect_idx cl (Int32.of_int (List.length cl - 1), []))
     | Srecord f_se_list ->
         let affect_field affl (f, se) =
           let dest_f = CLfield (dest, f) in
@@ -788,7 +788,7 @@ let cdefs_and_cdecls_of_type_decl otd =
                     let t = cname_of_qn t in
                     let funcall = Cfun_call ("strcmp", [Cvar "s";
                                                         Cconst (Cstrlit t)]) in
-                    let cond = Cbop ("==", funcall, Cconst (Ccint 0)) in
+                    let cond = Cbop ("==", funcall, Cconst (Ccint 0l)) in
                     Cif (cond, [Creturn (Cconst (Ctag t))], []) in
                   map gen_if nl; }
           }

@@ -43,7 +43,7 @@ let program p =
     Idents.enter_node class_name;
     let field_step_dnb, id_step_dnb =
       let id = Idents.gen_var "java_main" "default_step_nb" in
-      mk_field ~static:true ~final:true ~value:(Some (Sint 100)) Tint id, id
+      mk_field ~static:true ~final:true ~value:(Some (Sint 30000l)) Tint id, id
     in
     let main_methode =
 
@@ -51,7 +51,7 @@ let program p =
       let vd_step, pat_step, exp_step = mk_var Tint false "step" in
 
       let vd_args, _, exp_args =
-        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0])) false "args" in
+        mk_var (Tarray (Tclass (Names.pervasives_qn "String"), [Sint 0l])) false "args" in
 
       let get_arg i = Earray_elem(exp_args, [Sint i]) in
 
@@ -64,23 +64,23 @@ let program p =
         let jminus = pervasives_qn "-" in
 
         (* num args to give to the main *)
-        let rec num_args = List.length ty_main_args in
+          let rec num_args = Int32.of_int (List.length ty_main_args) in
 
         (* parse arguments to give to the main *)
         let rec parse_args t_l i = match t_l with
           | [] -> []
           | (Ttype t)::t_l when t = Initial.tint ->
               (Emethod_call(jint, "parseInt", [get_arg i]))
-              :: parse_args t_l (i+1)
+                :: parse_args t_l (Int32.succ i)
           | (Ttype t)::t_l when t = Initial.tfloat ->
               (Emethod_call(jfloat, "parseFloat", [get_arg i]))
-              :: parse_args t_l (i+1)
+                :: parse_args t_l (Int32.succ i)
           | (Ttype t)::t_l when t = Initial.tint ->
               (Emethod_call(jbool, "parseBool", [get_arg i]))
-              :: parse_args t_l (i+1)
+                :: parse_args t_l (Int32.succ i)
           | _ -> Misc.unsupported "java main does not support parsing complexe static args"
         in
-        let main_args = parse_args ty_main_args 0 in
+          let main_args = parse_args ty_main_args 0l in
         let vd_main, e_main, q_main, ty_main =
        (*   if Modules.is_statefull q_main
           then *)

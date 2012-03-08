@@ -425,9 +425,9 @@ let rec when_ck desc li ty ck =
 let rec base_value ck li ty =
   match ty with
   | Tid({qual = Pervasives; name = "int" }) ->
-      when_ck (Econst(mk_static_exp ty (Sint(0)))) li ty ck
+      when_ck (Econst (Initial.mk_static_int 0)) li ty ck
   | Tid({qual = Pervasives; name = "float"}) ->
-      when_ck (Econst(mk_static_exp ty (Sfloat(0.)))) li ty ck
+      when_ck (Econst (Initial.mk_static_float 0.)) li ty ck
   | Tid({qual = Pervasives; name = "bool" }) ->
       when_ck (Econst(strue)) li ty ck
   | Tid(sname) ->

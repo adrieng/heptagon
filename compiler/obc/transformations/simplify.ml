@@ -36,7 +36,7 @@ let extvaluedesc funs acc evd = match evd with
                 | Eextvalue { w_desc = Wconst i } ->
                   (try
                      let indice = int_of_static_exp i in
-                     Wconst (Misc.nth_of_list (indice+1) sv_l), acc
+                     Wconst (Misc.nth_of_list (Int32.to_int indice + 1) sv_l), acc
                    with _ -> raise Errors.Fallback)
                 | _ -> raise Errors.Fallback
               )
