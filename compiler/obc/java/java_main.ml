@@ -114,11 +114,11 @@ let program p =
             | _ -> Anewvar (vd_ret, e_main)
           in
           let print_ret i = match ty_ret with
-            | Tunit -> Aexp (Emethod_call(out, "printf", [Sstring "%d => \\n"; Evar i]))
+            | Tunit -> Aexp (Emethod_call(out, "printf", [Sstring "%d => \n"; Evar i]))
             | _ ->
               Aexp (
                 Emethod_call(out, "printf",
-                             [Sstring "%d => %s\\n";
+                             [Sstring "%d => %s\n";
                               Evar i;
                               Emethod_call(java_pervasives, "genToString", [exp_ret])]))
           in
@@ -129,14 +129,14 @@ let program p =
           in
           [ Aif(Efun(Names.pervasives_qn "<", [ Efield (exp_args, "length"); Sint num_args ]),
                  mk_block [Aexp (Emethod_call(out, "printf",
-                                              [Sstring "error : not enough arguments.\\n"]));
+                                              [Sstring "error : not enough arguments.\n"]));
                            Areturn Evoid]);
             vd_main;
             parse_max_iteration;
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
             Obc2java.fresh_for exp_step main_for_loop;
             Aexp (Emethod_call(out, "printf",
-              [ Sstring "time : %d\\n";
+              [ Sstring "time : %d\n";
                 Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]));
             Aexp(Emethod_call(jsys, "exit", [Sint 0]))
           ]

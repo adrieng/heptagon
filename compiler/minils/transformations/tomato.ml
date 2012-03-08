@@ -595,7 +595,7 @@ and fix_output_var_decs tenv (equs, vd_list) =
 
 
 let node nd =
-  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name);
+  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name) ();
   Idents.enter_node nd.n_name;
 
   (* Initial environment *)
