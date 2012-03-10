@@ -25,6 +25,14 @@ public class Pervasives {
 		else return i;
 	}
 
+  public static int int_of_bool(boolean b) {
+    return (int)b;
+  }
+
+  public static boolean int_of_bool(int i) {
+    return (boolean)i;
+  }
+
 	public static final ExecutorService executor_cached = Executors.newCachedThreadPool();
 	public static final int max_tasks = 25;
 

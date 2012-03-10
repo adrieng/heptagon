@@ -10,5 +10,15 @@ static inline int between(int idx, int n)
   return o;
 }
 
+static inline int int_of_bool(bool b)
+{
+  return b;
+}
+
+static inline bool bool_of_int(int i)
+{
+  return i;
+}
+
 #endif
 
