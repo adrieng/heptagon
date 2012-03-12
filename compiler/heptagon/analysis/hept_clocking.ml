@@ -162,7 +162,7 @@ and expect h pat expected_ct e =
 
 and typing_app h base pat op e_list = match op with
   | Etuple (* to relax ? *)
-  | Ebang _
+  | Ebang
   | Earrow
   | Efun _ (* stateless functions: inputs and outputs on the same clock *) (*TODO really ??*)
   | Earray_fill | Eselect | Eselect_dyn | Eselect_trunc | Eupdate

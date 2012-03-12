@@ -251,7 +251,7 @@ let rec translate_exp env e =
 
 and translate_desc loc env = function
   | Econst c -> Heptagon.Econst (translate_static_exp c)
-  | Esfun (f,e_l) -> Misc.internal_error "Esfun should already be converted into Sfun"
+  | Esfun _ -> Misc.internal_error "Esfun should already be converted into Sfun"
   | Easync c -> Heptagon.Econst (expect_static_exp c)
   | Evar x -> Heptagon.Evar (Rename.var loc env x)
   | Elast x -> Heptagon.Elast (Rename.last loc env x)
