@@ -126,7 +126,7 @@ let rec static_exp param_env se = match se.Signature.se_desc with
   | Signature.Sbool b -> Sbool b
   | Signature.Sstring s -> Sstring s
   | Signature.Sconstructor c -> let c = translate_constructor_name c in Sconstructor c
-  | Signature.Sfield _ -> Misc.unsupported "field acces in Java backend. ojSfield @."
+  | Signature.Sfield _ -> Misc.internal_error "Sfield in Java backend.@."
   | Signature.Stuple se_l -> tuple param_env se_l
   | Signature.Sarray_power (see,pow_list) ->
       let pow_list = List.rev pow_list in
@@ -146,7 +146,22 @@ let rec static_exp param_env se = match se.Signature.se_desc with
       make_array (ty param_env se.Signature.se_ty) pow_list
   | Signature.Sarray se_l ->
       Enew_array (ty param_env se.Signature.se_ty, List.map (static_exp param_env) se_l)
-  | Signature.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
+  | Signature.Srecord fe_l ->
+      (* One need to sort the expression according to the field order of the type*)
+      (* to give it to the constructor of the class *)
+      let ty_name = match se.Signature.se_ty with
+        | Tid t -> t
+        | _ -> Misc.internal_error "Wrong record type.@."
+      in
+      let td = Modules.find_type ty_name in
+      let e_l = match td with
+        | Tstruct sf_l ->
+            List.map (fun sf -> List.assoc sf.f_name fe_l) sf_l
+        | _ -> Misc.internal_error "obc2java get Estruct with wrong type.@."
+      in
+      let t = ty param_env se.Signature.se_ty in
+      let e_l = List.map (static_exp param_env) e_l in
+      Enew(t, e_l)
   | Signature.Sop (f, se_l) ->
       Efun (translate_fun_name f, List.map (static_exp param_env) se_l)
   | Signature.Sasync se ->
@@ -208,7 +223,18 @@ and var_dec_list param_env vd_l = List.map (var_dec param_env) vd_l
 and exp param_env e = match e.e_desc with
   | Obc.Eextvalue p -> ext_value param_env p
   | Obc.Eop (op,e_l) -> Efun (translate_fun_name op, exp_list param_env e_l)
-  | Obc.Estruct _ -> eprintf "ojEstruct@."; assert false (* TODO java *)
+  | Obc.Estruct (t, f_e_l) ->
+      (* One need to sort the expression according to the field order of the type*)
+      (* to give it to the constructor of the class *)
+      let td = Modules.find_type t in
+      let e_l = match td with
+        | Tstruct sf_l ->
+            List.map (fun sf -> List.assoc sf.f_name f_e_l) sf_l
+        | _ -> Misc.internal_error "obc2java get Estruct with wrong type"
+      in
+      let t = ty param_env e.e_ty in
+      let e_l = exp_list param_env e_l in
+      Enew(t, e_l)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
   | Obc.Ebang e -> Emethod_call (exp param_env e,"get",[])
 
@@ -680,15 +706,21 @@ let type_dec_list classes td_l =
           let mk_constr_enum c = translate_constructor_name_2 c td.t_name in
           (mk_enum (List.map mk_constr_enum c_l) classe_name) :: classes
       | Type_struct f_l ->
-          let mk_field_jfield { Signature.f_name = oname; Signature.f_type = oty } =
+          let mk_vd { Signature.f_name = oname; Signature.f_type = oty } =
             let jty = ty param_env oty in
-            let field = Idents.ident_of_name (translate_field_name oname) in
+            let id = Idents.ident_of_name (translate_field_name oname) in
             (* [translate_field_name] will give the right result anywhere it is used,
             since the [ident_of_name] will keep it as it is unique in the class,
             see [Idents.enter_node classe_name] *)
-            mk_field jty field
+            mk_var_dec id false jty
           in
-          (mk_classe ~fields:(List.map mk_field_jfield f_l) classe_name) :: classes
+          let vds = List.map mk_vd f_l in
+          let fields = vds_to_fields vds in
+          let constructor =
+            let body = mk_block (copy_to_this vds) in
+            mk_methode ~args:vds body (Names.shortname classe_name)
+          in
+          (mk_classe ~fields:fields ~constrs:[constructor] classe_name) :: classes
   in
   List.fold_left _td classes td_l
 
