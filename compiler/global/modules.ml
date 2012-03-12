@@ -92,8 +92,8 @@ let _load_module modul =
     let rec modname m = match m with
       | Names.Pervasives -> "Pervasives"
       | Names.Module n -> n
-      | Names.LocalModule m -> modname m (*TODO what should we load, if anything? *)
-      | Names.QualModule _ -> Misc.unsupported "modules"
+      | Names.LocalModule m -> Misc.unsupported "load of localmodule"
+      | Names.QualModule _ -> Misc.unsupported "load of submodules"
     in
     let name = String.uncapitalize (modname modul) in
     try

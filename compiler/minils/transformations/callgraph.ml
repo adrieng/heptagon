@@ -46,7 +46,9 @@ sig
   val build : param list -> key list -> env
   module Instantiate :
   sig
-    val program : program -> program
+    val get_new_instances_of_node : node_dec -> program_desc list
+    val get_new_instances_from_program : program -> program_desc list
+    val update_node : node_dec -> node_dec
   end
 end =
 struct
@@ -152,13 +154,12 @@ struct
       let se = match se.se_desc with
         | Svar q ->
             (match q.qual with
-              | LocalModule _ -> (* This var is a static parameter, it has to be instanciated *)
+              | LocalModule _ -> (* This var is a static parameter, try to instanciate it. *)
                 (try
                   QualEnv.find q m
                  with Not_found ->
-                  Format.eprintf "rr %a@."
-                    (Global_printer.print_qualenv Global_printer.print_static_exp) m;
-                  Misc.internal_error "callgraph")
+                   se) (* Allow partial application, especially with [update_node] *)
+     (* Format.eprintf "rr %a@." (Global_printer.print_qualenv Global_printer.print_static_exp) m*)
               | _ -> se)
         | Sfun (q,se_l) ->
             (match q.qual with
@@ -198,13 +199,18 @@ struct
         end with Not_found -> ed (* the calls were not to be replaced *)
       in ed, m
 
-    let node_dec_instance n params =
+    let global_funs = { Global_mapfold.defaults with static_exp = static_exp }
+
+    let instanciate_node_body n m =
       Idents.enter_node n.n_name;
-      let global_funs = { Global_mapfold.defaults with static_exp = static_exp } in
-      let funs = { Mls_mapfold.defaults with edesc = edesc;
-                                             global_funs = global_funs } in
-      let m = build n.n_params params in
+      let funs = { Mls_mapfold.defaults with edesc = edesc; global_funs = global_funs } in
       let n, _ = Mls_mapfold.node_dec_it funs m n in
+      n
+
+    let clone_instance n params =
+      Idents.enter_node n.n_name;
+      let m = build n.n_params params in
+      let n = instanciate_node_body n m in
 
       (* Add to the global environment the signature of the new instance *)
       let node_sig = find_value n.n_name in
@@ -218,32 +224,39 @@ struct
       Idents.clone_node n.n_name ln;
       { n with n_name = ln; n_params = []; n_param_constraints = []; }
 
-    let node_dec n =
-      List.map (node_dec_instance n) (get_node_instances n.n_name)
+    let get_new_instances_of_node n =
+      List.map (fun params -> Pnode (clone_instance n params)) (get_node_instances n.n_name)
 
-    let program p =
-      let program_desc pd acc = match pd with
+    let get_new_instances_from_program p =
+      let program_desc acc pd = match pd with
         | Pnode n -> (* for every node in the program p, search for instance *)
-            let nds = node_dec n in
-            List.fold_left (fun pds n -> Pnode n :: pds) acc nds
+            (get_new_instances_of_node n)@acc
         | _ -> pd :: acc
       in
-      { p with p_desc = List.fold_right program_desc p.p_desc [] }
+      List.fold_left program_desc [] p.p_desc
+
+    let update_node n =
+      instanciate_node_body n QualEnv.empty
   end
 
 end
 
 open Param_instances
 
+(* Global mutable environment used for memoiziations *)
 type info =
   { mutable opened : program ModulEnv.t;
-    mutable called_nodes : ((qualname * static_exp list) list) QualEnv.t; }
+    mutable called_nodes : ((qualname * static_exp list) list) QualEnv.t;
+    mutable need_instanciation : bool QualEnv.t; }
 
 let info =
   { (** opened programs*)
     opened = ModulEnv.empty;
     (** Maps a node to the list of (node name, params) it calls *)
-    called_nodes = QualEnv.empty }
+    called_nodes = QualEnv.empty;
+    (** Tells whether a node needs to be instanciated *)
+    need_instanciation = QualEnv.empty;
+    }
 
 (** Loads the modname.epo file. *)
 let load_object_file modul =
@@ -293,24 +306,61 @@ let node_by_longname node =
   with
     Not_found -> Error.message no_location (Error.Enode_unbound node)
 
-(** @return the list of nodes called by the node named [ln], with the
-    corresponding params (static parameters appear as free variables). *)
-let collect_node_calls ln =
-  (** only add nodes when not external and with params *)
-  let add_called_node ln params acc =
-    match params with
-      | [] -> acc
-      | _ ->
-        if (Modules.find_value ln).node_external
-        then acc
-        else (ln, params)::acc
-  in
+let is_local ln = match ln.qual with
+  | LocalModule _ -> true
+  | _ -> false
+
+(** Non memoized version of need_instanciation *)
+let rec _need_instanciation ln =
+  if is_local ln then true
+  else
+  (* external nodes can't be instanciated *)
+  if (Modules.find_value ln).node_external
+  then false
+  else begin
+    if !Compiler_options.callgraph_only_on_higherorder
+    then (* Am I high-order, or is there a child requiring me to be instanciated ? *)
+      let is_high_order (ln,_) = match ln with
+        | { qual = LocalModule _ } -> true
+        | _ -> false
+      in
+      (* This is recursive, a node needs to be instanciated
+         when it calls a node needing instanciation with some of its local parameters. *)
+      let child_require_instanciation (ln,params) =
+        (need_instanciation ln)
+        && (List.exists Signature.is_local_se params)
+      in
+      let childs = called_nodes ln in
+      (*
+Format.eprintf "%a has childs : @." Global_printer.print_qualname ln;
+List.iter (fun (n,_) -> Format.eprintf "%a@." Global_printer.print_qualname n) childs;
+  Format.eprintf "%a has child high_order ? %b@."
+  Global_printer.print_qualname ln (List.exists is_high_order childs);
+  Format.eprintf "%a has child needing inst ? %b@."
+  Global_printer.print_qualname ln (List.exists child_require_instanciation childs);
+  *)
+      (List.exists is_high_order childs) or (List.exists child_require_instanciation childs)
+    else (* If I'm not parameterless, I need instanciation *)
+      (Modules.find_value ln).node_params != []
+  end
+
+(** Is responsible to decide whether a node may be generated,
+  or it needs to be instanciated with specific parameters. *)
+and need_instanciation ln =
+  try QualEnv.find ln info.need_instanciation
+  with Not_found ->
+    let b = _need_instanciation ln in
+    info.need_instanciation <- QualEnv.add ln b info.need_instanciation;
+    b
+
+
+(** Non memoized version of called_nodes *)
+and _called_nodes ln =
   let edesc _ acc ed = match ed with
-    | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _) ->
-        ed, add_called_node ln params acc
-    | Eiterator(_, { a_op = (Enode ln | Efun ln); a_params = params },
-                _, _, _, _) ->
-        ed, add_called_node ln params acc
+    | Eapp ({ a_op = (Enode ln | Efun ln); a_params = params }, _, _)
+    | Eiterator(_, { a_op = (Enode ln | Efun ln); a_params = params }, _, _, _, _) ->
+        let acc = if need_instanciation ln then (ln,params)::acc else acc in
+        ed, acc
     | _ -> raise Errors.Fallback
   in
   let funs = { Mls_mapfold.defaults with edesc = edesc } in
@@ -318,42 +368,68 @@ let collect_node_calls ln =
   let _, acc = Mls_mapfold.node_dec funs [] n in
   acc
 
-(** @return the list of nodes called by the node named [ln]. This list is
-    computed lazily the first time it is needed. *)
-let called_nodes ln =
-  if not (QualEnv.mem ln info.called_nodes) then (
-    let called = collect_node_calls ln in
-      info.called_nodes <- QualEnv.add ln called info.called_nodes;
-      called
-  ) else
-    QualEnv.find ln info.called_nodes
+(** @return the list of nodes, called by the node named [ln], needing instanciation, with the
+    corresponding params (static parameters appear as free variables). *)
+and called_nodes ln = match ln.qual with
+  | LocalModule _ -> [] (* high-order so we can't know *)
+  | _ ->
+      try QualEnv.find ln info.called_nodes
+      with Not_found ->
+        let called = _called_nodes ln in
+        info.called_nodes <- QualEnv.add ln called info.called_nodes;
+        called
 
-(** Generates the list of instances of nodes needed to call
-    [ln] with static parameters [params]. *)
+(** Call add_node_instance, to generates the instances
+    needed to call [ln] with static parameters [params]. *)
 let rec call_node (ln, params) =
   (* First, add the instance for this node *)
   let n = node_by_longname ln in
   Idents.enter_node n.n_name;
-  let m = build n.n_params params in
-  add_node_instance ln params;
-  (* Recursively generate instances for called nodes. *)
-  let call_list = called_nodes ln in
-  let call_list = List.map (fun (ln, p) -> instantiate_node m ln p) call_list in
-  (* Filters the node which doesn't have static params*)
-(*  (* since they are already instanciated/compiled *)
-  let call_list = List.filter (fun (_, p) -> p != []) call_list in *)
-  List.iter call_node call_list
+  let m = if params = [] (* there is no substitution for the root nodes *)
+    then QualEnv.empty
+    else build n.n_params params
+  in
+  (* Recursively generate needed instances. *)
+  let childs = called_nodes ln in
+  let childs = List.map (fun (ln, p) -> instantiate_node m ln p) childs in
+  List.iter (fun (n,p) -> add_node_instance n p) childs;
+  List.iter call_node childs
 
 let program p =
-  (* Find the nodes without static parameters *)
-  let main_nodes = List.filter (function Pnode n -> is_empty n.n_params | _ -> false) p.p_desc in
-  let main_nodes = List.map (function Pnode n -> n.n_name, []
-                              | _ -> Misc.internal_error "callgraph") main_nodes in
-  info.opened <- ModulEnv.add p.p_modname p ModulEnv.empty;
+  (* Open the current module *)
+  info.opened <- ModulEnv.add p.p_modname p info.opened;
+  (* Find the nodes which doesn't require instanciation *)
+  let to_gen_nodes =
+    List.fold_left
+      (fun acc p -> match p with
+        | Pnode n ->
+          if not (need_instanciation n.n_name)
+          then (n.n_name, [])::acc
+          else acc
+        | _ -> acc)
+      [] p.p_desc
+  in
   (* Creates the list of instances starting from these nodes *)
-  List.iter call_node main_nodes;
-  let p_list = ModulEnv.fold (fun _ p l -> p::l) info.opened [] in
-  (* Generate all the needed instances,*)
-  (* Instances of nodes from other modules are respectively done in their modules,*)
-  (* thus the program list *)
-  List.map Param_instances.Instantiate.program p_list
+  List.iter call_node to_gen_nodes;
+  (* The current program generate the to_gen_nodes plus some instances *)
+  let pd = List.fold_right
+    (fun pd acc -> match pd with
+      | Pnode n when need_instanciation n.n_name ->
+          (Param_instances.Instantiate.get_new_instances_of_node n)@acc
+      | Pnode n ->
+          (Pnode (Param_instances.Instantiate.update_node n))::acc
+      | _ -> pd::acc)
+    p.p_desc []
+  in
+  let p = { p with p_desc = pd } in
+  (* Generate all the remaining needed instances,*)
+  (* Every instance needed has invoked the opening of its module *)
+  let p_list = ModulEnv.fold   (* First filter the modules from the one of p *)
+    (fun _ o l -> if p.p_modname != o.p_modname then o::l else l)
+    info.opened []
+  in
+  let new_nodes_in_other_modules =
+    List.map (fun o -> {o with p_desc =
+      Param_instances.Instantiate.get_new_instances_from_program o}) p_list
+  in
+  p::new_nodes_in_other_modules

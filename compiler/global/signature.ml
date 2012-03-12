@@ -155,5 +155,10 @@ let rec field_assoc f = function
       if f = n then ty
       else field_assoc f l
 
+(** permits to know whether a static_exp is a local parameter of a node. *)
+let is_local_se se = match se.se_desc with
+  | Svar {qual = LocalModule _} -> true
+  | _ -> false
+
 
 
