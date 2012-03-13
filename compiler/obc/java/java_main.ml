@@ -138,7 +138,7 @@ let program p =
             Aexp (Emethod_call(out, "printf",
               [ Sstring "time : %d\n";
                 Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]));
-            Aexp(Emethod_call(jsys, "exit", [Sint 0]))
+            Aexp(Emethod_call(jsys, "exit", [Sint 0l]))
           ]
         in
         mk_block ~locals:[vd_step] acts

@@ -61,8 +61,7 @@ let rec struct_name ty =
   | Cty_id n -> n
   | _ -> assert false
 
-let int_of_static_exp se = Static.int_of_static_exp QualEnv.empty se
-  Static.int_of_static_exp se
+let int_of_static_exp se = Static.int_of_static_exp se
 
 
 let output_names_list sig_info =

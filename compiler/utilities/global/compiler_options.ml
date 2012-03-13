@@ -75,8 +75,11 @@ let target_path : string option ref = ref None
 let set_target_path path =
   target_path := Some path
 
-let java_queue_size = ref 1
-let java_queue_nb = ref 1
+
+let java_queue_size = ref 1l
+let java_queue_nb = ref 1l
+
+let set_java_queue_size i = java_queue_size := Int32.of_int i
 
 let full_type_info = ref false
 

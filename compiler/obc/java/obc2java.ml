@@ -467,7 +467,7 @@ let create_async_classe async base_classe =
   in
 
   let fields =
-    if !Compiler_options.java_queue_size = 0
+    if !Compiler_options.java_queue_size = 0l
     then field_inst::field_result::fields_params
     else field_inst::field_node::fields_params
   in
@@ -484,7 +484,7 @@ let create_async_classe async base_classe =
 
   let constructor, reset =
     let body, async_params, body_r =
-      if !Compiler_options.java_queue_size = 0
+      if !Compiler_options.java_queue_size = 0l
       then
         let acts_params = copy_to_this vds_params in
         let act_inst = Aassgn (Pthis id_inst, Enew (ty_inst, exps_params)) in
@@ -512,7 +512,7 @@ let create_async_classe async base_classe =
   in
 
   let step =
-    if !Compiler_options.java_queue_size = 0
+    if !Compiler_options.java_queue_size = 0l
     then
       let body =
         let act_syncronize =

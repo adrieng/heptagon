@@ -32,7 +32,7 @@ and static_exp = { se_desc: static_exp_desc; se_ty: ty; se_loc: location }
 and static_exp_desc =
   | Sfun of fun_name * (static_exp list) (** f<<3, n>> *)
   | Svar of constant_name
-  | Sint of int
+  | Sint of Int32.t
   | Sfloat of float
   | Sbool of bool
   | Sstring of string (** without enclosing quotes *)

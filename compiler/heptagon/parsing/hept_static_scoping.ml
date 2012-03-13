@@ -9,10 +9,7 @@ open Hept_parsetree_mapfold
 
 exception Not_static
 
-let assert_se e =
-  if e.e_ct_annot <> None then raise Not_static;
-  match e.e_desc with
-    returns [false, c] if c is a constant *)
+
 let qualify_var local_const c =
   try
     let is_fun = NamesEnv.find c local_const in
