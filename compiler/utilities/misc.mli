@@ -53,6 +53,9 @@ val split_at : int -> 'a list -> 'a list * 'a list
 (** [take n l] returns the [n] first elements of the list [l] *)
 val take : int -> 'a list -> 'a list
 
+(** [drop n l] removes the [n] first elements of the list [l] *)
+val drop : int -> 'a list -> 'a list
+
 (** [nth_of_list n l] @return the [n] element of the list [l] (1 is the first)
     @raise List_too_short exception if the list is too short.*)
 val nth_of_list : int -> 'a list -> 'a

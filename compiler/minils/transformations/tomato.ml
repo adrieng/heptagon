@@ -67,7 +67,7 @@ struct
         er_pattern : pat;
         er_head : exp;
         er_children : class_ref list;
-        er_add_when : exp -> exp;
+        er_add_when : (exp -> exp) -> exp -> exp;
         er_when_count : int;
       }
 
@@ -79,7 +79,7 @@ struct
 
   let print_class_ref fmt cr = match cr with
     | Cr_plain id -> print_ident fmt id
-    | Cr_input w -> print_extvalue fmt w
+    | Cr_input w -> Format.fprintf fmt "%a (input)" print_extvalue w
 
   let debug_tenv fmt tenv =
     let debug pat repr =
@@ -185,13 +185,14 @@ let rec add_equation is_input (tenv : tom_env) eq =
     let class_id_list, w = extvalue is_input w class_id_list in
     class_id_list, (cn, w) in
 
-  let id x = x in
+  let id _ x = x in
 
   let ed, add_when, when_count, class_id_list =
-    let rec decompose e = match e.e_desc with
+    let rec decompose e =
+      match e.e_desc with
       | Eextvalue w ->
         let class_id_list, w = extvalue is_input w [] in
-        Eextvalue w, id, 0, class_id_list
+        Eextvalue w, (id : (exp -> exp) -> exp -> exp), 0, class_id_list
 
       | Eapp (app, w_list, rst) ->
         let class_id_list, w_list = mapfold_right (extvalue is_input) w_list [] in
@@ -210,7 +211,7 @@ let rec add_equation is_input (tenv : tom_env) eq =
 
       | Ewhen (e', cn, x) ->
         let ed, add_when, when_count, class_id_list = decompose e' in
-        ed, (fun e' -> { e with e_desc = Ewhen (add_when e', cn, x) }), when_count + 1,
+        ed, (fun f e' -> f { e with e_desc = Ewhen (add_when f e', cn, x) }), when_count + 1,
         class_ref_of_var is_input
           (mk_extvalue ~clock:(Clocks.first_ck e'.e_ct) ~ty:Initial.tbool
                        ~linearity:Linearity.Ltop (Wvar x)) x
@@ -307,7 +308,8 @@ let new_name mapping x =
   try
     let Info x' = Env.find x mapping in
     x'
-  with Not_found -> x
+  with Not_found ->
+    x
 
 (* Takes a tomato env and returns a renaming environment *)
 let construct_mapping (_, cenv) =
@@ -369,9 +371,18 @@ let rec reconstruct ((tenv, cenv) as env) mapping =
         reconstruct_clock mapping repr.er_head.e_level_ck in (* not strictly needed, done for
                                                                 consistency reasons *)
       let ct = reconstruct_clock_type mapping repr.er_head.e_ct in
-      { repr.er_head with e_desc = ed; e_level_ck = level_ck; e_ct = ct; } in
 
-    let e = repr.er_add_when e in
+      { repr.er_head with e_desc = ed; e_level_ck = level_ck; e_ct = ct; }
+    in
+
+    let e =
+      let reconstruct_exp e =
+        { e with
+          e_level_ck = reconstruct_clock mapping e.e_level_ck;
+          e_ct = reconstruct_clock_type mapping e.e_ct; }
+      in
+      repr.er_add_when reconstruct_exp e
+    in
 
     let pat = reconstruct_pattern mapping repr.er_pattern in
 
@@ -420,31 +431,34 @@ and reconstruct_exp_desc mapping headd children =
     Eiterator (it, app, sel, partial_w_list, w_list, rst)
 
 and reconstruct_extvalues mapping w_list children =
-  let rec reconstruct_extvalue w (children : class_ref list) = match w.w_desc with
-    | Wconst _ -> w, children
-    | Wvar _ ->
-      let w = { w with w_desc = Wvar (reconstruct_class_ref mapping (List.hd children)); } in
-      w, List.tl children
-    | Wwhen (w', cn, _) ->
-      let w_x = reconstruct_class_ref mapping (List.hd children) in
-      let w', children = reconstruct_extvalue w' (List.tl children) in
-      { w with w_desc = Wwhen (w', cn, w_x) }, children
-    | Wfield (w', fn) ->
-      let w', children = reconstruct_extvalue w' children in
-      { w with w_desc = Wfield (w', fn); }, children
-    | Wreinit (w1, w2) ->
-      let w1, children = reconstruct_extvalue w1 children in
-      let w2, children = reconstruct_extvalue w2 children in
-      { w with w_desc = Wreinit (w1, w2); }, children
+  let rec reconstruct_extvalue w (children : class_ref list) =
+    let w, children =
+      match w.w_desc with
+      | Wconst _ -> w, children
+      | Wvar _ ->
+        let w = { w with w_desc = Wvar (reconstruct_class_ref mapping (List.hd children)); } in
+        w, List.tl children
+      | Wwhen (w', cn, _) ->
+        let w_x = reconstruct_class_ref mapping (List.hd children) in
+        let w', children = reconstruct_extvalue w' (List.tl children) in
+        { w with w_desc = Wwhen (w', cn, w_x) }, children
+      | Wfield (w', fn) ->
+        let w', children = reconstruct_extvalue w' children in
+        { w with w_desc = Wfield (w', fn); }, children
+      | Wreinit (w1, w2) ->
+        let w1, children = reconstruct_extvalue w1 children in
+        let w2, children = reconstruct_extvalue w2 children in
+        { w with w_desc = Wreinit (w1, w2); }, children
+    in
+    { w with w_ck = reconstruct_clock mapping w.w_ck }, children
   in
 
   let consume w (children, result_w_list) =
     let w, children = reconstruct_extvalue w children in
-    let w = { w with w_ck = reconstruct_clock mapping w.w_ck } in
     children, w :: result_w_list
   in
 
-  let (children, w_list) = List.fold_right consume w_list (List.rev children, []) in
+  let (_, w_list) = List.fold_right consume w_list (List.rev children, []) in
   w_list
 
 (* and extract_name w = match w.w_desc with *)

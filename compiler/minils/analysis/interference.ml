@@ -165,7 +165,10 @@ module World = struct
         memories := List.fold_left (fun s (x, _) -> IvarSet.add (Ivar x) s) IvarSet.empty mems
 
   let vd_from_ident x =
-    Env.find x !vds
+    try Env.find x !vds
+    with Not_found ->
+      Format.eprintf "Unknown variable %a@." print_ident x;
+      Misc.internal_error "interference"
 
   let rec ivar_type iv = match iv with
     | Ivar x ->
