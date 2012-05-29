@@ -216,10 +216,19 @@ and typing_block { b_local = dec; b_equs = eq_list; b_loc = loc } =
 let typing_contract loc contract =
   match contract with
     | None -> cempty
-    | Some { c_block = b; c_assume = e_a;
-             c_enforce = e_g } ->
+    | Some { c_block = b; 
+             c_assume = e_a;
+             c_assume_loc = e_a_loc;
+             c_enforce = e_g;
+             c_enforce_loc = e_g_loc;
+           } ->
         let teq = typing_eqs b.b_equs in
-        let t_contract = cseq (typing e_a) (cseq teq (typing e_g)) in
+        let t_contract =
+          cseq
+            (typing e_a)
+            (cseq (typing e_g)
+               (cseq (typing e_a_loc)
+                  (cseq (typing e_g_loc) teq))) in
         Causal.check loc t_contract;
         let t_contract = clear (build b.b_local) t_contract in
         t_contract

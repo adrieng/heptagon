@@ -20,7 +20,7 @@ open Clocks
 
 (** Warning: Whenever Minils ast is modified,
     minils_format_version should be incremented. *)
-let minils_format_version = "2"
+let minils_format_version = "3"
 
 type iterator_type =
   | Imap
@@ -121,6 +121,8 @@ type var_dec = {
 type contract = {
   c_assume        : extvalue;
   c_enforce       : extvalue;
+  c_assume_loc    : extvalue;
+  c_enforce_loc   : extvalue;
   c_controllables : var_dec list;
   c_local         : var_dec list;
   c_eq            : eq list }

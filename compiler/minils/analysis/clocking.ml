@@ -240,6 +240,8 @@ let typing_contract h contract =
              c_eq = eq_list;
              c_assume = e_a;
              c_enforce = e_g;
+             c_assume_loc = e_a_loc;
+             c_enforce_loc = e_g_loc;
              c_controllables = c_list } as contract) ->
         let h' = append_env h l_list in
         (* assumption *)
@@ -247,6 +249,8 @@ let typing_contract h contract =
         let eq_list = typing_eqs h' eq_list in
         expect_extvalue h' Cbase e_a;
         expect_extvalue h' Cbase e_g;
+        expect_extvalue h' Cbase e_a_loc;
+        expect_extvalue h' Cbase e_g_loc;
         let h = append_env h c_list in
         Some { contract with c_eq = eq_list }, h
 

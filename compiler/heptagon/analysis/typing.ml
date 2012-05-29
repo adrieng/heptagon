@@ -1164,6 +1164,8 @@ let typing_contract cenv h contract =
     | Some ({ c_block = b;
               c_assume = e_a;
               c_enforce = e_g;
+              c_assume_loc = e_a_loc;
+              c_enforce_loc = e_g_loc;
               c_controllables = c }) ->
         let typed_b, defined_names, h' = typing_block cenv h b in
           (* check that the equations do not define other unexpected names *)
@@ -1171,14 +1173,18 @@ let typing_contract cenv h contract =
 
         (* assumption *)
         let typed_e_a = expect cenv h' (Tid Initial.pbool) e_a in
+        let typed_e_a_loc = expect cenv h' (Tid Initial.pbool) e_a_loc in
         (* property *)
         let typed_e_g = expect cenv h' (Tid Initial.pbool) e_g in
+        let typed_e_g_loc = expect cenv h' (Tid Initial.pbool) e_g_loc in
 
         let typed_c, (c_names, h) = build cenv h c in
 
         Some { c_block = typed_b;
                c_assume = typed_e_a;
                c_enforce = typed_e_g;
+               c_assume_loc = typed_e_a_loc;
+               c_enforce_loc = typed_e_g_loc;
                c_controllables = typed_c }, h
 
 

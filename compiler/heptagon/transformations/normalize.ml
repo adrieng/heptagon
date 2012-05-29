@@ -339,11 +339,15 @@ let contract funs context c =
   (* Non-void context could mean lost equations *)
   assert (void_context=([],[]));
   let context, e_a = translate ExtValue ([],[]) c.c_assume in
+  let context, e_a_loc = translate ExtValue context c.c_assume_loc in
   let context, e_e = translate ExtValue context c.c_enforce in
+  let context, e_e_loc = translate ExtValue context c.c_enforce_loc in
   let (d_list, eq_list) = context in
   { c with
       c_assume = e_a;
       c_enforce = e_e;
+      c_assume_loc = e_a_loc;
+      c_enforce_loc = e_e_loc;
       c_block = { b with
                     b_local = d_list@b.b_local;
                     b_equs = eq_list@b.b_equs; }

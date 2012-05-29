@@ -238,9 +238,15 @@ and contract_it funs acc c = funs.contract funs acc c
 and contract funs acc c =
   let c_assume, acc = exp_it funs acc c.c_assume in
   let c_enforce, acc = exp_it funs acc c.c_enforce in
+  let c_assume_loc, acc = exp_it funs acc c.c_assume_loc in
+  let c_enforce_loc, acc = exp_it funs acc c.c_enforce_loc in
   let c_block, acc = block_it funs acc c.c_block in
   { c with
-    c_assume = c_assume; c_enforce = c_enforce; c_block = c_block }
+      c_assume = c_assume;
+      c_enforce = c_enforce;
+      c_assume_loc = c_assume_loc;
+      c_enforce_loc = c_enforce_loc;
+      c_block = c_block }
   , acc
 
 

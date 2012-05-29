@@ -836,6 +836,8 @@ let translate_contract env contract =
   | None -> None, env
   | Some { c_assume = e_a;
            c_enforce = e_g;
+           c_assume_loc = e_a_loc;
+           c_enforce_loc = e_g_loc;
            c_controllables = cl;
            c_block = b } ->
       let cl, cl_loc, cl_eq, env = buildenv_var_dec_list env cl in
@@ -844,13 +846,17 @@ let translate_contract env contract =
              b_equs = eqs } as b), env'
         = translate_block env cl_loc cl_eq b in
       let context, e_a = translate env' (v,eqs) e_a in
+      let context, e_a_loc = translate env' (v,eqs) e_a_loc in
       let context, e_g = translate env' context e_g in
+      let context, e_g_loc = translate env' context e_g_loc in
       let (d_list,eq_list) = context in
       Some { c_block = { b with
                            b_local = d_list;
                            b_equs = eq_list };
              c_assume = e_a;
              c_enforce = e_g;
+             c_assume_loc = e_a_loc;
+             c_enforce_loc = e_g_loc;
              c_controllables = cl },
       env
 

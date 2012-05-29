@@ -180,11 +180,15 @@ let translate_contract contract =
                                   Heptagon.b_equs = eq_list };
              Heptagon.c_assume = e_a;
              Heptagon.c_enforce = e_g;
+             Heptagon.c_assume_loc = e_a_loc;
+             Heptagon.c_enforce_loc = e_g_loc;
              Heptagon.c_controllables = l_c } ->
         Some { c_local = List.map translate_var v;
                c_eq = List.map translate_eq eq_list;
                c_assume = translate_extvalue e_a;
                c_enforce = translate_extvalue e_g;
+               c_assume_loc = translate_extvalue e_a_loc;
+               c_enforce_loc = translate_extvalue e_g_loc;
                c_controllables = List.map translate_var l_c }
 
 let node n =

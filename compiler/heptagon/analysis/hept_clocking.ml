@@ -234,12 +234,17 @@ let typing_contract h contract =
     | Some { c_block = b;
              c_assume = e_a;
              c_enforce = e_g;
+             c_assume_loc = e_a_loc;
+             c_enforce_loc = e_g_loc;
              c_controllables = c_list } ->
         let h' = typing_block h b in
         (* assumption *)
         expect h' (Etuplepat []) (Ck Cbase) e_a;
+        expect h' (Etuplepat []) (Ck Cbase) e_a_loc;
         (* property *)
         expect h' (Etuplepat []) (Ck Cbase) e_g;
+        expect h' (Etuplepat []) (Ck Cbase) e_g_loc;
+        
         append_env h c_list
 
 (* check signature causality and update it in the global env *)

@@ -425,6 +425,8 @@ let translate_contract env opt_ct =
       let b, env = translate_block env ct.c_block in
       Some { Heptagon.c_assume = translate_exp env ct.c_assume;
              Heptagon.c_enforce = translate_exp env ct.c_enforce;
+             Heptagon.c_assume_loc = translate_exp env ct.c_assume_loc;
+             Heptagon.c_enforce_loc = translate_exp env ct.c_enforce_loc;
              Heptagon.c_controllables = translate_vd_list env' ct.c_controllables;
              Heptagon.c_block = b }, env'
 
@@ -548,7 +550,9 @@ let translate_signature s =
   let o = List.map translate_arg s.sig_outputs in
   let p, _ = params_of_var_decs Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
-  let sig_node = Signature.mk_node ~extern:s.sig_external s.sig_loc i o s.sig_stateful s.sig_unsafe p in
+  let sig_node =
+    Signature.mk_node 
+      ~extern:s.sig_external s.sig_loc i o s.sig_stateful s.sig_unsafe p in
   Check_signature.check_signature sig_node;
   safe_add s.sig_loc add_value n sig_node;
   mk_signature n i o s.sig_stateful p c s.sig_loc ~extern:s.sig_external

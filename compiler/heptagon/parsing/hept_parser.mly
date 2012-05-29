@@ -237,6 +237,8 @@ contract:
       { Some{ c_block = b;
               c_assume = a;
               c_enforce = e;
+              c_assume_loc = mk_constructor_exp ptrue (Loc($startpos,$endpos));
+              c_enforce_loc = mk_constructor_exp ptrue (Loc($startpos,$endpos));
         c_controllables = w } }
 ;
 
