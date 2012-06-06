@@ -38,7 +38,7 @@ else
 	$(OCAMLBUILD) $(COMPILER).p.native
 endif
 
-install: all
+install: 
 	$(INSTALL) -d $(INSTALL_BINDIR)
 	$(INSTALL) $(COMPILER).$(TARGET) $(INSTALL_BINDIR)/$(COMPILER)
 ifeq ($(ENABLE_SIMULATOR), yes)
