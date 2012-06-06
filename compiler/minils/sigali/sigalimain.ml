@@ -40,8 +40,12 @@ let translate_static_exp se =
   match se.se_desc with
   | Sint(v) -> Cint(v)
   | Sfloat(_) -> failwith("Sigali: floats not implemented")
-  | Sbool(true) -> Ctrue
-  | Sbool(false) -> Cfalse
+  | Sbool(true)
+  | Sconstructor { qual = Pervasives; name = "true" }
+    -> Ctrue
+  | Sbool(false)
+  | Sconstructor { qual = Pervasives; name = "false" }
+    -> Cfalse  
   | Sop({ qual = Pervasives; name = "~-" },[{se_desc = Sint(v)}]) ->
       Cint(-v)
   | _ ->
@@ -51,7 +55,7 @@ let translate_static_exp se =
 
 
 let rec translate_pat = function
-  | Minils.Evarpat(x) -> [name x]
+  | Minils.Evarpat(x) -> [x]
   | Minils.Etuplepat(pat_list) ->
       List.fold_right (fun pat acc -> (translate_pat pat) @ acc) pat_list []
 
@@ -68,7 +72,7 @@ let rec translate_ck pref e = function
             | _ -> assert false)
 
 
-let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty } as e) =
+let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty }) =
   match desc with
     | Minils.Wconst(v) ->
         begin match (actual_ty ty) with
@@ -77,13 +81,15 @@ let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty } as e) =
         | Tother -> failwith("Sigali: untranslatable type")
         end
     | Minils.Wvar(n) -> Svar(prefix ^ (name n))
-    | Minils.Wwhen(e, c, var) when ((actual_ty e.Minils.w_ty) = Tbool) ->
-        let e = translate_ext prefix e in
-        Swhen(e,
-              match (shortname c) with
-                "true" -> Svar(prefix ^ (name var))
-              | "false" -> Snot(Svar(prefix ^ (name var)))
-              | _ -> assert false)
+
+    (* TODO remove if this works without *)
+    (* | Minils.Wwhen(e, c, var) when ((actual_ty e.Minils.w_ty) = Tbool) -> *)
+    (*     let e = translate_ext prefix e in *)
+    (*     Swhen(e, *)
+    (*           match (shortname c) with *)
+    (*             "true" -> Svar(prefix ^ (name var)) *)
+    (*           | "false" -> Snot(Svar(prefix ^ (name var))) *)
+    (*           | _ -> assert false) *)
     | Minils.Wwhen(e, _c, _var) ->
         translate_ext prefix e
     | Minils.Wfield(_) ->
@@ -91,7 +97,7 @@ let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty } as e) =
     | Minils.Wreinit _ -> failwith("Sigali: reinit not implemented")
 
 (* [translate e = c] *)
-let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
+let rec translate prefix ({ Minils.e_desc = desc } as e) =
   match desc with
     | Minils.Eextvalue(ext) -> translate_ext prefix ext
     | Minils.Eapp (* pervasives binary or unary stateless operations *)
@@ -134,13 +140,13 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
             | "<>"),_ -> failwith("Sigali: '=' or '<>' not yet implemented")
           | _ -> assert false
         end
-    | Minils.Ewhen(e, c, var) when ((actual_ty e.Minils.e_ty) = Tbool) ->
-        let e = translate prefix e in
-        Swhen(e,
-              match (shortname c) with
-                "true" -> Svar(prefix ^ (name var))
-              | "false" -> Snot(Svar(prefix ^ (name var)))
-              | _ -> assert false)
+    (* | Minils.Ewhen(e, c, var) when ((actual_ty e.Minils.e_ty) = Tbool) -> *)
+    (*     let e = translate prefix e in *)
+    (*     Swhen(e, *)
+    (*           match (shortname c) with *)
+    (*             "true" -> Svar(prefix ^ (name var)) *)
+    (*           | "false" -> Snot(Svar(prefix ^ (name var))) *)
+    (*           | _ -> assert false) *)
     | Minils.Ewhen(e, _c, _var) ->
         translate prefix e
     | Minils.Emerge(ck,[(c1,e1);(_c2,e2)]) ->
@@ -182,8 +188,8 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
         failwith("Sigali: not supported application")
     | Minils.Emerge(_, _) -> assert false
 
-let rec translate_eq env f
-    (acc_dep,acc_states,acc_init,acc_inputs,acc_ctrl,acc_cont,acc_eqs)
+let rec translate_eq f
+    (acc_states,acc_init,acc_inputs,acc_eqs)
     { Minils.eq_lhs = pat; Minils.eq_rhs = e; eq_base_ck = ck } =
 
   let prefix = f ^ "_" in
@@ -194,11 +200,10 @@ let rec translate_eq env f
   match pat, desc with
   | Minils.Evarpat(n), Minils.Efby(opt_c, e) ->
       let sn = prefixed (name n) in
-      let sm = prefix ^ "mem_" ^ (name n) in
-(*       let acc_eqs = *)
-(*         (extend *)
-(*            constraints *)
-(*            (Slist[Sequal(Ssquare(Svar(sn)),Sconst(Ctrue))]))::acc_eqs in *)
+      let acc_eqs =
+        (extend
+           constraints
+           (Slist[Sequal(Ssquare(Svar(sn)),Sconst(Ctrue))]))::acc_eqs in
       let acc_eqs,acc_init =
         match opt_c with
         | None -> acc_eqs,Cfalse::acc_init
@@ -211,363 +216,47 @@ let rec translate_eq env f
       in
       let e_next = translate_ext prefix e in
       let e_next = translate_ck prefix e_next ck in
-      acc_dep,
-      sn::acc_states,
-      acc_init,acc_inputs,acc_ctrl,acc_cont,
+      (n,sn)::acc_states,
+      acc_init,acc_inputs,
       (extend
          evolutions
          (Slist[Sdefault(e_next,Svar(sn))]))
-        (* TODO *)
-(*       ::{ stmt_name = sn; *)
-(*           stmt_def  = translate_ck prefix (Svar(sm)) ck } *)
       ::acc_eqs
-  | pat, Minils.Eapp({ Minils.a_op = Minils.Enode g_name;
-                       Minils.a_id = Some a_id;
-                       Minils.a_inlined = inlined }, e_list, None) ->
+  | pat, Minils.Eapp({ Minils.a_op = Minils.Enode _f; }, _e_list, None) ->
       (*
-        g : n states (gq1,...,gqn), p inputs (gi1,...,gip), m outputs (go1,...,gom)
+        (y1,...,yp) = f(x1,...,xn)
 
-        case inlined :
-          var_g : [gq1,...,gqn,gi1,...,gip]
-          var_inst_g : [hq1,...,hqn,e1,...,en]
-        case non inlined :
-          add inputs go1',...,gom'
-          var_g : [gq1,...,gqn,gi1,...,gip,go1,...,gom]
-          var_inst_g : [hq1,...,hqn,e1,...,en,go1',...,gom']
-
-        declare(d1,...,dn)
-
-        d : [d1,...,dn]
-        % q1 = if ck then d1 else hq1 %
-        q1 : d1 when ck default hq1
-        ...
-        qn : dn when ck default hqn
-
-        % P_inst = P[var_inst_g/var_g] %
-        evol_g : l_subst(evolution(g),var_g,var_inst_g);
-        evolutions : concat(evolutions,l_subst([q1,...,qn],[d1,...,dn],evol_g)
-        initialisations : concat(initialisations, [subst(initial(g),var_g,var_inst_g)])
-        constraints : concat(constraints, [subst(constraint(g),var_g,var_inst_g)])
-
-        case inlined :
-          ho1 : subst(go1,var_g,var_inst_g)
-          ...
-          hom : subst(gom,var_g,var_inst_g)
-        case non inlined :
-          (nothing)
+        add inputs y1,...,yp. Link between yi and f's contract has
+        been done in the pass "Contracts".
       *)
-      let g_name = shortname g_name in
-      let (g_p,g_p_contract) = NamesEnv.find g_name env in
-      let g = if inlined then g_name else g_name ^ "_contract" in
-      (* add dependency *)
-      let acc_dep = g :: acc_dep in
-      let name_list = translate_pat pat in
-      let g_p = if inlined then g_p else g_p_contract in
-      (* var_g : [gq1,...,gqn,gi1,...,gip] *)
-      let var_g = "var_" ^ g in
-      let vars =
-        match inlined with
-        | true -> g_p.proc_states @ g_p.proc_inputs
-        | false -> g_p.proc_states @ g_p.proc_inputs @ g_p.proc_outputs in
-      let acc_eqs =
-        { stmt_name = var_g;
-          stmt_def = Slist(List.map (fun v -> Svar(v)) vars) }::acc_eqs in
-      (* var_inst_g : [hq1,...,hqn,e1,...,en] *)
-      let var_inst_g = "var_inst_" ^ g in
-      (* Coding contract states : S_n_id_s *)
-      (* id being the id of the application *)
-      (* n being the length of id *)
-      (* s being the name of the state*)
-      let a_id = (name a_id) in
-      let id_length = String.length a_id in
-      let s_prefix = "S_" ^ (string_of_int id_length) ^ "_" ^ a_id ^ "_" in
-      let new_states_list =
-        List.map
-          (fun g_state ->
-             (* Remove "g_" prefix *)
-             let l = String.length g in
-             let s =
-               String.sub
-                 g_state (l+1)
-                 ((String.length g_state)-(l+1)) in
-             prefixed (s_prefix ^ s))
-          g_p.proc_states in
-      let e_states = List.map (fun hq -> Svar(hq)) new_states_list in
-      let e_list = List.map (translate_ext prefix) e_list in
-      let e_outputs,acc_inputs =
-        match inlined with
-        | true -> [],acc_inputs
-        | false ->
-            let new_outputs =
-              List.map (fun name -> prefixed name) name_list in
-            (List.map (fun v -> Svar(v)) new_outputs),(acc_inputs@new_outputs) in
-      let vars_inst = e_states@e_list@e_outputs in
-      let acc_eqs =
-        { stmt_name = var_inst_g;
-          stmt_def = Slist(vars_inst); }::acc_eqs in
-      let acc_states = List.rev_append new_states_list acc_states in
-      let acc_init = List.rev_append g_p.proc_init acc_init in
-      (* declare(d1,...,dn) *)
-      let dummy_list = var_list dummy_prefix (List.length g_p.proc_states) in
-      (* d : [d1,...dn] *)
-      let acc_eqs =
-        {stmt_name = dummy_prefix;
-         stmt_def = Slist(List.map (fun di -> Svar(di)) dummy_list)}::acc_eqs in
-      (* qi = di when ck default hqi *)
-      let q_list = List.map (fun _ -> "q_" ^ (gen_symbol ())) g_p.proc_states in
-      let e_list =
-        List.map2
-          (fun hq d ->
-             let e = Svar(d) in
-             let e = translate_ck (prefixed "") e ck in
-             Sdefault(e,Svar(hq)))
-          new_states_list dummy_list in
-      let acc_eqs =
-        List.fold_left2
-          (fun acc_eqs q e -> {stmt_name = q; stmt_def = e}::acc_eqs)
-          acc_eqs q_list e_list in
-      (* evol_g : l_subst(evolution(g),var_g,var_inst_g); *)
-      let evol_g = "evol_" ^ g in
-      let acc_eqs =
-        {stmt_name = evol_g;
-         stmt_def = l_subst (evolution (Svar g)) (Svar var_g) (Svar var_inst_g)}
-        ::acc_eqs in
-      (* evolutions : concat(evolutions,l_subst([q1,...,qn],[d1,...,dn],evol_g) *)
-      let acc_eqs =
-        (extend evolutions (l_subst
-                              (Slist (List.map (fun q -> Svar(q)) q_list))
-                              (Slist (List.map (fun d -> Svar(d)) dummy_list))
-
-                              (Svar evol_g)))
-        ::acc_eqs in
-      (* initialisations : concat(initialisations, [subst(initial(g),var_g,var_inst_g)]) *)
-      let acc_eqs =
-        (extend initialisations (Slist[subst
-                                         (initial (Svar g))
-                                         (Svar var_g)
-                                         (Svar var_inst_g)]))
-        :: acc_eqs in
-      (* constraints : concat(constraints, [subst(constraint(g),var_g,var_inst_g)]) *)
-      let acc_eqs =
-        (extend constraints (Slist[subst
-                                     (pconstraint (Svar g))
-                                     (Svar var_g)
-                                     (Svar var_inst_g)]))
-        ::acc_eqs in
-      (* if inlined, hoi : subst(goi,var_g,var_inst_g) *)
-      let acc_eqs =
-        match inlined with
-        | true ->
-            List.fold_left2
-              (fun acc_eqs o go ->
-                 {stmt_name = prefixed o;
-                  stmt_def = subst (Svar(go)) (Svar(var_g)) (Svar(var_inst_g))}
-                 ::acc_eqs)
-              acc_eqs name_list g_p.proc_outputs
-        | false -> acc_eqs in
-      (* assume & guarantee *)
-      (* f_g_assume_x : subst(g_assume,var_g,var_inst_g) *)
-      (* f_g_guarantee_x : subst(g_guarantee,var_g,var_inst_g) *)
-      let var_assume = prefixed (g ^ "_assume_" ^ (gen_symbol ())) in
-      let var_guarantee = prefixed (g ^ "_guarantee_" ^ (gen_symbol ())) in
-      let acc_eqs =
-        {stmt_name = var_assume;
-         stmt_def = subst (Svar(g ^ "_assume")) (Svar(var_g)) (Svar(var_inst_g))} ::
-          {stmt_name = var_guarantee;
-           stmt_def = subst (Svar(g ^ "_guarantee")) (Svar(var_g)) (Svar(var_inst_g))} ::
-          acc_eqs in
-      let acc_cont =
-        (Svar(var_assume),Svar(var_guarantee)) :: acc_cont in
-      acc_dep,acc_states,acc_init,
-      acc_inputs,acc_ctrl,acc_cont,acc_eqs
-  | pat, Minils.Eapp({ Minils.a_op = Minils.Enode g_name;
-                       Minils.a_id = Some a_id;
-                       Minils.a_inlined = inlined }, e_list, Some r) ->
-      (*
-        g : n states (gq1,...,gqn), p inputs (gi1,...,gip),
-        n init states (gq1_0,...,gqn_0)
-
-        case inlined :
-          var_g : [gq1,...,gqn,gi1,...,gip]
-          var_inst_g : [hq1,...,hqn,e1,...,en]
-        case non inlined :
-          add inputs go1',...,gom'
-          var_g : [gq1,...,gqn,gi1,...,gip,go1,...,gom]
-          var_inst_g : [hq1,...,hqn,e1,...,en,go1',...,gom']
-
-        declare(d1,...,dn)
-
-        d : [d1,...,dn]
-        % q1 = if ck then (if r then gq1_0 else d1) else hq1 %
-        q1 : (gq1_0 when r default d1) when ck default hq1
-        ...
-        qn : (gqn_0 when r default dn) when ck default hqn
-
-        % P_inst = P[var_inst_g/var_g] %
-        evol_g : l_subst(evolution(g),var_g,var_inst_g);
-        evolutions : concat(evolutions,l_subst([q1,...,qn],[d1,...,dn],evol_g)
-        initialisations : concat(initialisations, [subst(initial(g),var_g,var_inst_g)])
-        constraints : concat(constraints, [subst(constraint(g),var_g,var_inst_g)])
-
-        case inlined :
-          ho1 : subst(go1,var_g,var_inst_g)
-          ...
-          hom : subst(gom,var_g,var_inst_g)
-        case non inlined :
-          (nothing)
-      *)
-      let g_name = shortname g_name in
-      let (g_p,g_p_contract) = NamesEnv.find g_name env in
-      let g = if inlined then g_name else g_name ^ "_contract" in
-      (* add dependency *)
-      let acc_dep = g :: acc_dep in
-      let name_list = translate_pat pat in
-      let g_p = if inlined then g_p else g_p_contract in
-      (* var_g : [gq1,...,gqn,gi1,...,gip] *)
-      let var_g = "var_" ^ g in
-      let vars =
-        match inlined with
-        | true -> g_p.proc_states @ g_p.proc_inputs
-        | false -> g_p.proc_states @ g_p.proc_inputs @ g_p.proc_outputs in
-      let acc_eqs =
-        { stmt_name = var_g;
-          stmt_def = Slist(List.map (fun v -> Svar(v)) vars) }::acc_eqs in
-      (* var_inst_g : [hq1,...,hqn,e1,...,en] *)
-      let var_inst_g = "var_inst_" ^ g in
-      (* Coding contract states : S_n_id_s *)
-      (* id being the id of the application *)
-      (* n being the length of id *)
-      (* s being the name of the state*)
-      let a_id = name a_id in
-      let id_length = String.length a_id in
-      let s_prefix = "S_" ^ (string_of_int id_length) ^ "_" ^ a_id ^ "_" in
-      let new_states_list =
-        List.map
-          (fun g_state ->
-             (* Remove "g_" prefix *)
-             let l = (String.length g) in
-             let s =
-               String.sub
-                 g_state (l+1)
-                 ((String.length g_state)-(l+1)) in
-             prefixed (s_prefix ^ s))
-          g_p.proc_states in
-      let e_states = List.map (fun hq -> Svar(hq)) new_states_list in
-      let e_list = List.map (translate_ext prefix) e_list in
-      let e_outputs,acc_inputs =
-        match inlined with
-        | true -> [],acc_inputs
-        | false ->
-            let new_outputs =
-              List.map (fun name -> prefixed name) name_list in
-            (List.map (fun v -> Svar(v)) new_outputs),(acc_inputs@new_outputs) in
-      let vars_inst = e_states@e_list@e_outputs in
-      let acc_eqs =
-        { stmt_name = var_inst_g;
-          stmt_def = Slist(vars_inst); }::acc_eqs in
-      let acc_states = List.rev_append new_states_list acc_states in
-      let acc_init = List.rev_append g_p.proc_init acc_init in
-      (* declare(d1,...,dn) *)
-      let dummy_list = var_list dummy_prefix (List.length g_p.proc_states) in
-      (* d : [d1,...dn] *)
-      let acc_eqs =
-        {stmt_name = dummy_prefix;
-         stmt_def = Slist(List.map (fun di -> Svar(di)) dummy_list)}::acc_eqs in
-      (* qi = (gqi_0 when r default di) when ck default hqi *)
-      let q_list = List.map (fun _ -> "q_" ^ (gen_symbol ())) g_p.proc_states in
-      let e_list =
-        List.map2
-          (fun (q0,hq) d ->
-             let e = Sdefault(Swhen(Sconst(q0),
-                                    Svar(prefixed (name r))),Svar(d)) in
-             let e = translate_ck (prefixed "") e ck in
-             Sdefault(e,Svar(hq)))
-          (List.combine g_p.proc_init new_states_list) dummy_list in
-      let acc_eqs =
-        List.fold_left2
-          (fun acc_eqs q e -> {stmt_name = q; stmt_def = e}::acc_eqs)
-          acc_eqs q_list e_list in
-      (* evol_g : l_subst(evolution(g),var_g,var_inst_g); *)
-      let evol_g = "evol_" ^ g in
-      let acc_eqs =
-        {stmt_name = evol_g;
-         stmt_def = l_subst (evolution (Svar g)) (Svar var_g) (Svar var_inst_g)}
-        ::acc_eqs in
-      (* evolutions : concat(evolutions,l_subst([q1,...,qn],[d1,...,dn],evol_g) *)
-      let acc_eqs =
-        (extend evolutions (l_subst
-                              (Slist (List.map (fun q -> Svar(q)) q_list))
-                              (Slist (List.map (fun d -> Svar(d)) dummy_list))
-
-                              (Svar evol_g)))
-        ::acc_eqs in
-      (* initialisations : concat(initialisations, [subst(initial(g),var_g,var_inst_g)]) *)
-      let acc_eqs =
-        (extend initialisations (Slist[subst
-                                         (initial (Svar g))
-                                         (Svar var_g)
-                                         (Svar var_inst_g)]))
-        :: acc_eqs in
-      (* constraints : concat(constraints, [subst(constraint(g),var_g,var_inst_g)]) *)
-      let acc_eqs =
-        (extend constraints (Slist[subst
-                                     (pconstraint (Svar g))
-                                     (Svar var_g)
-                                     (Svar var_inst_g)]))
-        ::acc_eqs in
-      (* if inlined, hoi : subst(goi,var_g,var_inst_g) *)
-      let acc_eqs =
-        match inlined with
-        | true ->
-            List.fold_left2
-              (fun acc_eqs o go ->
-                 {stmt_name = prefixed o;
-                  stmt_def = subst (Svar(go)) (Svar(var_g)) (Svar(var_inst_g))}
-                 ::acc_eqs)
-              acc_eqs name_list g_p.proc_outputs
-        | false -> acc_eqs in
-      (* assume & guarantee *)
-      (* f_g_assume_x : subst(g_assume,var_g,var_inst_g) *)
-      (* f_g_guarantee_x : subst(g_guarantee,var_g,var_inst_g) *)
-      let var_assume = prefixed (g ^ "_assume_" ^ (gen_symbol ())) in
-      let var_guarantee = prefixed (g ^ "_guarantee_" ^ (gen_symbol ())) in
-      let acc_eqs =
-        {stmt_name = var_assume;
-         stmt_def = subst (Svar(g ^ "_assume")) (Svar(var_g)) (Svar(var_inst_g))} ::
-          {stmt_name = var_guarantee;
-           stmt_def = subst (Svar(g ^ "_guarantee")) (Svar(var_g)) (Svar(var_inst_g))} ::
-          acc_eqs in
-      let acc_cont =
-        (Svar(var_assume),Svar(var_guarantee)) :: acc_cont in
-      acc_dep,acc_states,acc_init,
-      acc_inputs,acc_ctrl,acc_cont,acc_eqs
+      let ident_list = translate_pat pat in
+      let acc_inputs = 
+        acc_inputs @
+          (List.map (fun id -> (id,(prefixed (name id)))) ident_list) in
+      acc_states,acc_init,
+      acc_inputs,acc_eqs
   | Minils.Evarpat(n), _ ->
       (* assert : no fby, no node application in e *)
       let e' = translate prefix e in
-      let e' =
-        begin match (actual_ty e.Minils.e_ty) with
-        | Tbool -> translate_ck prefix e' ck
-        | _ -> e'
-        end in
-      acc_dep,acc_states,acc_init,
-      acc_inputs,acc_ctrl,acc_cont,
+      (* let e' = *)
+      (*   begin match (actual_ty e.Minils.e_ty) with *)
+      (*   | Tbool -> translate_ck prefix e' ck *)
+      (*   | _ -> e' *)
+      (*   end in *)
+      acc_states,acc_init,
+      acc_inputs,
       { stmt_name = prefixed (name n);
         stmt_def  = e' }::acc_eqs
   | _ -> assert false
 
-let translate_eq_list env f eq_list =
+let translate_eq_list f eq_list =
   List.fold_left
-    (fun (acc_dep,acc_states,acc_init,
-          acc_inputs,acc_ctrl,acc_cont,acc_eqs) eq ->
-       translate_eq
-         env f
-         (acc_dep,acc_states,acc_init,
-          acc_inputs,acc_ctrl,acc_cont,acc_eqs)
-         eq)
-    ([],[],[],[],[],[],[])
+    (fun (acc_states,acc_init, acc_inputs,acc_eqs) eq ->
+       translate_eq f (acc_states,acc_init,acc_inputs,acc_eqs) eq)
+    ([],[],[],[])
     eq_list
 
-let translate_contract env f contract =
+let translate_contract f contract =
   let prefix = f ^ "_" in
   let var_a = prefix ^ "assume" in
   let var_g = prefix ^ "guarantee" in
@@ -576,38 +265,32 @@ let translate_contract env f contract =
       let body =
         [{ stmt_name = var_g; stmt_def = Sconst(Ctrue) };
          { stmt_name = var_a; stmt_def = Sconst(Ctrue) }] in
-      [],[],[],body,(Svar(var_a),Svar(var_g)),[]
-  | Some {Minils.c_local = _locals;
+      [],[],body,(Svar(var_a),Svar(var_g)),[],[],[]
+  | Some {Minils.c_local = locals;
           Minils.c_eq = l_eqs;
           Minils.c_assume = e_a;
           Minils.c_enforce = e_g;
+          Minils.c_assume_loc = e_a_loc;
+          Minils.c_enforce_loc = e_g_loc;
           Minils.c_controllables = cl} ->
-      let dep,states,init,inputs,
-        controllables,_contracts,body =
-        translate_eq_list env f l_eqs in
+      let states,init,inputs,body = translate_eq_list f l_eqs in
       assert (inputs = []);
-      assert (controllables = []);
       let e_a = translate_ext prefix e_a in
       let e_g = translate_ext prefix e_g in
+      let e_a_loc = translate_ext prefix e_a_loc in
+      let e_g_loc = translate_ext prefix e_g_loc in
       let body =
-        {stmt_name = var_g; stmt_def = e_g} ::
-        {stmt_name = var_a; stmt_def = e_a} ::
+        {stmt_name = var_g; stmt_def = e_g &~ e_g_loc } ::
+        {stmt_name = var_a; stmt_def = e_a &~ e_a_loc } ::
         body in
       let controllables =
-        List.map (fun { Minils.v_ident = id } -> prefix ^ (name id)) cl in
-      dep,states,init,body,(Svar(var_a),Svar(var_g)),controllables
+        List.map
+          (fun ({ Minils.v_ident = id } as v) -> v,(prefix ^ (name id))) cl in
+      states,init,body,(Svar(var_a),Svar(var_g)),controllables,(locals@cl),l_eqs
 
 
 
-let rec build_environment contracts =
-  match contracts with
-  | [] -> [],Sconst(Ctrue)
-  | [a,g] -> [a =>~ g],g
-  | (a,g)::l ->
-      let conts,assumes = build_environment l in
-      ((a =>~ g) :: conts),(g &~ assumes)
-
-let translate_node env
+let translate_node
     ({ Minils.n_name = {name = f};
        Minils.n_input = i_list; Minils.n_output = o_list;
        Minils.n_local = _d_list; Minils.n_equs = eq_list;
@@ -615,92 +298,118 @@ let translate_node env
   (* every variable is prefixed by its node name *)
   let inputs =
     List.map
-      (fun { Minils.v_ident = v } -> f ^ "_" ^ (name v)) i_list in
-  let outputs =
+      (fun { Minils.v_ident = v } -> v,(f ^ "_" ^ (name v))) i_list in
+  let sig_outputs =
     List.map
       (fun { Minils.v_ident = v } -> f ^ "_" ^ (name v)) o_list in
-  let dep,states,init,add_inputs,add_controllables,contracts,body =
-    translate_eq_list env f eq_list in
-  let dep_c,states_c,init_c,body_c,(a_c,g_c),controllables =
-    translate_contract env f contract in
+  let states,init,add_inputs,body =
+    translate_eq_list f eq_list in
+  let states_c,init_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c =
+    translate_contract f contract in
   let inputs = inputs @ add_inputs in
-  let controllables = controllables @ add_controllables in
   let body = List.rev body in
   let states = List.rev states in
   let body_c = List.rev body_c in
   let states_c = List.rev states_c in
+  let mls_inputs,sig_inputs = List.split inputs in
+  let mls_states,sig_states = List.split (states@states_c) in
+  let mls_ctrl,sig_ctrl = List.split controllables in
   let constraints =
     List.map
       (fun v -> Sequal(Ssquare(Svar(v)),Sconst(Ctrue)))
-      (inputs@controllables) in
-  let contracts_components,assumes_components =
-    build_environment contracts in
-  let constraints = constraints @
-    contracts_components @ [Sequal (a_c,Sconst(Ctrue))] in
-  let impl = g_c &~ assumes_components in
-  let obj = Security(impl) in
-  let p = { proc_dep = unique (dep @ dep_c);
+      (sig_inputs@sig_ctrl) in
+  let constraints = constraints @ [Sequal (a_c,Sconst(Ctrue))] in
+  let obj = Security(g_c) in
+  let p = { proc_dep = [];
             proc_name = f;
-            proc_inputs = inputs@controllables;
-            proc_uncont_inputs = inputs;
-            proc_outputs = outputs;
-            proc_controllables = controllables;
-            proc_states = states@states_c;
+            proc_inputs = sig_inputs@sig_ctrl;
+            proc_uncont_inputs = sig_inputs;
+            proc_outputs = sig_outputs;
+            proc_controllables = sig_ctrl;
+            proc_states = sig_states;
             proc_init = init@init_c;
             proc_constraints = constraints;
             proc_body = body@body_c;
             proc_objectives = [obj] } in
-  (* Hack : save inputs and states names for controller call *)
-  let remove_prefix =
-    let n = String.length f in
-    fun s ->
-      String.sub s (n+1) ((String.length s) - (n+1)) in
-  node.Minils.n_controller_call <-
-    (List.map remove_prefix inputs,
-     List.map remove_prefix (states@states_c));
 
-  let f_contract = f ^ "_contract" in
-  let inputs_c =
+  let ctrlr_pat = Minils.Etuplepat(List.map (fun { Minils.v_ident = v } ->
+                                               Minils.Evarpat(v))
+                                     mls_ctrl) in
+  let ctrlr_name = f ^ "_controller" in
+  let ctrlr_fun_name = { qual = Module (String.capitalize ctrlr_name);
+                         name = ctrlr_name } in
+  let ctrlr_exp = 
+    Minils.mk_exp
+      Cbase 
+      (Tprod (List.map (fun _ -> Initial.tbool) mls_ctrl))
+      ~linearity:Linearity.Ltop
+      (Minils.Eapp(Minils.mk_app (Minils.Efun ctrlr_fun_name),
+            (List.map 
+               (fun v ->
+                  Minils.mk_extvalue 
+                    ~ty:Initial.tbool 
+                    ~linearity:Linearity.Ltop
+                    ~clock:Cbase
+                    (Minils.Wvar v))
+               (mls_inputs@mls_states))
+            @ (List.map
+                 (fun _ ->
+                    Minils.mk_extvalue
+                      ~ty:Initial.tbool 
+                      ~linearity:Linearity.Ltop
+                      ~clock:Cbase
+                      (Minils.Wconst(Initial.mk_static_bool true)))
+                 mls_ctrl),
+            None))
+  in
+  let ctrlr_call =
+    Minils.mk_equation ~base_ck:Cbase false ctrlr_pat ctrlr_exp in
+
+  let ctrlr_inputs =
+    (List.map
+       (fun v -> 
+          Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
+       (sig_inputs@sig_states))
+    @ (List.map
+         (fun v ->
+            Signature.mk_arg 
+              (Some ("p_" ^ v)) Initial.tbool Linearity.Ltop Signature.Cbase)
+         sig_ctrl) in
+  let ctrlr_outputs =
     List.map
-      (fun { Minils.v_ident = v } -> f_contract ^ "_" ^ (name v)) i_list in
-  let outputs_c =
-    List.map
-      (fun { Minils.v_ident = v } -> f_contract ^ "_" ^ (name v)) o_list in
-  let dep_c,states_c,init_c,body_c,(_a_c,_g_c),_controllables =
-    translate_contract env f_contract contract in
-  let states_c = List.rev states_c in
-  let body_c = List.rev body_c in
-  let constraints_c =
-    List.map
-      (fun v -> Sequal(Ssquare(Svar(v)),Sconst(Ctrue)))
-      (inputs_c@outputs_c) in
-  let p_c =  { proc_dep = dep_c;
-               proc_name = f ^ "_contract";
-               proc_inputs = inputs_c@outputs_c;
-               proc_uncont_inputs = inputs_c@outputs_c;
-               proc_outputs = [];
-               proc_controllables = [];
-               proc_states = states_c;
-               proc_init = init_c;
-               proc_constraints = constraints_c;
-               proc_body = body_c;
-               proc_objectives = [] } in
-  (NamesEnv.add f (p,p_c) env), (p,p_c)
+      (fun v ->
+         Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
+      sig_ctrl in
+  let ctrlr_signature = 
+    Signature.mk_node Location.no_location ~extern:false 
+      ctrlr_inputs ctrlr_outputs false false [] in
+  (* Add controller into modules *)
+  Modules.add_value ctrlr_fun_name ctrlr_signature;
+  
+  let node =
+    { node with
+        Minils.n_contract = None;
+        Minils.n_local = node.Minils.n_local @ locals_c;
+        Minils.n_equs = ctrlr_call :: (node.Minils.n_equs @ eqs_c);
+    } in
+  node, p
 
 let program p =
-  let _env,acc_proc =
+  let acc_proc, acc_p_desc =
     List.fold_left
-      (fun (env,acc) p_desc ->
+      (fun (acc_proc,acc_p_desc) p_desc ->
          match p_desc with
          | Minils.Pnode(node) ->
-             let env,(proc,contract) = translate_node env node in
-             env,contract::proc::acc
-         | _ -> env,acc)
-      (NamesEnv.empty,[])
+             let (node,proc) = translate_node node in
+             (proc::acc_proc),((Minils.Pnode(node))::acc_p_desc)
+         | p -> (acc_proc,p::acc_p_desc))
+      ([],[])
       p.Minils.p_desc in
   let procs = List.rev acc_proc in
   let filename = filename_of_name (modul_to_string p.Minils.p_modname) in
   let dirname = build_path (filename ^ "_z3z") in
   let dir = clean_dir dirname in
-  Sigali.Printer.print dir procs
+  Sigali.Printer.print dir procs;
+  { p with Minils.p_desc = List.rev acc_p_desc }
+
 

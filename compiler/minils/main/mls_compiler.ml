@@ -52,6 +52,17 @@ let compile_program p =
       pass "Scheduling" true Schedule.program p pp
   in
 
+  let z3z = List.mem "z3z" !target_languages in
+  let p = pass "Sigali generation" z3z Sigalimain.program p pp in
+  (* Re-scheduling after sigali generation *)
+  let p =
+    if not !Compiler_options.use_old_scheduler then
+      pass "Scheduling (with minimization of interferences)" z3z Schedule_interf.program p pp
+    else
+      pass "Scheduling" z3z Schedule.program p pp
+  in
+
+
   (* Memory allocation *)
   let p = pass "Memory allocation" !do_mem_alloc Interference.program p pp in
 

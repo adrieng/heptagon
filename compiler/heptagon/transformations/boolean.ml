@@ -329,7 +329,7 @@ let rec translate_ct env ct =
   | Ck(ck) -> Ck(translate_ck env ck)
   | Cprod(l) -> Cprod(List.map (translate_ct env) l)
 
-let translate_const c ty e =
+let translate_const c ty ct e =
   match c.se_desc,ty with
   | _, Tid({ qual = Pervasives; name = "bool" }) -> Econst(c)
   | Sconstructor(cname),Tid(tname) ->
@@ -350,6 +350,7 @@ let translate_const c ty e =
                         (List.map
                            (fun b -> {e with
                                         e_desc = b;
+                                        e_ct_annot = ct;
                                         e_ty = ty_bool })
                            b_list)
                 end
@@ -512,7 +513,7 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
   let context,desc =
     match desc with
     | Econst(c) ->
-        context, translate_const c ty e
+        context, translate_const c ty ct e
     | Evar(name) ->
         let desc = begin
           try
@@ -538,7 +539,7 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
         let context,e = translate env context e in
         context,Epre(None,e)
     | Epre(Some c,e) ->
-        let e_c = translate_const c ty e in
+        let e_c = translate_const c ty ct e in
         let context,e = translate env context e in
         begin
           match e_c with
@@ -772,12 +773,9 @@ let buildenv_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
                         var_dec_list
                           (acc_vd,acc_loc,acc_eq)
                           v info.ty_nb_var in
-                      let vi = { var_enum = info;
-                            var_list = vl;
-                            clocked_var = t } in
                       let env =
                         Env.add
-                          v.v_ident
+                          v.v_ident 
                           { var_enum = info;
                             var_list = vl;
                             clocked_var = t }
@@ -846,7 +844,7 @@ let translate_contract env contract =
              b_equs = eqs } as b), env'
         = translate_block env cl_loc cl_eq b in
       let context, e_a = translate env' (v,eqs) e_a in
-      let context, e_a_loc = translate env' (v,eqs) e_a_loc in
+      let context, e_a_loc = translate env' context e_a_loc in
       let context, e_g = translate env' context e_g in
       let context, e_g_loc = translate env' context e_g_loc in
       let (d_list,eq_list) = context in

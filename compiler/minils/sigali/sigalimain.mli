@@ -11,4 +11,4 @@
 
 (* $Id$ *)
 
-val program : Minils.program -> unit
+val program : Minils.program -> Minils.program

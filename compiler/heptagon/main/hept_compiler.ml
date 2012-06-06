@@ -24,6 +24,9 @@ let compile_program p =
   (* Inlining *)
   let p = pass "Inlining" true Inline.program p pp in
 
+  (* Contracts handling *)
+  let p = pass "Contracts" true Contracts.program p pp in
+
   (* Causality check *)
   let p = silent_pass "Causality check" !causality Causality.program p in
 

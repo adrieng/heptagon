@@ -19,6 +19,8 @@ let tbool = Types.Tid pbool
 let ptrue = { qual = Pervasives; name = "true" }
 let pfalse = { qual = Pervasives; name = "false" }
 let por = { qual = Pervasives; name = "or" }
+let pand = { qual = Pervasives; name = "&" }
+let pnot = { qual = Pervasives; name = "not" }
 let pint = { qual = Pervasives; name = "int" }
 let tint = Types.Tid pint
 let pfloat = { qual = Pervasives; name = "float" }

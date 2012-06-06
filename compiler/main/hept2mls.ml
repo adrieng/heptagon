@@ -101,8 +101,8 @@ let rec translate_extvalue e =
   match e.Heptagon.e_desc with
     | Heptagon.Econst c -> mk_extvalue e (Wconst c)
     | Heptagon.Evar x -> mk_extvalue e (Wvar x)
-    | Heptagon.Ewhen (e, c, x) ->
-        mk_extvalue e (Wwhen (translate_extvalue e, c, x))
+    | Heptagon.Ewhen (e', c, x) ->
+        mk_extvalue e (Wwhen (translate_extvalue e', c, x))
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield;
                       Heptagon.a_params = params }, e_list, _) ->
         let e = assert_1 e_list in
