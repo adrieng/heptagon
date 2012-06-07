@@ -158,6 +158,12 @@ module World = struct
     let env = build Env.empty f.n_input in
     let env = build env f.n_output in
     let env = build env f.n_local in
+    let env =
+      match f.n_contract with
+        None -> env
+      | Some c -> 
+          let env = build env c.c_local in
+          build env c.c_controllables in
       igs := [];
       vds := env;
     (* build the set of memories *)

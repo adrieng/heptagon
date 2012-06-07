@@ -225,10 +225,12 @@ let typing_contract loc contract =
         let teq = typing_eqs b.b_equs in
         let t_contract =
           cseq
-            (typing e_a)
-            (cseq (typing e_g)
-               (cseq (typing e_a_loc)
-                  (cseq (typing e_g_loc) teq))) in
+            teq
+            (ctuplelist
+               [(typing e_a);
+                (typing e_g);
+                (typing e_a_loc);
+                (typing e_g_loc)]) in
         Causal.check loc t_contract;
         let t_contract = clear (build b.b_local) t_contract in
         t_contract
