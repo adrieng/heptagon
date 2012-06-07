@@ -200,10 +200,6 @@ let rec translate_eq f
   match pat, desc with
   | Minils.Evarpat(n), Minils.Efby(opt_c, e) ->
       let sn = prefixed (name n) in
-      let acc_eqs =
-        (extend
-           constraints
-           (Slist[Sequal(Ssquare(Svar(sn)),Sconst(Ctrue))]))::acc_eqs in
       let acc_eqs,acc_init =
         match opt_c with
         | None -> acc_eqs,Cfalse::acc_init
@@ -319,17 +315,29 @@ let translate_node
       (fun v -> Sequal(Ssquare(Svar(v)),Sconst(Ctrue)))
       (sig_inputs@sig_ctrl) in
   let constraints = constraints @ [Sequal (a_c,Sconst(Ctrue))] in
-  let obj = Security(g_c) in
+  (* Sink state when the guarantee part of the contract becomes false *)
+  (* f_error_state state variable initialized to true; become false
+     the instant after the guarantee part is false *)
+  let error_state_name = f ^ "_error_state" in
+  let sig_states_full = sig_states @ [error_state_name] in
+  let body_sink =
+    [(extend
+        initialisations
+        (Slist[Sequal(Svar(error_state_name),Sconst(Ctrue))]));
+     (extend
+        evolutions
+        (Slist[g_c]))] in
+  let obj = Security(Svar(error_state_name)) in
   let p = { proc_dep = [];
             proc_name = f;
             proc_inputs = sig_inputs@sig_ctrl;
             proc_uncont_inputs = sig_inputs;
             proc_outputs = sig_outputs;
             proc_controllables = sig_ctrl;
-            proc_states = sig_states;
+            proc_states = sig_states_full;
             proc_init = init@init_c;
             proc_constraints = constraints;
-            proc_body = body@body_c;
+            proc_body = body@body_c@body_sink;
             proc_objectives = [obj] } in
 
   let ctrlr_pat = Minils.Etuplepat(List.map (fun { Minils.v_ident = v } ->
@@ -344,23 +352,23 @@ let translate_node
       (Tprod (List.map (fun _ -> Initial.tbool) mls_ctrl))
       ~linearity:Linearity.Ltop
       (Minils.Eapp(Minils.mk_app (Minils.Efun ctrlr_fun_name),
-            (List.map 
-               (fun v ->
-                  Minils.mk_extvalue 
-                    ~ty:Initial.tbool 
-                    ~linearity:Linearity.Ltop
-                    ~clock:Cbase
-                    (Minils.Wvar v))
-               (mls_inputs@mls_states))
-            @ (List.map
-                 (fun _ ->
-                    Minils.mk_extvalue
-                      ~ty:Initial.tbool 
-                      ~linearity:Linearity.Ltop
-                      ~clock:Cbase
-                      (Minils.Wconst(Initial.mk_static_bool true)))
-                 mls_ctrl),
-            None))
+                   (List.map 
+                      (fun v ->
+                         Minils.mk_extvalue 
+                           ~ty:Initial.tbool 
+                           ~linearity:Linearity.Ltop
+                           ~clock:Cbase
+                           (Minils.Wvar v))
+                      (mls_inputs@mls_states))
+                   @ (List.map
+                        (fun _ ->
+                           Minils.mk_extvalue
+                             ~ty:Initial.tbool 
+                             ~linearity:Linearity.Ltop
+                             ~clock:Cbase
+                             (Minils.Wconst(Initial.mk_static_bool true)))
+                        mls_ctrl),
+                   None))
   in
   let ctrlr_call =
     Minils.mk_equation ~base_ck:Cbase false ctrlr_pat ctrlr_exp in

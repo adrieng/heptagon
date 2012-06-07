@@ -233,13 +233,18 @@ node_params:
 
 contract:
   | /* empty */ {None}
-  | CONTRACT b=block(LET) TEL a=opt_assume e=opt_enforce w=opt_with
+  | CONTRACT b=opt_block a=opt_assume e=opt_enforce w=opt_with
       { Some{ c_block = b;
               c_assume = a;
               c_enforce = e;
               c_assume_loc = mk_constructor_exp ptrue (Loc($startpos,$endpos));
               c_enforce_loc = mk_constructor_exp ptrue (Loc($startpos,$endpos));
         c_controllables = w } }
+;
+
+opt_block:
+  | /* empty */ { mk_block [] [] (Loc($startpos,$endpos)) }
+  | b=block(LET) TEL { b }
 ;
 
 opt_assume:

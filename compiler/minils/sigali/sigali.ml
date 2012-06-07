@@ -266,14 +266,14 @@ module Printer =
 
       Compiler_utils.print_header_info ff "%" "%";
       fprintf ff "%s" sigali_head;
-      let n = List.length states in
+      (* let n = List.length states in *)
 
       (* declare dummy variables d1...dn *)
-      fprintf ff "@[declare(@[<hov>d1";
-      for i = 2 to n do
-        fprintf ff ",@ d%d" i;
-      done;
-      fprintf ff "@]);@]@\n@\n";
+      (* fprintf ff "@[declare(@[<hov>d1"; *)
+      (* for i = 2 to n do *)
+      (*   fprintf ff ",@ d%d" i; *)
+      (* done; *)
+      (* fprintf ff "@]);@]@\n@\n"; *)
 
       fprintf ff "@[<v>";
 
@@ -405,6 +405,8 @@ module Printer =
               fprintf ff "%s_triang : Triang(constraint(%s),controllables,phantom_vars);@,"
                 name name;
 
+              (* Suppress sink state as controller input *)
+              let states = List.rev (List.tl (List.rev states)) in
               (* controller vars *)
               fprintf ff "controller_inputs : [@[";
               print_list ff print_name "," (uncont_inputs
