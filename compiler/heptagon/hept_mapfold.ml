@@ -194,10 +194,18 @@ and eqdesc funs acc eqd = match eqd with
 
 and block_it funs acc b = funs.block funs acc b
 and block funs acc b =
-  (* TODO defnames ty ?? *)
   let b_local, acc = mapfold (var_dec_it funs) acc b.b_local in
   let b_equs, acc = mapfold (eq_it funs) acc b.b_equs in
-  { b with b_local = b_local; b_equs = b_equs }, acc
+  let b_defnames, acc = 
+    Idents.Env.fold
+      (fun v v_dec (env,acc) ->
+         let v, acc = var_ident_it funs.global_funs acc v in
+         let v_dec, acc = var_dec_it funs acc v_dec in
+         let env = Idents.Env.add v v_dec env in
+         env, acc)
+      b.b_defnames
+      (Idents.Env.empty, acc) in
+  { b with b_local = b_local; b_equs = b_equs; b_defnames = b_defnames }, acc
 
 
 and state_handler_it funs acc s = funs.state_handler funs acc s

@@ -24,38 +24,61 @@ let mk_unique_node nd =
   let mk_bind vd =
     let id = fresh (Idents.name vd.v_ident) in
     (vd.v_ident, { vd with v_ident = id; v_clock = Clocks.fresh_clock () }) in
-  let subst = List.map mk_bind (nd.n_block.b_local
-                                @ nd.n_input @ nd.n_output) in
+  let subst =
+    List.fold_left
+      (fun subst vd ->
+         let id, vd = mk_bind vd in
+         Env.add id vd.v_ident subst)
+      Env.empty
+      (nd.n_input @ nd.n_output) in
 
-  let subst_var_dec _ () vd = (List.assoc vd.v_ident subst, ()) in
+  (* let subst_var_dec _ () vd = (List.assoc vd.v_ident subst, ()) in *)
 
-  let subst_edesc funs () ed =
-    let ed, () = Hept_mapfold.edesc funs () ed in
-    let find vn = (List.assoc vn subst).v_ident in
-    (match ed with
-      | Evar vn -> Evar (find vn)
-      | Elast vn -> Elast (find vn)
-      | Ewhen (e, cn, vn) -> Ewhen (e, cn, find vn)
-      | Emerge (vn, e_l) -> Emerge (find vn, e_l)
-      | _ -> ed), ()
-  in
+  (* let subst_edesc funs () ed = *)
+  (*   let ed, () = Hept_mapfold.edesc funs () ed in *)
+  (*   let find vn = (List.assoc vn subst).v_ident in *)
+  (*   (match ed with *)
+  (*     | Evar vn -> Evar (find vn) *)
+  (*     | Elast vn -> Elast (find vn) *)
+  (*     | Ewhen (e, cn, vn) -> Ewhen (e, cn, find vn) *)
+  (*     | Emerge (vn, e_l) -> Emerge (find vn, e_l) *)
+  (*     | _ -> ed), () *)
+  (* in *)
 
-  let subst_eqdesc funs () eqd =
-    let (eqd, ()) = Hept_mapfold.eqdesc funs () eqd in
-    match eqd with
-    | Eeq (pat, e) ->
-        let rec subst_pat pat = match pat with
-          | Evarpat vn -> Evarpat (try (List.assoc vn subst).v_ident
-                                   with Not_found -> vn)
-          | Etuplepat patl -> Etuplepat (List.map subst_pat patl) in
-        (Eeq (subst_pat pat, e), ())
-    | _ -> raise Errors.Fallback in
+  (* let subst_eqdesc funs () eqd = *)
+  (*   let (eqd, ()) = Hept_mapfold.eqdesc funs () eqd in *)
+  (*   match eqd with *)
+  (*   | Eeq (pat, e) -> *)
+  (*       let rec subst_pat pat = match pat with *)
+  (*         | Evarpat vn -> Evarpat (try (List.assoc vn subst).v_ident *)
+  (*                                  with Not_found -> vn) *)
+  (*         | Etuplepat patl -> Etuplepat (List.map subst_pat patl) in *)
+  (*       (Eeq (subst_pat pat, e), ()) *)
+  (*   | _ -> raise Errors.Fallback in *)
 
-  let funs = { defaults with
-                 var_dec = subst_var_dec;
-                 eqdesc = subst_eqdesc;
-                 edesc = subst_edesc; } in
-  fst (Hept_mapfold.node_dec funs () nd)
+  let subst_var_ident _funs subst v =
+    let v = Env.find v subst in
+    v, subst in
+
+  let subst_block funs subst b =
+    let b_local, subst' =
+      mapfold 
+        (fun subst vd ->
+           let id, vd = mk_bind vd in
+           vd, (Env.add id vd.v_ident subst))
+        subst b.b_local in
+    let b, _ = Hept_mapfold.block funs subst' b in
+    { b with b_local = b_local }, subst in
+
+  (* let funs = { defaults with *)
+  (*                var_dec = subst_var_dec; *)
+  (*                eqdesc = subst_eqdesc; *)
+  (*                edesc = subst_edesc; } in *)
+  let funs = { Hept_mapfold.defaults with
+                 block = subst_block;
+                 global_funs = { Global_mapfold.defaults with
+                                   Global_mapfold.var_ident = subst_var_ident } } in
+  fst (Hept_mapfold.node_dec funs subst nd)
 
 let exp funs (env, newvars, newequs) exp =
   let exp, (env, newvars, newequs) = Hept_mapfold.exp funs (env, newvars, newequs) exp in
