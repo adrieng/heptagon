@@ -1,0 +1,124 @@
+\documentclass[a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper]{geometry}
+%\usepackage[francais]{babel}
+%\usepackage{subfigure}
+%\usepackage{fancyvrb}
+%\usepackage{fancyhdr}
+\usepackage[hypertex,ps2pdf]{hyperref}
+\usepackage{array}
+\usepackage{xcolor}
+%\usepackage{comment}
+\usepackage{lmodern}
+\usepackage{varwidth}
+\usepackage{tikz}
+%\usetikzlibrary{arrows}
+\usetikzlibrary{automata}
+\usetikzlibrary{matrix}
+\usetikzlibrary{shapes}
+\usetikzlibrary{positioning}
+\usepackage{macros}
+
+% fontes tt avec gras (mots-clés)
+\renewcommand{\ttdefault}{txtt}
+
+% Figures tikz
+
+\tikzstyle{hierarchical state} =
+  [rectangle,
+   round corners,
+   draw=black]
+
+\tikzstyle{ls node} =
+  [rectangle,
+   sharp corners,
+   draw=black]
+
+\tikzstyle{file} =
+  [rectangle,
+   sharp corners,
+   draw=black]
+
+\tikzstyle{tool} =
+  [rectangle,
+   rounded corners,
+   draw=black]
+
+\newenvironment{lsnode}[2][]{
+    \node[% title
+      ls node
+%      fill=blue!90!black,
+      ] (title) {#2};% title text
+    \node at (title.south west) [%
+      ls node,
+      anchor=north west,
+      yshift=\pgflinewidth]
+    \bgroup
+       \begin{varwidth}{0.9\textwidth}
+         \centering
+         \begin{tikzpicture}[%
+           node distance=8mm,
+           pin distance=8mm,
+           label distance=2mm,
+           inner sep=1mm,
+           anchor=center,
+           pos=0.5,
+           #1]% optional parameter(s)
+}{%
+         \end{tikzpicture}
+       \end{varwidth}
+    \egroup;
+}
+
+\newenvironment{contlsnode}[2][]{
+    \node[% title
+      ls node
+%      fill=blue!90!black,
+      ] (title) {#2};% title text
+    \node at (title.south west) [%
+      ls node,rectangle split, rectangle split parts=3,
+      anchor=north west,text badly ragged,
+      yshift=\pgflinewidth]
+    \bgroup
+%        \begin{varwidth}{0.9\textwidth}
+%          \centering
+%          \begin{tikzpicture}[%
+%            node distance=8mm,
+%            pin distance=8mm,
+%            label distance=-0.5mm,
+%            inner sep=1mm,
+%            anchor=center,
+%            pos=0.5,
+%            #1]% optional parameter(s)
+}{%
+%          \end{tikzpicture}
+%        \end{varwidth}
+    \egroup;
+}
+
+
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{tikzpicture}
+  \begin{contlsnode}{$f(\ton{x}{,}) = (\ton{y}{,})$}
+    $\Assume e_A$
+    \nodepart{second}
+    $\Guarantee e_G \With (\ton{c}{,})$
+    \nodepart{third}
+    \begin{varwidth}{\textwidth}
+      \[
+      \begin{array}{l}
+        y_1 = f_1(\ton{x}{,},\ton{c}{,})\\
+        \ldots\\
+        y_n = f_n(\ton{x}{,},\ton{c}{,})\\
+      \end{array}
+      \]
+    \end{varwidth}
+  \end{contlsnode}
+\end{tikzpicture}
+
+\end{document}

@@ -1,0 +1,558 @@
+\ProvidesPackage{macros}
+
+\RequirePackage[T1]{fontenc}
+\RequirePackage{xspace}
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{amsthm}
+\RequirePackage{graphicx}
+\RequirePackage{ifthen}
+
+%% lambdas-trucs
+
+\newcommand{\lambdavar}[1]{\expandafter\newcommand\csname #1\endcsname{\lambda #1}}
+
+\lambdavar{p}
+\lambdavar{x}
+\lambdavar{y}
+\lambdavar{z}
+
+\let\corrital=\/
+\renewcommand{\/}{\ifmmode\forall\else\corrital\fi}
+
+\newcommand{\va}{\ensuremath{\alpha}\xspace}
+\newcommand{\vb}{\ensuremath{\beta}\xspace}
+\newcommand{\vc}{\ensuremath{\gamma}\xspace}
+\newcommand{\vd}{\ensuremath{\delta}\xspace}
+\newcommand{\vh}{\ensuremath{\eta}\xspace}
+
+
+%% langages
+
+\newcommand{\langage}[2]{\providecommand{#1}{}\renewcommand{#1}{\textsc{#2}\xspace}}
+
+\langage{\ls}{Lucid Synchrone}
+\langage{\lustre}{Lustre}
+\langage{\signal}{Signal}
+\langage{\esterel}{Esterel}
+\langage{\maestro}{Maestro}
+\langage{\ocaml}{OCaml}
+\langage{\caml}{Caml}
+\langage{\nemo}{Nemo}
+\langage{\Acute}{Acute}
+\langage{\Oz}{Oz}
+\langage{\heptagon}{Heptagon}
+\langage{\decade}{Decade}
+
+\RequirePackage{listings}
+
+% Definition langage decade
+
+\lstdefinelanguage{Heptagon}
+{%
+  keywords={node,returns,let,tel,var,pre,fby,when,whenot,merge,if,then,else,or,not},%
+  morekeywords=[2]{automaton,state,until,unless,end,present,switch,inlined},%
+  morekeywords=[2]{contract,assume,enforce,with},%
+  otherkeywords={->,&,=},%
+  comment=[n]{(*}{*)},%
+}[keywords,comments]
+
+% \lstdefinelanguage[dist]{Decade}
+% {%
+%   morekeywords={link,to},%
+% }[keywords,comments]
+
+%% règles d'inférence
+
+\RequirePackage{mathpartir}
+
+\renewcommand{\TirName}[1]{\textsc{(#1)}}
+\renewcommand{\RefTirName}[1]{\textsc{(#1)}}
+
+\newcommand{\rulename}[1]{\ifthenelse{\equal{#1}{}}{}{\textsc{#1}}}
+
+\newcommand{\sepname}{\:}
+\newcommand{\sepprem}{\;\;\;}
+
+\newcommand{\axiom}[2][]{\rulename{#1}\quad#2}
+\newcommand{\infsimple}[3][]{\rulename{#1}\sepname\frac{#2}{#3}}
+\newcommand{\infsimplespec}[3][]{
+  \begin{array}{c}
+    {#2}\\
+    \multicolumn{1}{l}{\rulename{#1}}\\\hline
+    {#3}
+  \end{array}
+}
+\newcommand{\infdouble}[4][]{\rulename{#1}\sepname\frac{#2\sepprem#3}{#4}}
+\newcommand{\infdoublecol}[4][]{\rulename{#1}\sepname\frac{\array{c}#2\\#3\endarray}{#4}}
+\newcommand{\inftriple}[5][]{\rulename{#1}\sepname\frac{#2\sepprem#3\sepprem#4}{#5}}
+\newcommand{\inftriplecol}[5][]{\rulename{#1}\sepname\frac{\array{c}#2\\#3\\#4\endarray}{#5}}
+\newcommand{\infquadruple}[6][]{\rulename{#1}\sepname\frac{#2\sepprem#3\sepprem#4\sepprem#5}{#6}}
+
+%% Grammaires
+
+\newcommand{\ou}{\;|\;}
+\newcommand{\fun}{\rightarrow}
+%\newcommand{\ovfun}[1]{\xrightarrow{#1}}
+\newcommand{\ovfun}[1]{{\;-\mskip-1.5\thinmuskip\langle{#1}\rangle\!\!\!\rightarrow\;}}
+
+%% Typage --- général
+
+\DeclareMathOperator{\FV}{FV}
+\DeclareMathOperator{\FTV}{FTV}
+\DeclareMathOperator{\FSV}{FSV}
+\DeclareMathOperator{\FLV}{FLV}
+\DeclareMathOperator{\FCV}{FCV}
+\DeclareMathOperator{\gen}{gen}
+\DeclareMathOperator{\genall}{genall}
+%\DeclareMathOperator{\Var}{Var}
+
+\DeclareMathOperator{\merge}{merge}
+
+\newcommand{\mergeenv}{\uplus}
+
+%% Types de données
+
+\newcommand{\type}[3]{\ensuremath{#1\vdash#2:#3}}
+
+%% Horloges
+
+\newcommand{\horloge}[3]{\ensuremath{#1\vdash#2:#3}}
+
+%% Types spaciaux
+
+\newcommand{\soussite}{\ensuremath{\prec_\cR}}
+\newcommand{\connecte}{\ensuremath{\mapsto_\cC}}
+
+\DeclareMathOperator{\site}{site}
+\DeclareMathOperator{\sites}{sites}
+\DeclareMathOperator{\locations}{locations}
+\DeclareMathOperator{\loc}{loc}
+
+\DeclareMathOperator{\names}{names}
+
+\DeclareMathOperator{\out}{out}
+
+\DeclareMathOperator{\com}{com}
+
+\DeclareMathOperator{\channels}{channels}
+
+\DeclareMathOperator{\constraints}{constr}
+
+\DeclareMathOperator{\op}{op}
+\DeclareMathOperator{\ifte}{ifte}
+\DeclareMathOperator{\fby}{fby}
+
+
+\newcommand{\fcom}[4]{\ensuremath{#1\xrightarrow{#2\vartriangleright#3}#4}}
+
+\newcommand{\OutputType}[3]{\ensuremath{\uparrow_{#1,#2}(#3)}}
+
+\newcommand{\pere}[2]{\ensuremath{\uparrow_#1(#2)}}
+
+\newcommand{\set}[1]{\ensuremath{\{#1\}}}
+
+\newcommand{\defprogram}[2]{\ensuremath{\vdash#1:#2}}
+\newcommand{\defhierarchy}[3]{\ensuremath{#1\vdash#2:#3}}
+\newcommand{\defarch}[3]{\ensuremath{#1\vdash#2:#3}}
+\newcommand{\spacetype}[4]{\ensuremath{#1\vdash#3:#4/#2}}
+
+\renewcommand{\spacetype}[5]{\ensuremath{#1|#2\vdash#4:#5/#3}}
+\newcommand{\spacetypetrans}[4]{\ensuremath{#1|#2\vdash#4/#3}}
+\newcommand{\spacetypeimpl}[5]{\ensuremath{#1|#2\vdash_i#4:#5/#3}}
+\newcommand{\spacetypechan}[6]{\ensuremath{#1|#2\vdash#5:#6/#3/#4}}
+
+\newcommand{\subtype}[3]{\ensuremath{#1\vdash#2\prec#3}}
+\newcommand{\projsubtype}[4]{\ensuremath{#1\vdash#2:#3\prec#4}}
+
+\newcommand{\emptydecl}{\ensuremath{\emptyset}}
+
+\newcommand{\slicing}[3]{\ensuremath{#1\stackrel{#2}{\longrightarrow}#3}}
+%\newcommand{\projection}[4]{\ensuremath{#1|#2\stackrel{#3}{\Longrightarrow}#4}}
+\newcommand{\projection}[3]{\ensuremath{#1\stackrel{#2}{\Longrightarrow}#3}}
+\newcommand{\projspacetype}[7]{\ensuremath{\projection{\spacetype{#1}{#2}{#3}{#4}{#5}}{#6}{#7}}}
+\newcommand{\projtrans}[6]{\ensuremath{\projection{\spacetypetrans{#1}{#2}{#3}{#4}}{#5}{#6}}}
+\newcommand{\projectioncol}[3]{\ensuremath{
+    \begin{array}{c}
+      #1\\
+      \stackrel{#2}{\Longrightarrow}#3
+    \end{array}}}
+
+\newcommand{\projtype}[4]{\ensuremath{#1\vdash#2\stackrel{#3}{\Longrightarrow}#4}}
+
+\newcommand{\canal}[3]{\ensuremath{#1\stackrel{#2}{\leftrightarrow}#3}}
+\newcommand{\channel}[3]{\ensuremath{#1\stackrel{#2}{\mapsto} #3}}
+
+\newcommand{\vs}{\ensuremath{\delta}\xspace}
+
+\newcommand{\comm}{\triangleright}
+
+\newcommand{\graph}[2]{\ensuremath{\langle#1,#2\rangle}}
+
+\newcommand{\abs}{\ensuremath{\bot}}
+\newcommand{\cabs}{\ensuremath{[]}}
+
+\newcommand{\subck}{\ensuremath{<:}}
+
+%% Sémantique synchrone
+
+\newcommand{\clock}[1]{\ensuremath{\langle#1\rangle}}
+
+\newcommand{\I}{\mathbb{I}}
+%\newcommand{\N}{\mathbb{N}}
+
+% dist. values and environments
+
+\newcommand{\dv}{\hat v}
+\newcommand{\lv}{vl}
+\newcommand{\R}{\hat R}
+\let\paragraphe=\S
+\renewcommand{\S}{\hat S}
+\newcommand{\G}{\hat G}
+\newcommand{\C}{\hat C}
+\newcommand{\A}{\hat A}
+
+\newcommand{\semop}[3]{\ensuremath{#1\xrightarrow{#2}#3}}
+\newcommand{\semdist}[5]{\ensuremath{#1\stackrel{#2}{\Vdash}#3\xrightarrow{#4}#5}}
+\newcommand{\semproj}[4]{\ensuremath{#1\vdash#2\xrightarrow{#3}#4}}
+\newcommand{\semcent}[4]{\ensuremath{#1\vdash#2\xrightarrow{#3}#4}}
+\newcommand{\semcentshort}[4]{\ensuremath{#1\!\vdash\!#2\!\stackrel{#3}{\rightarrow}\!#4}}
+\newcommand{\semprog}[3]{\ensuremath{#1\vdash#2:#3}}
+\newcommand{\semdistprog}[3]{\ensuremath{#1\Vdash#2:#3}}
+
+\newcommand{\compvt}[3]{#1\in I_{H}(#3)}
+
+\newcommand{\relval}[4]{\ensuremath{#1\preccurlyeq^{#2}_{#3}#4}}
+
+%\newcommand{\reaceq}[1]{\stackrel{#1}{\cong}}
+%\newcommand{\reaceq}[1]{\stackrel{#1}{\preccurlyeq}}
+\newcommand{\reaceq}[1]{\preccurlyeq_{#1}}
+
+\def\leadstofill@{\arrowfill@\relbar\relbar\leadsto}
+\newcommand{\xleadsto}[2][]{\ext@arrow 0359\leadstofill@{#1}{#2}}
+
+\newcommand{\simu}[4]{#1\xleadsto[#3]{#2}#4}
+
+%% lettres calligraphiques
+
+\newcommand{\shortcal}[1]{\expandafter\newcommand\csname c#1\endcsname{\ensuremath{\mathcal{#1}}}}
+
+\shortcal{A}
+\shortcal{B}
+\shortcal{C}
+\shortcal{D}
+\shortcal{E}
+\shortcal{F}
+\shortcal{G}
+\shortcal{H}
+\shortcal{I}
+\shortcal{J}
+\shortcal{K}
+\shortcal{L}
+\shortcal{M}
+\shortcal{N}
+\shortcal{O}
+\shortcal{P}
+\shortcal{Q}
+\shortcal{R}
+\shortcal{S}
+\shortcal{T}
+\shortcal{U}
+\shortcal{V}
+\shortcal{W}
+\shortcal{X}
+\shortcal{Y}
+\shortcal{Z}
+
+%% mots-clés
+
+\newcommand{\m@thspace}{%
+  \ifmmode\ \fi%
+}
+
+
+\newcommand{\textname}[1]{\texttt{#1}}
+
+\newcommand{\name}[2]{%
+  \providecommand{#1}{}%
+  \renewcommand{#1}{\textname{#2}\xspace}%
+}
+
+\newcommand{\textkw}[1]{\texttt{\textbf{#1}}}
+
+\newcommand{\kw}[2]{%
+  \providecommand{#1}{}%
+  \renewcommand{#1}{\textkw{#2}\xspace}%
+}
+\newcommand{\akeyword}[1]{\expandafter\kw\csname #1\endcsname{#1}}
+
+\newcommand{\midkw}[2]{%
+  \providecommand{#1}{}%
+  \renewcommand{#1}{\m@thspace\textkw{#2}\m@thspace\xspace}%
+}
+\newcommand{\midkeyword}[1]{\expandafter\midkw\csname #1\endcsname{#1}}
+
+\newcommand{\begkw}[2]{%
+  \providecommand{#1}{}%
+  \renewcommand{#1}{\textkw{#2}\m@thspace\xspace}%
+}
+\newcommand{\begkeyword}[1]{\expandafter\begkw\csname #1\endcsname{#1}}
+
+\newcommand{\closekw}[2]{%
+  \providecommand{#1}{}%
+  \renewcommand{#1}{\m@thspace\textkw{#2}\xspace}%
+}
+\newcommand{\closekeyword}[1]{\expandafter\closekw\csname #1\endcsname{#1}}
+
+\newcommand{\typeconst}[2]{\kw{#1}{#2}}
+\newcommand{\binop}[2]{\midkw{#1}{#2}}
+\newcommand{\unop}[2]{\begkw{#1}{#2}}
+\newcommand{\funct}[2]{\begkw{#1}{#2}}
+
+%% Mots-clés Lucid Synchrone
+
+\begkw{\Assume}{assume}
+\begkw{\Automaton}{automaton}
+\midkw{\And}{and}
+\midkw{\Band}{\&}
+\begkw{\Clock}{clock}
+\begkw{\Contract}{contract}
+\begkw{\Do}{do}
+\closekw{\Done}{done}
+\midkw{\Else}{else}
+\begkw{\Emit}{emit}
+\closekw{\End}{end}
+\begkw{\Enforce}{enforce}
+\midkw{\Every}{every}
+\binop{\Fby}{fby}
+\binop{\Fleche}{->}
+\unop{\Fst}{fst}
+\kw{\False}{false}
+\begkw{\Guarantee}{guarantee}
+\begkw{\If}{if}
+\midkw{\In}{in}
+\begkw{\Inlined}{inlined}
+\begkw{\Last}{last}
+\begkw{\Let}{let}
+\begkw{\Letnode}{node}
+\begkw{\Match}{match}
+\funct{\Merge}{merge}
+%\kw{\merge}{merge}
+\begkw{\Node}{node}
+\begkw{\Not}{not}
+\midkw{\On}{on}
+\midkw{\Or}{or}
+\unop{\Pre}{pre}
+\begkw{\Present}{present}
+\kw{\Pv}{;}
+\begkw{\Rec}{rec}
+\begkw{\Reset}{reset}
+\midkw{\Returns}{returns}
+\begkw{\Run}{run}
+\begkw{\Sig}{sig}
+\unop{\Snd}{snd}
+\begkw{\State}{state}
+\closekw{\Tel}{tel}
+\midkw{\Then}{then}
+\kw{\True}{true}
+\midkw{\Until}{until}
+\midkw{\Unless}{unless}
+\midkw{\Var}{var}
+\midkw{\When}{when}
+\midkw{\Whenot}{whenot}
+\midkw{\Where}{where}
+\midkw{\With}{with}
+
+
+\kw{\Tick}{tick}
+
+
+\typeconst{\Float}{float}
+\typeconst{\Int}{int}
+\typeconst{\Unit}{unit}
+\typeconst{\Bool}{bool}
+
+\newcommand{\Nil}{\ensuremath{\mathit{nil}}}
+
+%% Mots-clés répartition
+
+\midkw{\At}{at}
+\begkw{\Site}{site}
+\begkw{\Loc}{loc}
+\begkw{\Subsite}{subsite}
+\begkw{\Subloc}{subloc}
+\begkw{\Link}{link}
+\midkw{\To}{to}
+\begkw{\Out}{out}
+\midkw{\Of}{of}
+\begkw{\Port}{port}
+
+\newcommand{\TAt}{\m@thspace\texttt{at}\m@thspace\xspace}
+
+\DeclareMathOperator{\typecl}{clock}
+
+\funct{\Send}{send}
+\funct{\Receive}{receive}
+
+\newcommand{\match}[4][c]{
+\begin{array}[#1]{l}
+  \Match #2\With\\
+  |\ \True \rightarrow #3\\
+  |\ \False \rightarrow #4\\
+\end{array}
+}
+
+\newcommand{\linematch}[3]{
+  \Match #1\With
+  |\ \True \rightarrow #2
+  \ |\ \False \rightarrow #3
+}
+
+%% Théorèmes, définitions, remarques...
+
+\RequirePackage{amsmath}
+
+\newtheorem{definition}{D\'efinition}
+
+\newtheorem{remarque}{Remarque}
+
+\newtheorem{theoreme}{Th\'eor\`eme}
+\newtheorem{lemme}{Lemme}
+
+\newtheorem{proposition}{Proposition}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+
+\newcommand{\noeud}{n\oe ud\xspace}
+\newcommand{\Noeud}{N\oe ud\xspace}
+\newcommand{\noeuds}{n\oe uds\xspace}
+\newcommand{\Noeuds}{N\oe uds\xspace}
+
+%% Macros mathématiques
+
+\providecommand{\tonfirst}{}
+\newcommand{\ton}[1][1]{\renewcommand{\tonfirst}{#1}\tonbis}
+\newcommand{\tonbis}[3][n]{\ensuremath{#2_{\tonfirst}#3\ldots#3#2_{#1}}}
+
+\newcommand{\tonp}{\ton[1][p]}
+\newcommand{\tonq}{\ton[1][q]}
+
+\newcommand{\tontt}[1][1]{\renewcommand{\tonfirst}{#1}\tonttbis}
+\newcommand{\tonttbis}[3][n]{\ensuremath{\mathtt{#2}_{\tonfirst}\mathtt{#3}\ldots\mathtt{#3}\mathtt{#2}_{#1}}}
+
+\newcommand{\ind}[1]{\(\sb{#1}\)}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\codom}{cod}
+%\DeclareMathOperator{\inst}{inst}
+
+\DeclareMathOperator{\head}{hd}
+\DeclareMathOperator{\tail}{tl}
+\DeclareMathOperator{\DCS}{DCS}
+\DeclareMathOperator{\Triang}{Triang}
+\DeclareMathOperator{\Traces}{Traces}
+
+\newcommand{\B}{\mathbb{B}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+%\newcommand{\R}{\mathbb{R}}
+%\newcommand{\C}{\mathbb{C}}
+
+\newcommand{\seq}[1]{\ensuremath{\overline{#1}}}
+
+\newcommand{\cphant}{\hat{c}}
+
+
+
+%% Flots de données
+
+\newenvironment{streams}[1]{%
+  \setlength{\arraycolsep}{0.3cm}
+  \array{|c|*{#1}{c}|}
+  \hline
+}{%
+  \hline
+  \endarray
+}
+
+%% Macros usuelles
+
+%\RequirePackage[outerbars]{changebar}
+
+%\newenvironment{change}[1][]{\cbstart}{\cbend}
+\newenvironment{change}[1][]{}{}
+
+\newenvironment{amodifier}%
+{\textcolor{red}\bgroup%
+  \hrule
+  \begin{center}
+  \`A MODIFIER ?
+  \end{center}
+  \hrule
+}%
+{\hrule\egroup}
+
+\renewenvironment{amodifier}{}{}
+
+%% Boîte-noeud code
+
+\RequirePackage{alltt}
+
+\newenvironment{code}{%
+  \renewcommand{\textkw}[1]{\textbf{##1}}
+  \@beginparpenalty 10000 %
+  \quote%
+  \alltt}{\endalltt%
+  \endquote
+  \vspace{3mm}
+}
+
+\newenvironment{figcode}{%
+  \renewcommand{\textkw}[1]{\textbf{##1}}
+  \@beginparpenalty 10000 %
+  \alltt}{\endalltt%
+  \vspace{1mm}
+}
+
+\newcommand{\marc}[1]{}
+
+\RequirePackage{varwidth}
+
+\newenvironment{showproj}
+{
+  \par\noindent\medskip
+  \renewenvironment{code}
+  {\varwidth{\linewidth}\vspace*{0.5em}\alltt}
+  {\endalltt\endvarwidth}
+  \tabular{>{\centering}p{0.45\linewidth}||>{\centering}p{0.45\linewidth}}
+  \multicolumn{1}{c}{\texttt{A}} & \multicolumn{1}{c}{\texttt{B}} \\\hline
+}
+{\vspace{-3cm}\endtabular\medskip}
+
+\newcommand{\minildots}{\ensuremath{\!...}}
+
+\newbox\subfigbox % Create a box to hold the subfigure.
+\newenvironment{subfloat}% % Create the new environment.
+{\def\caption##1{\gdef\subcapsave{\relax##1}}%
+  \let\subcapsave=\@empty % Save the subcaption text.
+  \let\sf@oldlabel=\label
+  \def\label##1{\xdef\sublabsave{\noexpand\label{##1}}}%
+  \let\sublabsave\relax % Save the label key.
+  \setbox\subfigbox\hbox
+  \bgroup}% % Open the box...
+{\egroup % ... close the box and call \subfigure.
+  \let\label=\sf@oldlabel
+  \subfigure[\subcapsave]{\sublabsave\box\subfigbox}}%
+
+\newenvironment{flushedproof}{%
+  \proof%
+  \flushleft%
+}{%
+  \endflushleft%
+  \endproof%
+}
+
+%% MiniLustre & contrats
+
+\newcommand{\semml}[5]{\ensuremath{#1,#2\vdash#3\xrightarrow{#4}#5}}

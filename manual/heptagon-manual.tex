@@ -1,0 +1,827 @@
+\documentclass[a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper]{geometry}
+%\usepackage[francais]{babel}
+%\usepackage{subfigure}
+%\usepackage{fancyvrb}
+%\usepackage{fancyhdr}
+\usepackage[hypertex,ps2pdf]{hyperref}
+\usepackage{array}
+\usepackage{xcolor}
+%\usepackage{comment}
+%\usepackage{lmodern}
+\usepackage{varwidth}
+%\usepackage{tikz}
+%\usetikzlibrary{arrows}
+%\usetikzlibrary{automata}
+%\usetikzlibrary{matrix}
+%\usetikzlibrary{shapes}
+%\usetikzlibrary{positioning}
+\usepackage{macros}
+
+% fontes tt avec gras (mots-clés)
+\renewcommand{\ttdefault}{txtt}
+
+\lstset{
+  language=Heptagon,% numbers=left, numberstyle=\small,
+  basicstyle=\normalsize\ttfamily,captionpos=b,
+  frame={tb}, rulesep=1pt, columns=fullflexible,
+  xleftmargin=1cm, xrightmargin=1cm,
+  mathescape=true
+}
+
+\title{Heptagon/BZR manual}
+
+\author{}
+
+%\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction and tutorial}
+\label{sec:intro}
+
+\subsection{Heptagon: short presentation}
+\label{sec:hept-short-pres}
+
+Heptagon is a synchronous dataflow language, with a syntax allowing the
+expression of control structures (e.g., switch or mode automata).
+
+A typical Heptagon program will take as input a sequence of values, and will
+output a sequence of values. Then, variables (inputs, outputs or locals) as well
+as constants are actually variable or constant \emph{streams}. The usual
+operators (e.g., arithmetic or Boolean operators) are applied pointwise on these
+sequences of values.
+
+For example, the Heptagon program below is composed of one node \texttt{plus},
+performing the pointwise sum of its two integer inputs:
+
+\begin{lstlisting}
+node plus(x:int,y:int) returns (z:int)
+let
+  z = x + y;
+tel
+\end{lstlisting}
+
+\texttt{x} and \texttt{y} are the inputs of the node \texttt{plus}; \texttt{z}
+is the output. \texttt{x}, \texttt{y} and \texttt{z} are of type \texttt{int},
+denoting integer \emph{streams}. \texttt{z} is defined by the equation
+\lstinline|z = x + y|.
+
+An execution of the node \texttt{plus} can then be:
+\[
+\begin{streams}{5}
+  x & 1 & 2 & 3 & 4 & \ldots\\\hline
+  y & 1 & 2 & 1 & 2 & \ldots\\\hline
+  \mathtt{plus}(x,y) & 2 & 4 & 4 & 6 & \ldots\\
+\end{streams}
+\]
+
+\subsection{Compilation}
+\label{sec:compilation}
+
+The Heptagon compiler is named \texttt{heptc}. Its list of options is available by
+:
+
+\begin{alltt}
+> heptc -help
+\end{alltt}
+
+Every options described below are cumulable.
+
+Assuming that the program to compile is in a file named \texttt{example.ept},
+then one can compile it by typing :
+
+\begin{alltt}
+> heptc example.ept
+\end{alltt}
+
+However, such compilation will only perform standard analysis (such as typing,
+causality, scheduling) and output intermediate object code, but not any final or
+executable code.
+
+The Heptagon compiler can thus generate code in some general languages, in order
+to obtain either a standalone executable, or a linkable library. The target
+language must then be given by the \texttt{-target} option:
+
+\begin{alltt}
+> heptc -target <language> example.ept
+\end{alltt}
+
+Where \texttt{<language>} is the name of the target language. For now, available
+languages are C (\texttt{c} option) and Java (\texttt{java} option).
+
+\subsection{Generated code}
+\label{sec:generated-code}
+
+The generic generated code consists, for each node, of two imperative functions:
+\begin{itemize}
+\item one ``reset'' function, used to reset the internal memory of the node;
+\item one ``step'' function, taking as input the nodes inputs, and whose call
+  performs one step of the node, updates the memory, and outputs the nodes
+  outputs.
+\end{itemize}
+
+A standard way to execute Heptagon program is to compile the generated files
+together with a main program of the following scheme :
+
+\begin{alltt}
+call the \textit{reset} function
+for each instant
+   get the \textit{inputs} values
+   \textit{outputs} \(\leftarrow\) \textit{step(inputs)}
+   do something with \textit{outputs} values
+\end{alltt}
+
+Appendix~\ref{sec:app-generated-code} give specific technical details for each target language.
+
+
+\subsection{Simulation}
+\label{sec:simulation}
+
+A graphical simulator is available: \texttt{hepts}. It allows the user to simulate
+one node by providing a graphical window, where simulation steps can be
+performed by providing inputs of the simulated node.
+
+This simulator tool interacts with an executable, typically issued of Heptagon
+programs compilation, and which await on the standard input the list of the
+simulated node's inputs, and prints its outputs on the standard output. Such
+executable, for the simulation of the node \texttt{f}, can be obtained by the
+\texttt{-s <node>} option:
+\begin{alltt}
+> heptc -target c -s f example.ept
+\end{alltt}
+
+We can then directly compile the generated C program (whose main function stand
+in the \texttt{\_main.c} file):
+\begin{alltt}
+> cd example_c
+> gcc -Wall -c example.c
+> gcc -Wall -c _main.c
+> gcc -o f_sim _main.o example.o       # \text{executable creation}
+\end{alltt}
+
+This executable \texttt{f\_sim} can then be used with the graphical simulator
+\texttt{hepts}, which takes as argument:
+\begin{itemize}
+\item The name of the module (capitalized name of the program without the
+  \texttt{.ept} extension),
+\item the name of the simulated node,
+\item the path to the executable \texttt{f\_sim}.
+\end{itemize}
+\begin{alltt}
+> hepts -mod Example -node f -exec example_c/f_sim
+\end{alltt}
+
+\section{Syntax and informal semantics}
+\label{sec:synt-infor-sem}
+
+Heptagon programs are synchronous Moore machines, with parallel and hierarchical
+composition. The states of such machines define dataflow equations. The
+Figure~\ref{fig:mixed-state-dataflow-example} gives an example of such program.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics{figures/mixed-state-df}
+  \caption{Mixed state and dataflow example}
+  \label{fig:mixed-state-dataflow-example}
+\end{figure}
+
+\subsection{Nodes}
+\label{sec:nodes}
+
+Heptagon programs are structured in \emph{nodes}: a program is a sequence of
+nodes. A node is a subprogram with a name $f$, inputs $\ton{x}{,}$, outputs
+$\ton[1][p]{y}{,}$, local variables $\ton[1][q]{z}{,}$ and declarations
+$D$. $y_i$ and $z_i$ variables are to be defined in $D$, using operations
+between values of $x_j$, $y_j$, $z_j$. Figure~\ref{fig:syntax-nodes} gives the
+syntax of node definitions, together with a graphical syntax used in this
+manuel\footnote{declaration of local variables are mandatory for the compiler in
+  the textual syntax, however we will sometimes omit it in the graphical syntax
+  for the sake of brevity}. The declaration of one variable comes with its type
+($t_i$, $t'_i$ and $t''_i$ being the type of respectively $x_i$, $y_i$ and
+$z_i$).
+
+\begin{figure}[htb]
+  \centering
+%  \begin{varwidth}{\linewidth}
+    \[
+    \begin{array}{|c|c}
+      \cline{1-1}
+      f(x_1:t_1,\ldots,x_n:t_n) = y_1:t'_1,\ldots,y_p:t'_p & \\\hline
+      \multicolumn{2}{|c|}{}\\
+      \multicolumn{2}{|c|}{D}\\
+      \multicolumn{2}{|c|}{}\\\hline
+    \end{array}
+    \]
+%  \end{varwidth}\hspace{1cm}
+%  \begin{varwidth}{\linewidth}
+\begin{lstlisting}
+node f(x$_1$:t$_1$;$\ldots$;x$_n$:t$_n$) returns (y$_1$:t$'_1$,$\ldots$,y$_p$:t$'_p$)
+  var z$_1$:t$''_1$,$\ldots$,z$_q$:t$''_q$;
+let
+  D
+tel
+\end{lstlisting}
+%    \end{varwidth}
+  \caption{Graphical and textual syntax of node definition}
+  \label{fig:syntax-nodes}
+\end{figure}
+
+The program of the Figure~\ref{fig:mixed-state-dataflow-example} can thus be
+structured as the semantically equivalent program of the
+Figure~\ref{fig:struct-prog-example}. The Figure~\ref{fig:textual-syntax} gives
+the textual syntax of this program.
+
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics{figures/struct-pg}
+  \caption{Structured program example}
+  \label{fig:struct-prog-example}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+
+\begin{lstlisting}
+node h(a:bool) returns (y:bool)
+  let
+    automaton
+      state Idle
+        do y = false
+        until a then Active
+      state Active
+        do y = true
+        until a then Idle
+    end
+  tel
+
+node g (a,b:bool) returns (y:bool)
+  var y1,y2 : bool;
+  let
+    y = y1 & y2;
+    y1 = h(a);
+    y2 = h(b);
+  tel
+
+node f (c,d:bool) returns (y:bool)
+  let
+    automaton
+      state A
+        do y = false
+        until c then B
+      state B
+        do y = g(c,d)
+        until c & d then C
+      state C
+        do y = true
+        until d then A
+    end
+  tel
+\end{lstlisting}
+
+  \caption{Textual syntax}
+  \label{fig:textual-syntax}
+\end{figure}
+
+
+Heptagon allows to distinguish, by mean of clocks and control structures (switch,
+automata), for declarations and expressions, the discrete instants of
+activation, when the declarations and expressions are computed and progress
+toward further states, and other instants when neither computation nor
+progression are performed.
+
+\subsection{Expressions}
+\label{sec:expressions}
+
+\subsubsection{Values and combinatorial operations}
+\label{sec:variables-constants}
+
+Heptagon is a dataflow language, i.e., every value, variable or constant, is
+actually a stream of value. The usual operators (e.g., arithmetic or Boolean
+operators) are applied pointwise on these sequences of values, as combinatorial
+operations (as opposed to \emph{sequential} operations, taking into account the
+current \emph{state} of the program: see delays in Section~\ref{sec:delays}).
+
+Thus, \texttt{x} denotes the stream $x_1.x_2.\ldots$, and \lstinline|x + y| is
+the stream defined by $($\lstinline|x + y|$)_i=x_i+y_i$.
+
+\[
+\begin{streams}{5}
+  \mathtt{x} & x_1 & x_2 & x_3 & x_4 & \ldots\\\hline
+  \mathtt{y} & y_1 & y_2 & y_3 & y_4 & \ldots\\\hline
+  \mathtt{x + y} & x_1+y_1 & x_2+y_2 & x_3+y_3 & x_4+y_4 & \ldots\\
+\end{streams}
+\]
+
+
+\subsubsection{Delays}
+\label{sec:delays}
+
+Delays are the way to introduce some state in a Heptagon program.
+
+\begin{itemize}
+\item \lstinline|pre x| gives the value of \texttt{x} at the preceding
+  instant. The value at the first instant is undefined.
+\item \lstinline|x -> y| takes the value of \texttt{x} at the first instant,
+  and then the value of \texttt{y};
+\item \lstinline|x fby y| is equivalent to \lstinline|x -> pre y|.
+\end{itemize}
+
+\[
+\begin{streams}{3}
+  \text{\lstinline|x|} & x_1 & x_2 & x_3 \\
+  \hline
+  \text{\lstinline|y|} & y_1 & y_2 & y_3 \\
+  \hline
+  \text{\lstinline|pre x|} & \perp & x_1 & x_2 \\
+  \hline
+  \text{\lstinline|x -> y|} & x_1 & y_2 & y_3 \\
+  \hline
+  \text{\lstinline|x fby y|} & x_1 & y_1 & y_2 \\
+\end{streams}
+\]
+
+
+\subsection{Declarations}
+\label{sec:declarations}
+
+A declaration $D$ can be either :
+\begin{itemize}
+\item an equation $x = e$, defining variable $x$ by the expression $e$ at each
+  activation instants ;
+\item a node application $(\tonp{y}{,}) = f(\ton{e}{,})$, defining variables
+  $\tonp{y}{,}$ by application of the node $f$ with values $\ton{e}{,}$ at each
+  activation instants ;
+\item parallel declarations of $D_1$ and $D_2$, noted graphically $D_1\vdots
+  D_2$ and textually $D_1\Pv D_2$. Variables defined in $D_1$ and $D_2$ must be
+  exclusive. The activation of this parallel declaration activate both $D_1$ and
+  $D_2$, which are both computed and both progress ;
+\item a switch control structure ;
+\item an automaton.
+\end{itemize}
+
+\subsubsection{Switch control structures}
+\label{sec:switch-contr-struct}
+
+The \texttt{switch} control structure allows to controls which equations are
+evaluated:
+
+\begin{lstlisting}
+type modes = Up | Down
+
+node two(m:modes;v:int) returns (o:int)
+  var last x:int = 0;
+let
+  o = x;
+  switch m
+  | Up do x = last x + v
+  | Down do x = last x - v
+  end
+tel
+\end{lstlisting}
+
+The \texttt{last} keyword defines a memory which is shared by the different
+modes. Thus, \lstinline|last x| is the value of the variable \texttt{x} in the
+previous instant, whichever was the activated mode.
+
+\subsubsection{Automata}
+\label{sec:automata}
+
+An automaton is a set of states (one of which being the initial one), and
+transitions between these states, triggered by Boolean expressions. A
+declaration is associated to each state. The set of variables defined by the
+automaton is the union, not necessarily disjoint (variables can have different
+definitions in different states, and can be partially defined : in this case,
+when the variable is not defined in an active state, the previous value of this
+variable is taken.
+
+At each automaton activation instant, one and only one state of this automaton
+is active (the initial one at the first activation instant). The declaration
+associated to this active state is itself activated and progress in this
+activation instant.
+
+\paragraph{Example}
+\label{sec:example}
+
+The following example gives the node \texttt{updown}. This node is defined by an
+automaton composed of two states:
+\begin{itemize}
+\item the state \texttt{Up} gives to \texttt{x} its previous value augmented of 1
+\item the state \texttt{Down} gives to \texttt{x} its previous value diminued of 1
+\end{itemize}
+This automaton comprises two transitions:
+\begin{itemize}
+\item it goes from \texttt{Up} (the initial state) to \texttt{Down} when
+  \texttt{x} becomes greater or equal than 10;
+\item it goes from \texttt{Down} to \texttt{Up} when \texttt{x} becomes less or
+  equal 0.
+\end{itemize}
+
+\begin{lstlisting}
+node updown() returns (y:int)
+  var last x:int = 0;
+let
+  y = x;
+  automaton
+    state Up
+      do x = last x + 1
+      until x >= 10 then Down
+    state Down
+      do x = last x - 1
+      until x <= 0 then Up
+  end
+tel
+\end{lstlisting}
+
+\[
+\begin{streams}{14}
+\text{current state} & Up & Up & Up & Up & Up & Up & Up & Up & Up & Up & Down & Down & Down & \ldots\\\hline
+\mathtt{y} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10 & 9 & 8 & 7 & \ldots\\\hline
+\end{streams}
+\]
+
+ Expressions on outgoing transitions of this active state are
+evaluated, so as to compute the next active state : these are weak
+transitions. Transitions are evaluated in declaration order, in the textual
+syntax. If no transition can be triggered, then the current state is the next
+active state.
+
+
+
+
+\section{BZR: Contracts for controller synthesis}
+\label{sec:extens-with-contr}
+
+Contracts are an extension of the Heptagon language, so as to allow to perform
+discrete controller synthesis on Heptagon programs. The extended language is
+named BZR.
+
+We associate to each node a \emph{contract}, which is a program associated with
+two outputs :
+\begin{itemize}
+\item an output $e_A$ representing the environment model ;
+\item an invariance objective $e_G$ ;
+\item a set $\set{\ton{c}{,}}$ of controllable variables used for ensuring this objective.
+\end{itemize}
+
+This contract means that the node will be controlled, i.e., that values will be
+given to $\ton{c}{,}$ such that, given any input trace yielding $e_A$, the
+output trace will yield the true value for $e_G$.
+
+\begin{center}
+\includegraphics{figures/node-contract}
+\end{center}
+
+In the textual syntax, the contracts are noted :
+\begin{lstlisting}
+node f(x$_1$:t$_1$;$\ldots$;x$_n$:t$_n$) returns (y$_1$:t$'_1$;$\ldots$;y$_p$:t$'_p$)
+contract
+  var $\ldots$
+  let
+     $\ldots$
+  tel
+  assume $e_A$
+  enforce $e_G$
+  with (c$_1$:t$''_1$;$\ldots$;c$_q$:t$''_n$)
+
+var $\ldots$
+let
+  y$_1$ = f$_1$($\ton{\mathtt{x}}{,},\ton[1][q]{\mathtt{c}}{,}$); 
+  $\vdots$
+  y$_p$ = f$_p$($\ton{\mathtt{x}}{,},\ton[1][q]{\mathtt{c}}{,}$); 
+tel
+\end{lstlisting}
+
+\section{BZR Running Example:  Multi-task System}
+\label{sec:multi-task-system}
+
+\subsection{Delayable Tasks}
+\label{sec:delayable-tasks}
+
+
+
+We consider a multi-task system composed of $n$ delayable
+tasks. Figure~\ref{fig:del-task} shows a delayable task. A delayable task takes
+three inputs \texttt{r}, \texttt{c} and \texttt{e}: \texttt{r} is the task
+launch request from the environment, \texttt{e} is the end request, and
+\texttt{c} is meant to be a controllable input controlling whether, on request,
+the task is actually launched (and therefore goes in the active state), or
+delayed (and then forced by the controller to go in the waiting state by stating
+the false value to \texttt{c}). This node outputs a unique boolean \texttt{act}
+which is true when the task is in the active state.
+
+\begin{figure}[htb]
+\begin{lstlisting}
+node delayable(r,c,e:bool) returns (act:bool)
+  let
+    automaton
+      state Idle
+        do act = false
+        until r & c then Active
+            | a & not c then Wait
+      state Wait
+        do act = false
+        until c then Active
+      state Active
+        do act = true
+        until e then Idle
+    end
+  tel
+\end{lstlisting}
+\caption{Delayable task}
+\label{fig:del-task}
+\end{figure}
+
+The Figure~\ref{fig:n-del-task} shows then a node \texttt{ntasks} where $n$
+delayable tasks have been put in parallel. The tasks are inlined so as to be
+able to perform DSC on this node, taking into account the tasks' states. Until
+now, the only interest of modularity is, from the programmer's point of view, to
+be able to give once the delayable task code.
+
+\begin{figure}[htb]
+\begin{lstlisting}
+node ntasks($\ton{\mathtt{r}}{,},\ton{\mathtt{e}}{,}$:bool)
+       returns ($\ton{\mathtt{a}}{,}$:bool)
+  contract
+  let
+    ca$_{1}$ = a$_{1}$ & (a$_{2}$ or $\ldots$ or a$_{n}$);
+    $\vdots$
+    ca$_{n-1}$ = a$_{n-1}$ & a$_{n}$;
+  tel
+  enforce not (ca$_{1}$ or \ldots or ca$_{n-1}$) 
+  with ($\ton{\mathtt{c}}{,}$:bool)
+let
+  a$_{1}$ = inlined delayable(r$_{1}$,c$_{1}$,e$_{1}$); 
+  $\vdots$
+  a$_{n}$ = inlined delayable(r$_{n}$,c$_{n}$,e$_{n}$); 
+tel
+\end{lstlisting}
+\caption{\texttt{ntasks} node: $n$ delayable tasks in parallel}
+\label{fig:n-del-task}
+\end{figure}
+
+This \texttt{ntasks} node is provided with a contract, stating that its
+composing tasks are exclusive, i.e., that there are no two tasks in the active
+state at the same instant. This contract is enforced with the help of the
+controllable inputs $c_i$.
+
+\subsection{Contract composition}
+\label{sec:contract-composition}
+
+We want know to reuse the \texttt{ntasks} node, in order to build modularly a
+system composed of $2n$ tasks. The Figure~\ref{fig:2n-del-task} shows the
+parallel composition of two \texttt{ntasks} nodes. We associate to this
+composition a new contract, which role is to enforce the exclusivity of the $2n$
+tasks.
+
+\begin{figure}[htb]
+\begin{lstlisting}
+node main($\ton[1][2n]{\mathtt{r}}{,},\ton[1][2n]{\mathtt{e}}{,}$:bool)
+       returns ($\ton[1][2n]{\mathtt{a}}{,}$:bool)
+  contract
+  let
+    ca$_{1}$ = a$_{1}$ & (a$_{2}$ or $\ldots$ or a$_{2n}$);
+    $\vdots$
+    ca$_{2n-1}$ = a$_{2n-1}$ & a$_{2n}$;
+  tel
+  enforce not (ca$_{1}$ or $\ldots$ or ca$_{2n-1}$)
+let
+  ($\ton{\mathtt{a}}{,}$) = ntasks($\ton{\mathtt{r}}{,}$,$\ton{\mathtt{e}}{,}$); 
+  ($\ton[n+1][2n]{\mathtt{a}}{,}$) = ntasks($\ton[n+1][2n]{\mathtt{r}}{,}$,$\ton[n+1][2n]{\mathtt{e}}{,}$); 
+tel
+\end{lstlisting}
+\caption{Composition of two \texttt{ntasks} nodes}
+\label{fig:2n-del-task}
+\end{figure}
+
+It is easy to see that the contract of \texttt{ntasks} is not precise enough to
+be able to compose several of these nodes. Therefore, we need to refine this
+contract by adding some way to externally control the activity of the tasks.
+
+\subsection{Contract refinement}
+\label{sec:contract-refinement}
+
+We first add an input \texttt{c}, meant to be controllable. The refined contract
+will enforce that:
+\begin{enumerate}
+\item the tasks are exclusive,
+\item one task is active only at instants when the input \texttt{c} is
+  true. This property, appearing in the contract, allow a node instantiating
+  \texttt{ntasks} to forbid any activity of the $n$ tasks instantiated.
+\end{enumerate}
+The Figure~\ref{fig:n-del-task-2} contains this new \texttt{ntasks} node.
+
+\begin{figure}[htb]
+\begin{lstlisting}
+node ntasks(c,$\ton{\mathtt{r}}{,}$,$\ton{\mathtt{e}}{,}$:bool) returns ($\ton{\mathtt{a}}{,}$:bool)
+  contract
+  let
+    ca$_{1}$ = a$_{1}$ & (a$_{2}$ or $\ldots$ or a$_{n}$);$\ldots$
+    ca$_{n-1}$ = a$_{n-1}$ & a$_{n}$;
+    one = a$_{1}$ or $\ldots$ or a$_{n}$;
+  tel
+  enforce not (ca$_{1}$ or $\ldots$ or ca$_{n-1}$) & (c or not one)
+  with ($\ton{\mathtt{c}}{,}$:bool)
+let
+  a$_{1}$ = inlined delayable(r$_{1}$,c$_{1}$,e$_{1}$); 
+  $\vdots$
+  a$_{n}$ = inlined delayable(r$_{n}$,c$_{n}$,e$_{n}$); 
+tel
+\end{lstlisting}
+\caption{First contract refinement for the \texttt{ntasks} node}
+\label{fig:n-del-task-2}
+\end{figure}
+
+However, the controllability introduced here is know too strong. The synthesis
+will succeed, but the computed controller, without knowing how \texttt{c} will
+be instantiated, will actually block every tasks in their idle state. Indeed, if
+the controller allows one task to go in its active state, the input \texttt{c}
+can become false at the next instant, violating the property to enforce.
+
+Thus, we propose to add an assumption to this contract: the input \texttt{c}
+will not become false if a task was active an instant before. This new contract
+is visible in Figure~\ref{fig:n-del-tasks-3}.
+
+\begin{figure}[htb]
+  \centering
+\begin{lstlisting}
+node ntasks(c,$\ton{\mathtt{r}}{,}$,$\ton{\mathtt{e}}{,}$:bool) returns ($\ton{\mathtt{a}}{,}$:bool)
+  contract
+  let
+    ca$_{1}$ = a$_{1}$ & (a$_{2}$ or $\ldots$ or a$_{n}$);$\ldots$
+    ca$_{n-1}$ = a$_{n-1}$ & a$_{n}$;
+    one =  a$_{1}$ or $\ldots$ or a$_{n}$;
+    pone = false fby one;
+  tel
+  assume (not pone or c)
+  enforce not (ca$_{1}$ or $\ldots$ or ca$_{n-1}$) & (c or not one)
+  with ($\ton{\mathtt{c}}{,}$)
+let
+  a$_{1}$ = inlined delayable(r$_{1}$,c$_{1}$,e$_{1}$); 
+  $\vdots$
+  a$_{n}$ = inlined delayable(r$_{n}$,c$_{n}$,e$_{n}$); 
+tel
+\end{lstlisting}
+  \caption{Second contract refinement for the \texttt{ntasks} node}
+  \label{fig:n-del-tasks-3}
+\end{figure}
+
+We can then use this new \texttt{ntasks} version for the parallel composition,
+by instantiating the \texttt{c} input by a controllable variable and its
+negation. This composition can be found in Figure~\ref{fig:ntasks-compos}.
+
+\begin{figure}[htb]
+  \centering
+\begin{lstlisting}
+node main($\ton[1][2n]{\mathtt{r}}{,}$,$\ton[1][2n]{\mathtt{e}}{,}$:bool) returns ($\ton[1][2n]{\mathtt{a}}{,}$:bool)
+  contract
+  let
+    ca$_{1}$ = a$_{1}$ & (a$_{2}$ or $\ldots$ or a$_{2n}$);
+    $\vdots$
+    ca$_{2n-1}$ = a$_{2n-1}$ & a$_{2n}$;
+  tel
+  enforce not (ca$_{1}$ or $\ldots$ or ca$_{2n-1}$)
+  with (c:bool)
+let
+  ($\ton{\mathtt{a}}{,}$) = ntasks(c,$\ton{\mathtt{r}}{,}$,$\ton{\mathtt{e}}{,}$); 
+  ($\ton[n+1][2n]{\mathtt{a}}{,}$) = ntasks(\Not c,$\ton[n+1][2n]{\mathtt{r}}{,}$,$\ton[n+1][2n]{\mathtt{e}}{,}$); 
+tel
+\end{lstlisting}
+  \caption{Two \texttt{ntasks} parallel composition}
+  \label{fig:ntasks-compos}
+\end{figure}
+
+
+\appendix
+
+\section{Generated code}
+\label{sec:app-generated-code}
+
+\subsection{C generated code}
+\label{sec:c-generated-code}
+
+C generated files from an Heptagon program \texttt{example.ept} are placed in a
+directory named \texttt{example\_c}. This directory contains one file
+\texttt{example.c}. For each node \texttt{f} of the source program, assuming
+that \texttt{f} has inputs $(x_1:t_1,\ldots,x_n:t_n)$ and outputs
+$(y_1:t'_1,\ldots,y_p:t'_p)$, $t_i$ and $t'_i$ being the data types of these
+inputs and outputs, then the \texttt{example.c} file contains, for each node
+\texttt{f}:
+
+\begin{itemize}
+\item A \texttt{Example\_\_f\_reset} function, with an argument \texttt{self} being a
+  memory structure instance:
+
+\begin{lstlisting}[language=C]
+void Example__f_reset(Example__f_mem* self);
+\end{lstlisting}
+
+\item A \texttt{Example\_\_f\_step} function, with as arguments the nodes inputs, a
+  structure \texttt{\_out} where the output will be put, and a memory structure
+  instance \texttt{self}:
+
+\begin{lstlisting}[language=C]
+void Example__f_step(t$_{1}$ x$_{1}$, ..., t$_{n}$ x$_{n}$,
+                     Example__f_out* \_out,
+                     Example__f_mem* self);
+\end{lstlisting}
+
+After the call of this function, the structure \texttt{\_out} contains the
+outputs of the node:
+\begin{lstlisting}[language=C]
+typedef struct \{
+  t$'_1$ y$_{1}$;
+  ...
+  t$'_p$ y$_{p}$;
+\} Example__f_ans;
+\end{lstlisting}
+\end{itemize}
+
+An example of main C code for the execution of this node would be then:
+\begin{lstlisting}[language=C]
+#include "example.h"
+
+int main(int argc, char * argv[]) \{
+  
+  Example__f_m mem;
+  t$_{1}$ x$_{1}$;
+  ...
+  t$_{n}$ x$_{n}$;
+  Example__f_out ans;
+
+  /* initialize memory instance */
+  f_reset(&mem);
+  
+  while(1) \{
+    /* read inputs */
+    scanf("...", &x$_{1}$, ..., &x$_{n}$);
+
+    /* perform step */
+    Example__f_step(x$_{1}$, ..., x$_{n}$, &ans, &mem);
+
+    /* write outputs */
+    printf("...", ans.y$_{1}$, ..., ans.y$_{p}$);
+  \}
+\}
+\end{lstlisting}
+
+The above code is nearly what is produce for the simulator with the \texttt{-s}
+option (see Section~\ref{sec:simulation}).
+
+% \subsection{OCaml generated code}
+% \label{sec:ocaml-generated-code}
+
+
+% If the option \texttt{-target caml} is given, then the compiler generates OCaml
+% code in a file named \texttt{example.ml}. Heptagon nodes are compiled into OCaml
+% classes, where state variables are class properties, and the two functions
+% ``reset'' and ``step'' are class methods. Thus, the class type of \texttt{f}
+% would be:
+% \begin{alltt}
+% class f :
+%   object
+%     method reset : unit \(\rightarrow\) unit
+%     method step : t\ind{1} * ... * t\ind{n} \(\rightarrow\) (t\('\sb{1}\) * ... * t\('\sb{p}\))
+%   end
+% \end{alltt}
+
+\subsection{Java generated code}
+\label{sec:java-generated-code}
+
+Java generated files from an Heptagon program \texttt{example.ept} are placed in
+a directory named \texttt{example\_java}. This directory contains one Java class
+\texttt{f} (in the file \texttt{f.java}) for each node \texttt{f} of the source
+program. Assuming that \texttt{f} has inputs $(x_1:t_1,\ldots,x_n:t_n)$ and
+outputs $(y_1:t'_1,\ldots,y_p:t'_p)$, $t_i$ and $t'_i$ being the data types of
+these inputs and outputs, then this \texttt{f} class implements the following
+interface:
+
+
+\begin{lstlisting}[language=Java]
+public interface f {
+    
+    public void reset();
+
+    public fAnswer step(t$_{1}$ x$_{1}$, ..., t$_{n}$ x$_{n}$);
+}
+\end{lstlisting}
+
+The \texttt{fAnswer} class being a structure containing the outputs:
+
+\begin{lstlisting}[language=Java]
+public class fAnswer {
+  t$'\sb{1}$ y$_{1}$;
+  ...
+  t$'\sb{p}$ y$_{p}$;
+}
+\end{lstlisting}
+
+
+
+\end{document}
