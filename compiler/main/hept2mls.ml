@@ -105,10 +105,10 @@ let rec translate_extvalue e =
         mk_extvalue e (Wwhen (translate_extvalue e', c, x))
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Efield;
                       Heptagon.a_params = params }, e_list, _) ->
-        let e = assert_1 e_list in
+        let e' = assert_1 e_list in
         let f = assert_1 params in
         let fn = match f.se_desc with Sfield fn -> fn | _ -> assert false in
-          mk_extvalue e (Wfield (translate_extvalue e, fn))
+          mk_extvalue e (Wfield (translate_extvalue e', fn))
     | Heptagon.Eapp({ Heptagon.a_op = Heptagon.Ereinit }, e_list, _) ->
         let e1, e2 = assert_2 e_list in
           mk_extvalue e (Wreinit (translate_extvalue e1, translate_extvalue e2))
