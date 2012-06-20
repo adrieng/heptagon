@@ -325,20 +325,6 @@ let compute_live_vars eqs =
   let _, res =  List.fold_left aux (VarEnv.empty, []) (List.rev eqs) in
     res
 
-let rec disjoint_clock ck1 ck2 =
-  match Clocks.ck_repr ck1, Clocks.ck_repr ck2 with
-    | Cbase, Cbase -> false
-    | Con(ck1, c1, n1), Con(ck2,c2,n2) ->
-        if ck1 = ck2 & n1 = n2  & c1 <> c2 then
-          true
-        else
-          disjoint_clock ck1 ck2
-        (*let separated_by_reset =
-          (match x_is_mem, y_is_mem with
-            | true, true -> are_separated_by_reset c1 c2
-            | _, _ -> true) in *)
-    | _ -> false
-
 (** [should_interfere x y] returns whether variables x and y
     can interfere. *)
 let should_interfere (ivx, ivy) =
@@ -360,7 +346,7 @@ let should_interfere (ivx, ivy) =
       that the value of the register will
       be done at the end of the step. *)
    let disjoint_clocks =
-     not ((x_is_mem && not x_is_when) || (y_is_mem && not y_is_when)) && disjoint_clock ckx cky
+     not ((x_is_mem && not x_is_when) || (y_is_mem && not y_is_when)) && Clocks.are_disjoint ckx cky
    in
       not (disjoint_clocks or are_copies)
   )
