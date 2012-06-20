@@ -5,8 +5,6 @@ open Minils
 open Mls_utils
 open Misc
 open Sgraph
-open Interference
-open Interference_graph
 
 (** In order to put together equations with the same control structure, we have to take into
     account merge equations, that will to be translated to two instructions on slow clocks
@@ -19,65 +17,62 @@ let control_ck eq =
 (** Returns a map giving the number of uses of each ivar in the equations [eqs]. *)
 let compute_uses eqs =
   let aux env eq =
-    let incr_uses env iv =
-      if IvarEnv.mem iv env then
-        IvarEnv.add iv ((IvarEnv.find iv env) + 1) env
+    let incr_uses env x =
+      if Env.mem x env then
+        Env.add x ((Env.find x env) + 1) env
       else
-        IvarEnv.add iv 1 env
+        Env.add x 1 env
     in
-    let ivars = all_ivars_list (InterfRead.read eq) in
-    List.fold_left incr_uses env ivars
+    List.fold_left incr_uses env (Mls_utils.Vars.read false eq)
   in
-  List.fold_left aux IvarEnv.empty eqs
+  List.fold_left aux Env.empty eqs
 
-let number_uses iv uses =
+let number_uses x uses =
   try
-    IvarEnv.find iv uses
+    Env.find x uses
   with
-    | Not_found ->
+    | Not_found -> 0
         (* add one use for memories without any use to make sure they interfere
            with other memories and outputs. *)
-        (match iv with
-          | Ivar x when World.is_memory x -> 1
-          | _ -> 0)
+        (*if Interference.World.is_memory x then 1 else 0*)
 
-let add_uses uses env iv =
-  let ivars = all_ivars [] iv None (World.ivar_type iv) in
-  List.fold_left (fun env iv -> IvarEnv.add iv (number_uses iv uses) env) env ivars
+let add_uses uses env x =
+  Format.eprintf "Adding %d uses for %a@." (number_uses x uses) print_ident x;
+  Env.add x (number_uses x uses) env
 
-let decr_uses env iv =
+let decr_uses env x =
   try
-    IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
+    Env.add x ((Env.find x env) - 1) env
   with
     | Not_found ->
-        print_debug "Cannot decrease; var not found : %a@." print_ivar iv; assert false
+        Interference.print_debug "Cannot decrease; var not found : %a@." print_ident x; assert false
 
 module Cost =
 struct
   (** Remove from the elements the elements whose value is zero or negative. *)
   let remove_null m =
     let check_not_null k d m =
-      if d > 0 then IvarEnv.add k d m else m
+      if d > 0 then Env.add k d m else m
     in
-      IvarEnv.fold check_not_null m IvarEnv.empty
+      Env.fold check_not_null m Env.empty
 
   (** Returns the list of variables killed by an equation (ie vars
       used by the equation and with use count equal to 1). *)
   let killed_vars eq env =
-    let is_killed acc iv =
+    let is_killed acc x =
       try
-        if IvarEnv.find iv env = 1 then acc + 1 else acc
+        if Env.find x env = 1 then acc + 1 else acc
       with
         | Not_found ->
-          Format.printf "Var not found in kill_vars %a@." print_ivar iv; assert false
+          Format.printf "Var not found in kill_vars: %a@." print_ident x; assert false
     in
-    let used_ivars = List.map remove_iwhen (all_ivars_list (InterfRead.read eq)) in
-      List.fold_left is_killed 0 used_ivars
+    List.fold_left is_killed 0 (Mls_utils.Vars.read false eq)
 
   (** Initialize the costs data structure. *)
   let init_cost uses inputs =
-    let env = IdentSet.fold (fun x env -> add_uses uses env (Ivar x)) !World.memories IvarEnv.empty in
-    let inputs = List.map (fun vd -> Ivar vd.v_ident) inputs in
+    Format.eprintf "Init cost@.";
+    let env = IdentSet.fold (fun x env -> add_uses uses env x) !Interference.World.memories Env.empty in
+    let inputs = List.map (fun vd -> vd.v_ident) inputs in
       List.fold_left (add_uses uses) env inputs
 
   (** [update_cost eq uses env] updates the costs data structure
@@ -85,9 +80,8 @@ struct
       It updates uses and adds the new variables defined by this equation.
   *)
   let update_cost eq uses env =
-    let used_ivars = List.map remove_iwhen (all_ivars_list (InterfRead.read eq)) in
-    let env = List.fold_left decr_uses env used_ivars in
-      List.fold_left (add_uses uses) env (InterfRead.def_ivars eq)
+    let env = List.fold_left decr_uses env (Mls_utils.Vars.read false eq) in
+      List.fold_left (add_uses uses) env (Mls_utils.Vars.def [] eq)
 
   (** Returns the next equation, chosen from the list of equations rem_eqs *)
   let next_equation rem_eqs ck env =
@@ -97,9 +91,9 @@ struct
     in
     let cost eq =
       let nb_killed_vars = killed_vars eq env in
-      let nb_def_vars = List.length (all_ivars_list (InterfRead.def_ivars eq)) in
+      let nb_def_vars = List.length (Mls_utils.Vars.def [] eq) in
       let b = bonus eq in
-      if verbose_mode then
+      (*if Interference.verbose_mode then *)
       Format.eprintf "(%d,%d,%d)%a@." nb_killed_vars nb_def_vars b Mls_printer.print_eq eq;
       nb_def_vars - nb_killed_vars + b
 
@@ -150,7 +144,6 @@ let remove_eq eq node_list =
 (** Main function to schedule a node. *)
 let schedule eq_list inputs node_list =
   let uses = compute_uses eq_list in
-  Interference.print_debug_ivar_env "uses" uses;
   let rec schedule_aux rem_eqs sched_eqs node_list ck costs =
     match rem_eqs with
       | [] ->
