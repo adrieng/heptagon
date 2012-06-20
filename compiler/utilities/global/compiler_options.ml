@@ -116,6 +116,13 @@ let do_mem_alloc_and_typing () =
 let use_old_scheduler = ref false
 
 let strict_ssa = ref false
+(* if this option is on, generate code that first copies the whole array and then modifies one element.
+   Otherwise, generate two loops so that each element in the array is only assigned once. *)
+let memcpy_array_and_struct = ref true
+
+let set_strict_ssa () =
+  strict_ssa := true;
+  memcpy_array_and_struct := false
 
 let unroll_loops = ref false
 

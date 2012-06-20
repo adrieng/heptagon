@@ -10,37 +10,43 @@ open Printf
 
 let print_interference_graphs = false
 let verbose_mode = false
-let print_debug0 s =
-  if verbose_mode then
-    Format.printf s
-
-let print_debug1 fmt x =
-  if verbose_mode then
-    Format.printf fmt x
-
-let print_debug2 fmt x y =
-  if verbose_mode then
-    Format.printf fmt x y
-
-let print_debug_ivar_env name env =
-  if verbose_mode then (
-    Format.printf "%s:  " name;
-    IvarEnv.iter (fun k v -> Format.printf "%s : %d; " (ivar_to_string k) v) env;
-    Format.printf "@."
-  )
-
-let print_debug_ivar_set name env =
-  if verbose_mode then (
-    Format.printf "%s:  " name;
-    IvarSet.iter (fun k -> Format.printf "%s; " (ivar_to_string k) ) env;
-    Format.printf "@."
-  )
 
 module TyEnv =
     ListMap(struct
       type t = ty
       let compare = Global_compare.type_compare
     end)
+
+module VarEnv = struct
+  include Idents.Env
+
+  let add_ivar env iv =
+    let x = var_ident_of_ivar iv in
+    if mem x env then
+      add x (IvarSet.add iv (find x env)) env
+    else
+      add x (IvarSet.singleton iv) env
+end
+
+let print_debug fmt =
+  if verbose_mode then
+    Format.printf fmt
+  else
+    Format.ifprintf Format.std_formatter fmt
+
+let print_debug_ivar_env name env =
+  if verbose_mode then (
+    Format.printf "%s:  " name;
+    IvarEnv.iter (fun k v -> Format.printf "%a : %d; " print_ivar k v) env;
+    Format.printf "@."
+  )
+
+let print_debug_var_env name env =
+  if verbose_mode then (
+    Format.printf "%s:  " name;
+    VarEnv.iter (fun _ l -> IvarSet.iter (fun k -> Format.printf "%a; " print_ivar k) l) env;
+    Format.printf "@."
+  )
 
 (** @return whether [ty] corresponds to a record type. *)
 let is_record_type ty = match Modules.unalias_type ty with
@@ -70,7 +76,7 @@ module InterfRead = struct
   exception Const_extvalue
 
   let rec vars_ck acc = function
-    | Con(ck2, _, n) -> IvarSet.add (Ivar n) (vars_ck acc ck2)
+    | Con(ck2, _, n) -> (Ivar n)::(vars_ck acc ck2)
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
@@ -78,10 +84,10 @@ module InterfRead = struct
     | Ck ck -> vars_ck acc ck
     | Cprod ct_list -> List.fold_left vars_ct acc ct_list
 
-  let rec ivar_of_extvalue w = match w.w_desc with
+  let rec ivar_of_extvalue w' = match w'.w_desc with
     | Wvar x -> Ivar x
     | Wfield(w, f) -> Ifield (ivar_of_extvalue w, f)
-    | Wwhen(w, _, _) -> ivar_of_extvalue w
+    | Wwhen(w, _, _) -> Iwhen (ivar_of_extvalue w, w'.w_ck)
     | Wconst _ -> raise Const_extvalue
     | Wreinit (_, w) -> ivar_of_extvalue w
 
@@ -100,10 +106,10 @@ module InterfRead = struct
 
   let read_extvalue funs acc w =
     (* recursive call *)
-    let _, acc = Mls_mapfold.extvalue funs acc w in
+    (*let _, acc = Mls_mapfold.extvalue funs acc w in*)
     let acc =
       try
-        IvarSet.add (ivar_of_extvalue w) acc
+        (ivar_of_extvalue w)::acc
       with
         | Const_extvalue -> acc
     in
@@ -115,17 +121,19 @@ module InterfRead = struct
     (* special cases *)
     let acc = match e.e_desc with
       | Emerge(x,_)  | Eapp(_, _, Some x)
-      | Eiterator (_, _, _, _, _, Some x) -> IvarSet.add (Ivar x) acc
+      | Eiterator (_, _, _, _, _, Some x) -> (Ivar x)::acc
       | _ -> acc
     in
       e, acc
 
   let rec vars_pat acc = function
-    | Evarpat x -> IvarSet.add (Ivar x) acc
+    | Evarpat x -> x::acc
     | Etuplepat pat_list -> List.fold_left vars_pat acc pat_list
 
   let def eq =
-    vars_pat IvarSet.empty eq.eq_lhs
+    vars_pat [] eq.eq_lhs
+  let def_ivars eq =
+    List.map (fun x -> Ivar x) (def eq)
 
   let rec nth_var_from_pat j pat =
     match j, pat with
@@ -137,7 +145,7 @@ module InterfRead = struct
     let funs = { Mls_mapfold.defaults with
       Mls_mapfold.exp = read_exp;
       Mls_mapfold.extvalue = read_extvalue } in
-    let _, acc =  Mls_mapfold.exp_it funs IvarSet.empty e in
+    let _, acc =  Mls_mapfold.exp_it funs [] e in
       acc
 
   let read eq =
@@ -147,7 +155,7 @@ end
 
 module World = struct
   let vds = ref Env.empty
-  let memories = ref IvarSet.empty
+  let memories = ref IdentSet.empty
   let igs = ref []
 
   let init f =
@@ -161,14 +169,15 @@ module World = struct
     let env =
       match f.n_contract with
         None -> env
-      | Some c -> 
+      | Some c ->
           let env = build env c.c_local in
           build env c.c_controllables in
       igs := [];
       vds := env;
-    (* build the set of memories *)
+      (* build the set of memories *)
       let mems = Mls_utils.node_memory_vars f in
-        memories := List.fold_left (fun s (x, _) -> IvarSet.add (Ivar x) s) IvarSet.empty mems
+      let s = List.fold_left (fun s (x, _) -> IdentSet.add x s) IdentSet.empty mems in
+      memories := s
 
   let vd_from_ident x =
     try Env.find x !vds
@@ -184,6 +193,13 @@ module World = struct
         let n = Modules.find_field f in
         let fields = Modules.find_struct n in
           Signature.field_assoc f fields
+    | Iwhen (iv, _) -> ivar_type iv
+
+  let ivar_clock iv = match iv with
+    | Iwhen (_, ck) -> ck
+    | _ ->
+        let vd = vd_from_ident (var_ident_of_ivar iv) in
+        vd.v_clock
 
   let is_optimized_ty ty =
     (!Compiler_options.interf_all (* && not (is_enum ty)) *) ) || is_array_or_struct ty
@@ -192,19 +208,19 @@ module World = struct
     is_optimized_ty (ivar_type iv)
 
   let is_memory x =
-    IvarSet.mem (Ivar x) !memories
+    IdentSet.mem x !memories
 
   let node_for_ivar iv =
     let rec _node_for_ivar igs iv =
       match igs with
-        | [] -> print_debug1 "Var not in graph: %s@." (ivar_to_string iv); raise Not_found
+        | [] -> print_debug "Var not in graph: %a@." print_ivar iv; raise Not_found
         | ig::igs ->
             (try
                 ig, node_for_value ig iv
               with Not_found ->
                 _node_for_ivar igs iv)
     in
-      _node_for_ivar !igs iv
+      _node_for_ivar !igs (remove_iwhen  iv)
 
   let node_for_name x =
     node_for_ivar (Ivar x)
@@ -243,6 +259,7 @@ let add_same_value_link_from_ivar = by_ivar () add_affinity_link
 let coalesce_from_name = by_name () coalesce
 let coalesce_from_ivar = by_ivar () coalesce
 let have_same_value_from_name = by_name false have_same_value
+let have_same_value_from_ivar = by_ivar false have_same_value
 
 let remove_from_ivar iv =
   try
@@ -252,87 +269,70 @@ let remove_from_ivar iv =
     | Not_found -> (* var not in graph, just ignore it *) ()
 
 
-(** Adds all the fields of a variable to the set [s] (when it corresponds to a record). *)
-let rec all_ivars s iv ty =
-  let s = if World.is_optimized_ty ty then IvarSet.add iv s else s in
-  match Modules.unalias_type ty with
-    | Tid n ->
-        (try
-            let fields = Modules.find_struct n in
-              List.fold_left (fun s { f_name = n; f_type = ty } ->
-                all_ivars s (Ifield(iv, n)) ty) s fields
-          with
-              Not_found -> s
-        )
-    | _ -> s
+(** Adds all the fields of a variable to the list [l] (when it corresponds to a record). *)
+let rec all_ivars l iv ck ty =
+  if not (World.is_optimized_ty ty) then
+    l
+  else (
+    let iv' = match ck with None -> iv | Some ck -> Iwhen(iv, ck) in
+    let l = iv'::l in
+    match Modules.unalias_type ty with
+      | Tid n ->
+          (try
+              let fields = Modules.find_struct n in
+              List.fold_left (all_ivars_field iv ck) l fields
+            with
+                Not_found -> l
+          )
+      | _ -> l
+  )
 
-let all_ivars_set ivs =
-  IvarSet.fold (fun iv s -> all_ivars s iv (World.ivar_type iv)) ivs IvarSet.empty
+and all_ivars_field iv ck l { f_name = n; f_type = ty } =
+  let new_iv = match ck with
+    | None -> Ifield(iv, n)
+    | Some ck -> Iwhen (Ifield(iv, n), ck)
+  in
+  all_ivars l new_iv ck ty
 
-
-(** Returns a map giving the number of uses of each ivar in the equations [eqs]. *)
-let compute_uses eqs =
-  let aux env eq =
-    let incr_uses iv env =
-      if IvarEnv.mem iv env then
-        IvarEnv.add iv ((IvarEnv.find iv env) + 1) env
-      else
-        IvarEnv.add iv 1 env
+let all_ivars_list ivs =
+  let add_one acc iv =
+    let ck = match iv with
+      | Iwhen (_, ck) -> Some ck
+      | _ -> None
     in
-    let ivars = all_ivars_set (InterfRead.read eq) in
-      IvarSet.fold incr_uses ivars env
+    let iv = remove_iwhen iv in
+    all_ivars acc iv ck (World.ivar_type iv)
   in
-    List.fold_left aux IvarEnv.empty eqs
+  List.fold_left add_one [] ivs
 
-let number_uses iv uses =
-  try
-    IvarEnv.find iv uses
-  with
-    | Not_found ->
-        (* add one use for memories without any use to make sure they interfere
-           with other memories and outputs. *)
-        (match iv with
-          | Ivar x when World.is_memory x -> 1
-          | _ -> 0)
-
-let add_uses uses iv env =
-  let ivars = all_ivars IvarSet.empty iv (World.ivar_type iv) in
-    IvarSet.fold (fun iv env -> IvarEnv.add iv (number_uses iv uses) env) ivars env
-
-let decr_uses iv env =
-  try
-    IvarEnv.add iv ((IvarEnv.find iv env) - 1) env
-  with
-    | Not_found ->
-        print_debug1 "Cannot decrease; var not found : %s@." (ivar_to_string iv); assert false
-
-(** TODO: compute correct live range for variables wit no use ?*)
+(* TODO: variables with no use ?? *)
 let compute_live_vars eqs =
-  let uses = compute_uses eqs in
-  print_debug_ivar_env "Uses" uses;
-  let aux (env,res) eq =
-    let alive_vars = IvarEnv.fold (fun iv n acc -> if n > 0 then iv::acc else acc) env [] in
-      print_debug1 "Alive vars : %s@." (String.concat " " (List.map ivar_to_string alive_vars));
-      let read_ivars = all_ivars_set (InterfRead.read eq) in
-      let env = IvarSet.fold decr_uses read_ivars env in
-      let res = (eq, alive_vars)::res in
-      let env = IvarSet.fold (add_uses uses) (InterfRead.def eq) env in
-        print_debug_ivar_env "Remaining uses" env;
-        env, res
+  let aux (alive_vars, res) eq =
+    let read_ivars = all_ivars_list (InterfRead.read eq) in
+    let def_ivars = InterfRead.def eq in
+    (* add vars used in the equation *)
+    let alive_vars = List.fold_left VarEnv.add_ivar alive_vars read_ivars in
+    (* remove vars defined in this equation *)
+    let alive_vars =
+      List.fold_left (fun alive_vars id -> VarEnv.remove id alive_vars) alive_vars def_ivars
+    in
+    print_debug "%a@," Mls_printer.print_eq eq;
+    print_debug_var_env "alive" alive_vars;
+    let alive_vars_list = VarEnv.fold (fun _ ivs acc -> (IvarSet.elements ivs)@acc) alive_vars [] in
+    let res = (eq, alive_vars_list)::res in
+    alive_vars, res
   in
-  let env = IvarSet.fold (add_uses uses) !World.memories IvarEnv.empty in
-  let _, res = List.fold_left aux (env, []) eqs in
+  let _, res =  List.fold_left aux (VarEnv.empty, []) (List.rev eqs) in
     res
 
-
-let rec disjoint_clock is_mem ck1 ck2 =
+let rec disjoint_clock ck1 ck2 =
   match Clocks.ck_repr ck1, Clocks.ck_repr ck2 with
     | Cbase, Cbase -> false
     | Con(ck1, c1, n1), Con(ck2,c2,n2) ->
-        if ck1 = ck2 & n1 = n2  & c1 <> c2 & not is_mem then
+        if ck1 = ck2 & n1 = n2  & c1 <> c2 then
           true
         else
-          disjoint_clock is_mem ck1 ck2
+          disjoint_clock ck1 ck2
         (*let separated_by_reset =
           (match x_is_mem, y_is_mem with
             | true, true -> are_separated_by_reset c1 c2
@@ -341,20 +341,32 @@ let rec disjoint_clock is_mem ck1 ck2 =
 
 (** [should_interfere x y] returns whether variables x and y
     can interfere. *)
-let should_interfere (x, y) =
-  let vdx = World.vd_from_ident x in
-  let vdy = World.vd_from_ident y in
-  if Global_compare.type_compare vdx.v_type vdy.v_type <> 0 then
+let should_interfere (ivx, ivy) =
+  let tyx = World.ivar_type ivx in
+  let tyy = World.ivar_type ivy in
+  if Global_compare.type_compare tyx tyy <> 0 then
     false
   else (
-    let x_is_mem = World.is_memory x in
-    let y_is_mem = World.is_memory y in
-    let are_copies = have_same_value_from_name x y in
-    let disjoint_clocks = disjoint_clock (x_is_mem || y_is_mem) vdx.v_clock vdy.v_clock in
+   let x_is_mem = World.is_memory (var_ident_of_ivar ivx) in
+   let x_is_when = is_when_ivar ivx in
+   let y_is_mem = World.is_memory (var_ident_of_ivar ivy) in
+   let y_is_when = is_when_ivar ivy in
+   let ckx = World.ivar_clock ivx in
+   let cky = World.ivar_clock ivy in
+   let are_copies = have_same_value_from_ivar ivx ivy in
+   (* a register with a slow clock is still alive even when it is not activated.
+      However, if we read a fast register on a slow rhythm,
+      we can share it with other variables on disjoint slow rhythms as we know
+      that the value of the register will
+      be done at the end of the step. *)
+   let disjoint_clocks =
+     not ((x_is_mem && not x_is_when) || (y_is_mem && not y_is_when)) && disjoint_clock ckx cky
+   in
       not (disjoint_clocks or are_copies)
   )
 
 let should_interfere = Misc.memoize_couple should_interfere
+
 
 (** Builds the (empty) interference graphs corresponding to the
     variable declaration list vds. It just creates one graph per type
@@ -362,8 +374,8 @@ let should_interfere = Misc.memoize_couple should_interfere
 let init_interference_graph () =
   (** Adds a node for the variable and all fields of a variable. *)
   let rec add_ivar env iv ty =
-    let ivars = all_ivars IvarSet.empty iv ty in
-      IvarSet.fold (fun iv env -> TyEnv.add_element (World.ivar_type iv) (mk_node iv) env) ivars env
+    let ivars = all_ivars [] iv None ty in
+      List.fold_left (fun env iv -> TyEnv.add_element (World.ivar_type iv) (mk_node iv) env) env ivars
   in
   let env = Env.fold
     (fun _ vd env -> add_ivar env (Ivar vd.v_ident) vd.v_type) !World.vds TyEnv.empty in
@@ -375,12 +387,9 @@ let init_interference_graph () =
     whatever the variables are, without checking if interference
     is real. *)
 let rec add_interferences_from_list force vars =
-  let add_interference x y =
-    match x, y with
-      | Ivar x, Ivar y ->
-        if force or should_interfere (x, y) then
-          add_interference_link_from_ivar (Ivar x) (Ivar y)
-      | _, _ -> add_interference_link_from_ivar x y
+  let add_interference ivx ivy =
+    if force or should_interfere (ivx, ivy) then
+      add_interference_link_from_ivar ivx ivy
   in
     Misc.iter_couple add_interference vars
 
@@ -393,24 +402,24 @@ let add_interferences live_vars =
 (** Spill non linear inputs. *)
 let spill_inputs f =
   let spilled_inp = List.filter (fun vd -> not (is_linear vd.v_linearity)) f.n_input in
-  let spilled_inp = List.fold_left
-    (fun s vd -> IvarSet.add (Ivar vd.v_ident) s) IvarSet.empty spilled_inp in
-  let spilled_inp = all_ivars_set spilled_inp in
-    IvarSet.iter remove_from_ivar spilled_inp
+  let spilled_inp = List.map (fun vd -> Ivar vd.v_ident) spilled_inp in
+  let spilled_inp = all_ivars_list spilled_inp in
+    List.iter remove_from_ivar spilled_inp
 
 (** If we optimize all types, we need to spill outputs and memories so
     that register allocation by the C compiler is not disturbed. *)
 let spill_mems_outputs f =
-  let add_output s vd =
-    if not (is_array_or_struct vd.v_type) then IvarSet.add (Ivar vd.v_ident) s else s
+  let add_output l vd =
+    if not (is_array_or_struct vd.v_type) then (Ivar vd.v_ident)::l else l
   in
-  let add_memory iv s =
-    if not (is_array_or_struct (World.ivar_type iv)) then IvarSet.add iv s else s
+  let add_memory x l =
+    let iv = Ivar x in
+    if not (is_array_or_struct (World.ivar_type iv)) then iv::l else l
   in
-  let spilled_vars = List.fold_left add_output IvarSet.empty f.n_output in
-  let spilled_vars = IvarSet.fold add_memory !World.memories spilled_vars in
-  let spilled_vars = all_ivars_set spilled_vars in
-  IvarSet.iter remove_from_ivar spilled_vars
+  let spilled_vars = List.fold_left add_output [] f.n_output in
+  let spilled_vars = IdentSet.fold add_memory !World.memories spilled_vars in
+  let spilled_vars = all_ivars_list spilled_vars in
+  List.iter remove_from_ivar spilled_vars
 
 (** [filter_vars l] returns a list of variables whose fields appear in
     a list of ivar.*)
@@ -479,7 +488,7 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
     | _, Eiterator((Imap|Imapi), { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
       let invars = InterfRead.ivars_of_extvalues w_list in
       let pinvars = InterfRead.ivars_of_extvalues pw_list in
-      let outvars = IvarSet.elements (InterfRead.def eq) in
+      let outvars = InterfRead.def_ivars eq in
         (* because of the encoding of the fold, the outputs are written before
            the partially applied inputs are read so they must interfere *)
          List.iter (fun inv -> List.iter (add_interference_link_from_ivar inv) outvars) pinvars;
@@ -516,10 +525,27 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
          add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
        with
          | InterfRead.Const_extvalue -> ())
-    | Evarpat x, Eapp({ a_op = Eupdate | Efield_update }, args, _) ->
-      let w,  _ = Misc.assert_1min args in
+    | Evarpat x, Eapp({ a_op = Eupdate }, args, _) ->
+      let w, _ = Misc.assert_1min args in
       (try
-        add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
+          add_affinity_link_from_ivar (InterfRead.ivar_of_extvalue w) (Ivar x)
+       with
+         | InterfRead.Const_extvalue -> ())
+    | Evarpat x, Eapp({ a_op = Efield_update }, args, _) ->
+        let w1, w2 = Misc.assert_2 args in
+        (* if we generate code for o = { a with .f = b } that is:
+           o=a; o.f = b
+           then we need to make sure that b interferes with all fields of o *)
+        if !Compiler_options.memcpy_array_and_struct then
+          (try
+              let all_iv = all_ivars [] (Ivar x) None w1.w_ty in
+              let iv2 = InterfRead.ivar_of_extvalue w2 in
+              List.iter (add_interference_link_from_ivar iv2) all_iv;
+            with
+              | InterfRead.Const_extvalue -> ());
+      (try
+          let iv1 = InterfRead.ivar_of_extvalue w1 in
+          add_affinity_link_from_ivar iv1 (Ivar x)
        with
          | InterfRead.Const_extvalue -> ())
     | Evarpat x, Eextvalue w ->
@@ -533,12 +559,26 @@ let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
 (** Add the special init and return equations to the dependency graph
     (resp at the bottom and top) *)
 let add_init_return_eq f =
+  let pat_from_dec_list decs =
+    Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) decs)
+  in
+
+  let tuple_from_dec_and_mem_list decs =
+    let exp_of_vd vd =
+      mk_extvalue ~clock:vd.v_clock ~ty:vd.v_type ~linearity:vd.v_linearity (Wvar vd.v_ident)
+    in
+    let exp_of_mem x = exp_of_vd (World.vd_from_ident x) in
+    let decs = List.map exp_of_vd decs in
+    let mems = IdentSet.fold (fun iv acc -> (exp_of_mem iv)::acc) !World.memories [] in
+    Eapp(mk_app Earray, decs@mems, None)
+  in
+
    (** a_1,..,a_p = __init__  *)
-  let eq_init = mk_equation false (Mls_utils.pat_from_dec_list f.n_input)
+  let eq_init = mk_equation false (pat_from_dec_list f.n_input)
     (mk_extvalue_exp Cbase Initial.tint Ltop (Wconst (Initial.mk_static_int 0))) in
-    (** __return__ = o_1,..,o_q *)
+    (** __return__ = o_1,..,o_q, mem_1, ..., mem_k *)
   let eq_return = mk_equation false (Etuplepat [])
-    (mk_exp Cbase Tinvalid Ltop (Mls_utils.tuple_from_dec_list f.n_output)) in
+    (mk_exp Cbase Tinvalid Ltop (tuple_from_dec_and_mem_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
 
 

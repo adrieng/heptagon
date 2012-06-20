@@ -1,0 +1,6 @@
+node f(c:bool) = (o:int)
+var last t:int^100 = 1^100;
+let
+  t = merge c ((last t) when c) ([((last t) whenot c) with [0] = 0]);
+  o = t[0];
+tel

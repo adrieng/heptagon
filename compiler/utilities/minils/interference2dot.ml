@@ -25,11 +25,13 @@ module DotG = struct
       match iv with
         | Ivar id -> Idents.name id
         | Ifield(ivar, f) -> (ivar_name ivar)^"_"^(Names.shortname f)
+        | Iwhen _ -> assert false
     in
       Misc.sanitize_string (ivar_name (List.hd !(V.label v)))
 
   let vertex_attributes v =
-    let s = String.concat ", " (List.map (fun iv -> ivar_to_string iv) !(V.label v)) in
+    Format.fprintf Format.str_formatter "%a" print_ivar_list !(V.label v);
+    let s = Format.flush_str_formatter () in
       [`Label s; `Color (color_to_graphviz_color (Mark.get v))]
 
   let edge_attributes e =

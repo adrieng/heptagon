@@ -34,11 +34,13 @@ let rec repr_from_ivar env iv =
       let ty = Tid (Modules.find_field f) in
       let lhs = mk_pattern ty (repr_from_ivar env iv) in
       Lfield(lhs, f)
+    | Iwhen _ -> assert false
 
 let rec choose_record_field env l = match l with
   | [iv] -> repr_from_ivar env iv
   | (Ivar _)::l -> choose_record_field env l
   | (Ifield(iv,f))::_ -> repr_from_ivar env (Ifield(iv,f))
+  | (Iwhen _ )::_ -> assert false
   | [] -> assert false
 
 (** Chooses from a list of vars (with the same color in the interference graph)
@@ -56,14 +58,10 @@ let choose_representative m inputs outputs mems ty vars =
       | [], [Ivar vout], [] -> Lvar vout
       | [Ivar vin], [Ivar _], [] -> Lvar vin
       | _, _, _ ->
-        Interference.print_debug0 "@.Something is wrong with the coloring : ";
-        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string vars));
-        Interference.print_debug0 "\tInputs : ";
-        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string inputs));
-        Interference.print_debug0 "\tOutputs : ";
-        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string outputs));
-        Interference.print_debug0 "\tMem : ";
-        Interference.print_debug1 "%s@." (String.concat " " (List.map ivar_to_string mems));
+        Interference.print_debug "@.Something is wrong with the coloring : %a@." print_ivar_list vars;
+        Interference.print_debug "\tInputs : %a@." print_ivar_list inputs;
+        Interference.print_debug "\tOutputs : %a@." print_ivar_list outputs;
+        Interference.print_debug "\tMem : %a@." print_ivar_list mems;
         assert false (*something went wrong in the coloring*)
   in
     mk_pattern ty desc

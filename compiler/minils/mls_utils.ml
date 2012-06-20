@@ -65,15 +65,6 @@ let is_record_type ty = match ty with
 let is_op = function
   | { qual = Pervasives; name = _ } -> true | _ -> false
 
-let pat_from_dec_list decs =
-  Etuplepat (List.map (fun vd -> Evarpat vd.v_ident) decs)
-
-let tuple_from_dec_list decs =
-  let aux vd =
-    mk_extvalue ~clock:vd.v_clock ~ty:vd.v_type ~linearity:vd.v_linearity (Wvar vd.v_ident)
-  in
-    Eapp(mk_app Earray, List.map aux decs, None)
-
 module Vars =
 struct
   let add x acc = if List.mem x acc then acc else x :: acc
