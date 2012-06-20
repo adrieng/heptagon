@@ -87,6 +87,7 @@ struct
   let next_equation rem_eqs ck env =
     let bonus eq = match eq.eq_rhs.e_desc with
       | Eapp ({a_op = (Eupdate | Efield_update) },_,_) -> 1
+      | Efby _ -> 20
       | _ -> 0
     in
     let cost eq =
