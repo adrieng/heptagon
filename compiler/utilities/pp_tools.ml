@@ -5,7 +5,6 @@
 (*  Organization : LRI, University of Paris-Sud, Orsay                    *)
 (*                                                                        *)
 (**************************************************************************)
-(** Useful stuff for printing *)
 
 
 open Format

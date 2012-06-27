@@ -1,11 +1,31 @@
-(**************************************************************************)
-(*                                                                        *)
-(*  Heptagon                                                              *)
-(*                                                                        *)
-(*  Author : Marc Pouzet                                                  *)
-(*  Organization : Demons, LRI, University of Paris-Sud, Orsay            *)
-(*                                                                        *)
-(**************************************************************************)
+(***********************************************************************)
+(*                                                                     *)
+(*                             Heptagon                                *)
+(*                                                                     *)
+(* Gwenael Delaval, LIG/INRIA, UJF                                     *)
+(* Leonard Gerard, Parkas, ENS                                         *)
+(* Adrien Guatto, Parkas, ENS                                          *)
+(* Cedric Pasteur, Parkas, ENS                                         *)
+(*                                                                     *)
+(* Copyright 2012 ENS, INRIA, UJF                                      *)
+(*                                                                     *)
+(* This file is part of the Heptagon compiler.                         *)
+(*                                                                     *)
+(* Heptagon is free software: you can redistribute it and/or modify it *)
+(* under the terms of the GNU General Public License as published by   *)
+(* the Free Software Foundation, either version 3 of the License, or   *)
+(* (at your option) any later version.                                 *)
+(*                                                                     *)
+(* Heptagon is distributed in the hope that it will be useful,         *)
+(* but WITHOUT ANY WARRANTY; without even the implied warranty of      *)
+(* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the       *)
+(* GNU General Public License for more details.                        *)
+(*                                                                     *)
+(* You should have received a copy of the GNU General Public License   *)
+(* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
+(*                                                                     *)
+(***********************************************************************)
+
 (* Compiler options *)
 
 open Names
@@ -40,6 +60,8 @@ let locate_stdlib () =
 let show_version () =
   Format.printf "The Heptagon compiler, version %s (%s)@."
     version date;
+  Format.printf 
+    "This program is free software and comes with ABSOLUTELY NO WARRANTY.@.";
   locate_stdlib ()
 
 
