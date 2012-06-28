@@ -6,6 +6,7 @@
 (* Leonard Gerard, Parkas, ENS                                         *)
 (* Adrien Guatto, Parkas, ENS                                          *)
 (* Cedric Pasteur, Parkas, ENS                                         *)
+(* Marc Pouzet, Parkas, ENS                                            *)
 (*                                                                     *)
 (* Copyright 2012 ENS, INRIA, UJF                                      *)
 (*                                                                     *)
@@ -359,65 +360,72 @@ let translate_node
             proc_body = body@body_c@body_sink;
             proc_objectives = [obj] } in
 
-  let ctrlr_pat = Minils.Etuplepat(List.map (fun { Minils.v_ident = v } ->
-                                               Minils.Evarpat(v))
-                                     mls_ctrl) in
-  let ctrlr_name = f ^ "_controller" in
-  let ctrlr_fun_name = { qual = Module (String.capitalize ctrlr_name);
-                         name = ctrlr_name } in
-  let ctrlr_exp = 
-    Minils.mk_exp
-      Cbase 
-      (Tprod (List.map (fun _ -> Initial.tbool) mls_ctrl))
-      ~linearity:Linearity.Ltop
-      (Minils.Eapp(Minils.mk_app (Minils.Efun ctrlr_fun_name),
-                   (List.map 
-                      (fun v ->
-                         Minils.mk_extvalue 
-                           ~ty:Initial.tbool 
-                           ~linearity:Linearity.Ltop
-                           ~clock:Cbase
-                           (Minils.Wvar v))
-                      (mls_inputs@mls_states))
-                   @ (List.map
-                        (fun _ ->
-                           Minils.mk_extvalue
-                             ~ty:Initial.tbool 
-                             ~linearity:Linearity.Ltop
-                             ~clock:Cbase
-                             (Minils.Wconst(Initial.mk_static_bool true)))
-                        mls_ctrl),
-                   None))
-  in
-  let ctrlr_call =
-    Minils.mk_equation ~base_ck:Cbase false ctrlr_pat ctrlr_exp in
+  let ctrlr_call = 
+    begin
+      match controllables with
+	[] -> [] (* no controllable => no controller call *)
+      | _ :: _ ->
+	  let ctrlr_pat = Minils.Etuplepat(List.map (fun { Minils.v_ident = v } ->
+						       Minils.Evarpat(v))
+					     mls_ctrl) in
+	  let ctrlr_name = f ^ "_controller" in
+	  let ctrlr_fun_name = { qual = Module (String.capitalize ctrlr_name);
+				 name = ctrlr_name } in
+	  let ctrlr_exp = 
+	    Minils.mk_exp
+	      Cbase 
+	      (Tprod (List.map (fun _ -> Initial.tbool) mls_ctrl))
+	      ~linearity:Linearity.Ltop
+	      (Minils.Eapp(Minils.mk_app (Minils.Efun ctrlr_fun_name),
+			   (List.map 
+			      (fun v ->
+				 Minils.mk_extvalue 
+				   ~ty:Initial.tbool 
+				   ~linearity:Linearity.Ltop
+				   ~clock:Cbase
+				   (Minils.Wvar v))
+			      (mls_inputs@mls_states))
+			   @ (List.map
+				(fun _ ->
+				   Minils.mk_extvalue
+				     ~ty:Initial.tbool 
+				     ~linearity:Linearity.Ltop
+				     ~clock:Cbase
+				     (Minils.Wconst(Initial.mk_static_bool true)))
+				mls_ctrl),
+			   None))
+	  in
+	  let ctrlr_call =
+	    Minils.mk_equation ~base_ck:Cbase false ctrlr_pat ctrlr_exp in
 
-  let ctrlr_inputs =
-    (List.map
-       (fun v -> 
-          Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
-       (sig_inputs@sig_states))
-    @ (List.map
-         (fun v ->
-            Signature.mk_arg 
-              (Some ("p_" ^ v)) Initial.tbool Linearity.Ltop Signature.Cbase)
-         sig_ctrl) in
-  let ctrlr_outputs =
-    List.map
-      (fun v ->
-         Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
-      sig_ctrl in
-  let ctrlr_signature = 
-    Signature.mk_node Location.no_location ~extern:false 
-      ctrlr_inputs ctrlr_outputs false false [] in
-  (* Add controller into modules *)
-  Modules.add_value ctrlr_fun_name ctrlr_signature;
+	  let ctrlr_inputs =
+	    (List.map
+	       (fun v -> 
+		  Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
+	       (sig_inputs@sig_states))
+	    @ (List.map
+		 (fun v ->
+		    Signature.mk_arg 
+		      (Some ("p_" ^ v)) Initial.tbool Linearity.Ltop Signature.Cbase)
+		 sig_ctrl) in
+	  let ctrlr_outputs =
+	    List.map
+	      (fun v ->
+		 Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
+	      sig_ctrl in
+	  let ctrlr_signature = 
+	    Signature.mk_node Location.no_location ~extern:false 
+	      ctrlr_inputs ctrlr_outputs false false [] in
+	  (* Add controller into modules *)
+	  Modules.add_value ctrlr_fun_name ctrlr_signature;
+	  [ctrlr_call]
+    end in
   
   let node =
     { node with
         Minils.n_contract = None;
         Minils.n_local = node.Minils.n_local @ locals_c;
-        Minils.n_equs = ctrlr_call :: (node.Minils.n_equs @ eqs_c);
+        Minils.n_equs = ctrlr_call @ (node.Minils.n_equs @ eqs_c);
     } in
   node, p
 
