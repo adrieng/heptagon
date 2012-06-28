@@ -6,6 +6,7 @@
 /* Leonard Gerard, Parkas, ENS                                         */
 /* Adrien Guatto, Parkas, ENS                                          */
 /* Cedric Pasteur, Parkas, ENS                                         */
+/* Marc Pouzet, Parkas, ENS                                            */
 /*                                                                     */
 /* Copyright 2012 ENS, INRIA, UJF                                      */
 /*                                                                     */
