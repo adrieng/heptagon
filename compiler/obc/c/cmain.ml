@@ -202,7 +202,7 @@ let main_def_of_class_def cd =
         let format_s = format_for_type ty in
   let format_s =
     if !Compiler_options.hepts_simulation
-    then format_s ^ "\\n"
+    then format_s ^ "\n"
     else format_s ^ " " in
         let nbuf_opt = need_buf_for_ty ty in
         let ep = match nbuf_opt with
