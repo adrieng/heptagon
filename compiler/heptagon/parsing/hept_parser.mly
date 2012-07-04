@@ -702,10 +702,14 @@ extern:
   | EXTERNAL  { true }
   | /*empty*/ { false }
 
+val_or_empty:
+  | VAL { () }
+  | /*empty*/ { () }
+
 interface_desc:
   | type_dec         { Itypedef $1 }
   | const_dec        { Iconstdef $1 }
-  | e=extern u=unsafe VAL n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
+  | e=extern u=unsafe val_or_empty n=node_or_fun f=ident pc=node_params LPAREN i=params_signature RPAREN
     returns LPAREN o=params_signature RPAREN
     { Isignature({ sig_name = f;
                    sig_inputs = i;
