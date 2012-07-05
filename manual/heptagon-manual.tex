@@ -182,15 +182,7 @@ This executable \texttt{f\_sim} can then be used with the graphical simulator
 \label{sec:synt-infor-sem}
 
 Heptagon programs are synchronous Moore machines, with parallel and hierarchical
-composition. The states of such machines define dataflow equations. The
-Figure~\ref{fig:mixed-state-dataflow-example} gives an example of such program.
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics{figures/mixed-state-df}
-  \caption{Mixed state and dataflow example}
-  \label{fig:mixed-state-dataflow-example}
-\end{figure}
+composition. The states of such machines define dataflow equations. 
 
 \subsection{Nodes}
 \label{sec:nodes}
@@ -199,28 +191,10 @@ Heptagon programs are structured in \emph{nodes}: a program is a sequence of
 nodes. A node is a subprogram with a name $f$, inputs $\ton{x}{,}$, outputs
 $\ton[1][p]{y}{,}$, local variables $\ton[1][q]{z}{,}$ and declarations
 $D$. $y_i$ and $z_i$ variables are to be defined in $D$, using operations
-between values of $x_j$, $y_j$, $z_j$. Figure~\ref{fig:syntax-nodes} gives the
-syntax of node definitions, together with a graphical syntax used in this
-manual\footnote{declaration of local variables are mandatory for the compiler in
-  the textual syntax, however we will sometimes omit it in the graphical syntax
-  for the sake of brevity}. The declaration of one variable comes with its type
+between values of $x_j$, $y_j$, $z_j$. The declaration of one variable comes with its type
 ($t_i$, $t'_i$ and $t''_i$ being the type of respectively $x_i$, $y_i$ and
 $z_i$).
 
-\begin{figure}[htb]
-  \centering
-%  \begin{varwidth}{\linewidth}
-    \[
-    \begin{array}{|c|c}
-      \cline{1-1}
-      f(x_1:t_1,\ldots,x_n:t_n) = y_1:t'_1,\ldots,y_p:t'_p & \\\hline
-      \multicolumn{2}{|c|}{}\\
-      \multicolumn{2}{|c|}{D}\\
-      \multicolumn{2}{|c|}{}\\\hline
-    \end{array}
-    \]
-%  \end{varwidth}\hspace{1cm}
-%  \begin{varwidth}{\linewidth}
 \begin{lstlisting}
 node f(x$_1$:t$_1$;$\ldots$;x$_n$:t$_n$) returns (y$_1$:t$'_1$,$\ldots$,y$_p$:t$'_p$)
   var z$_1$:t$''_1$,$\ldots$,z$_q$:t$''_q$;
@@ -228,68 +202,6 @@ let
   D
 tel
 \end{lstlisting}
-%    \end{varwidth}
-  \caption{Graphical and textual syntax of node definition}
-  \label{fig:syntax-nodes}
-\end{figure}
-
-The program of the Figure~\ref{fig:mixed-state-dataflow-example} can thus be
-structured as the semantically equivalent program of the
-Figure~\ref{fig:struct-prog-example}. The Figure~\ref{fig:textual-syntax} gives
-the textual syntax of this program.
-
-
-\begin{figure}[htbp]
-  \centering
-  \includegraphics{figures/struct-pg}
-  \caption{Structured program example}
-  \label{fig:struct-prog-example}
-\end{figure}
-
-\begin{figure}[htbp]
-  \centering
-
-\begin{lstlisting}
-node h(a:bool) returns (y:bool)
-  let
-    automaton
-      state Idle
-        do y = false
-        until a then Active
-      state Active
-        do y = true
-        until a then Idle
-    end
-  tel
-
-node g (a,b:bool) returns (y:bool)
-  var y1,y2 : bool;
-  let
-    y = y1 & y2;
-    y1 = h(a);
-    y2 = h(b);
-  tel
-
-node f (c,d:bool) returns (y:bool)
-  let
-    automaton
-      state A
-        do y = false
-        until c then B
-      state B
-        do y = g(c,d)
-        until c & d then C
-      state C
-        do y = true
-        until d then A
-    end
-  tel
-\end{lstlisting}
-
-  \caption{Textual syntax}
-  \label{fig:textual-syntax}
-\end{figure}
-
 
 Heptagon allows to distinguish, by mean of clocks and control structures (switch,
 automata), for declarations and expressions, the discrete instants of
@@ -431,8 +343,8 @@ A declaration $D$ can be either :
 \item a node application $(\tonp{y}{,}) = f(\ton{e}{,})$, defining variables
   $\tonp{y}{,}$ by application of the node $f$ with values $\ton{e}{,}$ at each
   activation instants ;
-\item parallel declarations of $D_1$ and $D_2$, noted graphically $D_1\vdots
-  D_2$ and textually $D_1\Pv D_2$. Variables defined in $D_1$ and $D_2$ must be
+\item parallel declarations of $D_1$ and $D_2$, denoted $D_1\Pv D_2$.
+ Variables defined in $D_1$ and $D_2$ must be
   exclusive. The activation of this parallel declaration activate both $D_1$ and
   $D_2$, which are both computed and both progress ;
 \item a switch control structure ;
@@ -666,11 +578,7 @@ This contract means that the node will be controlled, i.e., that values will be
 given to $\ton{c}{,}$ such that, given any input trace yielding $e_A$, the
 output trace will yield the true value for $e_G$.
 
-\begin{center}
-\includegraphics{figures/node-contract}
-\end{center}
-
-In the textual syntax, the contracts are noted :
+Contracts are denoted :
 \begin{lstlisting}
 node f(x$_1$:t$_1$;$\ldots$;x$_n$:t$_n$) returns (y$_1$:t$'_1$;$\ldots$;y$_p$:t$'_p$)
 contract
