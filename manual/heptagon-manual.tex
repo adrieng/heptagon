@@ -535,8 +535,8 @@ Arrays are denoted using the \lstinline+^+ symbol. For instance, \lstinline+int^
 The following operators are defined for arrays:
 \begin{itemize}
 \item Accessing an element at a constant index: \lstinline{t[4]}
-\item Accessing an element at a dynamic index with a default value: \lstinline{z = t.[x] default v} is a stream defined by $z_i = t_i[x_i]$ if $0 \leq x_i < n$ and $z_i = v_i$ otherwise, where $n$ is the size of \lstinline+t+.
-\item Accessing an element at a truncated index: \lstinline+z = t[>x<]+ is defined by $z_i = t_i[\min(\max(0, x_i), n-1)]$, where $n$ is the size of \lstinline+t+.
+\item Accessing an element at a dynamic index with a default value: \lstinline{z = t.[x] default v} is a stream defined by $z_i = t_i[x_i]$ if $0 \leq x_i < n$ and $z_i = v_i$ otherwise (where $n$ is the size of \lstinline+t+).
+\item Accessing an element at a truncated index: \lstinline+z = t[>x<]+ is defined by $z_i = t_i[\min(\max(0, x_i), n-1)]$ (where $n$ is the size of \lstinline+t+).
 \item Modifying an element: \lstinline{t' = [ t with [x] = v ]} is a new array equal to \lstinline+t+, except for the element at index \lstinline+x+ which is equal to $v$, that is for all j in $[0, n-1]$ such that $j \neq x_i$, $t'_i[j] = t[j]$ and $t'_i[x_i] = v_i$.
 \item Defining an array by copying one value: \lstinline+x^n+ is the array of size \lstinline+n+ whose elements are all equal to \lstinline+x+.
 \item Defining an array explicitely:  \lstinline+[1, x, 3, y, 5]+.
@@ -615,7 +615,7 @@ let
 tel
 \end{lstlisting}
 
-If the backend support parametricity (like in Java), static parameters are kept in the generated code. Otherwise, a pass of the compiler generates all the versions of the node that are needed. If a parametrized node defined in a file \texttt{f1.ept} is used in \texttt{f2.ept}, it is necessary to first compile \texttt{f1.ept} with the \texttt{-c} option (and without any \texttt{-target}), that generates a binary file \texttt{f1.epo}. The compilation of the second file, this time with the \texttt{-target} option, will generate all the necessary nodes, from \texttt{f1.ept} and \texttt{f2.ept}.
+If the backend support parametricity (like in Java), static parameters are kept in the generated code. Otherwise, a pass of the compiler generates all the versions of the node that are needed. If a parametrized node defined in a file \texttt{f1.ept} is used in \texttt{f2.ept}, it is necessary to first compile \texttt{f1.ept} with the \texttt{-c} option (and without any \texttt{-target}), in order to generate a binary file \texttt{f1.epo}. The compilation of the second file, this time with the \texttt{-target} option, will generate code for all the necessary nodes, from \texttt{f1.ept} and \texttt{f2.ept}.
 
 \subsection{Location annotations}
 
@@ -830,16 +830,6 @@ tel
 \label{fig:n-del-task-2}
 \end{figure}
 
-However, the controllability introduced here is know too strong. The synthesis
-will succeed, but the computed controller, without knowing how \texttt{c} will
-be instantiated, will actually block every tasks in their idle state. Indeed, if
-the controller allows one task to go in its active state, the input \texttt{c}
-can become false at the next instant, violating the property to enforce.
-
-Thus, we propose to add an assumption to this contract: the input \texttt{c}
-will not become false if a task was active an instant before. This new contract
-is visible in Figure~\ref{fig:n-del-tasks-3}.
-
 \begin{figure}[htb]
   \centering
 \begin{lstlisting}
@@ -863,6 +853,16 @@ tel
   \caption{Second contract refinement for the \texttt{ntasks} node}
   \label{fig:n-del-tasks-3}
 \end{figure}
+
+However, the controllability introduced here is know too strong. The synthesis
+will succeed, but the computed controller, without knowing how \texttt{c} will
+be instantiated, will actually block every tasks in their idle state. Indeed, if
+the controller allows one task to go in its active state, the input \texttt{c}
+can become false at the next instant, violating the property to enforce.
+
+Thus, we propose to add an assumption to this contract: the input \texttt{c}
+will not become false if a task was active an instant before. This new contract
+is visible in Figure~\ref{fig:n-del-tasks-3}.
 
 We can then use this new \texttt{ntasks} version for the parallel composition,
 by instantiating the \texttt{c} input by a controllable variable and its
@@ -890,6 +890,7 @@ tel
 \end{figure}
 
 
+\clearpage
 \appendix
 
 \section{Generated code}
