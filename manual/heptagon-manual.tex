@@ -7,7 +7,7 @@
 %\usepackage{subfigure}
 %\usepackage{fancyvrb}
 %\usepackage{fancyhdr}
-\usepackage[hypertex,ps2pdf]{hyperref}
+\usepackage[]{hyperref}
 \usepackage{array}
 \usepackage{xcolor}
 %\usepackage{comment}
@@ -20,6 +20,7 @@
 %\usetikzlibrary{shapes}
 %\usetikzlibrary{positioning}
 \usepackage{macros}
+\usepackage{subfigure}
 
 % fontes tt avec gras (mots-clés)
 \renewcommand{\ttdefault}{txtt}
@@ -200,7 +201,7 @@ $\ton[1][p]{y}{,}$, local variables $\ton[1][q]{z}{,}$ and declarations
 $D$. $y_i$ and $z_i$ variables are to be defined in $D$, using operations
 between values of $x_j$, $y_j$, $z_j$. Figure~\ref{fig:syntax-nodes} gives the
 syntax of node definitions, together with a graphical syntax used in this
-manuel\footnote{declaration of local variables are mandatory for the compiler in
+manual\footnote{declaration of local variables are mandatory for the compiler in
   the textual syntax, however we will sometimes omit it in the graphical syntax
   for the sake of brevity}. The declaration of one variable comes with its type
 ($t_i$, $t'_i$ and $t''_i$ being the type of respectively $x_i$, $y_i$ and
@@ -453,7 +454,105 @@ syntax. If no transition can be triggered, then the current state is the next
 active state.
 
 
+\subsection{Structured types}
 
+\subsubsection{Arrays}
+
+Arrays are denoted using the \lstinline+^+ symbol. For instance, \lstinline+int^10+ is the type of arrays of size 10 containing integers. Arrays can be multidimensional, like \lstinline{int^3^2}. One should note that indices appear in reverse order compared to C: \lstinline{int^3^2} should be understood as \lstinline{(int^3)^2}, that is an array of size 2 containing arrays of size 3 (this would have been written \lstinline{int t[2][3]} in C). \\
+
+The following operators are defined for arrays:
+\begin{itemize}
+\item Accessing an element at a constant index: \lstinline{t[4]}
+\item Accessing an element at a dynamic index with a default value: \lstinline{z = t.[x] default v} is a stream defined by $z_i = t_i[x_i]$ if $0 \leq x_i < n$ and $z_i = v_i$ otherwise, where $n$ is the size of \lstinline+t+.
+\item Accessing an element at a truncated index: \lstinline+z = t[>x<]+ is defined by $z_i = t_i[\min(\max(0, x_i), n-1)]$, where $n$ is the size of \lstinline+t+.
+\item Modifying an element: \lstinline{t' = [ t with [x] = v ]} is a new array equal to \lstinline+t+, except for the element at index \lstinline+x+ which is equal to $v$, that is for all j in $[0, n-1]$ such that $j \neq x_i$, $t'_i[j] = t[j]$ and $t'_i[x_i] = v_i$.
+\item Defining an array by copying one value: \lstinline+x^n+ is the array of size \lstinline+n+ whose elements are all equal to \lstinline+x+.
+\item Defining an array explicitely:  \lstinline+[1, x, 3, y, 5]+.
+\item Extracting a slice: \lstinline+t[n..m]+ returns the sub array of \lstinline+t+ of size \lstinline{m-n+1} starting at index \lstinline+n+ and ending at index \lstinline+m+.
+\item Concatening arrays: \lstinline+t1@t2+.
+\end{itemize}
+
+It is also possible to use \emph{iterators} to operate on arrays. For instance, one can add two arrays pointwise by doing \lstinline{t = map<<n>> (+)(t1, t2)} (where \lstinline+n+ is the size of \lstinline+t1+, \lstinline+t2+ and \lstinline+t+).  The following iterators are defined:
+\begin{itemize}
+\item \lstinline+map+ applies a node pointwise to the input arrays and outputs one or several arrays. If \lstinline+f+ has type \lstinline+t1 * t2 -> t'1 * t'2+ then \lstinline+map<<n>> f+ has type \lstinline+t1^n * t2^n -> t'1^n * t'2^n+.
+\item \lstinline+mapi+ is the same as \lstinline+map+ but the iterated function should expect another integer argument, which will be equal to the index of the inputs in the input arrays. If \lstinline+f+ has type \lstinline+t1 * t2 * int -> t'1 * t'2+ then \lstinline+map<<n>> f+ has type \lstinline+t1^n * t2^n -> t'1^n * t'2^n+. 
+\item \lstinline+fold+ iterates a node on an array accumulating values. If \lstinline+f+ has type \lstinline+t1 * t -> t+ then \lstinline+fold<<n>> f+ has type \lstinline+t1^n * t -> t+. For instance,  \lstinline+fold<<2>> f(t, 0)+ is equivalent to  \lstinline+f(t[1], f(t[0], 0))+.
+\item \lstinline+foldi+ is to  \lstinline+fold+ what  \lstinline+mapi+ is to  \lstinline+map+.
+\item  \lstinline+mapfold+ combines the result of  \lstinline+map+ and  \lstinline+fold+, by accumulating a value and outputting a new array. If \lstinline+f+ has type \lstinline+t1 * t -> t'1 * t+ then \lstinline+mapfold<<n>> f+ has type \lstinline+t1^n * t -> t'1^n * t+.
+\end{itemize}
+
+\begin{figure}[htp]
+ \centering
+ \subfigure[\texttt{map}]{
+ \includegraphics[width = 0.25\textwidth]{figures/map}
+  }
+ \subfigure[\texttt{fold}]{
+  \includegraphics[width = 0.25\textwidth]{figures/fold}
+  }
+ \subfigure[\texttt{mapfold}]{
+  \includegraphics[width = 0.25\textwidth]{figures/mapfold}
+  }
+  \caption{Iterators in \textsc{Heptagon}}
+  \label{fig:iterators}
+\end{figure}
+
+Iterators can also be used for multidimensional arrays. In the case of \lstinline+mapi+ and \lstinline+foldi+, the iterated function should then expect one argument for each dimension.
+
+It is also possible to mimic partial application with iterators, by giving a list of arguments, not necessarily arrays, that will be given as first arguments to each application of the iterated function. For instance, \lstinline+o = map<<n>>f <(a)>(t)+ is equivalent to \lstinline+o[i] = f(a, t[i])+ for each element in the output array \lstinline+o+.
+
+Arrays are semantically functional: each modification on an array creates a new array. Implementing these arrays using separate arrays can lead to very unefficient code. That's why an optimization pass called \emph{memory allocation}~\cite{Gerard:2012} tries to share arrays and avoid unnecessary copies within each node. It can be enabled using the \texttt{-memalloc} or \texttt{-O} option.
+
+\subsubsection{Records}
+
+The syntax for declaring record types is the following:
+\begin{lstlisting}
+type t = { f1: t1; f2: t2 }
+\end{lstlisting}
+Note that two different record types cannot have fields with the same name.
+It is possible to declare a new record (\lstinline+{ f1 = x; f2 = 9 }+), read a field of a record (\lstinline+x.f1+) and modify one field (\lstinline+r' = { r with .f1 = v }+ returns a new record where all fields are equal to the ones in \lstinline+r+ except for \lstinline+f1+ which is equal to \lstinline+v+). 
+
+\subsubsection{Types alias}
+
+It is possible to declare an alias for any type (like a \texttt{typedef} in C), for instance:
+\begin{lstlisting}
+type meter = int
+type matrix = int^10^10
+\end{lstlisting}
+This alias can then be used anywhere a type is expected.
+
+
+\subsection{Parametricity}
+
+The size of arrays can be parametrized by so-called \emph{static expressions}, that is expressions that are reduced to constants at compile-time. They are either a literal, a global constant, a static parameter of a node or a static operation on two static expressions (\lstinline{+}, \lstinline{-}, \lstinline{*}, \lstinline{/}, \lstinline{+.}, \lstinline{<=}, \lstinline{or}, etc). Global constants are declared by:
+\begin{lstlisting}
+const n : int = 100
+const t0 : float^n = 1.0^n
+const r0 = { f1 = 0; f2 = t0 }
+\end{lstlisting}
+
+The parameters of a node are given between \lstinline+<<+ and \lstinline{>>} at the declaration of the node and are instantiated with the same syntax:
+\begin{lstlisting}
+node f<<m:int; t1: int^n>>(a:int^m) = (o:int^m)
+let
+  o = map<<m>> (+)(a, t1);
+tel
+
+node g(a:int^n) = (o:int^n)
+let
+  o = f<<n, t0>>(a);
+tel
+\end{lstlisting}
+
+If the backend support parametricity (like in Java), static parameters are kept in the generated code. Otherwise, a pass of the compiler generates all the versions of the node that are needed. If a parametrized node defined in a file \texttt{f1.ept} is used in \texttt{f2.ept}, it is necessary to first compile \texttt{f1.ept} with the \texttt{-c} option (and without any \texttt{-target}), that generates a binary file \texttt{f1.epo}. The compilation of the second file, this time with the \texttt{-target} option, will generate all the necessary nodes, from \texttt{f1.ept} and \texttt{f2.ept}.
+
+
+\subsection{Interfaces}
+
+Interface files, with the extension \texttt{.epi}, do not contain any definition but only the declaration (or signatures) of nodes, types and constants. In particular, they are useful to import external functions. For instance:
+\begin{lstlisting}
+external fun sort(a:int^100) = (o:int^100)
+\end{lstlisting}
+The imported function should respect the calling convention given in appendix \ref{sec:app-generated-code}. See the directory \texttt{examples/extern\_C} for a complete example.
 
 \section{BZR: Contracts for controller synthesis}
 \label{sec:extens-with-contr}
@@ -822,6 +921,8 @@ public class fAnswer {
 }
 \end{lstlisting}
 
+\bibliographystyle{plain}
+\bibliography{manual}
 
 
 \end{document}
