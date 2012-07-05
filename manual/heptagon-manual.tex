@@ -617,6 +617,27 @@ tel
 
 If the backend support parametricity (like in Java), static parameters are kept in the generated code. Otherwise, a pass of the compiler generates all the versions of the node that are needed. If a parametrized node defined in a file \texttt{f1.ept} is used in \texttt{f2.ept}, it is necessary to first compile \texttt{f1.ept} with the \texttt{-c} option (and without any \texttt{-target}), that generates a binary file \texttt{f1.epo}. The compilation of the second file, this time with the \texttt{-target} option, will generate all the necessary nodes, from \texttt{f1.ept} and \texttt{f2.ept}.
 
+\subsection{Location annotations}
+
+Memory allocation~\cite{Gerard:2012} avoids unnecessary array copies within the nodes automatically (it can be enable with the \texttt{-memalloc} or \texttt{-O} options). In order to avoid copies when calling nodes, the user must add \emph{location annotations}. We will give here only a short introduction, the interested reader can refer to~\cite{Gerard:2012} for more details. They express the fact that a function modifies in-place its argument. For instance, consider this node that swaps two elements in an array:
+\begin{lstlisting}
+node swap(i, j:int; t_in:float^100 at r) returns (t_out:float^100 at r)var t_tmp:float^100 at r; 
+let  t_tmp = [ t_in with [i] = t_in[>j<] ]; 
+  t_out = [ t_tmp with [j] = t_in[>i<] ];tel
+\end{lstlisting}
+The location annotations are introduced by the keyword \lstinline{at} followed by a location name. All the streams with the same location name are guaranteed to be stored together in the generated code, so the function generated for \texttt{swap} will directly modify its argument in-place. 
+
+Located variables are called \emph{semilinear}: they can only be updated once, but they can be read many times. An update is a function that modify its argument in-place, for instance a node that inputs and outputs located variables, and a read is any other function. For instance, modifying one element in an array is an update, but accessing one element is a read.
+
+Only located variables can be given to a function that expects located arguments. A located variable can only be obtained by updating another located variable or by explicitly initializing a new location with the \lstinline+init+ construction:
+\begin{lstlisting}
+node shuffle(i_arr, j_arr : int^m; q : int) = (v : float)
+var t, t_prev : float^n at r;
+let  init<<r>> t_prev = t_0 fby t;
+  t = fold<<m>> swap(i_arr, j_arr, t_prev); 
+  v = t[>q<];tel
+\end{lstlisting}
+
 
 \subsection{Interfaces}
 

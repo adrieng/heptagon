@@ -50,7 +50,7 @@
 
 \lstdefinelanguage{Heptagon}
 {%
-  keywords={node,returns,let,tel,var,pre,fby,when,whenot,merge,if,then,else,or,not},%
+  keywords={node,returns,let,tel,var,pre,fby,when,whenot,merge,if,then,else,or,not,at,init,map,fold,mapdold,foldi,mapi},%
   morekeywords=[2]{automaton,state,until,unless,end,present,switch,inlined},%
   morekeywords=[2]{contract,assume,enforce,with},%
   otherkeywords={->,&,=},%
@@ -62,7 +62,7 @@
 %   morekeywords={link,to},%
 % }[keywords,comments]
 
-%% règles d'inférence
+%% rÃ‹gles d'infÃˆrence
 
 \RequirePackage{mathpartir}
 
@@ -96,7 +96,7 @@
 %\newcommand{\ovfun}[1]{\xrightarrow{#1}}
 \newcommand{\ovfun}[1]{{\;-\mskip-1.5\thinmuskip\langle{#1}\rangle\!\!\!\rightarrow\;}}
 
-%% Typage --- général
+%% Typage --- gÃˆnÃˆral
 
 \DeclareMathOperator{\FV}{FV}
 \DeclareMathOperator{\FTV}{FTV}
@@ -111,7 +111,7 @@
 
 \newcommand{\mergeenv}{\uplus}
 
-%% Types de données
+%% Types de donnÃˆes
 
 \newcommand{\type}[3]{\ensuremath{#1\vdash#2:#3}}
 
@@ -194,7 +194,7 @@
 
 \newcommand{\subck}{\ensuremath{<:}}
 
-%% Sémantique synchrone
+%% SÃˆmantique synchrone
 
 \newcommand{\clock}[1]{\ensuremath{\langle#1\rangle}}
 
@@ -264,7 +264,7 @@
 \shortcal{Y}
 \shortcal{Z}
 
-%% mots-clés
+%% mots-clÃˆs
 
 \newcommand{\m@thspace}{%
   \ifmmode\ \fi%
@@ -309,7 +309,7 @@
 \newcommand{\unop}[2]{\begkw{#1}{#2}}
 \newcommand{\funct}[2]{\begkw{#1}{#2}}
 
-%% Mots-clés Lucid Synchrone
+%% Mots-clÃˆs Lucid Synchrone
 
 \begkw{\Assume}{assume}
 \begkw{\Automaton}{automaton}
@@ -374,7 +374,7 @@
 
 \newcommand{\Nil}{\ensuremath{\mathit{nil}}}
 
-%% Mots-clés répartition
+%% Mots-clÃˆs rÃˆpartition
 
 \midkw{\At}{at}
 \begkw{\Site}{site}
@@ -408,7 +408,7 @@
   \ |\ \False \rightarrow #3
 }
 
-%% Théorèmes, définitions, remarques...
+%% ThÃˆorÃ‹mes, dÃˆfinitions, remarques...
 
 \RequirePackage{amsmath}
 
@@ -429,7 +429,7 @@
 \newcommand{\noeuds}{n\oe uds\xspace}
 \newcommand{\Noeuds}{N\oe uds\xspace}
 
-%% Macros mathématiques
+%% Macros mathÃˆmatiques
 
 \providecommand{\tonfirst}{}
 \newcommand{\ton}[1][1]{\renewcommand{\tonfirst}{#1}\tonbis}
@@ -465,7 +465,7 @@
 
 
 
-%% Flots de données
+%% Flots de donnÃˆes
 
 \newenvironment{streams}[1]{%
   \setlength{\arraycolsep}{0.3cm}
@@ -495,7 +495,7 @@
 
 \renewenvironment{amodifier}{}{}
 
-%% Boîte-noeud code
+%% BoÃ“te-noeud code
 
 \RequirePackage{alltt}
 
