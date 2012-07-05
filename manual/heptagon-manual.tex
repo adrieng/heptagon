@@ -348,6 +348,78 @@ Delays are the way to introduce some state in a Heptagon program.
 \end{streams}
 \]
 
+Here is a small example of a node that sums its inputs:
+\begin{lstlisting}
+node sum(i:int) returns (o:int)
+let
+  o = 0 fby (o + i)
+tel
+\end{lstlisting}
+
+\subsubsection{Clocks}
+
+It is possible to mix streams with different rates by having streams that are not present at each instant. This can be done using the \lstinline+when+ operator, that samples a stream according to a condition, either a boolean or an enumerated value. If \texttt{x} is a stream that is always present, then \lstinline+x when c+ (resp \lstinline+x when C(y)+) is a stream equal to \texttt{x} but only present when \texttt{c} is true (resp. \lstinline{y = C}). \lstinline+x whenot c+ is a shortcut for \lstinline+x when (not c)+. The \texttt{split} operator allows to sample a stream according to all possible values, i.e. \lstinline+split c (x) = x when c, x whenot c+ if \texttt{x} is a boolean and \lstinline+split y (x) = x when C1(y), ..,  x when Cp(y)+ if \texttt{y} has an enumerated type defined by \lstinline+type t = C1 | ... | Cp+.
+
+\[
+\begin{streams}{3}
+  \text{\lstinline|x|} & x_1 & x_2 & x_3 \\
+  \hline
+  \text{\lstinline|c|} & true & false & true \\
+  \hline
+  \text{\lstinline|x when c|} & x_1 & .  & x_3 \\
+  \hline
+  \text{\lstinline|y|} & C' & C & C' \\
+  \hline
+  \text{\lstinline|x when C(y)|} & . & x_2 & . \\
+\end{streams}
+\]
+
+The clock of an expression (resp. a stream) is a boolean stream that defines the instants when it is present. The clock of the streams that are always present is called \texttt{base} or \texttt{.}. If \texttt{x} has clock \texttt{ck}, denoted \lstinline+x :: ck+, then \lstinline+x when c+ has clock \lstinline{ck on c}.
+
+The \lstinline{merge} operator joins slow streams to create a faster stream. 
+\[
+\begin{streams}{3}
+  \text{\lstinline|c|} & true & false & true \\
+  \hline
+  \text{\lstinline|x|} & x_1 & . & x_3 \\
+  \hline
+  \text{\lstinline|y|} & . & y_2 & . \\
+  \hline
+  \text{\lstinline|merge c x y|} & x_1 & y_2 & x_3 \\
+\end{streams}
+\]
+\lstinline{merge} expects complementary streams. If \lstinline{z = merge c x y} and \lstinline+z :: ck+, then we must have \lstinline+x :: ck on c+ and \lstinline+y :: ck onot c+. It is thus different from \lstinline+if c then x else y+ that expects all its arguments to have the same clock. An analysis pass called \emph{clock calculus} checks that these conditions are met.
+
+Here is a first example of a bidirectional counter:
+\begin{lstlisting}
+type modes = Up | Down
+
+node two(m:modes;v:int) returns (o:int)
+  var x:int; 
+        x_up:int :: . on Up(m);
+        x_down:int :: . on Down(m); 
+let
+  o = 0 fby x;
+  x_up = o when Up(m) + 1;
+  x_down = o when Down(m) + 1; 
+  x = merge m (Up -> x_up) (Down -> x_down)
+tel
+\end{lstlisting}
+Note that clocks are inferred by the compiler, so the clocking annotations are optional.
+
+It is important to understand the interaction between sampling and delays. The value of a delay only changes when it is activated, that is, when its clock is true. As soon as a function \texttt{f} contains some delay operator, sampling its inputs is not equivalent to sampling its outputs, that is, \lstinline+f(x when c)+ $\neq$ \lstinline+(f x) when c+.
+\[
+\begin{streams}{4}
+  \text{\lstinline|c|} & true & false & true & false \\
+  \hline
+  \text{\lstinline|counter(1)|} & 0 & 1 & 2 & 3 \\
+  \hline
+  \text{\lstinline|counter(1) when c|} & 0  & . & 2 & . \\
+  \hline
+  \text{\lstinline|counter(1 when c)|} & 0 & .  & 1 & .\\
+\end{streams}
+\]
+
 
 \subsection{Declarations}
 \label{sec:declarations}
