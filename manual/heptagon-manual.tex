@@ -82,8 +82,76 @@ An execution of the node \texttt{plus} can then be:
 \end{streams}
 \]
 
-\subsection{Compilation}
+\subsection{Required tools}
+\label{sec:required-tools}
+
+The use of the Heptagon compiler by itself does not require any additional
+tools. However, the usual use involves a compiler for the generated code (e.g.,
+\texttt{gcc} for C generated code, or \texttt{javac} for Java).
+
+The tools below are optional or are related to some subparts of Heptagon:
+\begin{itemize}
+\item The graphical display tool \texttt{sim2chro} can be obtained from
+Verimag\footnote{\url{http://www-verimag.imag.fr/~raymond/edu/distrib/}}. It can
+be used together with the graphical simulator \texttt{hepts} (see Section~\ref{sec:simulation}).
+\item The \texttt{Sigali} tool for model-checking and discrete controller
+  synthesis \cite{sigali}
+  \footnote{\url{http://www.irisa.fr/vertecs/Logiciels/sigali.html}} is
+  mandatory for the use of contracts (see
+  Section~\ref{sec:extens-with-contr}). \texttt{Sigali} can be downloaded on the
+  BZR website : \url{http://bzr.inria.fr}.
+\end{itemize}
+
+\subsection{Compilation and installation}
+\label{sec:comp-inst}
+
+\subsubsection{Required libraries and tools for the compilation}
+\label{sec:requ-libr-tools}
+
+The compilation of the Heptagon compiler requires:
+\begin{itemize}
+\item \texttt{OCaml}\footnote{\url{http://caml.inria.fr}} (version $\geq$
+  3.11), and the \texttt{ocamlbuild} and \texttt{ocamlfind} tools
+\item the \texttt{Menhir}\footnote{\url{http://gallium.inria.fr/~fpottier/menhir/}} parser generator
+\item the \texttt{ocamlgraph}\footnote{\url{http://ocamlgraph.lri.fr}} library.
+\end{itemize}
+
+The compilation of the Heptagon simulator (optional) requires the
+\texttt{LablGTK2}\footnote{\url{http://wwwfun.kurims.kyoto-u.ac.jp/soft/lsl/lablgtk.html}}
+library.
+
+
+\subsubsection{Compilation}
 \label{sec:compilation}
+
+Once the compiler is downloaded and untarred, go into the \texttt{heptagon/} and
+type :
+
+\begin{alltt}
+> ./configure && make
+\end{alltt}
+
+This command will build the compiler, optionally the simulator (if the
+\texttt{LablGTK2} library is found), and the standard library.
+
+\subsubsection{Installation}
+\label{sec:installation}
+
+After the compilation, or the download and untar of the binary distribution, go
+into the \texttt{heptagon/} directory and type :
+
+\begin{alltt}
+> make install
+\end{alltt}
+
+By default, this will install the binaries (\texttt{heptc} and \texttt{hepts}) into
+\texttt{/usr/local/bin} and the standard library into
+\texttt{/usr/local/lib}. Consider the \texttt{configure} script options
+(\verb+./configure --help+) for other specific needs.
+
+
+\subsection{Heptagon programs compilation}
+\label{sec:hept-compilation}
 
 The Heptagon compiler is named \texttt{heptc}. Its list of options is available by
 :
@@ -449,7 +517,7 @@ The following operators are defined for arrays:
 \item Accessing an element at a constant index: \lstinline{t[4]}
 \item Accessing an element at a dynamic index with a default value: \lstinline{z = t.[x] default v} is a stream defined by $z_i = t_i[x_i]$ if $0 \leq x_i < n$ and $z_i = v_i$ otherwise (where $n$ is the size of \lstinline+t+).
 \item Accessing an element at a truncated index: \lstinline+z = t[>x<]+ is defined by $z_i = t_i[\min(\max(0, x_i), n-1)]$ (where $n$ is the size of \lstinline+t+).
-\item Modifying an element: \lstinline{t' = [ t with [x] = v ]} is a new array equal to \lstinline+t+, except for the element at index \lstinline+x+ which is equal to $v$, that is for all j in $[0, n-1]$ such that $j \neq x_i$, $t'_i[j] = t[j]$ and $t'_i[x_i] = v_i$.
+\item Modifying an element: \lstinline{t' = [ t with [x] = v ]} is a new array equal to \lstinline+t+, except for the element at index \lstinline+x+ which is equal to $v$, that is for all j in $[0, n-1]$ such that $j \neq x_i$, $t'_i[j] = t_i[j]$ and $t'_i[x_i] = v_i$.
 \item Defining an array by copying one value: \lstinline+x^n+ is the array of size \lstinline+n+ whose elements are all equal to \lstinline+x+.
 \item Defining an array explicitely:  \lstinline+[1, x, 3, y, 5]+.
 \item Extracting a slice: \lstinline+t[n..m]+ returns the sub array of \lstinline+t+ of size \lstinline{m-n+1} starting at index \lstinline+n+ and ending at index \lstinline+m+.
