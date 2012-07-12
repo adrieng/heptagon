@@ -1,0 +1,1 @@
+rsync -vz bib.php header.php index.php publications_bib.html publications.html style.css toc.php try.php Yuyuan_ventana_heptagonal.JPG pub scm.gforge.inria.fr:/home/groups/heptagon/htdocs

@@ -1,0 +1,120 @@
+body {
+    background-color: #FFFFFF;
+    color: #444444;
+    font-family: Helvetica,Arial,Verdana;
+    font-size: 100%;
+    margin:25px 50px; 
+    text-align: justify;
+}
+
+a {
+    color: #8A0000;
+    font-weight: bold;
+    text-decoration: none;
+}
+a:hover {
+    color: #E00000;
+}
+ol, ul {
+}
+li {
+    line-height: 20px;
+    text-align: left;
+}
+
+#logo {
+    float:left;
+}
+
+#header {
+    margin: 0 auto 40px;
+    width: 750px;
+}
+
+#header h1 {
+    border-bottom: 2px solid #8A0000;
+    color: #8A0000;
+    font-family: "Century Gothic",Helvetica,"Arial Narrow",Arial,sans-serif;
+    font-size: 2em;
+    font-weight: normal;
+    margin: 0 0 10px;
+    padding: 30px 0 0;
+    text-align: left;
+}
+
+#header h2 {
+    color: #8A0000;
+    font-family: "Century Gothic",Helvetica,"Arial Narrow",Arial,sans-serif;
+    font-size: 1.4em;
+    font-weight: normal;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+}
+
+#toc {
+    float:left;
+}
+
+#toc h2 {
+    border-bottom: 1px solid #8A0000;
+    color: #8A0000;
+    font-family: "Century Gothic",Helvetica,"Arial Narrow",Arial,sans-serif;
+    font-size: 1.5em;
+    font-weight: normal;
+}
+
+#toc ul {
+    list-style-type: none;
+}
+
+#content {
+    margin: 0 auto;
+    text-align: justify;
+    width: 750px;
+}
+
+
+#content h2 {
+    border-bottom: 1px solid #8A0000;
+    color: #8A0000;
+    font-family: "Century Gothic",Helvetica,"Arial Narrow",Arial,sans-serif;
+    font-size: 1.5em;
+    font-weight: normal;
+}
+#content h3 {
+    color: #8A0000;
+    font-size: 1.2em;
+    font-weight: normal;
+    padding: 0;
+}
+#content p {
+}
+table {
+    background-color: #FFFFFF;
+}
+table td {
+    border-collapse: collapse;
+    padding: 5px;
+}
+#rightcontent {
+    float: right;
+    font-size: 95%;
+    text-align: left;
+    width: 160px;
+}
+#rightcontent h1 {
+    border-bottom: 1px solid #EEEEEE;
+    color: #905F40;
+    font-family: "Century Gothic",Helvetica,"Arial Narrow",Arial,sans-serif;
+    font-size: 20px;
+    font-weight: normal;
+    text-align: right;
+    text-transform: uppercase;
+}
+#rightcontent p {
+    line-height: 20px;
+}
+#rightcontent a {
+    font-weight: normal;
+}
