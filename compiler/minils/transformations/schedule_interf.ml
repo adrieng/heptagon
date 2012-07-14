@@ -65,7 +65,7 @@ let number_uses x uses =
         (*if Interference.World.is_memory x then 1 else 0*)
 
 let add_uses uses env x =
-  Format.eprintf "Adding %d uses for %a@." (number_uses x uses) print_ident x;
+  Interference.print_debug "Adding %d uses for %a@." (number_uses x uses) print_ident x;
   Env.add x (number_uses x uses) env
 
 let decr_uses env x =
@@ -98,7 +98,7 @@ struct
 
   (** Initialize the costs data structure. *)
   let init_cost uses inputs =
-    Format.eprintf "Init cost@.";
+    Interference.print_debug "Init cost@.";
     let env = IdentSet.fold (fun x env -> add_uses uses env x) !Interference.World.memories Env.empty in
     let inputs = List.map (fun vd -> vd.v_ident) inputs in
       List.fold_left (add_uses uses) env inputs
@@ -123,7 +123,7 @@ struct
       let nb_def_vars = List.length (Mls_utils.Vars.def [] eq) in
       let b = bonus eq in
       (*if Interference.verbose_mode then *)
-      Format.eprintf "(%d,%d,%d)%a@." nb_killed_vars nb_def_vars b Mls_printer.print_eq eq;
+      Interference.print_debug "(%d,%d,%d)%a@." nb_killed_vars nb_def_vars b Mls_printer.print_eq eq;
       nb_def_vars - nb_killed_vars + b
 
     in
