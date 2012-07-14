@@ -1,6 +1,6 @@
 include ../config
 
-STDLIB_INTERFACE=pervasives.epi
+STDLIB_INTERFACE=pervasives.epi iostream.epi
 STDLIB_OBJ=$(STDLIB_INTERFACE:.epi=.epci)
 
 C_DIR=c
@@ -8,12 +8,15 @@ C_OBJ=pervasives.h
 
 .SUFFIXES: .epi .epci
 
-.epi.epci:
-	../compiler/$(COMPILER).$(TARGET) -nopervasives $<
-
 .PHONY: all install clean
 
 all: $(STDLIB_OBJ)
+
+pervasives.epci: pervasives.epi
+	../compiler/$(COMPILER).$(TARGET) -nopervasives $<
+
+%.epci: %.epi
+	../compiler/$(COMPILER).$(TARGET) $<
 
 install: all
 	$(INSTALL) -d $(INSTALL_LIBDIR)
@@ -23,3 +26,4 @@ install: all
 
 clean:
 	rm -f *.epci
+
