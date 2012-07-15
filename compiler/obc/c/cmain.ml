@@ -74,7 +74,7 @@ let assert_node_res cd =
     (fresh ("out_for_" ^ name),
       Cty_id (qn_append cd.cd_name "_out")) in
   let mem, reset_i =
-    if cd.cd_stateful
+    if not cd.cd_stateful
     then ([], [])
     else
       let mem =
@@ -102,9 +102,10 @@ let assert_node_res cd =
             Cif (Cuop ("!", Cfield (Cvar (fst out), local_qn outn)),
                  [Csexpr (Cfun_call ("fprintf",
                                      [Cvar "stderr";
-                                      Cconst (Cstrlit ("Node \\\"" ^ name
-                                                            ^ "\\\" failed at step" ^
-                                                              " %d.\\n"));
+                                      Cconst (Cstrlit ("Node \"" 
+						       ^ (Names.fullname cd.cd_name)
+                                                            ^ "\" failed at step" ^
+                                                              " %d.\n"));
                                       Cvar step_counter]));
                   Creturn (mk_int 1)],
                  []);
