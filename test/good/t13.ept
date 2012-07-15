@@ -6,7 +6,7 @@ tel
 node fourth() returns (res : bool)
 var tmp : int;
 let
-  tmp = 0 fby (if res then 0 else tmp + 1);
+  tmp = 0 fby (if res then tmp + 1 else 0);
   res = tmp = 0;
 tel
 
