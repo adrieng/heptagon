@@ -1,0 +1,93 @@
+#!/bin/bash
+
+checkdir=_check_builds
+
+shopt -s nullglob
+
+# script de test
+
+COMPILER_DIR="../compiler"
+if [ -x $COMPILER_DIR/heptc.native ];
+then
+    COMPILER=heptc.native
+else
+    COMPILER=heptc.byte
+fi
+
+HEPTC=../$COMPILER_DIR/$COMPILER
+CC="gcc -std=c99 -I ../../../lib/c"
+LD="gcc"
+NBSTEP=100
+
+
+progpath=$1
+shift
+coption="-target c $*"
+
+# run the program: no by default
+run=0
+
+cp $progpath $checkdir
+
+
+pushd $checkdir > /dev/null
+
+heptprog=`basename $progpath`
+heptroot=`basename $heptprog .ept`
+
+assert_node=$(eval grep CHECK $heptprog | awk '{ print $3 }')
+
+if [ -n "$assert_node" ]; then
+    coption="$coption -assert $assert_node"
+    run=1
+fi
+
+if grep "node main()" $heptprog >/dev/null; then
+    coption="$coption -hepts -s main"
+    run=1
+fi
+
+# Special case: t2 and t2open needs t1
+
+if [[ ($heptroot == "t2") || ($heptroot == "t2open") ]]; then
+    CC="$CC -I ../t1_c"
+    LD="$LD ../t1_c/[^_]*.o"
+fi
+
+echo $HEPTC $coption $heptprog
+if $HEPTC $coption $heptprog; then
+    pushd ${heptroot}_c > /dev/null
+    echo $CC -c *.c
+    if $CC -c *.c; then
+	if [[ $run == 1 ]]; then
+	    echo $LD *.o -o main
+	    if $LD *.o -o main; then
+		echo ./main $NBSTEP
+		if ./main $NBSTEP; then
+		    echo "Test successful."
+		    res=0
+		else
+		    echo "Run failed."
+		    res=1
+		fi
+	    else
+		echo "Link edition failed."
+		res=1
+	    fi
+	else
+	    echo "Test successful (C compilation only; no run)."
+	    res=0
+	fi
+    else
+	echo "Compilation of C target code failed"
+	res=1
+    fi
+    popd >/dev/null
+else
+    echo "Compilation of $heptprog failed"
+    res=1
+fi
+
+popd > /dev/null
+
+exit $res

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+checkdir=_check_builds
+
+shopt -s nullglob
+
+# script de test
+
+COMPILER_DIR="../compiler"
+if [ -x $COMPILER_DIR/heptc.native ];
+then
+    COMPILER=heptc.native
+else
+    COMPILER=heptc.byte
+fi
+
+HEPTC=../$COMPILER_DIR/$COMPILER
+
+progpath=$1
+shift
+coption=$*
+
+cp $progpath $checkdir
+
+pushd $checkdir > /dev/null
+
+heptprog=`basename $progpath`
+echo $HEPTC $coption $heptprog
+$HEPTC $coption $heptprog
+res=$?
+
+popd $checkdir > /dev/null
+
+exit $res
