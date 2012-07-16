@@ -1,0 +1,19 @@
+
+checkdir=_check_builds
+
+shopt -s nullglob
+
+# script de test
+
+COMPILER_DIR="../compiler"
+if [ -x $COMPILER_DIR/heptc.native ];
+then
+    COMPILER=heptc.native
+else
+    COMPILER=heptc.byte
+fi
+
+HEPTC=../$COMPILER_DIR/$COMPILER
+CC="gcc -std=c99 -I ../../../lib/c"
+LD="gcc"
+NBSTEP=100
