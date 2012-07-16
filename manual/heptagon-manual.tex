@@ -512,6 +512,58 @@ transitions. Transitions are evaluated in declaration order, in the textual
 syntax. If no transition can be triggered, then the current state is the next
 active state.
 
+\paragraph{Weak and strong transitions.}
+
+Transitions between states can be of two types: weak transitions, and strong
+ones.
+
+\subparagraph{Weak transitions} are denoted $\Until e \Then S$. The meaning of
+such transition is that when $e$ becomes true, the current state is executed
+before leaving it. The target state is only executed at next instant.
+
+\subparagraph{Strong transitions} are denoted $\Unless e \Then S$. When $e$
+becomes true, the automaton instantly leaves the current state, and the target
+state is executed.
+
+For causality reasons, the condition on strong transitions cannot depend
+instantly on the variables defined in the current state (as this state is not
+known and can change because of these transitions). Therefore, the example of
+the Figure~\ref{fig:updown-automaton} can be written as shown below:
+
+\begin{lstlisting}
+node updown() returns (y:int)
+  var last x:int = 0;
+let
+  y = x;
+  automaton
+    state Up
+      do x = last x + 1
+      unless (last x >= 10) then Down
+    state Down
+      do x = last x - 1
+      unless (last x <= 0) then Up
+  end
+tel
+\end{lstlisting}
+
+On this example, the sequence of states is exactly the same as in the previous
+version; however, the transition from $Up$ to $Down$ is taken one instant after
+(i.e., the instant next to the one where $x=10$). The resulting stream
+$\mathtt{y}$ is the same: 
+
+\[
+\begin{streams}{9}
+\text{current state} & Up & Up & \ldots & Up & Up & Down & Down & Down & \ldots\\\hline
+\mathtt{y} & 1 & 2 & \ldots & 9 & 10 & 9 & 8 & 7 & \ldots\\\hline
+\end{streams}
+\]
+
+\paragraph{Transition and memory.}
+When a transition (either weak or strong) denoted with \Then is taken, the
+target state is reset in its initial state: such transitions are said
+\emph{memoryless}. Conversely, \emph{transitions with memory} are denoted
+$\Until e \Continue S$ (resp. $\Unless e \Continue S$): in that case, the target
+state $S$ is executed without reset.
 
 \subsection{Structured types}
 
