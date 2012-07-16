@@ -13,8 +13,3 @@ for i in good/*.ept; do
 done
 
 
-
-echo 'SET_TEST_PROPERTIES(compile_only_t2 PROPERTIES DEPENDS compiler_only_t1)'
-echo 'SET_TEST_PROPERTIES(compile_only_t2open PROPERTIES DEPENDS compiler_only_t1)'
-echo 'SET_TEST_PROPERTIES(compile_gcc_run_t2 PROPERTIES DEPENDS compiler_gcc_run_t1)'
-echo 'SET_TEST_PROPERTIES(compile_gcc_run_t2open PROPERTIES DEPENDS compiler_gcc_run_t1)'

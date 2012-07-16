@@ -171,7 +171,4 @@ ADD_TEST(compile_gcc_run_tuple_args "scripts/compile_gcc_run" "good/tuple_args.e
 ADD_TEST(compile_gcc_run_type_alias "scripts/compile_gcc_run" "good/type_alias.ept")
 ADD_TEST(compile_gcc_run_updown "scripts/compile_gcc_run" "good/updown.ept")
 ADD_TEST(compile_gcc_run_when_merge1 "scripts/compile_gcc_run" "good/when_merge1.ept")
-SET_TEST_PROPERTIES(compile_only_t2 PROPERTIES DEPENDS compiler_only_t1)
-SET_TEST_PROPERTIES(compile_only_t2open PROPERTIES DEPENDS compiler_only_t1)
-SET_TEST_PROPERTIES(compile_gcc_run_t2 PROPERTIES DEPENDS compiler_gcc_run_t1)
-SET_TEST_PROPERTIES(compile_gcc_run_t2open PROPERTIES DEPENDS compiler_gcc_run_t1)
+
