@@ -134,29 +134,39 @@ let program p =
             | _ -> Anewvar (vd_ret, Emethod_call(e_main, "step", []))
           in
           let print_ret i = match ty_ret with
-            | Tunit -> Aexp (Emethod_call(out, "printf", [Sstring "%d => \\n"; Evar i]))
+            | Tunit ->
+                if !Compiler_options.hepts_simulation
+                then []
+                else [Aexp (Emethod_call(out, "printf", [Sstring "%d => \n"; Evar i]))]
             | _ ->
-              Aexp (
-                Emethod_call(out, "printf",
-                             [Sstring "%d => %s\\n";
-                              Evar i;
-                              Emethod_call(java_pervasives, "genToString", [exp_ret])]))
+                if !Compiler_options.hepts_simulation
+                then 
+                  [Aexp (Emethod_call(out, "printf",
+                                      [Sstring "%s\n";
+                                       Emethod_call(java_pervasives,
+                                                    "genToString", [exp_ret])]))]
+                else
+                  [Aexp (Emethod_call(out, "printf",
+                                      [Sstring "%d => %s\n";
+                                       Evar i;
+                                       Emethod_call(java_pervasives,
+                                                    "genToString", [exp_ret])]))]
           in
-          let main_for_loop i = [call_main; print_ret i] in
+          let main_for_loop i = call_main :: (print_ret i) in
           let vd_t1, e_t1 =
             let id = Idents.gen_var "java_main" "t" in
             mk_var_dec id false Tlong, Evar id
           in
           [ Aif(Efun(Names.pervasives_qn "<", [ Efield (exp_args, "length"); Sint num_args ]),
                  mk_block [Aexp (Emethod_call(out, "printf",
-                                              [Sstring "error : not enough arguments.\\n"]));
+                                              [Sstring "error : not enough arguments.\n"]));
                            Areturn Evoid]);
             Anewvar(vd_main, Enew (Tclass q_main, main_args));
             parse_max_iteration;
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
             Obc2java.fresh_for exp_step main_for_loop;
             Aexp (Emethod_call(out, "printf",
-              [ Sstring "time : %d\\n";
+              [ Sstring "time : %d\n";
                 Efun(jminus, [Emethod_call(jsys, "currentTimeMillis", []); e_t1])]))
           ]
         in
