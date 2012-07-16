@@ -31,3 +31,19 @@ let
 
     end;
 tel
+
+node main() returns (g0,g1:bool)
+var r0,r1:bool;
+let
+  r0 = false fby not r0;
+  r1 = false fby false fby true fby r1;
+  (g0,g1) = alloc(r0,r1);
+tel
+
+(* CHECK main_assert *)
+node main_assert() returns (ok:bool)
+var g0,g1:bool;
+let
+  (g0,g1) = main();
+  ok = not (g0 & g1);
+tel

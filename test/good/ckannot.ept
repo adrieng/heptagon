@@ -3,3 +3,10 @@ let
   y = (x :: .) when c;
 tel
 
+node main() returns (y:int)
+var x:int;c:bool;
+let
+  x = 0 fby x + 1;
+  c = true fby true fby false fby true fby c;
+  y = merge c (f(x,c)) 0;
+tel

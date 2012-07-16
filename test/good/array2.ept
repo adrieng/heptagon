@@ -17,3 +17,25 @@ var acc:int;
 let
   (o, acc) = mapfold<<n>> sumdup (a, 0);
 tel
+
+node main() returns (o:int^n)
+var last t:int^n = 1^n;
+let
+  automaton
+    state Prepare
+      var i,x1,x2:int;
+      do
+        i = 0 fby i + 1;
+        x1 = (last t).[i-2] default 0;
+        x2 = (last t).[i-1] default 1;
+        t = [ (last t) with [i] = x1 + x2 ];
+        o = p(t);
+      until i = 43 then Compute
+    state Compute
+      var i,j:int;
+      do
+        i = 0 fby if i > 43 then 0 else i + 1;
+        j = 0 fby if j > 1031 then 0 else j + 1;
+        o = p([ t with [i] = j ]);
+  end
+tel

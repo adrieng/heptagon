@@ -4,10 +4,12 @@ let
   y = x when c;
 tel
 
-node main(x:int) returns (z:int)
-var y,t : int; c : bool;
+node main() returns (z:int)
+var x,y,t : int; c : bool;
 let
+  x = -5 fby x + 1;
   y = 0 fby (y+1);
   (t,c) = cross<<4>>(x);
   z = merge c (true -> y + t) (false -> 0)
 tel
+

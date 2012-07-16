@@ -9,3 +9,15 @@ let
   m = fold<<n,n2>> sum_acc (a, 0);
 tel
 
+node main() returns (m:int)
+  var x1,x2,x3,x4,x5,x6:int;t:int^2^3;
+let
+  m = h<<2,3>>(t);
+  t = [[x1,x2],[x3,x4],[x5,x6]];
+  x1 = 0 fby if x1 > 53 then 0 else x1 + 2;
+  x2 = 0 fby if x2 > 15 then 0 else x2 + 1;
+  x3 = 0 fby if x3 > 42 then 0 else x3 + 3;
+  x4 = 0 fby if x4 > 17 then 0 else x4 + 6;
+  x5 = 0 fby if x5 > 87 then 0 else x5 + 4;
+  x6 = 0 fby if x6 > 47 then 0 else x6 + 2;
+tel

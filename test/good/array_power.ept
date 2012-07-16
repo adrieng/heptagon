@@ -5,10 +5,19 @@ tel
 
 node plus_tab(a: int^2^10) returns (o:int^2^10)
 let
-  o = a
+  o = [ a with [a[2][1]] = (a[2][0] + 1)^2 ]
 tel
 
 node g() returns (o:int^2^10^3^4)
 let
   o = map<<3,4>> plus_tab (2^2^10^3^4);
 tel
+
+node main() returns (o:int^2^10^3)
+var i:int;t:int^2^10^3^4;
+let
+  i = 0 fby if i = 4 then 0 else i + 1;
+  o = t[>i<];
+  t = map<<3,4>> plus_tab ((g()) fby t)
+tel
+

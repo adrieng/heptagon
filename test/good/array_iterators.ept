@@ -59,3 +59,16 @@ node itmapi(a:int^n) returns (o:int^n)
 let
   o = mapi <<n>> m<(a)>(a);
 tel
+
+node main() returns (t1,t2,t3,t4,t5,t6:int^n;x1:int)
+var r:bool;
+let
+  t1 = f();
+  t2 = g(t1);
+  x1 = h(t2);
+  t3 = p(t2);
+  t4 = k(t1,t3);
+  r = false fby false fby true fby r;
+  t5 = iter_reset(t4,r);
+  t6 = itmapi(t5);
+tel

@@ -43,7 +43,12 @@ let
 tel
 
 
-node main() returns (r :int)
+node elt_trunc (a:int^m^m; i,j:int) returns (o : int)
+let
+  o = a[>i<][>j<];
+tel
+
+node main() returns (i,j,r,o,o1 :int;t1:int^4)
 var x,y : int^10; z,t : int^20; r1,r2 :int^3;
 let
   x = ten(3);
@@ -51,9 +56,10 @@ let
   (z,t) = concatenate(x,y);
   (r1,r2) = slicing(x);
   r = r1[>0<];
+  i = 0 -> pre if i > 13 then 0 else i + 1;
+  j = 0 -> pre if j > 23 then 0 else j + 1;
+  o = (upd_dyn(elt(x),j))[>i<] + (elt_dyn(y,i))[>1<];
+  t1 = [ constant(12,13) with [i] = 5];
+  o1 = elt_trunc((elt_dyn(ten(6),i))^m,1,j);
 tel
 
-node elt_trunc (a:int^m^m; i,j:int) returns (o : int)
-let
-  o = a[>i<][>j<];
-tel
