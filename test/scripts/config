@@ -17,3 +17,8 @@ HEPTC="../$COMPILER_DIR/$COMPILER -stdlib ../../lib"
 CC="gcc -std=c99 -I ../../../lib/c"
 LD="gcc"
 NBSTEP=100
+
+if [ ! -x $checkdir ];
+then
+    mkdir $checkdir
+fi
