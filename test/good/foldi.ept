@@ -2,10 +2,23 @@ const n:int=42
 
 fun f(a:bool; i:int; acc_in : bool) returns (acc_out : bool)
 let
-  acc_out = if i = 0 then false else (a & acc_in);
+  acc_out = if i = 0 then true else (a & acc_in);
+tel
+
+fun for(a:bool; i:int; acc_in : bool) returns (acc_out : bool)
+let
+  acc_out = if i = 0 then false else (a or acc_in);
 tel
 
 fun g(a: bool^n) returns (o:bool)
 let
   o = foldi<<n>> f (a, true);
+tel
+
+node main() returns (o1,o2:bool)
+var t:bool^n;
+let
+  t = (true^n) fby (false^n) fby ([ true^n with [5]=false ]) fby ([ false^n with [12]=true ]) fby t;
+  o1 = g(t);
+  o2 = foldi<<n>> for (t, true);
 tel

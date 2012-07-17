@@ -2,3 +2,10 @@ node counter(res: bool; tick: bool) returns (o: int)
 let
   o = if res then 0 else if tick then 1 -> pre o + 1 else 0 -> pre o;
 tel
+
+node main() returns (y:int)
+var half:bool;
+let
+  y = counter(false fby (y > 35), half);
+  half = true fby not half
+tel

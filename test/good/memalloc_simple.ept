@@ -7,7 +7,7 @@ let
   u = a.[i] default 0.0;
   v = a.[j] default 0.0;
   a1 = [ a with [i] = v ];
-  o = [ a1 with [j] = v];
+  o = [ a1 with [j] = u ];
 tel
 
 node shuffle(i_arr, j_arr:int^m; q:int)
@@ -41,3 +41,14 @@ let
   a1 = (0.0^n) fby [ a1 with [i when true(x)] = 0.0 ];
   a2 = (0.0^n) fby [ a2 with [j when false(x)] = 0.0 ];
 tel
+
+node main() returns (o1,o2:float^n)
+var x:bool;i,j:int;
+let
+  o1 = clocked(x,i,j,1.0^n);
+  o2 = clocked_reg(x,i,j,1.0^n);
+  x = true fby true fby false fby x;
+  i = 0 fby if i >= n then 0 else i + 2;
+  j = 0 fby if j >= n then 0 else i + 1;
+tel
+

@@ -9,3 +9,11 @@ let
   x = [ u with [0] = 0 ];
   o = merge c (On -> x) (Off -> v)
 tel
+
+node main() returns (o:int^4)
+var c:st;a:int^n at r;
+let
+  o = (f(a,c))[0..3];
+  c = Off fby Off fby On fby c;
+  init<<r>> a = 1^n;
+tel

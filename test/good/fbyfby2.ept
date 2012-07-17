@@ -4,3 +4,8 @@ let
   o = x;
   x = true fby false fby x;
 tel
+
+node main() returns (o:bool)
+let
+  o = f();
+tel

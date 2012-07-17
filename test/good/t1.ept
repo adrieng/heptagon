@@ -34,10 +34,10 @@ node m(x: int) returns (o: int)
   let
     automaton
       state I
-        do o2 = 1
+        do o2 = 2
         unless (last o2 = 2) then J
       state J
-        do o2 = 3
+        do o2 = 1
         unless (last o2 = 1) then I
     end;
     o = o2;
@@ -46,7 +46,7 @@ node m(x: int) returns (o: int)
 node h(z: int; x, y: int) returns (o2: int)
   var o1, o: int;
   let
-    (o1, o2) = if z<0 then (1, 2) else (3, 4);
+    (o1, o2) = if z<0 then (1, o) else (o, 4);
     o = 0 -> pre o + 2
   tel
 
@@ -91,7 +91,7 @@ node (++)(up, down: int) returns (o: int)
          until (down = 1) then Down
              | (down = 0) then Up
       state Down
-         do cpt = (last cpt) + 1
+         do cpt = (last cpt) - 1
          until (up = 1) then Up
     end;
   tel
@@ -102,6 +102,21 @@ node f(x: bool) returns (y: bool)
     y = x or x & x;
     z = true -> if y then not (pre z) else pre z;
  tel
+
+node main() returns (o1,o2,o3,o4,o5,o6,o7,o8,o9:int)
+var x:int;
+let
+  x = -10 fby if x = 10 then -10 else x + 1;
+  o1 = m0();
+  o2 = mm(x);
+  o3 = mmm(0);
+  o4 = m(0);
+  o5 = h(x,0,0);
+  o6 = i(0,x);
+  o7 = j(0,0);
+  o8 = (++)((0 fby 1),(0 fby o9));
+  o9 = if (f(false fby true)) then 13 else 17;
+tel
 
 (*
 let increasing(x) returns (o)

@@ -2,12 +2,12 @@ const n:int = 100
 
 fun f(a:int^n at r) returns (o:int^n at r)
 let
-  o = [ a with [0] = 0 ]
+  o = [ a with [0] = 3 ]
 tel
 
 fun g(a:int^n at r) returns (o:int^n at r)
 let
-  o = [ a with [n-1] = 0 ]
+  o = [ a with [n-1] = 10 ]
 tel
 
 node autom(a:int^n at r) returns (o:int^n at r; u:int)
@@ -15,18 +15,18 @@ let
   automaton
     state S1
     do
-      o = f(a)
+      o = g(a)
     until true then S2
 
     state S2
     do
-      o = g(a)
+      o = f(a)
     until false then S1
   end;
   u = a[0]
 tel
 
-node autom_last() returns (u:int)
+node autom_last() returns (u1,u2:int)
 var last o : int^n at r = 0^n;
 let
   automaton
@@ -35,9 +35,16 @@ let
     until true then S2
 
     state S2
+    var u:int;
     do
-      o = g(last o)
+      (o,u) = autom(last o)
     until false then S1
   end;
-  u = o[0]
+  u1 = o[0];
+  u2 = o[n-1];
+tel
+
+node main() returns (u1,u2:int)
+let
+  (u1,u2) = autom_last()
 tel

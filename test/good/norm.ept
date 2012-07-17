@@ -10,3 +10,8 @@ node m0() returns (o: int)
   let
     o = if true then if true then 1 else 2 else 3;
   tel
+
+node main() returns (o:int)
+let
+  o = m0();
+tel

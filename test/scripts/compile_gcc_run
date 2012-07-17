@@ -36,6 +36,19 @@ if [[ ($heptroot == "t2") || ($heptroot == "t2open") ]]; then
     LD="$LD ../t1_c/[^_]*.o"
 fi
 
+# Special case: statics2 needs statics
+
+if [[ ($heptroot == "statics") ]]; then
+    coption="$coption -c"
+fi
+
+if [[ ($heptroot == "statics2") ]]; then
+    CC="$CC -I ../statics_c"
+    LD="$LD ../statics_c/[^_]*.o"
+fi
+
+
+
 echo $HEPTC $coption $heptprog
 if $HEPTC $coption $heptprog; then
     pushd ${heptroot}_c > /dev/null

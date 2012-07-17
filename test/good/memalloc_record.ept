@@ -12,3 +12,8 @@ let
   u = [ v with [10] = 99 ];
   o = { a with .tab = u }
 tel
+
+node main() returns (o:array)
+let
+  o = f(g({ tab = 1^100; size = 3 }));
+tel

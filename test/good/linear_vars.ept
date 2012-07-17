@@ -23,3 +23,14 @@ let
   init<<r>> x = 1^n;
   o = fold<<3>> f2(a, f(f(x)));
 tel
+
+fun plus(a,b:int) returns (c:int)
+let c = a + b tel
+
+node main() returns (o:int^n)
+var o1,o2:int^n;
+let
+  o1 = g();
+  o2 = lin_fold([13,17,23]);
+  o = map<<n>> plus(o1,o2);
+tel

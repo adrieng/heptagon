@@ -7,3 +7,11 @@ let
   (a1, a2) = split c (a);
   o = merge c (true -> reinit (a1, t_0)) (false -> [ a2 with [0] = 0 ])
 tel
+
+node main() returns (o:int^n)
+var c:bool;a:int^n at r;
+let
+  init<<r>> a = 1^n;
+  c = true fby false fby c;
+  o = f(a, c)
+tel

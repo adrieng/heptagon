@@ -19,3 +19,25 @@ let
   y2 = internal_current(c,x);
   b = y = y2;
 tel
+
+node prod() returns (y:int;b:bool)
+var x,y':int;c,b':bool;
+let
+  x = 0 fby x + 1;
+  c = (x % 10) = 0;
+  (b',y') = use_current(c,x when c);
+  y = current(c,y');
+  b = merge c b' (true fby b whenot c);
+tel
+
+(* CHECK check *)
+node check() returns (b:bool)
+var y:int;
+let
+  (y,b) = prod()
+tel
+
+node main() returns (y:int;b:bool)
+let
+  (y,b) = prod()
+tel

@@ -19,3 +19,11 @@ fun f3(a,b:int^n) returns (o:int^n)
 let
   o = map<<n>> (+) (b, map<<n>> inc (a));
 tel
+
+node main() returns (o:int^n)
+var t1,t2:int^n;
+let
+  t1 = f1 (1^n);
+  t2 = f2(t1, 2^n);
+  o = f3(t1,t2);
+tel

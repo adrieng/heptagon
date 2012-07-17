@@ -38,6 +38,24 @@ let
     state State4
        var l2: bool;
        do o1 = false; o2 = false; o3 = l2; o4 = false; l2 = true;
-       until i4 then State4
+       until i4 then State1
     end
+tel
+
+(* clock (0^(n-1)1) *)
+node counter <<n:int>>() returns (b:bool)
+var c:int;
+let
+  c = 1 fby if b then 1 else c + 1;
+  b = (c = n);
+tel
+
+node main() returns (o1: bool; o2: bool; o3: bool; o4: bool)
+var i1: bool; i2: bool; i3: bool; i4: bool;
+let
+  i1 = counter<<7>>();
+  i2 = counter<<9>>();
+  i3 = counter<<13>>();
+  i4 = counter<<17>>();
+  (o1,o2,o3,o4) = ssm(i1,i2,i3,i4)
 tel

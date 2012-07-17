@@ -26,6 +26,13 @@ let
   o = a + x;
 tel
 
+node main() returns (x,y,z:int)
+let
+  x = f(1 fby if x > 1000 then 1 else x, true);
+  y = h(1 fby if y > 1000 then 1 else y, true fby false);
+  z = p(1 fby if z > 1000 then 1 else z, true);
+tel
+
 (*
 (v1, v2, ...) fby (e1, e2, ...)
 ---->

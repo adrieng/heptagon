@@ -18,3 +18,13 @@ let
   z = 3;
   y = (0 fby z) when c;
 tel
+
+node main() returns (x,y:int)
+var c:bool;
+let
+  x = f(0);
+  c = false fby false fby true fby c;
+  y = merge c (ff(0,c)) 0;
+  () = fff(0,c);
+tel
+

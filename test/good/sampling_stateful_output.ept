@@ -18,3 +18,12 @@ let
   y = nn(1) when c;
   y2 = ff(1) when c 
 tel
+
+node main() returns (y,y2:int)
+var y',y'2:int;c:bool;
+let
+  c = false fby false fby true fby c;
+  (y',y'2) = g(c);
+  (y,y2) = merge c (y',y'2) (0,0)
+tel
+

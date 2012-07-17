@@ -30,3 +30,7 @@ let
   y2 = c2 + Statics.g<<k2>>() + Statics.i<<k2>>();
 tel
 
+node main() returns (y,y2:int)
+let
+  (y,y2) = h()
+tel

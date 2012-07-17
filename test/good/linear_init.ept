@@ -21,3 +21,9 @@ let
   v = [u with [n-1] = 0.0];
   o = v[28]
 tel
+
+node main() returns (o1,o2:float)
+let
+  o1 = f();
+  o2 = g();
+tel

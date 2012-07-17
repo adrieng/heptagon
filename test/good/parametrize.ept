@@ -15,7 +15,7 @@ tel
 node h(a:int^n; b:int^z) returns (o,m:int)
 let
    o = g<<n>>(a);
-   m = g<<z>>(b);
+   m = g<<z>>(b) + f(b);
 tel
 
 node l<<m:int>>(a:int^m) returns (o:int^m)
@@ -28,3 +28,8 @@ let
   o = map<<n>> (l<<n>>)(a);
 tel
 
+node main() returns(o,m,v:int)
+let
+  (o,m) = h(1^n, 2^z);
+  v = (p(3^n^n))[11][11]
+tel
