@@ -28,3 +28,10 @@ let
       until (x = 5) then A
   end
 tel
+
+node main() returns (y:int)
+var x:int;
+let
+  x = 0 fby if x = 7 then 0 else x + 1;
+  y = f(x);
+tel

@@ -22,3 +22,8 @@ node g(x: int) returns (o: int)
    end
   tel
 
+node main() returns (o1,o2:int)
+let
+  o1 = f();
+  o2 = g(o1 / 10);
+tel

@@ -4,3 +4,10 @@ let
   o = merge c (true -> (0 fby x) when c) (false -> 0 fby (o whenot c));
   every true
 tel
+
+node main() returns (o:int)
+var half:bool;
+let
+  half = false fby not half;
+  o = f(half,5);
+tel

@@ -20,3 +20,8 @@ let
   x = a;
   o = map<<n>> g (x);
 tel
+
+node main() returns (o:matrice)
+let
+  o = h(3^n^n)
+tel

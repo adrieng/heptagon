@@ -20,3 +20,9 @@ node main() returns (y:int)
 let
   y = updown2();
 tel
+
+(* CHECK lessthan12 *)
+node lessthan12() returns (ok:bool)
+let
+  ok = main() < 12
+tel

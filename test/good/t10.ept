@@ -15,3 +15,8 @@ node h(x1,x2:int) returns (y:int)
   let
     y = f(x1) + g(x2)
   tel
+
+node main() returns (y:int)
+let
+  y = h(5,7);
+tel

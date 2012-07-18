@@ -7,3 +7,8 @@ node foo() returns (tmt1:int)
      tmt2 = 0 fby v_1;
      v_1 = tmt1;
   tel
+
+node main() returns (t:int)
+let
+  t = foo()
+tel

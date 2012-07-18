@@ -8,3 +8,8 @@ fun h(a,b:int) returns (u,v:int)
 let
   (u,v) = f(f(a,b));
 tel
+
+node main() returns (u,v:int)
+let
+  (u,v) = h((1,2))
+tel

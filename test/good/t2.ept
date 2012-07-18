@@ -57,10 +57,20 @@ node hh(x,z,m:int) returns (o:int)
         do
          k = 2;
         until (1 = 0) then S2
-    end;(*
+    end;
     present
-      | (x = 0) do o = pre o + 2
-      | (x = 2) do o = 4
-    default do o = 2
-    end *) o = 1
+      | (x = 0) do o = k -> pre o + 2
+      | (x = 2) do o = z
+        default do o = 2
+    end
   tel
+
+node main() returns (o1,o2:int)
+let
+  () = h(0);
+  () = jj();
+  o1 = if (g(false fby true)) then 1 else 2;
+  () = hhh();
+  o2 = hh(0 fby 1 fby 2, 3, o1-2);
+tel
+

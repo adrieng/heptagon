@@ -8,3 +8,22 @@ fun mean<<n: int>> (i: int) returns (m: int)
 let
   m = substr<<n>> (i^n^n)
 tel
+
+fun mean2<<n: int>> (j: int) returns (m: int)
+let
+  m = substr<<n>> (j^n^n)
+tel
+
+node main() returns (m1,m2:int)
+let
+  m1 = mean<<5>>(3);
+  m2 = mean2<<5>>(3)
+tel
+
+(* CHECK compare *)
+node compare() returns (ok:bool)
+var x,y:int;
+let
+  (x,y) = main();
+  ok = (x = y);
+tel

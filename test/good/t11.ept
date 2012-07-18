@@ -10,3 +10,7 @@ let
   (z,t) = f(a,b);
 tel
 
+node main() returns (z:int;t:bool)
+let
+  (z,t) = g(false fby true, 0 fby 2 fby -3);
+tel

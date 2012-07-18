@@ -33,7 +33,13 @@ node h(x,z,m:int) returns (o:int)
     present
       | (x = 0) do o = 2 -> pre o + 2
       | (x = 2) do o = 4
-    default do o = 2
+        default do o = 2
     end
   tel
 
+
+node main() returns (o1,o2:int)
+let
+  o1 = if (g(false fby true)) then 1 else 2;
+  o2 = h(0 fby 1 fby 2, 3, o1-2);
+tel

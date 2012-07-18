@@ -24,3 +24,12 @@ node fusion(x1:int; x2:int; c:t) returns (y :int)
   let
     y = merge c (A -> x1) (B -> x2)
   tel
+
+node main() returns (y,c':int)
+var c:t;x:int;
+let
+  x = 1 fby if x > 10 then 1 else x + 2;
+  c = A fby B fby c;
+  y = fusion(filter(x,c),-4,c);
+  c' = bool2int(t2bool(c));
+tel

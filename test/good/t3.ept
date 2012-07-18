@@ -21,3 +21,8 @@ node f(x,z:int) returns (o:int)
     end
   tel
 
+node main() returns (o:int)
+let
+  o = f(0,0);
+tel
+

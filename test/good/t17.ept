@@ -5,3 +5,8 @@ node h(z: bool; x, y: int) returns (o2: int)
     o = 0 -> pre o + 2
   tel
 
+node main() returns (o:int)
+let
+  o = h(false -> true, 0, 0)
+tel
+ 

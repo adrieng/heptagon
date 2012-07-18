@@ -9,3 +9,8 @@ node j(x, v_33: bool) returns (o: int)
          until v_33 then I
     end
   tel
+
+node main() returns (o:int)
+let
+  o = j(true,true)
+tel

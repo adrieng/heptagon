@@ -14,3 +14,10 @@ node f(x,z:int) returns (o1,o2:int)
     end;
   tel
 
+node main() returns (o1,o2:int)
+var x,z:int;
+let
+  x = 0 fby 1 fby 2 fby x;
+  z = 1 fby 2 fby z;
+  (o1,o2) = f(x,z);
+tel

@@ -12,3 +12,7 @@ node f(x,z1:int) returns (o:int)
     m = r + 2
   tel
 
+node main() returns (o:int)
+let
+  o = f(0,0);
+tel

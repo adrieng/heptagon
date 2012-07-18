@@ -7,3 +7,10 @@ let
       do o = true until on_off then Down
    end;
 tel
+
+node main() returns (o:bool)
+var half:bool;
+let
+  o = updown(half);
+  half = true fby not half
+tel

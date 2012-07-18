@@ -22,3 +22,8 @@ node f(x: t1; z1:t2) returns (o:t2)
     r = (m.z).x;
   tel
 
+node main() returns (o1:t1;o2:t2)
+let
+  o1 = h({ x = 1; y = 2 });
+  o2 = f(o1, { z = o1; u = 3 });
+tel

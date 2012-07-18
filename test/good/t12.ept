@@ -17,3 +17,8 @@ let
   y = if m > 50 then 1 + m else 42;
   res = if true then r else y;
 tel
+
+node main() returns (out:int)
+let
+  out = bar()
+tel
