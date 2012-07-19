@@ -36,15 +36,15 @@ if [[ ($heptroot == "t2") || ($heptroot == "t2open") ]]; then
     LD="$LD ../t1_c/[^_]*.o"
 fi
 
-# Special case: statics2 needs statics
+# Special case: statics2 needs statics1
 
-if [[ ($heptroot == "statics") ]]; then
+if [[ ($heptroot == "statics1") ]]; then
     coption="$coption -c"
 fi
 
 if [[ ($heptroot == "statics2") ]]; then
-    CC="$CC -I ../statics_c"
-    LD="$LD ../statics_c/[^_]*.o"
+    CC="$CC -I ../statics1_c"
+    LD="$LD ../statics1_c/[^_]*.o"
 fi
 
 

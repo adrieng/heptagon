@@ -13,3 +13,21 @@ for i in good/*.ept; do
 done
 
 
+function compile_diff () {
+    
+    option=$1
+
+    for i in good/*.ept; do
+        echo "ADD_TEST(test_option_${option}_`basename $i .ept`" '"scripts/test_option"' '"'$i'"' '"-'$option'")'
+    done
+
+}
+
+compile_diff "bool"
+compile_diff "deadcode"
+compile_diff "tomato"
+compile_diff "flatten"
+compile_diff "itfusion"
+compile_diff "memalloc"
+compile_diff "unroll"
+compile_diff "O"

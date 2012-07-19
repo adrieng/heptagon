@@ -1,0 +1,129 @@
+#!/bin/bash
+
+# Test script: compile and run program $1 with option $2, and compare
+# output with the run without option
+
+source scripts/config
+
+progpath=$1
+testingoption=$2
+shift
+shift
+coption="-target c $*"
+
+# run the program: no by default
+run=0
+
+cp $progpath $checkdir
+
+
+pushd $checkdir > /dev/null
+
+heptprog=`basename $progpath`
+heptroot=`basename $heptprog .ept`
+
+assert_node=$(eval grep CHECK $heptprog | awk '{ print $3 }')
+
+if [ -n "$assert_node" ]; then
+    coption="$coption -assert $assert_node"
+    run=1
+fi
+
+if grep "node main()" $heptprog >/dev/null; then
+    coption="$coption -hepts -s main"
+    run=1
+fi
+
+# Special case: t2 and t2open needs t1
+
+if [[ ($heptroot == "t2") || ($heptroot == "t2open") ]]; then
+    CC="$CC -I ../t1_c"
+    LD="$LD ../t1_c/[^_]*.o"
+fi
+
+# Special case: statics2 needs statics1
+
+if [[ ($heptroot == "statics1") ]]; then
+    coption="$coption -c"
+fi
+
+if [[ ($heptroot == "statics2") ]]; then
+    CC="$CC -I ../statics1_c"
+    LD="$LD ../statics1_c/[^_]*.o"
+fi
+
+# Usage: compile "option" "comment" "output_file_name"
+function compile () {
+
+    option=$1
+    comment=$2
+    outputfilename=$3
+
+    echo $HEPTC $coption $option $heptprog
+    if $HEPTC $coption $option $heptprog; then
+        pushd ${heptroot}_c > /dev/null
+        echo $CC -c *.c
+        if $CC -c *.c; then
+	    if [[ $run == 1 ]]; then
+	        echo $LD *.o -o main
+	        if $LD *.o -o main; then
+		    echo ./main $NBSTEP | tee ../${outputfilename}
+		    if ./main $NBSTEP | tee ../${outputfilename}; then
+		        echo "Run (${comment}) successful."
+		        res=0
+		    else
+		        echo "Run (${comment}) failed."
+		        res=1
+		    fi
+	        else
+		    echo "Link edition (${comment}) failed."
+		    res=1
+	        fi
+            else
+                res=0
+	    fi
+        else
+	    echo "Compilation of C target code (${comment}) failed"
+	    res=1
+        fi
+        popd >/dev/null
+    else
+        echo "Compilation of $heptprog (${comment}) failed"
+        res=1
+    fi
+
+}
+
+# Compile and run without option
+
+output_without_option="${heptroot}_output_without_option"
+
+compile "" "without option" "$output_without_option"
+
+# Compile and run with option
+
+output_with_option="${heptroot}_output_with_option"
+
+compile "$testingoption" "with option $testingoption" "$output_with_option"
+
+
+if [[ $res == 0 ]]; then
+    if [[ $run == 1 ]]; then
+        # Compare the outputs
+        echo diff -b $output_without_option $output_with_option
+        if diff -b $output_without_option $output_with_option; then
+            # No difference
+            echo "Test successful."
+            res=0
+        else
+            echo "Test failed: outputs are different."
+            res=1
+        fi
+    else
+        echo "Test successful (compilation only)."
+    fi
+fi
+
+popd > /dev/null
+
+exit $res

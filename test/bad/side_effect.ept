@@ -1,0 +1,16 @@
+(* This fails: the nodes should be declared as "unsafe" (because of side effect) *)
+node hello() returns (b:bool)
+let
+  () = Iostream.printf("hello\n");
+  automaton
+  state A do
+    b = true;
+    () = Iostream.printf("hello\n");
+  end;
+tel
+
+node main() returns ()
+var b:bool;
+let
+   b = hello();
+tel

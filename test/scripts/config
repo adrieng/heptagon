@@ -10,7 +10,13 @@ if [ -x $COMPILER_DIR/heptc.native ];
 then
     COMPILER=heptc.native
 else
-    COMPILER=heptc.byte
+    if [ -x $COMPILER_DIR/heptc.byte ];
+    then    
+        COMPILER=heptc.byte
+    else
+        echo "Error: no compiler found."
+        exit 2
+    fi
 fi
 
 HEPTC="../$COMPILER_DIR/$COMPILER -stdlib ../../lib"

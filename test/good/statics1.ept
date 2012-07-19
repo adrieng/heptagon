@@ -1,11 +1,11 @@
 (* Check manually *)
 (* This test should only create two instances of f. *)
-const c2:int = 3
-const k2:int = 1
+const c:int = 3
+const k:int = 1
 
 fun f<<n:int>>() returns (y:int)
 let
-  y = n + 3 + c2;
+  y = n + 3 + c;
 tel
 
 fun g<<m:int>>() returns (y:int)
@@ -20,17 +20,16 @@ var x, y, z: int;
 let
   x = f<<2>>();
   y = f<<1 + m>>();
-  z = f<<k2 + 1>>();
-  o = f<<m + k2>>();
+  z = f<<k + 1>>();
+  o = f<<m + k>>();
 tel
 
-fun h() returns (y,y2:int)
+fun h() returns (y:int)
 let
-  y = c2 + g<<c2>>() + i<<k2>>();
-  y2 = c2 + Statics1.g<<k2>>() + Statics1.i<<k2>>();
+  y = c + g<<c>>() + i<<k>>();
 tel
 
-node main() returns (y,y2:int)
+node main() returns (y:int)
 let
-  (y,y2) = h()
+  y = h()
 tel
