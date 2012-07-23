@@ -55,10 +55,10 @@ let unroll vd start stop b =
     else
       let funs = { Obc_mapfold.defaults with extvalue = ext_value; } in
       let new_b, () = Obc_mapfold.block funs () b in
-      add (c + 1) (new_b.b_body @ l)
+      add (c + 1) (new_b.b_body :: l)
   in
   let l = add start [] in
-  { b with b_body = List.rev l; }
+  { b with b_body = List.concat (List.rev l); }
 
 let act funs () a =
   let a, () = Obc_mapfold.act funs () a in
