@@ -67,7 +67,7 @@ function compile () {
 	    if [[ $run == 1 ]]; then
 	        echo $LD *.o -o main
 	        if $LD *.o -o main; then
-		    echo ./main $NBSTEP | tee ../${outputfilename}
+		    echo "./main $NBSTEP | tee ../${outputfilename}"
 		    if ./main $NBSTEP | tee ../${outputfilename}; then
 		        echo "Run (${comment}) successful."
 		        res=0
