@@ -49,12 +49,28 @@ let static_exp funs local_const se =
     | _ -> ());
   Hept_parsetree_mapfold.static_exp funs local_const se
 
+(** Qualify and check for pervasiveness *)
+let qualify_pervasive q =
+  match q with
+  | ToQ name ->
+      begin
+        try
+          match (Modules.qualify_value name) with
+          | { Names.qual = Names.Pervasives } as qn -> 
+              Q qn
+          | _ -> raise Not_static
+        with Not_found -> raise Not_static
+      end
+  | Q { Names.qual = Names.Pervasives } -> q
+  | _ -> raise Not_static
+
 (** convention : static params are set as the first static args,
     op<a1,a2> (a3) == op <a1> (a2,a3) == op (a1,a2,a3) *)
 let static_app_from_app app args =
   match app.a_op with
-    | Efun ((Q { Names.qual = Names.Pervasives }) as q)
-    | Enode ((Q { Names.qual = Names.Pervasives }) as q) ->
+    | Efun q
+    | Enode q ->
+        let q = qualify_pervasive q in
         q, (app.a_params @ args)
     | _ -> raise Not_static
 

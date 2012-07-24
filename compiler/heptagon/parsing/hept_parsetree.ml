@@ -266,7 +266,7 @@ let mk_call ?(params=[]) ?(inlined=false) op exps =
   Eapp (mk_app op params inlined, exps)
 
 let mk_op_call ?(params=[]) s exps =
-  mk_call ~params:params (Efun (Q (Names.pervasives_qn s))) exps
+  mk_call ~params:params (Enode (ToQ s)) exps
 
 let mk_iterator_call it ln params n_list pexps exps =
   Eiterator (it, mk_app (Enode ln) params false, n_list, pexps, exps)
