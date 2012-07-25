@@ -882,15 +882,16 @@ let node ({ n_input = inputs;
             n_output = outputs;
             n_contract = contract;
             n_block = b } as n) =
-  let inputs,in_loc,in_eq,env = buildenv_var_dec_list Env.empty inputs in
-  let outputs,out_loc,out_eq,env = buildenv_var_dec_list env outputs in
-  let contract, env = translate_contract env contract in
-  let add_locals = in_loc@out_loc in
-  let add_eqs = in_eq@out_eq in
-  let b,_ = translate_block env add_locals add_eqs b in
+  (* let inputs,in_loc,in_eq,env = buildenv_var_dec_list Env.empty inputs in *)
+  (* let outputs,out_loc,out_eq,env = buildenv_var_dec_list env outputs in *)
+  let contract, env = translate_contract Env.empty contract in
+  (* let add_locals = in_loc@out_loc in *)
+  (* let add_eqs = in_eq@out_eq in *)
+  (* let b,_ = translate_block env add_locals add_eqs b in *)
+  let b,_ = translate_block env [] [] b in
   { n with
-      n_input = List.rev inputs;
-      n_output = List.rev outputs;
+      (* n_input = List.rev inputs; *)
+      (* n_output = List.rev outputs; *)
       n_contract = contract;
       n_block = b }
 
