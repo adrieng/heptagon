@@ -51,7 +51,14 @@ let compute_uses eqs =
       else
         Env.add x 1 env
     in
-    List.fold_left incr_uses env (Mls_utils.Vars.read false eq)
+    let reads = Mls_utils.Vars.read false eq in
+    (* self uses not counted *)
+    let defs = Mls_utils.Vars.def [] eq in
+    let reads =
+      List.fold_left
+	(fun acc x -> if List.mem x defs then acc else (x::acc))
+	[] reads in
+    List.fold_left incr_uses env reads
   in
   List.fold_left aux Env.empty eqs
 
@@ -73,7 +80,8 @@ let decr_uses env x =
     Env.add x ((Env.find x env) - 1) env
   with
     | Not_found ->
-        Interference.print_debug "Cannot decrease; var not found : %a@." print_ident x; assert false
+	(* Self use: no decrease for x *)
+	env
 
 module Cost =
 struct
@@ -92,7 +100,8 @@ struct
         if Env.find x env = 1 then acc + 1 else acc
       with
         | Not_found ->
-          Format.printf "Var not found in kill_vars: %a@." print_ident x; assert false
+	    (* self use of x *)
+	    acc
     in
     List.fold_left is_killed 0 (Mls_utils.Vars.read false eq)
 
@@ -172,6 +181,7 @@ let remove_eq eq node_list =
 
 (** Main function to schedule a node. *)
 let schedule eq_list inputs node_list =
+  (* Compute number of uses of each ident *)
   let uses = compute_uses eq_list in
   let rec schedule_aux rem_eqs sched_eqs node_list ck costs =
     match rem_eqs with
@@ -203,8 +213,11 @@ let schedule_contract contract c_inputs =
       c.c_controllables
 
 let node _ () f =
+  (* Put memory variables into Interference.World.memories *)
   Interference.World.init f;
+  (* Schedule contract *)
   let contract,controllables = schedule_contract f.n_contract (f.n_input@f.n_output) in
+  (* Build dataflow dependency graph *)
   let node_list, _ = DataFlowDep.build f.n_equs in
   (* Controllable variables are considered as inputs *)
   let f = { f with

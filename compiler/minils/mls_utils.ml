@@ -104,7 +104,7 @@ struct
   let def acc { eq_lhs = pat } = vars_pat acc pat
 
   let rec vars_ck acc = function
-    | Con(_, _, n) -> add n acc
+    | Con(ck, _, n) -> vars_ck (add n acc) ck
     | Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
