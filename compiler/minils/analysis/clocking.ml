@@ -62,7 +62,7 @@ let error_message loc = function
       raise Errors.Error
   | Eclockclash (actual_ck, expected_ck) ->
       Format.eprintf "%aClock Clash: this value has clock %a,@\n\
-                        but is exprected to have clock %a.@."
+                        but is expected to have clock %a.@."
         print_location loc
         print_ck actual_ck
         print_ck expected_ck;
