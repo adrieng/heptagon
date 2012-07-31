@@ -107,7 +107,7 @@ let rec ext_value_of_trunc_idx_list p l =
   let mk_between idx se =
     mk_exp_int (Eop (mk_pervasives "between", [idx; mk_ext_value_exp se.se_ty (Wconst se)]))
   in
-  let rec aux p l = match p.w_ty, l with
+  let rec aux p l = match Modules.unalias_type p.w_ty, l with
     | _, [] -> p
     | Tarray (ty', se), idx :: l -> aux (mk_ext_value ty' (Warray (p, mk_between idx se))) l
     | _ -> internal_error "mls2obc ext_value_of_trunc_idx_list"
