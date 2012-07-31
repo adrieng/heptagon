@@ -137,93 +137,128 @@ let main_def_of_class_def cd =
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
 
   (** Generates scanf statements. *)
-  let rec read_lhs_of_ty lhs ty = match ty with
+  let rec read_lhs_of_ty lhs ty =
+    match ty with
     | Tarray (ty, n) ->
         let iter_var = fresh "i" in
         let lhs = Carray (lhs, Cvar iter_var) in
         let (reads, bufs) = read_lhs_of_ty lhs ty in
         ([Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, reads)], bufs)
-    | _ ->
-        let rec mk_prompt lhs = match lhs with
-          | Cvar vn -> (vn, [])
-          | Carray (lhs, cvn) ->
-              let (vn, args) = mk_prompt lhs in
-              (vn ^ "[%d]", cvn :: args)
-          | _ -> assert false in
-        let (prompt, args_format_s) = mk_prompt lhs in
-        let scan_exp =
-          let printf_s = Format.sprintf "%s ? " prompt in
-          let format_s = format_for_type ty in
-    let exp_scanf = Cfun_call ("scanf",
-                                     [Cconst (Cstrlit format_s);
-                                      Caddrof lhs]) in
-    let body =
-      if !Compiler_options.hepts_simulation
-      then (* hepts: systematically test and quit when EOF *)
-        [Cif(Cbop("==",exp_scanf,Cvar("EOF")),
-       [Creturn(mk_int 0)],[])]
-      else
-        [Csexpr (exp_scanf);] in
-    let body =
-      if !Compiler_options.hepts_simulation then
-        body
-      else
-        Csexpr (Cfun_call ("printf",
-                                 Cconst (Cstrlit printf_s)
-                                 :: args_format_s))
-        :: body in
-          Csblock { var_decls = [];
-                    block_body = body; } in
-        match need_buf_for_ty ty with
-          | None -> ([scan_exp], [])
-          | Some tyn ->
-              let varn = fresh "buf" in
-              ([scan_exp;
-                Csexpr (Cfun_call (tyn ^ "_of_string",
-                                   [Cvar varn]))],
-               [(varn, Cty_arr (20, Cty_char))]) in
+    | (Tid tn) as ty ->
+        begin match Modules.find_type tn with
+        | Talias ty -> read_lhs_of_ty lhs ty
+        | Tstruct field_list ->
+            List.fold_left
+              (fun (reads,bufs)
+                 { Signature.f_name = f_name; Signature.f_type = f_ty} ->
+                 let f_lhs = Cfield(lhs,f_name) in
+                 let (f_reads,f_bufs) = read_lhs_of_ty f_lhs f_ty in
+                 (reads@f_reads),(bufs@f_bufs))
+              ([],[])
+              field_list
+        | _ ->
+            let rec mk_prompt lhs = match lhs with
+              | Cvar vn -> (vn, [])
+              | Carray (lhs, cvn) ->
+                  let (vn, args) = mk_prompt lhs in
+                  (vn ^ "[%d]", cvn :: args)
+              | Cfield (lhs, fn) ->
+                  let (vn, args) = mk_prompt lhs in
+                  (vn ^ "." ^ (shortname fn), args)
+              | _ -> assert false in
+            let (prompt, args_format_s) = mk_prompt lhs in
+            let scan_exp =
+              let printf_s = Format.sprintf "%s ? " prompt in
+              let format_s = format_for_type ty in
+              let exp_scanf = Cfun_call ("scanf",
+                                         [Cconst (Cstrlit format_s);
+                                          Caddrof lhs]) in
+              let body =
+                if !Compiler_options.hepts_simulation
+                then (* hepts: systematically test and quit when EOF *)
+                  [Cif(Cbop("==",exp_scanf,Cvar("EOF")),
+                       [Creturn(mk_int 0)],[])]
+                else
+                  [Csexpr (exp_scanf);] in
+              let body =
+                if !Compiler_options.hepts_simulation then
+                  body
+                else
+                  Csexpr (Cfun_call ("printf",
+                                     Cconst (Cstrlit printf_s)
+                                     :: args_format_s))
+                  :: body in
+              Csblock { var_decls = [];
+                        block_body = body; } in
+            match need_buf_for_ty ty with
+            | None -> ([scan_exp], [])
+            | Some tyn ->
+                let varn = fresh "buf" in
+                ([scan_exp;
+                  Csexpr (Cfun_call (tyn ^ "_of_string",
+                                     [Cvar varn]))],
+                 [(varn, Cty_arr (20, Cty_char))])
+        end
+    | Tprod _ | Tinvalid -> failwith("read_lhs_of_ty: untranslatable type")
+  in
 
   (** Generates printf statements and buffer declarations needed for printing
       resulting values of enum types. *)
-  let rec write_lhs_of_ty lhs ty = match ty with
+  let rec write_lhs_of_ty lhs ty =
+    match ty with
     | Tarray (ty, n) ->
         let iter_var = fresh "i" in
         let lhs = Carray (lhs, Cvar iter_var) in
         let (writes, bufs) = write_lhs_of_ty lhs ty in
-  let writes_loop =
-    Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, writes) in
-  if !Compiler_options.hepts_simulation then
-    ([writes_loop], bufs)
-  else
+        let writes_loop =
+          Cfor (iter_var, mk_int 0, cexpr_of_static_exp n, writes) in
+        if !Compiler_options.hepts_simulation then
+          ([writes_loop], bufs)
+        else
           ([cprint_string "[ ";
-      writes_loop;
+            writes_loop;
             cprint_string "]"], bufs)
-    | _ ->
-        let varn = fresh "buf" in
-        let format_s = format_for_type ty in
-  let format_s =
-    if !Compiler_options.hepts_simulation
-    then format_s ^ "\n"
-    else format_s ^ " " in
-        let nbuf_opt = need_buf_for_ty ty in
-        let ep = match nbuf_opt with
-          | None -> [lhs]
-          | Some sid -> [Cfun_call ("string_of_" ^ sid,
-                                    [lhs;
-                                     Cvar varn])] in
-        ([Csexpr (Cfun_call ("printf",
-                             Cconst (Cstrlit (format_s))
-                             :: ep))],
-         match nbuf_opt with
-           | None -> []
-           | Some _ -> [(varn, Cty_arr (20, Cty_char))]) in
-
+    | (Tid tn) as ty ->
+        begin match Modules.find_type tn with
+        | Talias ty -> write_lhs_of_ty lhs ty
+        | Tstruct field_list ->
+            List.fold_left
+              (fun (writes,bufs)
+                 { Signature.f_name = f_name; Signature.f_type = f_ty} ->
+                 let f_lhs = Cfield(lhs,f_name) in
+                 let (f_writes,f_bufs) = write_lhs_of_ty f_lhs f_ty in
+                 (writes@f_writes),(bufs@f_bufs))
+              ([],[])
+              field_list
+        | _ ->
+            let varn = fresh "buf" in
+            let format_s = format_for_type ty in
+            let format_s =
+              if !Compiler_options.hepts_simulation
+              then format_s ^ "\n"
+              else format_s ^ " " in
+            let nbuf_opt = need_buf_for_ty ty in
+            let ep = match nbuf_opt with
+              | None -> [lhs]
+              | Some sid -> [Cfun_call ("string_of_" ^ sid,
+                                        [lhs;
+                                         Cvar varn])] in
+            ([Csexpr (Cfun_call ("printf",
+                                 Cconst (Cstrlit (format_s))
+                                 :: ep))],
+             match nbuf_opt with
+             | None -> []
+             | Some _ -> [(varn, Cty_arr (20, Cty_char))]) 
+        end
+    | Tprod _ | Tinvalid -> failwith("write_lhs_of_ty: untranslatable type")
+  in
+        
   let stepm = find_step_method cd in
   let (scanf_calls, scanf_decls) =
     let read_lhs_of_ty_for_vd vd =
       read_lhs_of_ty (Cvar (Idents.name vd.v_ident)) vd.v_type in
     split (map read_lhs_of_ty_for_vd stepm.m_inputs) in
-
+  
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
       let (stm, vars) =
