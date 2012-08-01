@@ -123,9 +123,21 @@ struct
 
   (** This function should be called every time we enter a node *)
   let enter_node n =
+    (* TODO : see copy_node; same problem *)
     (if not (QualEnv.mem n !node_env)
     then node_env := QualEnv.add n (ref NamesSet.empty) !node_env);
     used_names := QualEnv.find n !node_env
+
+  (** Copy environment of node of name [n] to new node name [n'] *)
+  let copy_node n n' =
+    (* TODO : do something smarter than create empty used names set *)
+    (* this happen when an object file is loaded: the used names set
+       of loaded nodes is not properly set *)
+    if not (QualEnv.mem n !node_env)
+    then node_env := QualEnv.add n (ref NamesSet.empty) !node_env;
+    assert (not (QualEnv.mem n' !node_env));
+    let used_names = !(QualEnv.find n !node_env) in
+    node_env := QualEnv.add n' (ref used_names) !node_env
 
   (** @return a unique string for each identifier. Idents corresponding
       to variables defined in the source file have the same name unless
@@ -172,5 +184,6 @@ let ident_of_name ?(reset=false) s =
 let source_name id = id.source
 let name id = UniqueNames.name id
 let enter_node n = UniqueNames.enter_node n
+let copy_node = UniqueNames.copy_node
 
 let print_ident ff id = Format.fprintf ff "%s" (name id)

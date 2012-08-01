@@ -27,6 +27,7 @@
 (*                                                                     *)
 (***********************************************************************)
 open Names
+open Idents
 open Types
 open Misc
 open Location
@@ -129,6 +130,7 @@ struct
             "_params_" params in
         let new_ln =
           Modules.fresh_value_in "callgraph" (n^param_string^"_") q in
+        Idents.copy_node ln new_ln;
         nodes_names := M.add (ln, params) new_ln !nodes_names
 
   (** Adds an instance of a node. *)

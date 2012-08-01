@@ -67,6 +67,8 @@ val is_reset : ident -> bool
 (** /!\ [enter_node qualname] should be called every time we enter a node with name [qualname]. *)
 val enter_node : Names.qualname -> unit
 
+val copy_node : Names.qualname -> Names.qualname -> unit
+
 (** Maps taking an identifier as a key. *)
 module Env :
 sig

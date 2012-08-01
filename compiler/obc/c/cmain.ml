@@ -364,12 +364,17 @@ let mk_main name p =
       let classes = program_classes p in
       let n_names = !Compiler_options.assert_nodes in
       let find_class n =
-        try List.find (fun cd -> cd.cd_name.name = n) classes
-        with Not_found ->
-          Format.eprintf "Unknown node %s.@." n;
-          exit 1 in
+        List.find (fun cd -> cd.cd_name.name = n) classes
+      in
 
-      let a_classes = List.map find_class n_names in
+      let a_classes =
+        List.fold_left
+          (fun acc n ->
+             try
+               find_class n :: acc
+             with Not_found -> acc)
+          []
+          n_names in
 
       let (var_l, res_l, step_l) =
         let add cd (var_l, res_l, step_l) =
@@ -378,10 +383,12 @@ let mk_main name p =
         List.fold_right add a_classes ([], [], []) in
 
       let n = !Compiler_options.simulation_node in
-      let (mem, nvar_l, res, nstep_l) = main_def_of_class_def (find_class n) in
-      let defs = match mem with None -> [] | Some m -> [m] in
-      let (var_l, res_l, step_l) =
-        (nvar_l @ var_l, res @ res_l, nstep_l @ step_l) in
+      let (defs, var_l, res_l, step_l) =
+        try
+          let (mem, nvar_l, res, nstep_l) = main_def_of_class_def (find_class n) in
+          let defs = match mem with None -> [] | Some m -> [m] in
+          (defs, nvar_l @ var_l, res @ res_l, nstep_l @ step_l)
+        with Not_found -> ([],var_l,res_l,step_l) in
 
       [("_main.c", Csource (defs @ [main_skel var_l res_l step_l]));
        ("_main.h", Cheader ([name], []))];

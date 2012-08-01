@@ -752,6 +752,7 @@ let cdefs_and_cdecls_of_class_def cd =
   (** We keep the state of our class in a structure, holding both internal
       variables and the state of other nodes. For a class named ["cname"], the
       structure will be called ["cname_mem"]. *)
+  Idents.enter_node cd.cd_name;
   let step_m = find_step_method cd in
   let memory_struct_decl = mem_decl_of_class_def cd in
   let out_struct_decl = out_decl_of_class_def cd in
