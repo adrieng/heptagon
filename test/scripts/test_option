@@ -48,7 +48,7 @@ if [[ ($heptroot == "statics1") ]]; then
 fi
 
 if [[ ($heptroot == "statics2") ]]; then
-    CC="$CC -I ../statics1_c"
+    CC="$CC -I ../statics1_c ../statics1_c/*.c"
     LD="$LD ../statics1_c/[^_]*.o"
 fi
 
