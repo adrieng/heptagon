@@ -38,6 +38,7 @@
  *)
 
 open Misc
+open Names
 open Idents
 open Heptagon
 open Hept_utils
@@ -183,12 +184,15 @@ and expect h pat expected_ct e =
 and typing_app h base pat op e_list = match op with
   | Etuple (* to relax ? *)
   | Earrow
-  | Efun _ (* stateless functions: inputs and outputs on the same clock *)
   | Earray_fill | Eselect | Eselect_dyn | Eselect_trunc | Eupdate
   | Eselect_slice | Econcat | Earray | Efield | Efield_update | Eifthenelse | Ereinit ->
       List.iter (expect h pat (Ck base)) e_list;
       Ck base
-  | Enode f ->
+  | Efun { qual = Module "Iostream"; name = "printf" }
+  | Efun { qual = Module "Iostream"; name = "fprintf" } ->
+      List.iter (expect h pat (Ck base)) e_list;
+      Cprod []
+  | (Efun f | Enode f) ->
       let node = Modules.find_value f in
       let pat_id_list = ident_list_of_pat pat in
       let rec build_env a_l v_l env = match a_l, v_l with

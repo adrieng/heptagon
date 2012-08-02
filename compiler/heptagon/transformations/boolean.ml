@@ -638,6 +638,7 @@ let rec translate env context ({e_desc = desc; e_ty = ty; e_ct_annot = ct} as e)
         failwith("Boolean: not supported expression (abstract tree should be normalized)")
   in
   context,{ e with
+              e_level_ck = translate_ck env e.e_level_ck;
               e_desc = desc;
               e_ty = translate_ty ty;
               e_ct_annot = ct}
@@ -882,6 +883,7 @@ let node ({ n_input = inputs;
             n_output = outputs;
             n_contract = contract;
             n_block = b } as n) =
+  Idents.enter_node n.n_name;
   (* let inputs,in_loc,in_eq,env = buildenv_var_dec_list Env.empty inputs in *)
   (* let outputs,out_loc,out_eq,env = buildenv_var_dec_list env outputs in *)
   let contract, env = translate_contract Env.empty contract in
