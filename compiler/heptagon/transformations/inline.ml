@@ -36,7 +36,9 @@ open Heptagon
 open Hept_utils
 open Hept_mapfold
 
-let to_be_inlined s = !Compiler_options.flatten || (List.mem s !Compiler_options.inline)
+let to_be_inlined s =
+  (!Compiler_options.flatten && not (s.qual = Pervasives))
+  || (List.mem s !Compiler_options.inline)
 
 let fresh = Idents.gen_var "inline"
 
