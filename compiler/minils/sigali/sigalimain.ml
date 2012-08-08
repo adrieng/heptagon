@@ -38,10 +38,22 @@ open Idents
 open Types
 open Clocks
 open Sigali
+open Location
 
 type mtype = Tint | Tbool | Tother
 
-let actual_ty = function
+exception Untranslatable
+
+let untranslatable_warn e =
+  if e.Minils.e_loc <> no_location then
+    Format.eprintf "Warning: abstracted expression:@.%a"
+      Location.print_location e.Minils.e_loc
+  else
+    Format.eprintf "Warning: abstracted expression: @[<hov 2>%a@]@."
+      Mls_printer.print_exp e
+
+let actual_ty ty =
+  match (Modules.unalias_type ty) with
   | Tid({ qual = Pervasives; name = "bool"}) -> Tbool
   | Tid({ qual = Pervasives; name = "int"}) -> Tint
   | _ -> Tother
@@ -54,12 +66,12 @@ let var_list prefix n =
         varl acc (n-1) in
   varl [] n
 
-let dummy_prefix = "d"
+let current_inputs : IdentSet.t ref = ref IdentSet.empty
 
 let translate_static_exp se =
   match se.se_desc with
   | Sint(v) -> Cint(v)
-  | Sfloat(_) -> failwith("Sigali: floats not implemented")
+  | Sfloat(_) -> raise Untranslatable
   | Sbool(true)
   | Sconstructor { qual = Pervasives; name = "true" }
     -> Ctrue
@@ -68,10 +80,7 @@ let translate_static_exp se =
     -> Cfalse  
   | Sop({ qual = Pervasives; name = "~-" },[{se_desc = Sint(v)}]) ->
       Cint(-v)
-  | _ ->
-      Format.printf "Constant %a@\n"
-        Global_printer.print_static_exp se;
-      failwith("Sigali: untranslatable constant")
+  | _ -> raise Untranslatable
 
 
 let rec translate_pat = function
@@ -94,119 +103,130 @@ let rec translate_ck pref e = function
 
 let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty }) =
   match desc with
-    | Minils.Wconst(v) ->
-        begin match (actual_ty ty) with
-        | Tbool -> Sconst(translate_static_exp v)
-        | Tint -> a_const (Sconst(translate_static_exp v))
-        | Tother -> failwith("Sigali: untranslatable type")
-        end
-    | Minils.Wvar(n) -> Svar(prefix ^ (name n))
-
-    (* TODO remove if this works without *)
-    (* | Minils.Wwhen(e, c, var) when ((actual_ty e.Minils.w_ty) = Tbool) -> *)
-    (*     let e = translate_ext prefix e in *)
-    (*     Swhen(e, *)
-    (*           match (shortname c) with *)
-    (*             "true" -> Svar(prefix ^ (name var)) *)
-    (*           | "false" -> Snot(Svar(prefix ^ (name var))) *)
-    (*           | _ -> assert false) *)
-    | Minils.Wwhen(e, _c, _var) ->
-        translate_ext prefix e
-    | Minils.Wfield(_) ->
-        failwith("Sigali: structures not implemented")
-    | Minils.Wreinit _ -> failwith("Sigali: reinit not implemented")
+  | Minils.Wconst(v) ->
+      begin match (actual_ty ty) with
+      | Tbool -> Sconst(translate_static_exp v)
+      | Tint -> a_const (Sconst(translate_static_exp v))
+      | Tother -> raise Untranslatable
+      end
+  | Minils.Wvar(n) ->
+      (* get variable iff it is Boolean or local *)
+      begin match (actual_ty ty) with
+      | Tbool -> Svar(prefix ^ (name n))
+      | Tint when not (IdentSet.mem n !current_inputs) -> Svar(prefix ^ (name n))
+      | _ -> raise Untranslatable
+      end
+  (* TODO remove if this works without *)
+  (* | Minils.Wwhen(e, c, var) when ((actual_ty e.Minils.w_ty) = Tbool) -> *)
+  (*     let e = translate_ext prefix e in *)
+  (*     Swhen(e, *)
+  (*           match (shortname c) with *)
+  (*             "true" -> Svar(prefix ^ (name var)) *)
+  (*           | "false" -> Snot(Svar(prefix ^ (name var))) *)
+  (*           | _ -> assert false) *)
+  | Minils.Wwhen(e, _c, _var) ->
+      translate_ext prefix e
+  | Minils.Wfield(_) ->
+      raise Untranslatable
+  | Minils.Wreinit _ -> raise Untranslatable
 
 (* [translate e = c] *)
-let rec translate prefix ({ Minils.e_desc = desc } as e) =
+let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
+  let ty = actual_ty ty in
   match desc with
-    | Minils.Eextvalue(ext) -> translate_ext prefix ext
-    | Minils.Eapp (* pervasives binary or unary stateless operations *)
-        ({ Minils.a_op = Minils.Efun({qual=Pervasives;name=n})},
-         e_list, _) ->
+  | Minils.Eextvalue(ext) -> translate_ext prefix ext
+  | Minils.Eapp (* pervasives binary or unary stateless operations *)
+      ({ Minils.a_op = Minils.Efun({qual=Pervasives;name=n})},
+       e_list, _) ->
+      begin
+        match n, e_list with
+        | "not", [e] -> Snot(translate_ext prefix e)
+        | "or", [e1;e2] -> Sor((translate_ext prefix e1),
+                               (translate_ext prefix e2))
+        | "&", [e1;e2] -> Sand((translate_ext prefix e1),
+                               (translate_ext prefix e2))
+        | ("<="|"<"|">="|">"), [e1;e2] ->
+            let op,modv =
+              begin match n with
+              | "<=" -> a_inf,0
+              | "<"  -> a_inf,-1
+              | ">=" -> a_sup,0
+              | _    -> a_sup,1
+              end in
+            let e1 = translate_ext prefix e1 in
+            let sig_e =
+              begin match e2.Minils.w_desc with
+              | Minils.Wconst({se_desc = Sint(v)}) ->
+                  op e1 (Sconst(Cint(v+modv)))
+              | _ ->
+                  let e2 = translate_ext prefix e2 in
+                  op (Sminus(e1,e2)) (Sconst(Cint(modv)))
+              end in
+            (* a_inf and a_sup : +1 to translate ideals to boolean
+               polynomials *)
+            Splus(sig_e,Sconst(Ctrue))
+        | "+", [e1;e2] -> Splus((translate_ext prefix e1),
+                                (translate_ext prefix e2))
+        | "-", [e1;e2] -> Splus((translate_ext prefix e1),
+                                (Sprod((translate_ext prefix e2),(Sconst(Cint(-1))))))
+        | "*", [e1;e2] -> Sprod((translate_ext prefix e1),
+                                (translate_ext prefix e2))
+        | "=", [e1;e2] when (ty = Tbool) ->
+            let e1 = translate_ext prefix e1 in
+            let e2 = translate_ext prefix e2 in
+            (* e1 = e2 iff (e1 and e2) or (not e1 and not e2) *)
+            (e1 &~ e2) |~ ((~~ e1) &~ (~~ e2))
+        | "<>", [e1;e2] when ty = Tbool ->
+            let e1 = translate_ext prefix e1 in
+            let e2 = translate_ext prefix e2 in
+            (* e1 <> e2 iff (e1 and not e2) or (not e1 and e2) *)
+            (e1 &~ (~~ e2)) |~ ((~~ e1) &~ e2)
+        | _ -> raise Untranslatable
+      end
+        (* | Minils.Ewhen(e, c, var) when ((actual_ty e.Minils.e_ty) = Tbool) -> *)
+        (*     let e = translate prefix e in *)
+        (*     Swhen(e, *)
+        (*           match (shortname c) with *)
+        (*             "true" -> Svar(prefix ^ (name var)) *)
+        (*           | "false" -> Snot(Svar(prefix ^ (name var))) *)
+        (*           | _ -> assert false) *)
+  | Minils.Ewhen(e, _c, _var) ->
+      translate prefix e
+  | Minils.Emerge(ck,[(c1,e1);(_c2,e2)]) ->
+      let e1 = translate_ext prefix e1 in
+      let e2 = translate_ext prefix e2 in
+      let e1,e2 =
         begin
-          match n, e_list with
-          | "not", [e] -> Snot(translate_ext prefix e)
-          | "or", [e1;e2] -> Sor((translate_ext prefix e1),
-                                 (translate_ext prefix e2))
-          | "&", [e1;e2] -> Sand((translate_ext prefix e1),
-                                 (translate_ext prefix e2))
-          | ("<="|"<"|">="|">"), [e1;e2] ->
-              let op,modv =
-                begin match n with
-                | "<=" -> a_inf,0
-                | "<"  -> a_inf,-1
-                | ">=" -> a_sup,0
-                | _    -> a_sup,1
-                end in
-              let e1 = translate_ext prefix e1 in
-              let sig_e =
-                begin match e2.Minils.w_desc with
-                | Minils.Wconst({se_desc = Sint(v)}) ->
-                    op e1 (Sconst(Cint(v+modv)))
-                | _ ->
-                    let e2 = translate_ext prefix e2 in
-                    op (Sminus(e1,e2)) (Sconst(Cint(modv)))
-                end in
-              (* a_inf and a_sup : +1 to translate ideals to boolean
-                 polynomials *)
-              Splus(sig_e,Sconst(Ctrue))
-          | "+", [e1;e2] -> Splus((translate_ext prefix e1),
-                                  (translate_ext prefix e2))
-          | "-", [e1;e2] -> Sminus((translate_ext prefix e1),
-                                   (translate_ext prefix e2))
-          | "*", [e1;e2] -> Sprod((translate_ext prefix e1),
-                                  (translate_ext prefix e2))
-          | ("="
-            | "<>"),_ -> failwith("Sigali: '=' or '<>' not yet implemented")
+          match (shortname c1) with
+            "true" -> e1,e2
+          | "false" -> e2,e1
           | _ -> assert false
-        end
-    (* | Minils.Ewhen(e, c, var) when ((actual_ty e.Minils.e_ty) = Tbool) -> *)
-    (*     let e = translate prefix e in *)
-    (*     Swhen(e, *)
-    (*           match (shortname c) with *)
-    (*             "true" -> Svar(prefix ^ (name var)) *)
-    (*           | "false" -> Snot(Svar(prefix ^ (name var))) *)
-    (*           | _ -> assert false) *)
-    | Minils.Ewhen(e, _c, _var) ->
-        translate prefix e
-    | Minils.Emerge(ck,[(c1,e1);(_c2,e2)]) ->
-        let e1 = translate_ext prefix e1 in
-        let e2 = translate_ext prefix e2 in
-        let e1,e2 =
-          begin
-            match (shortname c1) with
-              "true" -> e1,e2
-            | "false" -> e2,e1
-            | _ -> assert false
-          end in
-        let var_ck = Svar(prefix ^ (name ck)) in
-        begin match (actual_ty e.Minils.e_ty) with
-        | Tbool -> Sdefault(Swhen(e1,var_ck),e2)
-        | Tint -> a_part var_ck (a_const (Sconst(Cint(0)))) e1 e2
-        | Tother -> assert false
-        end
-    | Minils.Eapp({Minils.a_op = Minils.Eifthenelse},[e1;e2;e3],_) ->
-        let e1 = translate_ext prefix e1 in
-        let e2 = translate_ext prefix e2 in
-        let e3 = translate_ext prefix e3 in
-        begin match (actual_ty e.Minils.e_ty) with
-        | Tbool -> Sdefault(Swhen(e2,e1),e3)
-        | Tint -> a_part e1 (a_const (Sconst(Cint(0)))) e2 e3
-        | Tother -> assert false
-        end
-    | Minils.Estruct(_) ->
-        failwith("Sigali: structures not implemented")
-    | Minils.Eiterator(_,_,_,_,_,_) ->
-        failwith("Sigali: iterators not implemented")
-    | Minils.Eapp({Minils.a_op = Minils.Enode(_)},_,_) ->
-        failwith("Sigali: node in expressions; programs should be normalized")
-    | Minils.Efby(_,_) ->
-        failwith("Sigali: fby in expressions; programs should be normalized")
-    | Minils.Eapp(_,_,_) ->
-        Format.printf "Application : %a@\n"
-          Mls_printer.print_exp e;
-        failwith("Sigali: not supported application")
-    | Minils.Emerge(_, _) -> assert false
+        end in
+      let var_ck = Svar(prefix ^ (name ck)) in
+      begin match (actual_ty e.Minils.e_ty) with
+      | Tbool -> Sdefault(Swhen(e1,var_ck),e2)
+      | Tint -> a_part var_ck (a_const (Sconst(Cint(0)))) e1 e2
+      | Tother -> assert false
+      end
+  | Minils.Eapp({Minils.a_op = Minils.Eifthenelse},[e1;e2;e3],_) ->
+      let e1 = translate_ext prefix e1 in
+      let e2 = translate_ext prefix e2 in
+      let e3 = translate_ext prefix e3 in
+      begin match (actual_ty e.Minils.e_ty) with
+      | Tbool -> Sdefault(Swhen(e2,e1),e3)
+      | Tint -> a_part e1 (a_const (Sconst(Cint(0)))) e2 e3
+      | Tother -> assert false
+      end
+  | Minils.Estruct(_)
+  | Minils.Eiterator(_,_,_,_,_,_) ->
+      raise Untranslatable
+  | Minils.Eapp({Minils.a_op = Minils.Enode(_)},_,_) ->
+      failwith("Sigali: node in expressions; programs should be normalized")
+  | Minils.Efby(_,_) ->
+      failwith("Sigali: fby in expressions; programs should be normalized")
+  | Minils.Eapp(_,_,_) ->
+      raise Untranslatable
+  | Minils.Emerge(_, _) -> assert false
 
 let rec translate_eq f
     (acc_states,acc_init,acc_inputs,acc_eqs)
@@ -218,26 +238,44 @@ let rec translate_eq f
 
   let { Minils.e_desc = desc } = e in
   match pat, desc with
-  | Minils.Evarpat(n), Minils.Efby(opt_c, e) ->
-      let sn = prefixed (name n) in
-      let acc_eqs,acc_init =
-        match opt_c with
-        | None -> acc_eqs,Cfalse::acc_init
-        | Some(c) ->
-            let c = translate_static_exp c in
+  | Minils.Evarpat(n), Minils.Efby(opt_c, e') ->
+      begin match (actual_ty e.Minils.e_ty) with
+      | Tbool ->
+          begin try
+            let sn = prefixed (name n) in
+            let acc_eqs,acc_init =
+              match opt_c with
+              | None -> acc_eqs,Cfalse::acc_init
+              | Some(c) ->
+                  let c = translate_static_exp c in
+                  (extend
+                     initialisations
+                     (Slist[Sequal(Svar(sn),Sconst(c))]))::acc_eqs,
+                  c::acc_init
+            in
+            let e_next = translate_ext prefix e' in
+            let e_next = translate_ck prefix e_next ck in
+            (n,sn)::acc_states,
+            acc_init,acc_inputs,
             (extend
-               initialisations
-               (Slist[Sequal(Svar(sn),Sconst(c))]))::acc_eqs,
-            c::acc_init
-      in
-      let e_next = translate_ext prefix e in
-      let e_next = translate_ck prefix e_next ck in
-      (n,sn)::acc_states,
-      acc_init,acc_inputs,
-      (extend
-         evolutions
-         (Slist[Sdefault(e_next,Svar(sn))]))
-      ::acc_eqs
+               evolutions
+               (Slist[Sdefault(e_next,Svar(sn))]))
+            ::acc_eqs
+          with Untranslatable ->
+            untranslatable_warn e;
+            (* e is abstracted ; n is Boolean and can be added as
+               uncontrollable input *)
+            current_inputs := IdentSet.add n !current_inputs;
+            acc_states,acc_init,
+            (acc_inputs @ [(n,(prefixed (name n)))]),
+            acc_eqs
+          end
+      | _ ->
+          untranslatable_warn e;
+          (* Mark n as input: unusable as local variable *)
+          current_inputs := IdentSet.add n !current_inputs;
+          acc_states,acc_init,acc_inputs,acc_eqs
+      end
   | pat, Minils.Eapp({ Minils.a_op = Minils.Enode _f; }, _e_list, None) ->
       (*
         (y1,...,yp) = f(x1,...,xn)
@@ -248,21 +286,33 @@ let rec translate_eq f
       let ident_list = translate_pat pat in
       let acc_inputs = 
         acc_inputs @
-          (List.map (fun id -> (id,(prefixed (name id)))) ident_list) in
+          (List.map
+             (fun id ->
+                current_inputs := IdentSet.add id !current_inputs;
+                (id,(prefixed (name id))))
+             ident_list) in
       acc_states,acc_init,
       acc_inputs,acc_eqs
   | Minils.Evarpat(n), _ ->
-      (* assert : no fby, no node application in e *)
-      let e' = translate prefix e in
-      (* let e' = *)
-      (*   begin match (actual_ty e.Minils.e_ty) with *)
-      (*   | Tbool -> translate_ck prefix e' ck *)
-      (*   | _ -> e' *)
-      (*   end in *)
-      acc_states,acc_init,
-      acc_inputs,
-      { stmt_name = prefixed (name n);
-        stmt_def  = e' }::acc_eqs
+      begin try
+        (* assert : no fby, no node application in e *)
+        let e' = translate prefix e in
+        (* let e' = *)
+        (*   begin match (actual_ty e.Minils.e_ty) with *)
+        (*   | Tbool -> translate_ck prefix e' ck *)
+        (*   | _ -> e' *)
+        (*   end in *)
+        acc_states,acc_init,
+        acc_inputs,
+        { stmt_name = prefixed (name n);
+          stmt_def  = e' }::acc_eqs
+      with Untranslatable ->
+        untranslatable_warn e;
+        current_inputs := IdentSet.add n !current_inputs;
+        acc_states,acc_init,
+        (acc_inputs @ [(n,(prefixed (name n)))]),
+        acc_eqs
+      end
   | _ -> assert false
 
 let translate_eq_list f eq_list =
@@ -311,6 +361,15 @@ let translate_node
        Minils.n_input = i_list; Minils.n_output = o_list;
        Minils.n_local = _d_list; Minils.n_equs = eq_list;
        Minils.n_contract = contract } as node) =
+  current_inputs :=
+    List.fold_left
+      (fun set v_d -> IdentSet.add v_d.Minils.v_ident set)
+      IdentSet.empty
+      i_list;
+  (* keep only Boolean inputs *)
+  let i_list =
+    List.filter
+      (fun { Minils.v_type = ty } -> (actual_ty ty) = Tbool) i_list in
   (* every variable is prefixed by its node name *)
   let inputs =
     List.map

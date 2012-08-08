@@ -124,12 +124,19 @@ let (|~) e1 e2 =
   | e, Sconst(Cfalse) -> e
   | _ -> Sor(e1,e2)
 
+let (~~) e =
+  match e with
+  | Sconst(Ctrue) -> Sconst(Cfalse)
+  | Sconst(Cfalse) -> Sconst(Ctrue)
+  | Snot(e') -> e'
+  | _ -> Snot(e)
+
 let (=>~) e1 e2 =
   match e1,e2 with
   | Sconst(Ctrue), e -> e
   | _, Sconst(Ctrue)
   | Sconst(Cfalse), _ -> Sconst(Ctrue)
-  | _ -> Sor(Snot(e1),e2)
+  | _ -> ((~~ e1) |~ e2)
 
 let a_const e =
   Sprim ("a_const",[e])

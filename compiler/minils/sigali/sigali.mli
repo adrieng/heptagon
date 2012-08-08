@@ -105,6 +105,8 @@ val ( &~ ) : exp -> exp -> exp
 
 val ( |~ ) : exp -> exp -> exp
 
+val ( ~~ ) : exp -> exp
+
 val ( =>~ ) : exp -> exp -> exp
 
 val a_const : exp -> exp
