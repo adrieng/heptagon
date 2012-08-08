@@ -74,7 +74,11 @@ let print_ident = Idents.print_ident
   | Cbase -> fprintf ff "."
   | Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
   | Cvar { contents = Cindex i } -> fprintf ff "'a%i" i
-  | Cvar { contents = Clink ck } -> fprintf ff "~> %a" print_ck ck
+  | Cvar { contents = Clink ck } ->
+      if !Compiler_options.full_type_info then
+        fprintf ff "~> %a" print_ck ck
+      else
+        fprintf ff "%a" print_ck ck
 
 let rec print_ct ff = function
   | Ck ck -> print_ck ff ck
