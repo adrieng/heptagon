@@ -933,6 +933,42 @@ tel
   \label{fig:ntasks-compos}
 \end{figure}
 
+\section{Known issues}
+\label{sec:known-issues}
+
+Heptagon is a research prototype. Users are kindly invited to submit bugs to the
+Heptagon developers via \url{heptagon-developers@lists.}
+
+Yet, the following subject are known to be issues for the current Heptagon
+version:
+\begin{itemize}
+\item Discrete controller synthesis (DCS) can be applied only on full Boolean
+  programs (with static integer expressions). If applied on nodes containing
+  non-Boolean expressions or values, an abstraction will be computed, removing
+  every equation containing untranslatable value or expression. This abstraction
+  is conservative w.r.t. invariance properties, and does not jeopardize the use
+  of the computed controller, but this controller itself can be less efficient
+  due to the abstraction.
+\item For the above reason, DCS does not mix well with array types, which will
+  be abstracted.
+\item Translation to \texttt{Sigali} code (\texttt{-target z3z} option) for DCS
+  application activates the \texttt{-bool} option, for translation of enumerated
+  values into Boolean vectors. This translation cannot be applied on nodes whose
+  signature comprise enumerated clocks, e.g., the node \lstinline{filter} below:
+
+\begin{lstlisting}
+type t = A | B
+
+node filter(x:int; c:t) returns (y:int on A(c))
+let
+  y = x when A(c)
+tel
+\end{lstlisting}
+
+\item Nodes whose signature comprise sampled streams cannot be inlined. However,
+  inlining of nodes comprising clocks without appearing in signature is
+  possible.
+\end{itemize}
 
 \clearpage
 \appendix
