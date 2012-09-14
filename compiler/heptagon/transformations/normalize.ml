@@ -73,9 +73,11 @@ let e_to_e_list e = match e.e_desc with
   | _ -> assert false
 
 let flatten_e_list l =
-  let flatten = function
-    | { e_desc = Eapp({ a_op =  Etuple }, l, _) } -> l
-    | e -> [e]
+  let flatten e =
+    if is_list e then
+      e_to_e_list e
+    else
+      [e]
   in
     List.flatten (List.map flatten l)
 
