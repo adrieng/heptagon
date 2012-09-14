@@ -132,7 +132,7 @@ module InterfRead = struct
     in
       List.fold_left tr_one [] wl
 
-  let read_extvalue funs acc w =
+  let read_extvalue _ acc w =
     (* recursive call *)
     (*let _, acc = Mls_mapfold.extvalue funs acc w in*)
     let acc =
@@ -386,10 +386,14 @@ let should_interfere = Misc.memoize_couple should_interfere
     variable declaration list vds. It just creates one graph per type
     and one node per declaration. *)
 let init_interference_graph () =
+  let add_tyenv env iv =
+    let ty = Static.simplify_type Names.QualEnv.empty (World.ivar_type iv) in
+    TyEnv.add_element ty (mk_node iv) env
+  in
   (** Adds a node for the variable and all fields of a variable. *)
   let rec add_ivar env iv ty =
     let ivars = all_ivars [] iv None ty in
-      List.fold_left (fun env iv -> TyEnv.add_element (World.ivar_type iv) (mk_node iv) env) env ivars
+      List.fold_left add_tyenv env ivars
   in
   let env = Env.fold
     (fun _ vd env -> add_ivar env (Ivar vd.v_ident) vd.v_type) !World.vds TyEnv.empty in

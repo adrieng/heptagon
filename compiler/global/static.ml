@@ -186,6 +186,11 @@ let simplify env se =
   try eval_core true env se
   with exn -> message exn
 
+let rec simplify_type env ty = match ty with
+  | Tarray(ty, e) -> Tarray(simplify_type env ty, simplify env e)
+  | Tprod l -> Tprod (List.map (simplify_type env) l)
+  | t -> t
+
 (** [eval env e] does the same as [simplify]
     but if it returns, there are no variables nor op left.
     @raise [Errors.Error] when it cannot fully evaluate. *)

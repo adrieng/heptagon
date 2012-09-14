@@ -299,11 +299,6 @@ let build_subst names values =
   List.fold_left2 (fun m n v -> QualEnv.add n v m)
     QualEnv.empty names values
 
-let rec subst_type_vars m = function
-  | Tarray(ty, e) -> Tarray(subst_type_vars m ty, simplify m e)
-  | Tprod l -> Tprod (List.map (subst_type_vars m) l)
-  | t -> t
-
 let add_distinct_env id vd env =
   if Env.mem id env then
     error (Ealready_defined(name id))
@@ -640,8 +635,8 @@ let rec typing cenv h e =
             List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
           let m = build_subst node_params params in
           let expected_ty_list =
-            List.map (subst_type_vars m) expected_ty_list in
-          let result_ty_list = List.map (subst_type_vars m) result_ty_list in
+            List.map (simplify_type m) expected_ty_list in
+          let result_ty_list = List.map (simplify_type m) result_ty_list in
           let typed_n_list = List.map (expect_static_exp cenv (Tid Initial.pint)) n_list in
           (*typing of partial application*)
           let p_ty_list, expected_ty_list =
@@ -776,9 +771,9 @@ and typing_app cenv h app e_list =
         let op, expected_ty_list, result_ty_list = kind f ty_desc in
         let node_params = List.map (fun { p_name = n } -> local_qn n) ty_desc.node_params in
         let m = build_subst node_params app.a_params in
-        let expected_ty_list = List.map (subst_type_vars m) expected_ty_list in
+        let expected_ty_list = List.map (simplify_type m) expected_ty_list in
         let typed_e_list = typing_args cenv h expected_ty_list e_list in
-        let result_ty_list = List.map (subst_type_vars m) result_ty_list in
+        let result_ty_list = List.map (simplify_type m) result_ty_list in
         (* Type static parameters and generate constraints *)
         let typed_params = typing_node_params cenv ty_desc.node_params app.a_params in
         let constrs = List.map (simplify m) ty_desc.node_param_constraints in
