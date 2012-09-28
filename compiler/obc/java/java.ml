@@ -125,6 +125,21 @@ and pattern = Pfield of pattern * field_name
 type program = classe list
 
 
+(** [jname_of_name name] translates the string [name] to a valid Java identifier. *)
+let jname_of_name name =
+  let buf = Buffer.create (String.length name) in
+  let rec convert c =
+    match c with
+      | 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' ->
+          Buffer.add_char buf c
+      | '\'' -> Buffer.add_string buf "_prime"
+      | _ ->
+          Buffer.add_string buf "lex";
+          Buffer.add_string buf (string_of_int (Char.code c)) in
+  String.iter convert name;
+  Buffer.contents buf
+
+
 let rec default_value ty = match ty with
   | Tclass _ -> Snull
   | Tgeneric _ -> Snull

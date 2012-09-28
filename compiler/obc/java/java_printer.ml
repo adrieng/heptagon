@@ -34,16 +34,30 @@ open Pp_tools
 open Format
 open Misc
 
-let class_name = Global_printer.print_qualname
-let bare_class_name = Global_printer.print_shortname
-let obj_ident = Global_printer.print_ident
-let constructor_name = Global_printer.print_qualname
-let bare_constructor_name = Global_printer.print_shortname
-let method_name = pp_print_string
-let field_name = pp_print_string
-let field_ident = Global_printer.print_ident
-let var_ident = Global_printer.print_ident
-let const_name = Global_printer.print_qualname
+
+let print_ident ff id =  Format.fprintf ff "%s" (jname_of_name (Idents.name id))
+
+let print_qualname ff ({ Names.name = n } as qn) =
+  Global_printer.print_qualname ff { qn with Names.name = jname_of_name n }
+
+let print_shortname ff ({ Names.name = n } as qn) =
+  Global_printer.print_shortname ff { qn with Names.name = jname_of_name n }
+  
+let java_print_string ff s =
+  pp_print_string ff (jname_of_name s)
+
+let class_name = print_qualname
+let bare_class_name = print_shortname
+let constructor_name = print_qualname
+let bare_constructor_name = print_shortname
+let method_name = java_print_string
+let field_name = java_print_string
+let const_name = print_qualname
+
+
+let obj_ident = print_ident
+let field_ident = print_ident
+let var_ident = print_ident
 
 let protection ff = function
   | Ppublic -> fprintf ff "public "
@@ -68,7 +82,7 @@ let rec _ty is_new is_init ff t = match t with
   | Tarray (t,s_l) ->
       let me = _ty is_new is_init in
       (* print size expressions only for new without init *)
-      let print_size = if is_new && not is_init then exp else (fun ff e -> ()) in
+      let print_size = if is_new && not is_init then exp else (fun _ff _e -> ()) in
       fprintf ff "%a@[%a@]" me t (print_list print_size "[""][""]") s_l
   | Tunit -> pp_print_string ff "void"
 
@@ -258,7 +272,7 @@ and classe ff c = match c.c_kind with
 
 let output_classe base_dir c =
   let { Names.name = file_name; Names.qual = package } = c.c_name in
-  let file_name = file_name ^ ".java" in
+  let file_name = (jname_of_name file_name) ^ ".java" in
   let package_dirs = Misc.split_string (Names.modul_to_string package) "." in
   let create_dir base_dir dir =
     let dir = Filename.concat base_dir dir in
