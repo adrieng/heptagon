@@ -178,5 +178,11 @@ let edesc funs acc ed =
 let program p =
   let funs = { Hept_mapfold.defaults with edesc = edesc } in
   let p, _ = Hept_mapfold.program_it funs false p in
-  let pd = QualEnv.fold (fun _ nd l -> Pnode nd :: l) !anon_nodes p.p_desc in
+  let pd =
+    QualEnv.fold
+      (fun _ nd l ->
+         Modules.add_value nd.n_name (signature_of_node nd);
+         Pnode nd :: l)
+      !anon_nodes
+      p.p_desc in
     { p with p_desc = pd }
