@@ -31,3 +31,7 @@ compile_diff "itfusion"
 compile_diff "memalloc"
 compile_diff "unroll"
 compile_diff "O"
+
+for i in good/*.ept; do
+    echo 'ADD_TEST(compile_javac_run_'`basename $i .ept` '"scripts/compile_javac_run"' '"'$i'")'
+done

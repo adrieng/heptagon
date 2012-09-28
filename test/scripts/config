@@ -22,6 +22,8 @@ fi
 HEPTC="../$COMPILER_DIR/$COMPILER -stdlib ../../lib"
 CC="gcc -std=c99 -I ../../../lib/c"
 LD="gcc"
+JAVAC="javac -classpath ../../../lib/java:."
+JAVA="java -classpath ../../../lib/java:."
 NBSTEP=100
 
 if [ ! -x $checkdir ];

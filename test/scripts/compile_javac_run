@@ -1,0 +1,82 @@
+#!/bin/bash
+
+source scripts/config
+
+progpath=$1
+shift
+coption="-target java $*"
+
+# run the program: no by default
+run=0
+
+cp $progpath $checkdir
+
+
+pushd $checkdir > /dev/null
+
+heptprog=`basename $progpath`
+heptroot=`basename $heptprog .ept`
+
+assert_node=$(eval grep CHECK $heptprog | awk '{ print $3 }')
+
+if [ -n "$assert_node" ]; then
+    coption="$coption -assert $assert_node"
+    run=1
+fi
+
+if grep "node main()" $heptprog >/dev/null; then
+    coption="$coption -hepts -s main"
+    run=1
+fi
+
+# Special case: t2 and t2open needs t1
+
+# if [[ ($heptroot == "t2") || ($heptroot == "t2open") ]]; then
+#     # Nothing to do
+# fi
+
+# Special case: statics2 needs statics1
+
+if [[ ($heptroot == "statics1") ]]; then
+    coption="$coption -c"
+fi
+
+# if [[ ($heptroot == "statics2") ]]; then
+
+# fi
+
+# Capitalized root
+CapHeptroot=`echo ${heptroot} | sed 's/^\(.\).*$/\1/' | tr "[:lower:]" "[:upper:]"`\
+`echo ${heptroot} | sed 's/^.//'`
+
+echo $HEPTC $coption $heptprog
+if $HEPTC $coption $heptprog; then
+    pushd java > /dev/null
+    echo $JAVAC ${CapHeptroot}/*.java
+    if $JAVAC ${CapHeptroot}/*.java; then
+	if [[ $run == 1 ]]; then
+	    echo $JAVA ${CapHeptroot}.Main_sim $NBSTEP
+	    if $JAVA ${CapHeptroot}.Main_sim $NBSTEP; then
+		echo "Test successful."
+		res=0
+	    else
+		echo "Run failed."
+		res=1
+	    fi
+	else
+	    echo "Test successful (Java compilation only; no run)."
+	    res=0
+	fi
+    else
+	echo "Compilation of Java target code failed"
+	res=1
+    fi
+    popd >/dev/null
+else
+    echo "Compilation of $heptprog failed"
+    res=1
+fi
+
+popd > /dev/null
+
+exit $res
