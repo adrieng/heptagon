@@ -298,10 +298,20 @@ let obj_ref param_env o = match o with
       let idx_l = List.map (fun p -> pattern_to_exp param_env p) p_l in
       Earray_elem (Evar id, idx_l)
 
+let jop_of_op param_env op_name e_l =
+  match op_name with
+  | { qual = Module "Iostream"; name = "printf" } ->
+      Emethod_call (Eclass(Names.qualname_of_string "java.lang.System.out"), 
+                    "print",
+                    (exp_list param_env e_l))
+  | _ ->
+      Efun (op_name, exp_list param_env e_l)
+
+
 let rec act_list param_env act_l acts =
   let _act act acts = match act with
     | Obc.Aassgn (p,e) -> (Aassgn (pattern param_env p, exp param_env e))::acts
-    | Obc.Aop (op,e_l) -> Aexp (Efun (op, exp_list param_env e_l)) :: acts
+    | Obc.Aop (op,e_l) -> Aexp (jop_of_op param_env op e_l) :: acts
     | Obc.Acall ([], obj, Mstep, e_l) ->
         let acall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         Aexp acall::acts
