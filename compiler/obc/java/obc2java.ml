@@ -188,7 +188,18 @@ let rec static_exp param_env se = match se.Types.se_desc with
       Enew_array (ty param_env se.Types.se_ty, se_l)*)
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
-  | Types.Srecord _ -> Misc.unsupported "Srecord in java" (* TODO java *)
+  | Types.Srecord f_e_l ->
+      let ty_name = 
+        match se.Types.se_ty with
+        | Types.Tid ty_name -> qualname_to_package_classe ty_name
+        | _ -> Misc.internal_error "Obc2java14"
+      in
+      let f_e_l =
+	List.sort
+	  (fun (f1,_) (f2,_) -> compare f1.name f2.name)
+	  f_e_l in
+      let e_l = List.map (fun (_f,e) -> e) f_e_l in
+      Enew (Tclass ty_name, List.map (static_exp param_env) e_l)
   | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
 
 and boxed_ty param_env t = match Modules.unalias_type t with
@@ -242,7 +253,14 @@ and var_dec_list param_env vd_l = List.map (var_dec param_env) vd_l
 and exp param_env e = match e.e_desc with
   | Obc.Eextvalue p -> ext_value param_env p
   | Obc.Eop (op,e_l) -> Efun (op, exp_list param_env e_l)
-  | Obc.Estruct _ -> eprintf "ojEstruct@."; assert false (* TODO java *)
+  | Obc.Estruct (ty_name,f_e_l) ->
+      let ty_name = qualname_to_package_classe ty_name in
+      let f_e_l =
+	List.sort
+	  (fun (f1,_) (f2,_) -> compare f1.name f2.name)
+	  f_e_l in
+      let e_l = List.map (fun (_f,e) -> e) f_e_l in
+      Enew (Tclass ty_name, exp_list param_env e_l)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
 
 and exp_list param_env e_l = List.map (exp param_env) e_l
@@ -529,7 +547,23 @@ let type_dec_list classes td_l =
             see [Idents.enter_node classe_name] *)
             mk_field jty field
           in
-          (mk_classe ~fields:(List.map mk_field_jfield f_l) classe_name) :: classes
+	  let f_l =
+	    List.sort 
+	      (fun f1 f2 ->
+		 compare (f1.Signature.f_name.name) (f2.Signature.f_name.name))
+	      f_l in
+	  let fields = List.map mk_field_jfield f_l in
+	  let cons_params = List.map (fun f -> mk_var_dec f.f_ident false f.f_type) fields in
+	  let cons_body = 
+	    List.map
+	      (fun f -> Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
+	      fields in
+	  let cons =
+	    mk_methode 
+	      ~args:cons_params
+	      (mk_block cons_body)
+	      classe_name.name in
+          (mk_classe ~fields:fields ~constrs:[cons] classe_name) :: classes
   in
   List.fold_left _td classes td_l
 
