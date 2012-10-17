@@ -71,20 +71,38 @@ let number_uses x uses =
            with other memories and outputs. *)
         (*if Interference.World.is_memory x then 1 else 0*)
 
-let add_uses uses env x =
-  Interference.print_debug "Adding %d uses for %a@." (number_uses x uses) print_ident x;
-  Env.add x (number_uses x uses) env
 
-let decr_uses env x =
-  try
-    Env.add x ((Env.find x env) - 1) env
-  with
-    | Not_found ->
-	(* Self use: no decrease for x *)
-	env
 
 module Cost =
 struct
+  open Interference
+  open Interference_graph
+
+  (* Care only for optimized variables (arrays) *)
+  let filter_opt x_l =
+    List.filter (fun x -> World.is_optimized (Ivar x)) x_l
+
+  (** Care only for optimized variables (arrays) *)
+  let read_opt eq =
+    let reads = Mls_utils.Vars.read false eq in
+    filter_opt reads
+
+  (** Care only for optimized variables (arrays) *)
+  let def_opt eq =
+    let defs = Mls_utils.Vars.def [] eq in
+    filter_opt defs
+
+  let add_uses uses env x =
+    Interference.print_debug
+      "Adding %d uses for %a@." (number_uses x uses) print_ident x;
+    Env.add x (number_uses x uses) env
+
+  let decr_uses env x =
+    try
+      Env.add x ((Env.find x env) - 1) env
+    with Not_found -> (* Self use: no decrease for x *) env
+
+
   (** Remove from the elements the elements whose value is zero or negative. *)
   let remove_null m =
     let check_not_null k d m =
@@ -103,22 +121,27 @@ struct
 	    (* self use of x *)
 	    acc
     in
-    List.fold_left is_killed 0 (Mls_utils.Vars.read false eq)
+    List.fold_left is_killed 0 (read_opt eq)
 
   (** Initialize the costs data structure. *)
   let init_cost uses inputs =
-    Interference.print_debug "Init cost@.";
-    let env = IdentSet.fold (fun x env -> add_uses uses env x) !Interference.World.memories Env.empty in
-    let inputs = List.map (fun vd -> vd.v_ident) inputs in
-      List.fold_left (add_uses uses) env inputs
+    print_debug "Init cost@.";
+    let mem_opt =
+      IdentSet.filter (fun x -> World.is_optimized (Ivar x)) !World.memories
+    in
+    let env =
+      IdentSet.fold (fun x env -> add_uses uses env x) mem_opt Env.empty
+    in
+    let inputs = filter_opt (List.map (fun vd -> vd.v_ident) inputs) in
+    List.fold_left (add_uses uses) env inputs
 
   (** [update_cost eq uses env] updates the costs data structure
       after eq has been chosen as the next equation to be scheduled.
       It updates uses and adds the new variables defined by this equation.
   *)
   let update_cost eq uses env =
-    let env = List.fold_left decr_uses env (Mls_utils.Vars.read false eq) in
-      List.fold_left (add_uses uses) env (Mls_utils.Vars.def [] eq)
+    let env = List.fold_left decr_uses env (read_opt eq) in
+      List.fold_left (add_uses uses) env (def_opt eq)
 
   (** Returns the next equation, chosen from the list of equations rem_eqs *)
   let next_equation rem_eqs ck env =
@@ -129,10 +152,10 @@ struct
     in
     let cost eq =
       let nb_killed_vars = killed_vars eq env in
-      let nb_def_vars = List.length (Mls_utils.Vars.def [] eq) in
+      let nb_def_vars = List.length (def_opt eq) in
       let b = bonus eq in
-      (*if Interference.verbose_mode then *)
-      Interference.print_debug "(%d,%d,%d)%a@." nb_killed_vars nb_def_vars b Mls_printer.print_eq eq;
+      print_debug "(%d,%d,%d)%a@."
+        nb_killed_vars nb_def_vars b Mls_printer.print_eq eq;
       nb_def_vars - nb_killed_vars + b
 
     in
@@ -198,7 +221,7 @@ let schedule eq_list inputs node_list =
         let rem_eqs = free_eqs node_list in
         (* compute new costs for the next step *)
         let costs = Cost.update_cost eq uses costs in
-          schedule_aux rem_eqs (eq::sched_eqs) node_list (control_ck eq) costs
+        schedule_aux rem_eqs (eq::sched_eqs) node_list (control_ck eq) costs
   in
   let costs = Cost.init_cost uses inputs in
   let rem_eqs = free_eqs node_list in
