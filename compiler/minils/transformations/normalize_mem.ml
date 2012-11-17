@@ -63,6 +63,10 @@ let build_env nd =
        List.fold_left (fun env id -> Env.add id None env) env (Vars.def [] eq)
   in
   let env = add_none Env.empty nd.n_input in
+  let env =
+    match nd.n_contract with
+      None -> env
+    | Some c -> add_none env c.c_controllables in
   let env = List.fold_left add_eq env nd.n_equs in
   let env =
     if !normalize_outputs then
@@ -85,7 +89,7 @@ let rec depends_on x y env =
       else if ident_compare y z = 0 then false
       else depends_on x z env
 
-let eq funs (env, vds, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs with
+let eq _funs (env, vds, v, eqs) eq = match eq.eq_lhs, eq.eq_rhs with
   | Evarpat x, e when Vars.is_fby e && depends_on x x env ->
         let vd = vd_find x vds in
         let x_mem = Idents.gen_var "normalize_mem" ("mem_"^(Idents.name x)) in
