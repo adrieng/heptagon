@@ -208,7 +208,15 @@ and boxed_ty param_env t = match Modules.unalias_type t with
   | Types.Tid t when t = Initial.pbool -> Tclass (Names.local_qn "Boolean")
   | Types.Tid t when t = Initial.pint -> Tclass (Names.local_qn "Integer")
   | Types.Tid t when t = Initial.pfloat -> Tclass (Names.local_qn "Float")
-  | Types.Tid t -> Tclass (qualname_to_class_name t)
+  | Types.Tid t -> 
+      begin try
+        let ty = find_type t in
+        begin match ty with
+        | Tenum _ -> Tint
+        | _ -> Tclass (qualname_to_class_name t)
+        end
+      with Not_found -> Tclass (qualname_to_class_name t)
+      end
   | Types.Tarray _ ->
     let rec gather_array t = match t with
       | Types.Tarray (t,size) ->
@@ -232,7 +240,15 @@ and ty param_env t =
   | Types.Tid t when t = Initial.pbool -> Tbool
   | Types.Tid t when t = Initial.pint -> Tint
   | Types.Tid t when t = Initial.pfloat -> Tfloat
-  | Types.Tid t -> Tclass (qualname_to_class_name t)
+  | Types.Tid t ->
+      begin try
+        let ty = find_type t in
+        begin match ty with
+        | Tenum _ -> Tint
+        | _ -> Tclass (qualname_to_class_name t)
+        end
+      with Not_found -> Tclass (qualname_to_class_name t)
+      end
   | Types.Tarray _ ->
       let rec gather_array t = match t with
         | Types.Tarray (t,size) ->
@@ -320,7 +336,7 @@ let jop_of_op param_env op_name e_l =
   match op_name with
   | { qual = Module "Iostream"; name = "printf" } ->
       Emethod_call (Eclass(Names.qualname_of_string "java.lang.System.out"), 
-                    "printf",
+                    "print",
                     (exp_list param_env e_l))
   | _ ->
       Efun (op_name, exp_list param_env e_l)
@@ -330,29 +346,13 @@ let rec act_list param_env act_l acts =
   let _act act acts = match act with
     | Obc.Aassgn (p,e) -> (Aassgn (pattern param_env p, exp param_env e))::acts
     | Obc.Aop (op,e_l) -> Aexp (jop_of_op param_env op e_l) :: acts
-    | Obc.Acall ([], obj, Mstep, e_l) ->
-        let acall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
-        Aexp acall::acts
-    | Obc.Acall ([p], obj, Mstep, e_l) ->
-        let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
-        let assgn = Aassgn (pattern param_env p, ecall) in
-        assgn::acts
     | Obc.Acall (p_l, obj, Mstep, e_l) ->
-        let return_ty = p_l |> pattern_list_to_type |> (ty param_env) in
-        let return_id = Idents.gen_var "obc2java" "out" in
-        let return_vd = mk_var_dec return_id false return_ty in
-        let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
-        let assgn = Anewvar (return_vd, ecall) in
+        let o_ref = obj_ref param_env obj in
+        let ecall = Emethod_call (o_ref, "step", exp_list param_env e_l) in
+        let assgn = Aexp ecall in
         let copy_return_to_var i p =
-          let t = ty param_env p.pat_ty in
-          let cast t e = match t with
-            | Tbool -> Ecast(Tbool, Ecast(boxed_ty param_env p.pat_ty, e))
-            | Tint -> Ecast(Tint, Ecast(boxed_ty param_env p.pat_ty, e))
-            | Tfloat -> Ecast(Tfloat, Ecast(boxed_ty param_env p.pat_ty, e))
-            | _ -> Ecast(t, e)
-          in
           let p = pattern param_env p in
-          Aassgn (p, cast t (Efield (Evar return_id, "c"^(string_of_int i))))
+          Aassgn (p, Emethod_call (o_ref, "getOutput" ^ (string_of_int i), []))
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
@@ -372,7 +372,12 @@ let rec act_list param_env act_l acts =
               (Aifelse (exp param_env e, block param_env _then, block param_env _else)) :: acts)
     | Obc.Acase (e, c_b_l) ->
         let _c_b (c,b) = 
-	  Senum (translate_constructor_name c),
+	  let type_name = 
+	    match e.e_ty with
+	      Types.Tid n -> qualname_to_package_classe n
+	    | _ -> failwith("act_list: translating case") in
+	  let c = translate_constructor_name_2 c type_name in
+	  Sexp(Sconstructor c),
 	  block param_env b in
         let acase = Aswitch (exp param_env e, List.map _c_b c_b_l) in
         acase::acts
@@ -507,21 +512,25 @@ let class_def_list classes cd_l =
       let fields = List.fold_left mem_to_field fields cd.cd_mems in
       List.fold_left obj_to_field fields cd.cd_objs
     in
+    let ostep = find_step_method cd in
+    let vd_output = var_dec_list param_env ostep.m_outputs in
+    let output_fields = 
+      List.map (fun vd -> mk_field vd.vd_type vd.vd_ident) vd_output in
+    let fields = fields @ output_fields in
+    let build_output_methods i f =
+      mk_methode ~returns:f.f_type
+        (mk_block [Areturn (Evar f.f_ident)])
+        ("getOutput" ^ (string_of_int i))
+    in
+    let output_methods = Misc.mapi build_output_methods output_fields in
     let step =
-      let ostep = find_step_method cd in
-      let vd_output = var_dec_list param_env ostep.m_outputs in
-      let return_ty = ostep.m_outputs |> vd_list_to_type |> (ty param_env) in
-      let return_act =
-        Areturn (match vd_output with
-                  | [] -> Evoid
-                  | [vd] -> Evar vd.vd_ident
-                  | vd_l -> Enew (return_ty, List.map (fun vd -> Evar vd.vd_ident) vd_l))
-      in
-      let body = block param_env ~locals:vd_output ~end_acts:[return_act] ostep.Obc.m_body in
-      mk_methode ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:return_ty body "step"
+      let body = block param_env ostep.Obc.m_body in
+      mk_methode ~args:(var_dec_list param_env ostep.Obc.m_inputs) ~returns:Tunit body "step"
     in
     let classe = mk_classe ~fields:fields
-                           ~constrs:[constructeur] ~methodes:[step;reset] class_name in
+                           ~constrs:[constructeur]
+                           ~methodes:([step;reset]@output_methods)
+                           class_name in
     classe::classes
   in
   List.fold_left class_def classes cd_l
@@ -538,8 +547,15 @@ let type_dec_list classes td_l =
           let _ = Modules.unalias_type t in
           classes
       | Type_enum c_l ->
-          let mk_constr_enum c = translate_constructor_name_2 c td.t_name in
-          (mk_enum (List.map mk_constr_enum c_l) classe_name) :: classes
+          let mk_constr_field (acc_fields,i) c =
+            let init_value = Sint i in
+            let c = translate_constructor_name_2 c classe_name in
+            let field = 
+              mk_field ~static:true ~final:true ~value:(Some init_value)
+                Tint (Idents.ident_of_name c.name) in
+            (field::acc_fields),(i+1) in
+          let fields,_ = List.fold_left mk_constr_field ([],1) c_l in
+          (mk_classe ~fields:(List.rev fields) classe_name) :: classes
       | Type_struct f_l ->
           let mk_field_jfield { Signature.f_name = oname; Signature.f_type = oty } =
             let jty = ty param_env oty in

@@ -204,7 +204,11 @@ and act ff = function
   | Aexp e -> fprintf ff "@[%a@];" exp e
   | Aswitch (e, c_b_l) ->
       let pcb ff (c,b) =
-        fprintf ff "@[<v4>case %a:@ %a@ break;@]" bare_constructor_name c block b in
+	let print_case ff c =
+	  match c with
+	  | Senum c -> bare_constructor_name ff c
+	  | Sexp e -> exp ff e in
+        fprintf ff "@[<v4>case %a:@ %a@ break;@]" print_case c block b in
     (*  let switch_hack ff c_b_l = (* TODO java : better thing to do ? *)
         fprintf ff "@[<2>default ://Dead code. Hack to prevent \
                     \"may not be initialized\"

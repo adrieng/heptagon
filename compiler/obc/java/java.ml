@@ -90,12 +90,14 @@ and block = { b_locals : var_dec list;
 and act = Anewvar of var_dec * exp
         | Aassgn of pattern * exp
         | Aexp of exp
-        | Aswitch of exp * (constructor_name * block) list
+        | Aswitch of exp * (switch_case * block) list
         | Aif of exp * block
         | Aifelse of exp * block * block
         | Ablock of block
         | Afor of var_dec * exp * exp * block
         | Areturn of exp
+
+and switch_case = Senum of constructor_name | Sexp of exp
 
 and exp = Ethis
         | Efun of op_name * exp list
