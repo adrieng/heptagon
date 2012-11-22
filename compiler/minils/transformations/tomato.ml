@@ -644,7 +644,13 @@ let node nd =
 
   (* Initial environment *)
   let tenv =
-    let is_input id = List.exists (fun vd -> ident_compare vd.v_ident id = 0) nd.n_input in
+    let controllables =
+      match nd.n_contract with
+      | None -> []
+      | Some c -> c.c_controllables in
+    let inputs = nd.n_input @ controllables in
+    let is_input id = 
+      List.exists (fun vd -> ident_compare vd.v_ident id = 0) inputs in
     List.fold_left (add_equation is_input) PatMap.empty nd.n_equs in
 
   debug_do (fun () -> Format.printf "Very first tenv:\n%a@." debug_tenv tenv) ();
