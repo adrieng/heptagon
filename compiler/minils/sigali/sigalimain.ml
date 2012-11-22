@@ -67,6 +67,7 @@ let var_list prefix n =
   varl [] n
 
 let current_inputs : IdentSet.t ref = ref IdentSet.empty
+let current_locals : IdentSet.t ref = ref IdentSet.empty
 
 let translate_static_exp se =
   match se.se_desc with
@@ -112,9 +113,12 @@ let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty }) =
   | Minils.Wvar(n) ->
       (* get variable iff it is Boolean or local *)
       begin match (actual_ty ty) with
-      | Tbool -> Svar(prefix ^ (name n))
-      | Tint when not (IdentSet.mem n !current_inputs) -> Svar(prefix ^ (name n))
-      | _ -> raise Untranslatable
+      | Tbool -> 
+	  Svar(prefix ^ (name n))
+      | Tint when (IdentSet.mem n !current_locals) -> 
+	  Svar(prefix ^ (name n))
+      | _ -> 
+	  raise Untranslatable
       end
   (* TODO remove if this works without *)
   (* | Minils.Wwhen(e, c, var) when ((actual_ty e.Minils.w_ty) = Tbool) -> *)
@@ -255,6 +259,7 @@ let rec translate_eq f
             in
             let e_next = translate_ext prefix e' in
             let e_next = translate_ck prefix e_next ck in
+            current_locals := IdentSet.add n !current_locals;
             (n,sn)::acc_states,
             acc_init,acc_inputs,
             (extend
@@ -273,6 +278,7 @@ let rec translate_eq f
       | _ ->
           untranslatable_warn e;
           (* Mark n as input: unusable as local variable *)
+	  Format.printf "Adding non-bool variable %s in current_inputs@\n" (name n);
           current_inputs := IdentSet.add n !current_inputs;
           acc_states,acc_init,acc_inputs,acc_eqs
       end
@@ -302,6 +308,7 @@ let rec translate_eq f
         (*   | Tbool -> translate_ck prefix e' ck *)
         (*   | _ -> e' *)
         (*   end in *)
+        current_locals := IdentSet.add n !current_locals;
         acc_states,acc_init,
         acc_inputs,
         { stmt_name = prefixed (name n);
@@ -366,6 +373,7 @@ let translate_node
       (fun set v_d -> IdentSet.add v_d.Minils.v_ident set)
       IdentSet.empty
       i_list;
+  current_locals := IdentSet.empty;
   (* keep only Boolean inputs *)
   let i_list =
     List.filter
@@ -418,7 +426,7 @@ let translate_node
             proc_constraints = constraints;
             proc_body = body@body_c@body_sink;
             proc_objectives = [obj] } in
-
+  
   let ctrlr_call = 
     begin
       match controllables with
