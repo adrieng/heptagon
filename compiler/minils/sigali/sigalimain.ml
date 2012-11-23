@@ -402,19 +402,26 @@ let translate_node
       (fun v -> Sequal(Ssquare(Svar(v)),Sconst(Ctrue)))
       (sig_inputs@sig_ctrl) in
   let constraints = constraints @ [Sequal (a_c,Sconst(Ctrue))] in
-  (* Sink state when the guarantee part of the contract becomes false *)
-  (* f_error_state state variable initialized to true; become false
-     the instant after the guarantee part is false *)
-  let error_state_name = f ^ "_error_state" in
-  let sig_states_full = sig_states @ [error_state_name] in
-  let body_sink =
-    [(extend
-        initialisations
-        (Slist[Sequal(Svar(error_state_name),Sconst(Ctrue))]));
-     (extend
-        evolutions
-        (Slist[g_c]))] in
-  let obj = Security(Svar(error_state_name)) in
+  let body_sink, sig_states_full, obj_exp =
+    if !Compiler_options.nosink then
+      ([], sig_states, g_c)
+    else
+      begin
+	(* Sink state when the guarantee part of the contract becomes false *)
+	(* f_error_state state variable initialized to true; become false
+	   the instant after the guarantee part is false *)
+	let error_state_name = f ^ "_error_state" in
+	let sig_states_full = sig_states @ [error_state_name] in
+	let body_sink =
+	  [(extend
+              initialisations
+              (Slist[Sequal(Svar(error_state_name),Sconst(Ctrue))]));
+	   (extend
+              evolutions
+              (Slist[g_c]))] in
+	(body_sink, sig_states_full, Svar(error_state_name))
+      end in
+  let obj = Security(obj_exp) in
   let p = { proc_dep = [];
             proc_name = f;
             proc_inputs = sig_inputs@sig_ctrl;

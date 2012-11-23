@@ -85,6 +85,8 @@ let create_object_file = ref false
 
 let boolean = ref false
 
+let nosink = ref false
+
 (* Target languages list for code generation *)
 let target_languages : string list ref = ref []
 
@@ -190,6 +192,7 @@ and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
   ^ " cleaned)"
 and doc_boolean = "\t\tTranslate enumerated values towards boolean vectors"
+and doc_nosink = "\t\tSuppress the sink state in sigali equations"
 and doc_deadcode = "\t\tDeadcode removal"
 and doc_nocaus = "\t\tDisable causality analysis"
 and doc_noinit = "\t\tDisable initialization analysis"
