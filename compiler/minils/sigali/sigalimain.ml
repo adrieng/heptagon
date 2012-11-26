@@ -433,7 +433,15 @@ let translate_node
             proc_constraints = constraints;
             proc_body = body@body_c@body_sink;
             proc_objectives = [obj] } in
-  
+  if !Compiler_options.nbvars then
+    begin
+      (* Print out nb of vars *)
+      let nbs = List.length p.proc_states in
+      let nbi = List.length inputs in
+      let nbc = List.length controllables in
+      Printf.printf "%s %d %d %d %d\n" f nbs nbi nbc (nbs+nbi+nbc);
+    end;
+
   let ctrlr_call = 
     begin
       match controllables with

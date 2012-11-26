@@ -146,6 +146,7 @@ let main () =
         "-fti", Arg.Set full_type_info, doc_full_type_info;
         "-statefuli", Arg.Set stateful_info, doc_stateful_info;
         "-fname", Arg.Set full_name, doc_full_name;
+        "-nbvars", Arg.Set nbvars, doc_nbvars;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
         "-strict_ssa", Arg.Unit set_strict_ssa, doc_strict_ssa;
 	"-nosink", Arg.Set nosink, doc_nosink;

@@ -106,6 +106,8 @@ let stateful_info = ref false
 
 let full_name = ref false
 
+let nbvars = ref false
+
 let causality = ref true
 let init = ref true
 
@@ -188,6 +190,7 @@ and doc_target =
 and doc_full_type_info = "\t\t\tPrint full type information"
 and doc_stateful_info = "\t\tPrint stateful information"
 and doc_full_name = "\t\tPrint full variable name information"
+and doc_nbvars = "\t\tPrint information about number of variables"
 and doc_target_path =
   "<path>\tGenerated files will be placed in <path>\n\t\t\t(the directory is"
   ^ " cleaned)"
