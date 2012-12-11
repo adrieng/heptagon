@@ -77,7 +77,13 @@ let error_message loc = function
 let ck_of_name h x =
   if is_reset x
   then fresh_clock()
-  else Env.find x h
+  else
+    try
+      Env.find x h
+    with Not_found ->
+      Format.printf "Not found while hept_clocking : %a@\n"
+	Idents.print_ident x;
+      raise Not_found
 
 let rec typing_pat h = function
   | Evarpat x -> Ck (ck_of_name h x)
@@ -258,18 +264,24 @@ let typing_contract h contract =
     | Some { c_block = b;
              c_assume = e_a;
              c_enforce = e_g;
-             c_assume_loc = e_a_loc;
-             c_enforce_loc = e_g_loc;
              c_controllables = c_list } ->
         let h' = typing_block h b in
         (* assumption *)
         expect h' (Etuplepat []) (Ck Cbase) e_a;
-        expect h' (Etuplepat []) (Ck Cbase) e_a_loc;
         (* property *)
         expect h' (Etuplepat []) (Ck Cbase) e_g;
-        expect h' (Etuplepat []) (Ck Cbase) e_g_loc;
         
         append_env h c_list
+
+let typing_local_contract h contract =
+  match contract with
+    | None -> ()
+    | Some { c_assume_loc = e_a_loc;
+             c_enforce_loc = e_g_loc } ->
+        (* assumption *)
+        expect h (Etuplepat []) (Ck Cbase) e_a_loc;
+        (* property *)
+        expect h (Etuplepat []) (Ck Cbase) e_g_loc
 
 (* check signature causality and update it in the global env *)
 let update_signature h node =
@@ -287,7 +299,8 @@ let typing_node node =
   let h0 = append_env Env.empty node.n_input in
   let h0 = append_env h0 node.n_output in
   let h = typing_contract h0 node.n_contract in
-  typing_block h node.n_block;
+  let h = typing_block h node.n_block in
+  typing_local_contract h node.n_contract;
   (* synchronize input and output on base : find the free vars and set them to base *)
   Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;
   (*update clock info in variables descriptions *)

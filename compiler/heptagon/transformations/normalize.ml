@@ -351,8 +351,8 @@ let eq funs context eq =
   let context = translate_eq context eq in
     eq, context
 
-let block funs _ b =
-  let _, (v_acc, eq_acc) = Hept_mapfold.block funs ([],[]) b in
+let block funs context b =
+  let _, (v_acc, eq_acc) = Hept_mapfold.block funs context b in
     { b with b_local = v_acc@b.b_local; b_equs = eq_acc}, ([], [])
 
 let contract funs context c =
@@ -361,9 +361,9 @@ let contract funs context c =
   (* Non-void context could mean lost equations *)
   assert (void_context=([],[]));
   let context, e_a = translate ExtValue ([],[]) c.c_assume in
-  let context, e_a_loc = translate ExtValue context c.c_assume_loc in
   let context, e_e = translate ExtValue context c.c_enforce in
-  let context, e_e_loc = translate ExtValue context c.c_enforce_loc in
+  let local_context, e_a_loc = translate ExtValue ([],[]) c.c_assume_loc in
+  let local_context, e_e_loc = translate ExtValue local_context c.c_enforce_loc in
   let (d_list, eq_list) = context in
   { c with
       c_assume = e_a;
@@ -373,7 +373,22 @@ let contract funs context c =
       c_block = { b with
                     b_local = d_list@b.b_local;
                     b_equs = eq_list@b.b_equs; }
-  }, void_context
+  }, local_context
+
+and node_dec funs context nd =
+  let n_input, context = mapfold (var_dec_it funs) context nd.n_input in
+  let n_output, context = mapfold (var_dec_it funs) context nd.n_output in
+  let n_params, context = mapfold (param_it funs.global_funs) context nd.n_params in
+  let n_contract, context =  optional_wacc (contract_it funs) context nd.n_contract in
+  let n_block, context = block_it funs context nd.n_block in
+  { nd with
+      n_input = n_input;
+      n_output = n_output;
+      n_block = n_block;
+      n_params = n_params;
+      n_contract = n_contract }
+  , context
+
 
 let program p =
   let funs = { defaults with block = block; eq = eq; contract = contract } in

@@ -253,7 +253,7 @@ let append_env h vds =
   List.fold_left (fun h { v_ident = n; v_clock = ck } -> Env.add n ck h) h vds
 
 
-let typing_contract h contract =
+let typing_contract h0 h contract =
   match contract with
     | None -> None, h
     | Some ({ c_local = l_list;
@@ -263,14 +263,14 @@ let typing_contract h contract =
              c_assume_loc = e_a_loc;
              c_enforce_loc = e_g_loc;
              c_controllables = c_list } as contract) ->
-        let h' = append_env h l_list in
+        let h' = append_env h0 l_list in
         (* assumption *)
         (* property *)
         let eq_list = typing_eqs h' eq_list in
         expect_extvalue h' Cbase e_a;
         expect_extvalue h' Cbase e_g;
-        expect_extvalue h' Cbase e_a_loc;
-        expect_extvalue h' Cbase e_g_loc;
+        expect_extvalue h Cbase e_a_loc;
+        expect_extvalue h Cbase e_g_loc;
         let h = append_env h c_list in
         Some { contract with c_eq = eq_list }, h
 
@@ -278,8 +278,9 @@ let typing_contract h contract =
 let typing_node node =
   let h0 = append_env Env.empty node.n_input in
   let h0 = append_env h0 node.n_output in
-  let contract, h = typing_contract h0 node.n_contract in
-  let h = append_env h node.n_local in
+  let h = append_env h0 node.n_local in
+  let contract, h = typing_contract h0 h node.n_contract in
+  (*   let h = append_env h node.n_local in *)
   let equs = typing_eqs h node.n_equs in
   (* synchronize input and output on base : find the free vars and set them to base *)
   Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;

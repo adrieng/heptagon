@@ -31,7 +31,9 @@
 
 (* To be done before "completion" and "switch" transformations *)
 
+open Misc
 open Names
+open Idents
 open Heptagon
 open Hept_utils
 open Hept_mapfold
@@ -44,6 +46,77 @@ open Linearity
     eq_acc contains all the equations *)
 
 let fresh = Idents.gen_var "contracts"
+
+let mk_unique_node nd =
+  let mk_bind vd =
+    let id = fresh (Idents.name vd.v_ident) in
+    (vd.v_ident, { vd with v_ident = id; v_clock = Clocks.fresh_clock () }) in
+  let subst =
+    List.fold_left
+      (fun subst vd ->
+         let id, vd = mk_bind vd in
+         Env.add id vd.v_ident subst)
+      Env.empty
+      (nd.n_input @ nd.n_output) in
+
+  let subst_var_ident _funs subst v =
+    let v = Env.find v subst in
+    v, subst
+  in
+
+  let subst_block funs subst b =
+    let b_local, subst' =
+      mapfold 
+        (fun subst vd ->
+           let id, vd = mk_bind vd in
+           vd, (Env.add id vd.v_ident subst))
+        subst b.b_local in
+    let b, _ = Hept_mapfold.block funs subst' b in
+    { b with b_local = b_local }, subst
+  in
+  
+  let subst_contract_block funs subst b =
+    let b_local, subst' =
+      mapfold 
+        (fun subst vd ->
+           let id, vd = mk_bind vd in
+           vd, (Env.add id vd.v_ident subst))
+        subst b.b_local in
+    let b, _ = Hept_mapfold.block funs subst' b in
+    { b with b_local = b_local }, subst'
+  in
+
+  let subst_contract funs subst c =
+    let c_block, subst' = subst_contract_block funs subst c.c_block in
+    let c_assume, subst' = exp_it funs subst' c.c_assume in
+    let c_enforce, subst' = exp_it funs subst' c.c_enforce in
+    let subst =
+    List.fold_left
+      (fun subst vd ->
+         let id, vd = mk_bind vd in
+         Env.add id vd.v_ident subst)
+      subst c.c_controllables in
+    let c_controllables, subst = mapfold (var_dec_it funs) subst c.c_controllables in
+    let c_assume_loc, subst = exp_it funs subst c.c_assume_loc in
+    let c_enforce_loc, subst = exp_it funs subst c.c_enforce_loc in
+    { c_assume = c_assume;
+      c_enforce = c_enforce;
+      c_assume_loc = c_assume_loc;
+      c_enforce_loc = c_enforce_loc;
+      c_block = c_block;
+      c_controllables = c_controllables },
+    subst in
+
+  (* let funs = { defaults with *)
+  (*                var_dec = subst_var_dec; *)
+  (*                eqdesc = subst_eqdesc; *)
+  (*                edesc = subst_edesc; } in *)
+  let funs = { Hept_mapfold.defaults with
+                 block = subst_block;
+		 contract = subst_contract;
+                 global_funs = { Global_mapfold.defaults with
+                                   Global_mapfold.var_ident = subst_var_ident } } in
+  fst (Hept_mapfold.node_dec funs subst nd)
 
 let mk_unique_contract nd =
   let mk_bind vd =
@@ -93,11 +166,13 @@ let exp funs (env, newvars, newequs, contracts) exp =
   match exp.e_desc with
   | Eapp ({ a_op = (Enode nn | Efun nn); } as op, argl, rso) ->
     begin try
+      
       let add_reset eq = match rso with
         | None -> eq
         | Some x -> mk_equation (Ereset (mk_block [eq], x)) in
 
-      let ni = mk_unique_contract (QualEnv.find nn env) in
+      let n = QualEnv.find nn env in
+      let ni = mk_unique_node n in
 
       let ci = match ni.n_contract with
           None -> raise Not_found
@@ -190,7 +265,7 @@ let mk_vd_bool v = mk_var_dec ~last:(Last (Some (mk_static_bool true))) v tbool 
 let node_dec funs (env, newvars, newequs, contracts) nd =
   let nd, (env, newvars, newequs, contracts) =
     Hept_mapfold.node_dec funs (env, newvars, newequs, contracts) nd in
-  
+
   (* Build assume and guarantee parts from contract list (list of
      ident pairs (v_a,v_g)). Returns also a list of variable
      declarations. *)
