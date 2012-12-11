@@ -1,0 +1,500 @@
+(*
+  V2 +
+  In this example we model is a falttering of the example toy.
+  we may add some lifecycle management.
+*)
+
+type core = C1| C2| C3| C4
+
+
+
+
+(* An automaton to model the lifecycyle of a component *)   
+node lifecycle(change, kill, fifoEmpty :bool) returns(started, unbound:bool; c_start, c_connect, c_stop, c_disconnect:bool)
+let 
+  automaton 
+    state STOPPED do 
+      started = false; 
+      unbound =  true;
+      (c_start, c_connect, c_stop, c_disconnect)=(change, change, false, false);
+    until change then STARTED
+
+      
+   state STARTED do 
+     started =  true; 
+     unbound = false;
+     (c_start, c_connect, c_stop, c_disconnect)=(false, false, (change&fifoEmpty)or(kill),(change or kill));
+     until change & not fifoEmpty then STOPPING
+       |   change & fifoEmpty then STOPPED
+       |   kill then STOPPED
+
+   state STOPPING do 
+     started = true;
+     unbound = true;
+     (c_start, c_connect, c_stop, c_disconnect)=(false, change, (fifoEmpty or kill), false);
+     until fifoEmpty or  kill then STOPPED
+       | change then STARTED
+ end;
+tel 
+
+(* An atamaton to model the state of a FIFIO *)
+node fifo(f:bool) returns (full:bool)
+let 
+automaton 
+  state EMPTY do 
+    full = false;
+    until f then FULL
+  state FULL do 
+    full = true;
+    until not f then EMPTY
+ end;
+tel  
+
+
+(* defines the position of a task *)
+(* It has two boolean inputs to encode 4 possible outgoing transitions *)
+
+node position(a, b :bool)returns(position:core; c_mig1, c_mig2, c_mig3, c_mig4:bool)
+
+(* !a!b go to the next in the numerical order
+   !ab to the second 
+   a!b to the last  *)
+     let 
+	 
+     automaton 
+     	       state C1 do 
+	       position=C1;
+		 (c_mig1, c_mig2, c_mig3, c_mig4)=(false, not a & not b, not a & b, a & not b);
+	       until not a & not b then C2
+	       | not a & b  then C3
+	       | a & not b then C4
+			   
+     	       state C2 do 
+	       position=C2;
+		 (c_mig1, c_mig2, c_mig3, c_mig4)=(a & not b, false, not a & not b, not a & b);
+	       until not a & not b then C3
+	       | not a & b  then C4
+	       | a & not b then C1
+
+     	       state C3 do 
+	       position=C3;
+		 (c_mig1, c_mig2, c_mig3, c_mig4)=( not a & b, a & not b, false, not a & not b);
+	       until not a & not b then C4
+	       | not a & b  then C1
+	       | a & not b then C2
+
+
+     	       state C4 do 
+	       position=C4;
+		 (c_mig1, c_mig2, c_mig3, c_mig4)=( not a & not b, not a & b, a & not b, false);
+	       until not a & not b then C1
+	       | not a & b  then C2
+	       | a & not b then C3
+	    end;
+     tel 
+
+
+
+(* core availability  in the paper it's called proc *)
+node core_mode(disable:bool)returns(active:bool)
+let 
+    automaton 
+      state COREON do 
+	active= true; 
+      until disable then COREOFF
+
+      state COREOFF do 
+	active= false; 
+      until not disable  then COREON
+ end; 
+tel
+
+
+(* computes the communication cost associated with each core hosting the tasks *)
+(* in the paper there is additional inputs f: frequency c: function cost *)
+
+node communication_cost(core1,  core2:core)returns(costcpu1, costcpu2:int)
+     var sameproc, samecore:bool;
+     task1_cpu, task1_core, task2_cpu, task2_core:bool;
+     let
+
+	 switch core1 
+	 | C1 do (task1_cpu, task1_core)=(false, false)
+	 | C2 do (task1_cpu, task1_core)=(false, true);
+	 | C3 do (task1_cpu, task1_core)=(true, false);
+	 | C4 do (task1_cpu, task1_core)=(true, true);
+         end ;
+
+	 switch core2 
+	 | C1 do (task2_cpu, task2_core)=(false, false)
+	 | C2 do (task2_cpu, task2_core)=(false, true);
+	 | C3 do (task2_cpu, task2_core)=(true, false);
+	 | C4 do (task2_cpu, task2_core)=(true, true);
+         end ;	 
+
+     sameproc = (task1_cpu & task2_cpu) or (not task1_cpu & not task2_cpu);
+     samecore = sameproc & ((task1_core & task2_core) or (not task1_core & not task2_core));
+
+    (costcpu1, costcpu2)= if samecore then (10,20)
+     else if sameproc then (20,40)
+     else (50,100);
+     tel
+
+
+(* associates the cost to the given coreId *)
+node core_cost(coreId:core; cost:int)returns(c1, c2, c3, c4:int)     
+     let 	 
+	 switch coreId 
+	 | C1 do (c1,c2,c3,c4)= (cost, 0,0,0)
+	 | C2 do (c1,c2,c3,c4)= (0,cost,0,0) 
+	 | C3 do (c1,c2,c3,c4)= (0,0,cost,0)
+         | C4 do (c1,c2,c3,c4)= (0,0,0,cost);
+         end; 	 
+     tel 
+
+(* modeling asynchronous commands *)
+node command(start, isdone: bool)returns(pending:bool)
+let 
+    automaton 
+      state DONE do 
+	pending = false; 
+      until start then PENDING
+
+      state PENDING do 
+	pending=true;
+      until isdone  then DONE
+ end; 
+tel
+        
+
+(* ======================================== some utility nodes =============================================  *)
+
+
+
+
+(* retruns an integer representation of the coreId*)  
+node compute_core(coreId:core; active:bool)returns(icore:int)
+let
+    
+    	 switch coreId 
+	 | C1 do icore = if(active) then 1 else 0
+	 | C2 do icore = if(active) then 2 else 0
+	 | C3 do icore = if(active) then 3 else 0
+         | C4 do icore = if(active) then 4 else 0
+         end; 
+tel
+
+
+(* tells whether a task is running on core 3*)
+node comOn3(coreId:core)returns(yes:bool)
+let
+  switch coreId 
+	 | C1 do yes = false
+	 | C2 do yes = false
+	 | C3 do yes = true
+         | C4 do yes = false
+         end; 	 
+tel
+
+(* tells whether a task is running on core 1*)
+node comOn1(coreId:core)returns(yes:bool)
+let
+  switch coreId 
+	 | C1 do yes = true
+	 | C2 do yes = false
+	 | C3 do yes = false
+         | C4 do yes = false
+         end; 	 
+tel
+
+
+(* tells whether two cores are equivalent *)
+node same_core(core1:core; core2: core) returns(samecore:bool)
+var sameproc:bool;
+task1_cpu, task1_core, task2_cpu, task2_core:bool;
+let 
+	 switch core1 
+	 | C1 do (task1_cpu, task1_core)=(false, false)
+	 | C2 do (task1_cpu, task1_core)=(false, true);
+	 | C3 do (task1_cpu, task1_core)=(true, false);
+	 | C4 do (task1_cpu, task1_core)=(true, true);
+         end ;
+
+	 switch core2 
+	 | C1 do (task2_cpu, task2_core)=(false, false)
+	 | C2 do (task2_cpu, task2_core)=(false, true);
+	 | C3 do (task2_cpu, task2_core)=(true, false);
+	 | C4 do (task2_cpu, task2_core)=(true, true);
+         end ;	 
+
+     sameproc = (task1_cpu & task2_cpu) or (not task1_cpu & not task2_cpu);
+     samecore = sameproc & ((task1_core & task2_core) or (not task1_core & not task2_core));
+tel 
+
+
+(* this implments the boolean equivalence *)
+
+node bool_equi(a,b:bool) returns (res:bool)
+let 
+    res = ((a or not b) & (b or not a));
+tel 
+
+(* this implments the boolean implication *)
+
+node bool_impl(a,b:bool) returns (res:bool)
+let 
+    res = (not a or b) ;
+tel 
+
+
+
+(* ==================================================================================*)
+
+
+
+
+
+(* main program *)
+node main(disable: bool; fifoH1F, fifoH2F, fifoL2F, changeL2:bool; c_startH2_done, c_stopH2_done:bool) returns(
+									  h2Required:bool;
+									  h2NotRequired:bool;
+									  noOneOnC3WhenOff:bool;
+									  costgood:bool;
+									  notF2whenLogger:bool;
+									  startH2:bool; unboundH2:bool;
+									  startL2:bool; unboundL2:bool;
+							c_startH2, c_stopH2, c_connectH2, c_diconnectH2:bool;
+							c_startL, c_stopL, c_connectL, c_diconnectL:bool;
+							a_cmd_pending:bool
+									  )
+
+
+
+(* BEGIN CONTRACT *)
+(*====================================================*)
+  contract
+
+let 
+
+
+tel 
+    assume(true)
+
+  enforce((a_cmd_pending or h2Required) 
+	  & (a_cmd_pending or h2NotRequired) 
+	  & noOneOnC3WhenOff 
+	  & costgood 
+	  & (a_cmd_pending or notF2whenLogger))
+ with(cDa, cDb:bool;
+      cSAa, cSAb:bool;
+      cSBa, cSBb:bool;
+      changeH2, killH2:bool
+     )
+(*====================================================*)
+(* END CONTRACT *)
+
+
+	var 
+      c_startH2_pending, c_stopH2_pending:bool;
+   c1,c2,c3,c4:int;  pf, pa, pd, pf1, pf2, pl:int;
+
+      (* these vars are true when no one is running on the associate core  *)
+      noOneOnC3:bool; 
+      
+      (* vars to describe the desired max corecosts 
+	 when there is only 3 cores and when there is 4 cores available
+      *)
+      
+       costNActive:bool; costActive:bool;
+
+     (* component cores *)
+     frend_core, ana_core, disp_core, file1_core, file2_core, logger_core :core;
+
+
+      (* communication costs for each binding  server/client side*)
+      costAs, costAc:int; (*cost of the communication line between frend and ana*)
+      costBs, costBc:int; (*cost of the communication line between ana and disp*)
+      costCs, costCc:int; (*cost of the communication line between ana and logger*)
+      costDs, costDc:int; (*cost of the communication line between disp and file1*)
+      costFs, costFc:int; (*cost of the communication line between disp  and file2*)
+
+      (*core 1,2,3,4 workload*)
+      cost1, cost2, cost3, cost4: int; 
+      
+      costAs1, costAs2, costAs3, costAs4:int; (*cost of the communication line A on each core -- server side*)
+      costBs1, costBs2, costBs3, costBs4:int; (*cost of the communication line B on each core -- server side*)
+      costCs1, costCs2, costCs3, costCs4:int; (*cost of the communication line C on each core -- server side*)
+      costDs1, costDs2, costDs3, costDs4:int; (*cost of the communication line D on each core -- server side*)
+      costFs1, costFs2, costFs3, costFs4:int; (*cost of the communication line F on each core -- server side*)
+      
+      costAc1, costAc2, costAc3, costAc4:int; (*cost of the communication line A on each core -- client side*)
+      costBc1, costBc2, costBc3, costBc4:int; (*cost of the communication line B on each core -- client side*)
+      costCc1, costCc2, costCc3, costCc4:int; (*cost of the communication line C on each core -- client side*)      
+      costDc1, costDc2, costDc3, costDc4:int; (*cost of the communication line D on each core -- client side*)
+      costFc1, costFc2, costFc3, costFc4:int; (*cost of the communication line F on each core -- client side*)
+
+      core3:bool; (* state of the core number 3 ON/OFF*)
+      
+      fifoH1Full, fifoH2Bull, fifoL2Bull : bool; (*satte of the fifos associated with filehandlers and logger*)
+      
+      (* intermediate variables to control task positions *)
+      iFa, iFb : bool;
+      iAa, iAb : bool;
+      iDa, iDb : bool;
+      iF1a, iF1b : bool;
+      iF2a, iF2b : bool;
+      iLa, iLb : bool;
+      
+      (* migration commands. those that are not output*)
+     c_mig1f , c_mig2f , c_mig3f , c_mig4f,
+     c_mig1a , c_mig2a , c_mig3a , c_mig4a,
+     c_mig1f1 , c_mig2f1 , c_mig3f1 , c_mig4f1,
+     c_mig1l , c_mig2l , c_mig3l , c_mig4l,
+     c_mig1f2 , c_mig2f2 , c_mig3f2 , c_mig4f2 ,
+     c_mig1d , c_mig2d , c_mig3d , c_mig4d:bool;
+      
+
+      (* two boolean  variables to set the enforced propertie true for the 3 first instants *)
+      count0, count1 : bool  ;
+
+let 
+
+
+(* controlling task positions *)
+    (iFa, iFb)=(false->true, false->true); (* frontend always on Core 2*)
+  (iAa, iAb)=(false->true, false->true); (* analyzer manager always on Core2*)
+  (iDa, iDb)=(true->cDa, false->cDb); (* dispa core 4 at the begining*)
+  (iF1a, iF1b)=(true->cSAa, false->cSAb); (* fileh1 on core 4 at first *)
+  (iF2a, iF2b)=(true->cSBa, false->cSBb); (* file2 core 4 at first *)
+  (iLa, iLb)=(true->true, false->true); (* logger always on Core 4*)
+ 
+
+  (* Computnig the cost of each core   *)
+  cost1= costAs1+ costBs1 + costCs1 + costDs1  + costFs1 
+  + costAc1 + costBc1 + costCc1 + costDc1  + costFc1;
+  
+  cost2= costAs2+ costBs2 + costCs2 + costDs2 + costFs2
+  + costAc2 + costBc2 + costCc2 + costDc2  + costFc2;
+
+  cost3= costAs3+ costBs3 + costCs3 + costDs3 + costFs3 + 
+  costAc3 + costBc3 + costCc3 + costDc3 +  costFc3;
+
+  cost4= costAs4+ costBs4 + costCs4 + costDs4 +  costFs4 + 
+  costAc4 + costBc4 + costCc4 + costDc4 +  costFc4;  
+  
+
+
+  (* filehandler2 lifecycyle and the workload it induces *) 
+  (startH2, unboundH2, c_startH2,  c_connectH2, c_stopH2, c_diconnectH2)= inlined lifecycle(not changeH2, not killH2 , not fifoH2Bull);
+  (costFc, costFs) = if (not startH2) then  (0,0) else inlined communication_cost(disp_core,file2_core);
+
+
+  (* Logger lifeCycle and the workload it induces *) 
+  (startL2, unboundL2, c_startL,  c_connectL, c_stopL, c_diconnectL)= inlined lifecycle(changeL2,  false, not fifoL2Bull);
+  (costCc, costCs) = if (not startL2) then  (0,0) else inlined communication_cost(ana_core,logger_core);
+
+
+  (*switch on/off core 3*)
+  core3= inlined core_mode(disable);
+
+
+  (* the fifio associated with file1 component input*)
+  fifoH1Full = inlined fifo(fifoH1F);
+ 
+ (* the fifio associated with file2 component input*)
+ fifoH2Bull =  inlined fifo(fifoH2F);
+
+ (* the fifio associated with logger component input*)
+ fifoL2Bull =  inlined fifo(fifoL2F);
+ 
+
+ (* component mapping *)
+ (frend_core, c_mig1f , c_mig2f , c_mig3f , c_mig4f)= inlined position(iFa, iFb);
+ (ana_core, c_mig1a , c_mig2a , c_mig3a , c_mig4a)= inlined position(iAa, iAb);
+ (file1_core,  c_mig1f1 , c_mig2f1 , c_mig3f1 , c_mig4f1)= inlined position(iF1a, iF1b);
+ (disp_core,  c_mig1d , c_mig2d , c_mig3d , c_mig4d)= inlined position(iDa, iDb);
+ (file2_core, c_mig1f2 , c_mig2f2 , c_mig3f2 , c_mig4f2)= inlined position(iF2a, iF2b);
+ (logger_core,  c_mig1l , c_mig2l , c_mig3l , c_mig4l)= inlined position(iLa, iLb);
+
+ (* communication lines cost server/client side  *)
+ (costAc, costAs) = inlined communication_cost(frend_core, ana_core);
+ (costBc, costBs) = inlined communication_cost(ana_core,  disp_core);
+ (costDc, costDs) = inlined communication_cost(disp_core,  file1_core);
+
+ 
+
+ (* associating each communiaction line cost to the concerned processor *)
+ (costAs1, costAs2, costAs3, costAs4) = inlined core_cost(ana_core, costAs);
+ (costAc1, costAc2, costAc3, costAc4) = inlined core_cost(frend_core, costAc);
+
+ (costBs1, costBs2, costBs3, costBs4) = inlined core_cost(disp_core, costBs);
+ (costBc1, costBc2, costBc3, costBc4) = inlined core_cost(ana_core, costBc);
+
+ (costCs1, costCs2, costCs3, costCs4) = inlined core_cost(logger_core, costCs);
+ (costCc1, costCc2, costCc3, costCc4) = inlined core_cost(ana_core, costCc);
+
+ (costDs1, costDs2, costDs3, costDs4) = inlined core_cost(file1_core, costDs);
+ (costDc1, costDc2, costDc3, costDc4) = inlined core_cost(disp_core, costDc);
+
+ (costFs1, costFs2, costFs3, costFs4) = inlined core_cost(file2_core, costFs);
+ (costFc1, costFc2, costFc3, costFc4) = inlined core_cost(disp_core, costFc);
+
+ (* outputs/properties *)
+
+ (* core costs *)
+ (c1, c2, c3, c4)= (cost1, cost2, cost3, cost4);
+
+ (* component positions -- from enumerated type to integers *)
+ pf = inlined compute_core(frend_core, true);
+ pa = inlined compute_core(ana_core, true);
+ pf1 = inlined compute_core(file1_core, true);
+ pf2 = inlined compute_core(file2_core, startH2);
+ pl = inlined compute_core(logger_core, startL2);
+ pd = inlined compute_core(disp_core, true);
+ 
+ 
+
+
+ 
+ noOneOnC3 =       not (inlined comOn3(file1_core) 
+			or inlined comOn3(file2_core) 
+			or inlined comOn3(disp_core)
+			or inlined comOn3(logger_core)
+			or inlined comOn3(frend_core)
+			or inlined comOn3(ana_core)
+		       );
+
+
+
+
+
+ count0 = false -> true; 
+ count1 = false fby count0;
+
+
+ (* Asychronous commands *)
+ c_startH2_pending= inlined command(c_startH2, c_startH2_done);
+ c_stopH2_pending= inlined command(c_stopH2, c_stopH2_done);
+ a_cmd_pending =  c_startH2_pending or  c_stopH2_pending;
+
+(* properties to enforce *)
+
+(* when logger  is on, the file2 cannot be started *)
+ notF2whenLogger = inlined bool_impl(startL2 & not unboundL2, unboundH2); 
+
+ (*When core 3 is off, no one can run on it *)  (*may be done without ifthenelse*)
+ noOneOnC3WhenOff = if(core3) then true else noOneOnC3;
+
+
+(* FileHandler 2 is required when the fifo of file1 is full  *)
+ h2Required =  inlined bool_impl(not startL2 & fifoH1Full, startH2 & not unboundH2);
+
+(* FileHandler 2 is not required when the fifo of file1 is Empty  *)
+(* We just disconnect it, it will be stopped once its fifo is empty*)
+ h2NotRequired = inlined bool_impl(not fifoH1Full,unboundH2);
+
+(* workload when 3 cores or 4 cores *)
+ costActive=(c1<=170 & (c2<=180) & c3<=180 & c4<=140);
+ costNActive=(c1<=280 & c2<=280 & c3<=280 & c4<=280);
+ costgood = if(not count1)then true else (if core3 then costActive else costNActive);
+ tel 
