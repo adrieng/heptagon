@@ -1,0 +1,56 @@
+
+include config
+
+version = $(shell date +"%d%m%y")
+#version = 1.0
+heptdir = heptagon-$(version)
+
+binary-distrib:
+# main directory
+	mkdir -p export/$(heptdir)
+# binaries
+	mkdir -p export/$(heptdir)/bin
+	(cd compiler/; $(MAKE))
+	cp compiler/$(COMPILER).$(TARGET) export/$(heptdir)/bin/$(COMPILER)
+	cp compiler/$(SIMULATOR).$(TARGET) export/$(heptdir)/bin/$(SIMULATOR)
+# libraries
+	(cd lib; $(MAKE))
+	cp -r lib export/$(heptdir)
+# examples
+	cp -r examples export/$(heptdir)
+# tests
+	mkdir -p export/$(heptdir)/test
+	cp -r test/bad test/good test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptdir)/test
+# manual
+	mkdir -p export/$(heptdir)/manual
+	cp manual/heptagon-manual.pdf export/$(heptdir)/manual
+# Makefile, config, INSTALL
+	cp config export/$(heptdir)
+	cp Makefile-bin export/$(heptdir)/Makefile
+	cp manual/INSTALL export/$(heptdir)
+	cd export; tar czf $(heptdir).tar.gz $(heptdir)
+
+
+source-distrib:
+# main directory
+	mkdir -p export/$(heptdir)
+# sources
+	cp -r compiler export/$(heptdir)
+# libraries
+	cp -r lib export/$(heptdir)
+# examples
+	cp -r examples export/$(heptdir)
+# tests
+	mkdir -p export/$(heptdir)/test
+	cp -r test/bad test/good test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptdir)/test
+# manual
+	mkdir -p export/$(heptdir)/manual
+	cp manual/heptagon-manual.pdf export/$(heptdir)/manual
+# Makefile, config.in, configure, INSTALL, COPYING
+	cp config.in export/$(heptdir)
+	cp configure export/$(heptdir)
+	cp Makefile export/$(heptdir)
+	cp COPYING export/$(heptdir)
+	cp manual/INSTALL export/$(heptdir)
+	cd export; tar czf $(heptdir).tar.gz --exclude _build $(heptdir)
+

@@ -1,0 +1,12 @@
+include config
+
+.PHONY: all install
+
+all: install
+
+install:
+	$(INSTALL) -d $(INSTALL_BINDIR)
+	$(INSTALL) bin/$(COMPILER).$(TARGET) $(INSTALL_BINDIR)/$(COMPILER)
+	$(INSTALL) bin/$(SIMULATOR).$(TARGET) $(INSTALL_BINDIR)/$(SIMULATOR)
+	(cd lib; $(MAKE) install)
+
