@@ -6,7 +6,7 @@ bindir      = @bindir@
 libdir      = @libdir@
 
 INSTALL= @INSTALL@
-MAKE= @MAKE@
+@SET_MAKE@
 
 BUILD= _build
 COMPILER=heptc
