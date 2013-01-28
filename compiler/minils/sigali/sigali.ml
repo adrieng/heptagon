@@ -432,8 +432,13 @@ module Printer =
               fprintf ff "%s_triang : Triang(constraint(%s),controllables,phantom_vars);@,"
                 name name;
 
-              (* Suppress sink state as controller input *)
-              let states = List.rev (List.tl (List.rev states)) in
+              
+              let states =
+                match !Compiler_options.nosink with
+                  true -> states
+                | false ->
+                    (* Suppress sink state as controller input *)
+                    List.rev (List.tl (List.rev states)) in
               (* controller vars *)
               fprintf ff "controller_inputs : [@[";
               print_list ff print_name "," (uncont_inputs
