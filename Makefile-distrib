@@ -1,34 +1,37 @@
 
 include config
 
-version = $(shell date +"%d%m%y")
-#version = 1.0
+#version = $(shell date +"%d%m%y")
+version = 1.0-beta
+osname=$(shell uname -s)
+hardware=$(shell uname -m)
 heptdir = heptagon-$(version)
+heptbindir=$(heptdir)-$(osname)-$(hardware)
 
 binary-distrib:
 # main directory
-	mkdir -p export/$(heptdir)
+	mkdir -p export/$(heptbindir)
 # binaries
-	mkdir -p export/$(heptdir)/bin
+	mkdir -p export/$(heptbindir)/bin
 	(cd compiler/; $(MAKE))
-	cp compiler/$(COMPILER).$(TARGET) export/$(heptdir)/bin/$(COMPILER)
-	cp compiler/$(SIMULATOR).$(TARGET) export/$(heptdir)/bin/$(SIMULATOR)
+	cp compiler/$(COMPILER).$(TARGET) export/$(heptbindir)/bin/$(COMPILER)
+	cp compiler/$(SIMULATOR).$(TARGET) export/$(heptbindir)/bin/$(SIMULATOR)
 # libraries
 	(cd lib; $(MAKE))
-	cp -r lib export/$(heptdir)
+	cp -r lib export/$(heptbindir)
 # examples
-	cp -r examples export/$(heptdir)
+	cp -r examples export/$(heptbindir)
 # tests
-	mkdir -p export/$(heptdir)/test
-	cp -r test/bad test/good test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptdir)/test
+	mkdir -p export/$(heptbindir)/test
+	cp -r test/bad test/good test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptbindir)/test
 # manual
-	mkdir -p export/$(heptdir)/manual
-	cp manual/heptagon-manual.pdf export/$(heptdir)/manual
+	mkdir -p export/$(heptbindir)/manual
+	cp manual/heptagon-manual.pdf export/$(heptbindir)/manual
 # Makefile, config, INSTALL
-	cp config export/$(heptdir)
-	cp Makefile-bin export/$(heptdir)/Makefile
-	cp manual/INSTALL export/$(heptdir)
-	cd export; tar czf $(heptdir).tar.gz $(heptdir)
+	cp config export/$(heptbindir)
+	cp Makefile-bin export/$(heptbindir)/Makefile
+	cp manual/INSTALL export/$(heptbindir)
+	cd export; tar czf $(heptbindir).tar.gz $(heptbindir)
 
 
 source-distrib:
