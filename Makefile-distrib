@@ -49,9 +49,10 @@ source-distrib:
 # manual
 	mkdir -p export/$(heptdir)/manual
 	cp manual/heptagon-manual.pdf export/$(heptdir)/manual
-# Makefile, config.in, configure, INSTALL, COPYING
+# Makefile, config.in, configure, install-sh, INSTALL, COPYING
 	cp config.in export/$(heptdir)
 	cp configure export/$(heptdir)
+	cp install-sh export/$(heptdir)
 	cp Makefile export/$(heptdir)
 	cp COPYING export/$(heptdir)
 	cp manual/INSTALL export/$(heptdir)
