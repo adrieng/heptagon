@@ -57,7 +57,10 @@ let gather_extvalues_node nd =
   let ty_env =
     let add env vd = Env.add vd.v_ident vd.v_linearity env in
     let add_l env vd_list = List.fold_left add env vd_list in
-    (add_l (add_l (add_l Env.empty nd.n_output) nd.n_local) nd.n_input)
+    let env = add_l (add_l (add_l Env.empty nd.n_output) nd.n_local) nd.n_input in
+    match nd.n_contract with
+    | None -> env
+    | Some c -> add_l env c.c_controllables
   in
 
   (* Check for implicit cast from linear to non-linear type *)
