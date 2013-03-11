@@ -200,7 +200,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
 	  f_e_l in
       let e_l = List.map (fun (_f,e) -> e) f_e_l in
       Enew (Tclass ty_name, List.map (static_exp param_env) e_l)
-  | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
+  | Types.Sop (f, se_l) -> Efun (f, List.map (static_exp param_env) se_l)
 
 and boxed_ty param_env t = match Modules.unalias_type t with
   | Types.Tprod [] -> Tunit

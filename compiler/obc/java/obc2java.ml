@@ -192,7 +192,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
       let ty_name = 
         match se.Types.se_ty with
         | Types.Tid ty_name -> qualname_to_package_classe ty_name
-        | _ -> Misc.internal_error "Obc2java14"
+        | _ -> Misc.internal_error "Obc2java"
       in
       let f_e_l =
 	List.sort
@@ -200,7 +200,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
 	  f_e_l in
       let e_l = List.map (fun (_f,e) -> e) f_e_l in
       Enew (Tclass ty_name, List.map (static_exp param_env) e_l)
-  | Types.Sop (f, se_l) -> Efun (qualname_to_class_name f, List.map (static_exp param_env) se_l)
+  | Types.Sop (f, se_l) -> Efun (f, List.map (static_exp param_env) se_l)
 
 and boxed_ty param_env t = match Modules.unalias_type t with
   | Types.Tprod [] -> Tunit
