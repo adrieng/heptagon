@@ -31,7 +31,6 @@
 
 (* $Id: dynamic_system.ml 2652 2011-03-11 16:26:17Z delaval $ *)
 
-open Misc
 open Compiler_utils
 open Names
 open Idents
@@ -58,14 +57,6 @@ let actual_ty ty =
   | Tid({ qual = Pervasives; name = "int"}) -> Tint
   | _ -> Tother
 
-let var_list prefix n =
-  let rec varl acc = function
-    | 0 -> acc
-    | n ->
-        let acc = (prefix ^ (string_of_int n)) :: acc in
-        varl acc (n-1) in
-  varl [] n
-
 let current_inputs : IdentSet.t ref = ref IdentSet.empty
 let current_locals : IdentSet.t ref = ref IdentSet.empty
 
@@ -78,7 +69,7 @@ let translate_static_exp se =
     -> Ctrue
   | Sbool(false)
   | Sconstructor { qual = Pervasives; name = "false" }
-    -> Cfalse  
+    -> Cfalse
   | Sop({ qual = Pervasives; name = "~-" },[{se_desc = Sint(v)}]) ->
       Cint(-v)
   | _ -> raise Untranslatable
@@ -113,11 +104,11 @@ let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty }) =
   | Minils.Wvar(n) ->
       (* get variable iff it is Boolean or local *)
       begin match (actual_ty ty) with
-      | Tbool -> 
+      | Tbool ->
 	  Svar(prefix ^ (name n))
-      | Tint when (IdentSet.mem n !current_locals) -> 
+      | Tint when (IdentSet.mem n !current_locals) ->
 	  Svar(prefix ^ (name n))
-      | _ -> 
+      | _ ->
 	  raise Untranslatable
       end
   (* TODO remove if this works without *)
@@ -232,7 +223,7 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
       raise Untranslatable
   | Minils.Emerge(_, _) -> assert false
 
-let rec translate_eq f
+let translate_eq f
     (acc_states,acc_init,acc_inputs,acc_eqs)
     { Minils.eq_lhs = pat; Minils.eq_rhs = e; eq_base_ck = ck } =
 
@@ -290,7 +281,7 @@ let rec translate_eq f
         been done in the pass "Contracts".
       *)
       let ident_list = translate_pat pat in
-      let acc_inputs = 
+      let acc_inputs =
         acc_inputs @
           (List.map
              (fun id ->
@@ -299,7 +290,7 @@ let rec translate_eq f
              ident_list) in
       acc_states,acc_init,
       acc_inputs,acc_eqs
-  | Minils.Evarpat(n), _ ->
+  | Minils.Evarpat(n), _ when actual_ty e.Minils.e_ty == Tbool ->
       begin try
         (* assert : no fby, no node application in e *)
         let e' = translate prefix e in
@@ -313,12 +304,20 @@ let rec translate_eq f
         acc_inputs,
         { stmt_name = prefixed (name n);
           stmt_def  = e' }::acc_eqs
-      with Untranslatable ->
+        with Untranslatable ->
+          untranslatable_warn e;
+          current_inputs := IdentSet.add n !current_inputs;
+          acc_states,acc_init,
+          (acc_inputs @ [(n,(prefixed (name n)))]),
+          acc_eqs
+      end
+  | Minils.Evarpat(n), _ ->
+      begin
         untranslatable_warn e;
+        (* Mark n as input: unusable as local variable *)
+	Format.printf "Adding non-bool variable %s in current_inputs@\n" (name n);
         current_inputs := IdentSet.add n !current_inputs;
-        acc_states,acc_init,
-        (acc_inputs @ [(n,(prefixed (name n)))]),
-        acc_eqs
+        acc_states,acc_init,acc_inputs,acc_eqs
       end
   | _ -> assert false
 
@@ -442,7 +441,7 @@ let translate_node
       Printf.printf "%s %d %d %d %d\n" f nbs nbi nbc (nbs+nbi+nbc);
     end;
 
-  let ctrlr_call = 
+  let ctrlr_call =
     begin
       match controllables with
 	[] -> [] (* no controllable => no controller call *)
@@ -453,16 +452,16 @@ let translate_node
 	  let ctrlr_name = f ^ "_controller" in
 	  let ctrlr_fun_name = { qual = Module (String.capitalize ctrlr_name);
 				 name = ctrlr_name } in
-	  let ctrlr_exp = 
+	  let ctrlr_exp =
 	    Minils.mk_exp
-	      Cbase 
+	      Cbase
 	      (Tprod (List.map (fun _ -> Initial.tbool) mls_ctrl))
 	      ~linearity:Linearity.Ltop
 	      (Minils.Eapp(Minils.mk_app (Minils.Efun ctrlr_fun_name),
-			   (List.map 
+			   (List.map
 			      (fun v ->
-				 Minils.mk_extvalue 
-				   ~ty:Initial.tbool 
+				 Minils.mk_extvalue
+				   ~ty:Initial.tbool
 				   ~linearity:Linearity.Ltop
 				   ~clock:Cbase
 				   (Minils.Wvar v))
@@ -470,7 +469,7 @@ let translate_node
 			   @ (List.map
 				(fun _ ->
 				   Minils.mk_extvalue
-				     ~ty:Initial.tbool 
+				     ~ty:Initial.tbool
 				     ~linearity:Linearity.Ltop
 				     ~clock:Cbase
 				     (Minils.Wconst(Initial.mk_static_bool true)))
@@ -482,12 +481,12 @@ let translate_node
 
 	  let ctrlr_inputs =
 	    (List.map
-	       (fun v -> 
+	       (fun v ->
 		  Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
 	       (sig_inputs@sig_states))
 	    @ (List.map
 		 (fun v ->
-		    Signature.mk_arg 
+		    Signature.mk_arg
 		      (Some ("p_" ^ v)) Initial.tbool Linearity.Ltop Signature.Cbase)
 		 sig_ctrl) in
 	  let ctrlr_outputs =
@@ -495,14 +494,14 @@ let translate_node
 	      (fun v ->
 		 Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
 	      sig_ctrl in
-	  let ctrlr_signature = 
-	    Signature.mk_node Location.no_location ~extern:false 
+	  let ctrlr_signature =
+	    Signature.mk_node Location.no_location ~extern:false
 	      ctrlr_inputs ctrlr_outputs false false [] in
 	  (* Add controller into modules *)
 	  Modules.add_value ctrlr_fun_name ctrlr_signature;
 	  [ctrlr_call]
     end in
-  
+
   let node =
     { node with
         Minils.n_contract = None;
@@ -528,5 +527,3 @@ let program p =
   let dir = clean_dir dirname in
   Sigali.Printer.print dir procs;
   { p with Minils.p_desc = List.rev acc_p_desc }
-
-
