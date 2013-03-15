@@ -27,7 +27,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-open Format
 open List
 open Misc
 open Names
@@ -77,7 +76,7 @@ struct
     raise Errors.Error
 end
 
-let rec struct_name ty =
+let struct_name ty =
   match ty with
   | Cty_id n -> n
   | _ -> assert false
@@ -254,11 +253,11 @@ let rec cexpr_of_static_exp se =
     | Srecord fl ->
         let ty_name =
           match Modules.unalias_type se.se_ty with
-            | Types.Tid n -> cname_of_qn n
+            | Types.Tid n -> n
             | _ -> assert false
         in
-          Cstructlit (ty_name,
-                     List.map (fun (_, se) -> cexpr_of_static_exp se) fl)
+        let cexps_assoc = List.rev_map (fun (f, e) -> f, cexpr_of_static_exp e) fl in
+        cexpr_of_struct ty_name cexps_assoc
     | Sarray_power(c,n_list) ->
           (List.fold_left (fun cc n -> Carraylit (repeat_list cc (int_of_static_exp n)))
                      (cexpr_of_static_exp c) n_list)
@@ -274,20 +273,26 @@ let rec cexpr_of_static_exp se =
             cexpr_of_static_exp se'
     | Stuple _ -> Misc.internal_error "cgen: static tuple"
 
-
 (** [cexpr_of_exp exp] translates the Obj action [exp] to a C expression. *)
-let rec cexpr_of_exp out_env var_env exp =
+and cexpr_of_exp out_env var_env exp =
   match exp.e_desc with
     | Eextvalue w  -> cexpr_of_ext_value out_env var_env w
     (** Operators *)
     | Eop(op, exps) -> cop_of_op out_env var_env op exps
     (** Structure literals. *)
     | Estruct (tyn, fl) ->
-        let cexps = List.map (fun (_,e) -> cexpr_of_exp out_env var_env e) fl in
-        let ctyn = cname_of_qn tyn in
-        Cstructlit (ctyn, cexps)
+        let cexpr = cexpr_of_exp out_env var_env in
+        let cexps_assoc = List.rev_map (fun (f, e) -> f, cexpr e) fl in
+        cexpr_of_struct tyn cexps_assoc
     | Earray e_list ->
         Carraylit (cexprs_of_exps out_env var_env e_list)
+
+and cexpr_of_struct tyn cexps_assoc =
+  let cexps = List.fold_left
+    (fun cexps { Signature.f_name = f } -> List.assoc f cexps_assoc :: cexps)
+    [] (find_struct tyn) in
+  (* Reverse `cexps' here because of the previous use of `List.fold_left'. *)
+  Cstructlit (cname_of_qn tyn, List.rev cexps)
 
 and cexprs_of_exps out_env var_env exps =
   List.map (cexpr_of_exp out_env var_env) exps
