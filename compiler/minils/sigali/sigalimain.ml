@@ -61,7 +61,7 @@ let current_inputs : IdentSet.t ref = ref IdentSet.empty
 let current_locals : IdentSet.t ref = ref IdentSet.empty
 
 let translate_static_exp se =
-  match se.se_desc with
+  match (Static.simplify QualEnv.empty se).se_desc with
   | Sint(v) -> Cint(v)
   | Sfloat(_) -> raise Untranslatable
   | Sbool(true)
