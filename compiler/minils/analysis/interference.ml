@@ -257,7 +257,7 @@ end
 (** Helper functions to work with the multiple interference graphs *)
 
 let by_ivar def f x y =
-  if World.is_optimized x then (
+  if World.is_optimized x && World.is_optimized y then (
     let igx, nodex = World.node_for_ivar x in
     let igy, nodey = World.node_for_ivar y in
       if igx == igy then
@@ -268,7 +268,7 @@ let by_ivar def f x y =
     def
 
 let by_name def f x y =
-  if World.is_optimized (Ivar x) then (
+  if World.is_optimized (Ivar x) && World.is_optimized (Ivar y) then (
     let igx, nodex = World.node_for_name x in
     let igy, nodey = World.node_for_name y in
       if igx == igy then
