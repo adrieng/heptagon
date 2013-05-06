@@ -40,6 +40,7 @@ type ivar =
     | Ivar of Idents.var_ident
     | Ifield of ivar * Names.field_name
     | Iwhen of ivar * Clocks.ck
+    | Imem of Idents.var_ident
 
 let rec ivar_compare iv1 iv2 = match iv1, iv2 with
   | Ivar x1, Ivar x2 -> Idents.ident_compare x1 x2
@@ -49,11 +50,17 @@ let rec ivar_compare iv1 iv2 = match iv1, iv2 with
   | Ifield (iiv1, f1), Ifield (iiv2, f2) ->
       let cr = Pervasives.compare f1 f2 in
       if cr <> 0 then cr else ivar_compare iiv1 iiv2
+  | Imem x1, Imem x2 -> Idents.ident_compare x1 x2
 
   | Ivar _, _ -> 1
+
   | Iwhen _, Ivar _ -> -1
   | Iwhen _, _ -> 1
-  | Ifield _, _ -> -1
+
+  | Ifield _, (Ivar _ | Iwhen _) -> -1
+  | Ifield _, _ -> 1
+
+  | Imem _, _ -> -1
 
 module IvarEnv =
     Map.Make (struct
@@ -71,6 +78,7 @@ let rec print_ivar ff iv = match iv with
   | Ivar n -> print_ident ff n
   | Ifield(iv,f) -> fprintf ff "%a.%a" print_ivar iv print_qualname f
   | Iwhen(iv, ck) -> fprintf ff "%a::%a" print_ivar iv print_ck ck
+  | Imem n -> fprintf ff "mem(%a)" print_ident n
 
 let print_ivar_list ff l =
   fprintf ff "@[<2>%a@]" (print_list_r print_ivar "("","")") l
@@ -79,6 +87,7 @@ let rec var_ident_of_ivar iv = match iv with
   | Iwhen (iv, _) -> var_ident_of_ivar iv
   | Ifield (iv, _) -> var_ident_of_ivar iv
   | Ivar x -> x
+  | Imem x -> x
 
 let rec remove_iwhen iv = match iv with
   | Iwhen (iv, _) -> remove_iwhen iv
@@ -91,6 +100,9 @@ let remove_inner_iwhen iv = match iv with
 
 let is_when_ivar iv = match iv with
   | Iwhen _ -> true
+  | _ -> false
+let is_mem_ivar iv = match iv with
+  | Imem _ -> true
   | _ -> false
 
 module VertexValue = struct

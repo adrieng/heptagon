@@ -53,7 +53,7 @@ let rec ivar_of_ext_value w = match w.w_desc with
 
 let rec repr_from_ivar env iv =
   match iv with
-    | Ivar x ->
+    | Ivar x | Imem x ->
       (try
          let lhs = Env.find x env in lhs.pat_desc
        with
@@ -66,7 +66,7 @@ let rec repr_from_ivar env iv =
 
 let rec choose_record_field env l = match l with
   | [iv] -> repr_from_ivar env iv
-  | (Ivar _)::l -> choose_record_field env l
+  | (Ivar _)::l | (Imem _)::l -> choose_record_field env l
   | (Ifield(iv,f))::_ -> repr_from_ivar env (Ifield(iv,f))
   | (Iwhen _ )::_ -> assert false
   | [] -> assert false

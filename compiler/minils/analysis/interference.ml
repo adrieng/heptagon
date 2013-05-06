@@ -54,6 +54,15 @@ module VarEnv = struct
       add x (IvarSet.add iv (find x env)) env
     else
       add x (IvarSet.singleton iv) env
+
+  let remove_except_mem x env =
+    if mem x env then (
+      let s = IvarSet.filter is_mem_ivar (find x env) in
+      if IvarSet.is_empty s then
+        remove x env
+      else
+        add x s env
+    ) else env
 end
 
 let print_debug fmt =
@@ -214,7 +223,7 @@ module World = struct
       Misc.internal_error "interference"
 
   let rec ivar_type iv = match iv with
-    | Ivar x ->
+    | Ivar x | Imem x ->
         let vd = vd_from_ident x in
           vd.v_type
     | Ifield(_, f) ->
@@ -333,6 +342,11 @@ let all_ivars_list ivs =
   in
   List.fold_left add_one [] ivs
 
+let is_fast_memory x =
+  match ck_repr (World.ivar_clock (Imem x)) with
+    | Cbase -> false
+    | _ -> true
+
 (* TODO: variables with no use ?? *)
 let compute_live_vars eqs =
   let aux (alive_vars, res) eq =
@@ -342,7 +356,7 @@ let compute_live_vars eqs =
     let alive_vars = List.fold_left VarEnv.add_ivar alive_vars read_ivars in
     (* remove vars defined in this equation *)
     let alive_vars =
-      List.fold_left (fun alive_vars id -> VarEnv.remove id alive_vars) alive_vars def_ivars
+      List.fold_left (fun alive_vars id -> VarEnv.remove_except_mem id alive_vars) alive_vars def_ivars
     in
     print_debug "%a@," Mls_printer.print_eq eq;
     print_debug_var_env "alive" alive_vars;
@@ -350,7 +364,12 @@ let compute_live_vars eqs =
     let res = (eq, alive_vars_list)::res in
     alive_vars, res
   in
-  let _, res =  List.fold_left aux (VarEnv.empty, []) (List.rev eqs) in
+  let add_mem x env =
+    if is_fast_memory x then VarEnv.add_ivar env (Imem x) else env
+  in
+  (* Adds all ivars representing memories *)
+  let env = IdentSet.fold add_mem !World.memories VarEnv.empty in
+  let _, res =  List.fold_left aux (env, []) (List.rev eqs) in
     res
 
 (** [should_interfere x y] returns whether variables x and y
@@ -361,22 +380,33 @@ let should_interfere (ivx, ivy) =
   if Global_compare.type_compare tyx tyy <> 0 then
     false
   else (
-   let x_is_mem = World.is_memory (var_ident_of_ivar ivx) in
-   let x_is_when = is_when_ivar ivx in
-   let y_is_mem = World.is_memory (var_ident_of_ivar ivy) in
-   let y_is_when = is_when_ivar ivy in
-   let ckx = World.ivar_clock ivx in
-   let cky = World.ivar_clock ivy in
-   let are_copies = have_same_value_from_ivar ivx ivy in
-   (* a register with a slow clock is still alive even when it is not activated.
-      However, if we read a fast register on a slow rhythm,
-      we can share it with other variables on disjoint slow rhythms as we know
-      that the value of the register will
-      be done at the end of the step. *)
-   let disjoint_clocks =
-     not ((x_is_mem && not x_is_when) || (y_is_mem && not y_is_when)) && Clocks.are_disjoint ckx cky
-   in
-      not (disjoint_clocks or are_copies)
+    match ivx, ivy with
+      | Imem _, Imem _ ->
+        let ckx = World.ivar_clock ivx in
+        let cky = World.ivar_clock ivy in
+        Global_compare.clock_compare ckx cky <> 0
+      | Imem x, iv | iv, Imem x ->
+        let ckx = World.ivar_clock (Imem x) in
+        let ck = World.ivar_clock iv in
+        not (Clocks.is_subclock ck ckx)
+      | _, _ ->
+        let x_is_mem = World.is_memory (var_ident_of_ivar ivx) in
+        let x_is_when = is_when_ivar ivx in
+        let y_is_mem = World.is_memory (var_ident_of_ivar ivy) in
+        let y_is_when = is_when_ivar ivy in
+        let ckx = World.ivar_clock ivx in
+        let cky = World.ivar_clock ivy in
+        let are_copies = have_same_value_from_ivar ivx ivy in
+        (* a register with a slow clock is still alive even when it is not activated.
+           However, if we read a fast register on a slow rhythm,
+           we can share it with other variables on disjoint slow rhythms as we know
+           that the value of the register will
+           be done at the end of the step. *)
+        let disjoint_clocks =
+          not ((x_is_mem && not x_is_when) ||
+                  (y_is_mem && not y_is_when)) && Clocks.are_disjoint ckx cky
+        in
+        not (disjoint_clocks or are_copies)
   )
 
 let should_interfere = Misc.memoize_couple should_interfere
@@ -397,7 +427,13 @@ let init_interference_graph () =
   in
   let env = Env.fold
     (fun _ vd env -> add_ivar env (Ivar vd.v_ident) vd.v_type) !World.vds TyEnv.empty in
-    World.igs := TyEnv.fold (fun ty l acc -> (mk_graph l ty)::acc) env []
+  (* add special nodes for fast memories *)
+  let env =
+    IdentSet.fold
+      (fun x env -> if is_fast_memory x then add_tyenv env (Imem x) else env)
+      !World.memories env
+  in
+  World.igs := TyEnv.fold (fun ty l acc -> (mk_graph l ty)::acc) env []
 
 
 (** Adds interferences between all the variables in
@@ -599,6 +635,12 @@ let add_init_return_eq f =
     (mk_exp Cbase Tinvalid Ltop (tuple_from_dec_and_mem_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
 
+(** Coalesce Imem x and Ivar x *)
+let coalesce_mems () =
+  let coalesce_mem x =
+    if is_fast_memory x then coalesce_from_ivar (Imem x) (Ivar x)
+  in
+  IdentSet.iter coalesce_mem !World.memories
 
 let build_interf_graph f =
   World.init f;
@@ -616,6 +658,8 @@ let build_interf_graph f =
     add_interferences live_vars;
     (* Add interferences between records implied by IField values*)
     add_records_field_interferences ();
+    (* Coalesce all Imem x and Ivar x *)
+    coalesce_mems ();
     (* Splill inputs that are not modified *)
     spill_inputs f;
     (* Spill outputs and memories that are not arrays or struts*)

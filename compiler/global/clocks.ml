@@ -164,11 +164,12 @@ let rec first_ck ct = match ct with
   | Cprod [] -> assert false
   | Cprod (ct::_) -> first_ck ct
 
+let rec list_of_samplers acc ck = match ck with
+  | Cbase | Cvar { contents = Cindex _ } -> acc
+  | Con(ck, c, x) -> list_of_samplers ((c, x)::acc) ck
+  | Cvar { contents = Clink ck } -> list_of_samplers acc ck
+
 let are_disjoint ck1 ck2 =
-  let rec list_of_samplers acc ck = match ck with
-    | Cbase | Cvar _ -> acc
-    | Con(ck, c, x) -> list_of_samplers ((c, x)::acc) ck
-  in
   let rec disjoint_samplers s_ck1 s_ck2 = match s_ck1, s_ck2 with
     | [], _ -> false
     | _ , [] -> false
@@ -179,3 +180,16 @@ let are_disjoint ck1 ck2 =
           c1 <> c2 || disjoint_samplers s_ck1 s_ck2
   in
   disjoint_samplers (list_of_samplers [] ck1) (list_of_samplers [] ck2)
+
+(* returns whether ck1 is included in ck2. *)
+let is_subclock ck1 ck2 =
+  let rec sub_samplers s_ck1 s_ck2 = match s_ck1, s_ck2 with
+    | _, [] -> true
+    | [], _ -> false
+    | (c1, x1)::s_ck1, (c2, x2)::s_ck2 ->
+      if Idents.ident_compare x1 x2 <> 0 then
+        false
+      else
+        c1 = c2 && sub_samplers s_ck1 s_ck2
+  in
+  sub_samplers (list_of_samplers [] ck1) (list_of_samplers [] ck2)

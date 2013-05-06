@@ -53,6 +53,7 @@ module DotG = struct
       match iv with
         | Ivar id -> Idents.name id
         | Ifield(ivar, f) -> (ivar_name ivar)^"_"^(Names.shortname f)
+        | Imem id -> "mem("^Idents.name id^")"
         | Iwhen _ -> assert false
     in
       Misc.sanitize_string (ivar_name (List.hd !(V.label v)))
