@@ -446,8 +446,9 @@ let rec typing_exp env e =
           not_linear_for_exp e1, env
     | Eapp ({ a_op = Efield }, _, _) -> Ltop, env
     | Eapp ({ a_op = Earray }, _, _) -> Ltop, env
+    | Ewhen (e, _, _) -> lin_skeleton Ltop e.e_ty, env
     | Estruct _ -> Ltop, env
-    | Emerge _ | Ewhen _ | Esplit _ | Eapp _ | Eiterator _ -> assert false
+    | Emerge _ | Esplit _ | Eapp _ | Eiterator _ -> assert false
   in
     e.e_linearity <- l;
     l, env
@@ -832,9 +833,6 @@ and expect env lin e =
     | Emerge (_, c_e_list) ->
         let env = List.fold_left (fun env (_, e) -> safe_expect env lin e) env c_e_list in
         lin, env
-
-    | Ewhen (e, _, _) ->
-        expect env lin e
 
     | Esplit (c, e) ->
         let env = safe_expect env Ltop c in
