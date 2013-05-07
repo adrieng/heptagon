@@ -446,7 +446,9 @@ let rec typing_exp env e =
           not_linear_for_exp e1, env
     | Eapp ({ a_op = Efield }, _, _) -> Ltop, env
     | Eapp ({ a_op = Earray }, _, _) -> Ltop, env
-    | Ewhen (e, _, _) -> lin_skeleton Ltop e.e_ty, env
+    | Ewhen (e1, _, _) ->
+        let env = safe_expect env (not_linear_for_exp e1) e1 in
+        lin_skeleton Ltop e.e_ty, env
     | Estruct _ -> Ltop, env
     | Emerge _ | Esplit _ | Eapp _ | Eiterator _ -> assert false
   in
