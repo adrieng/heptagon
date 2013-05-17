@@ -60,13 +60,17 @@ let mk_unique_node nd =
       (nd.n_input @ nd.n_output) in
 
   let subst_var_ident _funs subst v =
-    let v = Env.find v subst in
-    v, subst
+    try
+      let v = Env.find v subst in
+      v, subst
+    with Not_found ->
+      Format.printf "Contracts: subst for ident %a not found@\n" Global_printer.print_ident v;
+      raise Not_found
   in
 
   let subst_block funs subst b =
     let b_local, subst' =
-      mapfold 
+      mapfold
         (fun subst vd ->
            let id, vd = mk_bind vd in
            vd, (Env.add id vd.v_ident subst))
@@ -74,10 +78,10 @@ let mk_unique_node nd =
     let b, _ = Hept_mapfold.block funs subst' b in
     { b with b_local = b_local }, subst
   in
-  
+
   let subst_contract_block funs subst b =
     let b_local, subst' =
-      mapfold 
+      mapfold
         (fun subst vd ->
            let id, vd = mk_bind vd in
            vd, (Env.add id vd.v_ident subst))
@@ -97,8 +101,8 @@ let mk_unique_node nd =
          Env.add id vd.v_ident subst)
       subst c.c_controllables in
     let c_controllables, subst = mapfold (var_dec_it funs) subst c.c_controllables in
-    let c_assume_loc, subst = exp_it funs subst c.c_assume_loc in
-    let c_enforce_loc, subst = exp_it funs subst c.c_enforce_loc in
+    let c_assume_loc = c.c_assume_loc in
+    let c_enforce_loc = c.c_enforce_loc in
     { c_assume = c_assume;
       c_enforce = c_enforce;
       c_assume_loc = c_assume_loc;
@@ -113,7 +117,7 @@ let mk_unique_node nd =
   (*                edesc = subst_edesc; } in *)
   let funs = { Hept_mapfold.defaults with
                  block = subst_block;
-		 contract = subst_contract;
+                 contract = subst_contract;
                  global_funs = { Global_mapfold.defaults with
                                    Global_mapfold.var_ident = subst_var_ident } } in
   fst (Hept_mapfold.node_dec funs subst nd)
@@ -122,12 +126,12 @@ let mk_unique_contract nd =
   let mk_bind vd =
     let id = fresh (Idents.name vd.v_ident) in
     (vd.v_ident, { vd with v_ident = id; v_clock = Clocks.fresh_clock () }) in
-  
+
   let c_local =
     match nd.n_contract with
       None -> []
     | Some { c_block = b } -> b.b_local in
-  
+
   let subst = List.map mk_bind (c_local @ nd.n_input @ nd.n_output) in
 
   let subst_var_dec _ () vd = (List.assoc vd.v_ident subst, ()) in
@@ -166,7 +170,7 @@ let exp funs (env, newvars, newequs, contracts) exp =
   match exp.e_desc with
   | Eapp ({ a_op = (Enode nn | Efun nn); } as op, argl, rso) ->
     begin try
-      
+
       let add_reset eq = match rso with
         | None -> eq
         | Some x -> mk_equation (Ereset (mk_block [eq], x)) in
@@ -206,8 +210,8 @@ let exp funs (env, newvars, newequs, contracts) exp =
         let pat = match ni.n_output with
             [o] -> Evarpat(o.v_ident)
           | ol -> Etuplepat(List.map (fun o -> Evarpat(o.v_ident)) ol) in
-        let v_argl = 
-          List.map 
+        let v_argl =
+          List.map
             (fun vd -> mk_exp (Evar vd.v_ident) vd.v_type ~linearity:vd.v_linearity)
             ni.n_input in
         mk_equation (Eeq (pat, { exp with e_desc = Eapp (op, v_argl, rso) })) in
@@ -224,7 +228,7 @@ let exp funs (env, newvars, newequs, contracts) exp =
         List.map2 mk_input_equ ni.n_input argl
         @ List.map add_reset ci.c_block.b_equs
         @ [ eq_app; eq_a; eq_g ]
-        @ newequs 
+        @ newequs
       and contracts = (v_a,v_g)::contracts in
 
       (* For clocking reason we cannot create 1-tuples. *)
@@ -289,7 +293,7 @@ let node_dec funs (env, newvars, newequs, contracts) nd =
   let nc =
     match nd.n_contract, contracts with
       c,[] -> c
-    | None,_::_ -> 
+    | None,_::_ ->
         Some { c_assume = true_exp;
                c_enforce = true_exp;
                c_assume_loc = assume_loc;
@@ -300,11 +304,11 @@ let node_dec funs (env, newvars, newequs, contracts) nd =
         Some { c with
                  c_assume_loc = assume_loc;
                  c_enforce_loc = enforce_loc } in
-  let nd = 
+  let nd =
     { nd with
         n_contract = nc;
         n_block =
-        { nd.n_block with 
+        { nd.n_block with
             b_local = newvars @ vd_contracts @ nd.n_block.b_local;
             b_equs = newequs @ nd.n_block.b_equs } } in
   let env = QualEnv.add nd.n_name nd env in
