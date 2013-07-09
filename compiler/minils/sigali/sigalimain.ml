@@ -273,7 +273,8 @@ let translate_eq f
           current_inputs := IdentSet.add n !current_inputs;
           acc_states,acc_init,acc_inputs,acc_eqs
       end
-  | pat, Minils.Eapp({ Minils.a_op = Minils.Enode _f; }, _e_list, None) ->
+  | pat, Minils.Eapp({ Minils.a_op = (Minils.Enode f|Minils.Efun f); },
+                     _e_list, None) when f.qual <> Pervasives ->
       (*
         (y1,...,yp) = f(x1,...,xn)
 
@@ -290,7 +291,7 @@ let translate_eq f
              ident_list) in
       acc_states,acc_init,
       acc_inputs,acc_eqs
-  | Minils.Evarpat(n), _ when actual_ty e.Minils.e_ty == Tbool ->
+  | Minils.Evarpat(n), _ when actual_ty e.Minils.e_ty = Tbool ->
       begin try
         (* assert : no fby, no node application in e *)
         let e' = translate prefix e in
