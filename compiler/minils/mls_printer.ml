@@ -154,9 +154,17 @@ and print_app ff (app, args) =
     | Eequal ->
       let e1, e2 = assert_2 args in
         fprintf ff "@[<2>%a@ = %a@]" print_extvalue e1  print_extvalue e2
-    | Efun { qual = Pervasives; name = n } when (is_infix n) ->
-      let a1, a2 = assert_2 args in
-      fprintf ff "@[(%a@, %s@, %a)@]" print_extvalue a1  n  print_extvalue a2
+    | Efun ({ qual = Pervasives; name = n } as f) when (is_infix n) ->
+	begin match args with
+	  [a1;a2] ->
+	    fprintf ff "@[(%a@, %s@, %a)@]"
+	      print_extvalue a1
+	      n
+	      print_extvalue a2
+	| _ ->
+            fprintf ff "@[%a@,%a@,%a@]"
+              print_qualname f print_params app.a_params  print_w_tuple args
+	end
     | Efun f | Enode f ->
         fprintf ff "@[%a@,%a@,%a@]"
           print_qualname f print_params app.a_params  print_w_tuple args

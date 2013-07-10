@@ -194,9 +194,14 @@ and print_app ff (app, args) =
     | Efun { name = n } when (n = "*" or n = "*.") ->
       let a1, a2 = assert_2 args in
       fprintf ff "@[%a@, %s@, %a@]" print_exp a1  n  print_exp a2
-    | Efun { qual = Pervasives; name = n } when (is_infix n) ->
-      let a1, a2 = assert_2 args in
-      fprintf ff "@[(%a@, %s@, %a)@]" print_exp a1  n  print_exp a2
+    | Efun ({ qual = Pervasives; name = n } as f) when (is_infix n) ->
+	begin match args with
+	  [a1;a2] ->
+	    fprintf ff "@[(%a@, %s@, %a)@]" print_exp a1  n  print_exp a2
+	| _ ->
+            fprintf ff "@[%a@,%a@,%a@]"
+              print_qualname f print_params app.a_params  print_exp_tuple args
+	end
     | Efun f ->
         fprintf ff "@[%a@,%a@,%a@]"
           print_qualname f print_params app.a_params  print_exp_tuple args
