@@ -37,6 +37,7 @@ open Modules
 open Signature
 open Names
 open Types
+open Printf
 
 let print_debug s =
   Printf.printf "%s\n" s;
@@ -47,6 +48,19 @@ let autostep = ref None
 let running_thread = ref None
 let running_period = ref 0.5
 
+type simtype = Tbool | Tint | Treal | Tother
+
+let simtype_of_type ty =
+  match Modules.unalias_type ty with
+  | Tid{ qual = Pervasives; name = "int" }   -> Tint
+  | Tid{ qual = Pervasives; name = "float" } -> Treal
+  | Tid{ qual = Pervasives; name = "bool" }  -> Tbool
+  | _ -> Tother
+
+
+type output_format = Rif | VCD
+
+type chrono_viewer = Sim2chro | GtkWave
 
 class type input =
 object
@@ -234,9 +248,9 @@ end
 
 let sim2chro_type ty =
   match ty with
-  | Tid{ qual = Pervasives; name = "int" }   -> "int"
-  | Tid{ qual = Pervasives; name = "float" } -> "real"
-  | Tid{ qual = Pervasives; name = "bool" }  -> "int"
+  | Tint -> "int"
+  | Treal -> "real"
+  | Tbool -> "int"
   | _ -> "string"
 
 (* input : 1 label, 1 field or two (bool) or more (enum) buttons *)
@@ -246,28 +260,28 @@ let create_input v_name v_ty n (table:GPack.table) =
   match v_ty with
   | Tid{ qual = Pervasives; name = "int" } ->
       new scale_input
-  0.0 0. 120.float_of_string
-  (fun v ->
-     string_of_int (int_of_float v))
-  0
-  table n
+        0.0 0. 120.float_of_string
+        (fun v ->
+          string_of_int (int_of_float v))
+        0
+        table n
   | Tid{ qual = Pervasives; name = "float" } ->
       new scale_input 0. 0. 100. float_of_string string_of_float 1 table n
   | Tid{ qual = Pervasives; name = "bool" } ->
       new boolean_input table n
   | Tid(name) ->
       begin try
-  let ty = find_type name in
-  begin match ty with
-  | Tenum(clist) -> new enum_input name.qual clist table n
-  | _ -> new entry_input "" table n
-  end
-      with Not_found ->
-  new entry_input "" table n
+              let ty = find_type name in
+              begin match ty with
+              | Tenum(clist) -> new enum_input name.qual clist table n
+              | _ -> new entry_input "" table n
+              end
+        with Not_found ->
+          new entry_input "" table n
       end
   | _ -> failwith("Arrays and tuples not yet implemented")
 
-let create_output v_name v_ty n (table:GPack.table) =
+let create_output v_name _v_ty n (table:GPack.table) =
   let label = GMisc.label ~text:v_name () in
   table#attach ~expand:`BOTH ~left:0 ~right:1 ~top:n label#coerce;
   new label_output table n
@@ -298,12 +312,16 @@ let find_in_path filename =
           raise Not_found
 
 let usage_msg = "Usage: " ^
-  Sys.executable_name ^ " -mod <Module> -node <node> -exec <exec>\n" ^
-"       " ^  Sys.executable_name ^ " -sig <file>.epci -node <node> -exec <exec>"
+  Sys.executable_name ^ " -mod <Module> -node <node> -exec <exec> [OPTION]...\n" ^
+"       " ^  Sys.executable_name ^ " -sig <file>.epci -node <node> -exec <exec> [OPTION]..."
 and doc_sig  = "<file>.epci\tCompiled interface containing node <node> (for backward compatibility)"
 and doc_mod  = "<Module>\tModule containing node <node>"
 and doc_node = "<node>\tName of simulated node"
 and doc_exec = "<exec>\tSimulation executable"
+and doc_sim2chro = "\tOutput to the sim2chro chronogram viewer tool (by default)"
+and doc_gtkwave = "\tOutput to the GtkWave chronogram viewer tool"
+and doc_noviewer = "\tNo chronogram viewer used: output to stdout"
+and doc_vcd = "\tOutput in VCD (Value Change Dump) format (Rif format by default)"
 
 let main () =
 
@@ -314,11 +332,14 @@ let main () =
   let node_name = ref "" in
   let exec_name = ref "" in
 
+  let format = ref Rif in
+  let viewer = ref (Some Sim2chro) in
+
   let mod_name_of_epci epci_name =
     if Filename.check_suffix epci_name ".epci" then
       begin
-  let filename = Filename.chop_suffix epci_name ".epci" in
-  mod_name := String.capitalize(Filename.basename filename)
+        let filename = Filename.chop_suffix epci_name ".epci" in
+        mod_name := String.capitalize(Filename.basename filename)
       end
     else
       raise (Arg.Bad("Invalid compiled interface: " ^ epci_name)) in
@@ -328,7 +349,11 @@ let main () =
       "-sig",Arg.String mod_name_of_epci,doc_sig; (* Backward compatibility *)
       "-mod",Arg.Set_string mod_name,doc_mod;
       "-node",Arg.Set_string node_name,doc_node;
-      "-exec",Arg.Set_string exec_name,doc_exec
+      "-exec",Arg.Set_string exec_name,doc_exec;
+      "-sim2chro",Arg.Unit (fun () -> viewer := (Some Sim2chro); format := Rif),doc_sim2chro;
+      "-gtkwave",Arg.Unit (fun () -> viewer := (Some GtkWave); format := VCD),doc_gtkwave;
+      "-noviewer",Arg.Unit (fun () -> viewer := None),doc_noviewer;
+      "-vcd",Arg.Unit (fun () -> format := VCD),doc_vcd
     ] in
   Arg.parse
     arg_list
@@ -339,8 +364,8 @@ let main () =
     or (!node_name = "")
     or (!exec_name = "") then
       begin
-  Arg.usage arg_list usage_msg;
-  raise Error
+        Arg.usage arg_list usage_msg;
+        raise Error
       end;
 
   open_module (Module !mod_name);
@@ -369,7 +394,7 @@ let main () =
 
   (* Output frame *)
   let out_frame     = GBin.frame ~label:"Outputs" ~packing:up_part#add () in
-  (*   let output_frame = GPack.table ~row_spacings:0 ~border_width:1 ~columns:2 ~rows:nb_outputs  *)
+  (*   let output_frame = GPack.table ~row_spacings:0 ~border_width:1 ~columns:2 ~rows:nb_outputs *)
   (*     ~packing:out_frame#add () in *)
   let output_frame = GPack.table ~columns:2 ~rows:nb_outputs
     ~packing:out_frame#add () in
@@ -377,7 +402,7 @@ let main () =
   (* Step label *)
   let step_label   = GMisc.label ~text:"Step: -" ~packing:mid_part#add () in
   (* Period scale *)
-  let period_label = GMisc.label ~text:"Period" ~packing:period_part#add () in
+  let _period_label = GMisc.label ~text:"Period" ~packing:period_part#add () in
   let running_period_adj =
     GData.adjustment
       ~value:!running_period
@@ -387,8 +412,8 @@ let main () =
       ~page_incr:0.1
       ~page_size:0.1 () in
   ignore(running_period_adj#connect#value_changed
-     (fun () -> running_period := running_period_adj#value));
-  let period_scale =
+     ~callback:(fun () -> running_period := running_period_adj#value));
+  let _period_scale =
     GRange.scale
       `HORIZONTAL
       ~adjustment:running_period_adj
@@ -419,107 +444,226 @@ let main () =
     GPack.button_box `HORIZONTAL ~packing:chrono_box#add () in
   let blatex = GButton.button ~label:"Export in LaTeX"
     ~packing:chrono_buttons#add () in
+  let btikz = GButton.button ~label:"Export in TikZ"
+    ~packing:chrono_buttons#add () in
   let bgnuplot = GButton.button ~label:"Export for Gnuplot"
     ~packing:chrono_buttons#add () in
 
   let make_label () = GMisc.label ~text:" " () in
 
   (* create sim2chro process *)
-  let oc_sim2chro =
-    try
-      let file = find_in_path "sim2chro" in
-      let oc = Unix.open_process_out (file ^ " -ecran") in
-      oc
-    with
-      Not_found -> stdout in
+  let oc_simview =
+    match !viewer with
+      None -> stdout
+    | Some Sim2chro ->
+      begin
+        try
+          let file = find_in_path "sim2chro" in
+          let oc = Unix.open_process_out (file ^ " -ecran") in
+          oc
+        with
+          Not_found -> stdout
+      end
+    | Some GtkWave ->
+      begin
+        try
+          let _ = find_in_path "gtkwave" in
+          let _ = find_in_path "shmidcat" in
+          Unix.open_process_out ("shmidcat | gtkwave -v -I " ^ !node_name ^ ".sav")
+        with
+          Not_found -> stdout
+      end
+  in
 
-  output_string oc_sim2chro ("#program \"" ^ !node_name ^ "\"\n");
-  output_string oc_sim2chro "#@inputs\n";
+  (* Print output headers *)
+
+  begin
+    match !format with
+    | Rif ->
+      output_string oc_simview ("#program \"" ^ !node_name ^ "\"\n");
+      output_string oc_simview "#@inputs\n"
+    | VCD ->
+      let tm = Unix.localtime (Unix.time ()) in
+      fprintf oc_simview "$date %d/%d/%d %d:%d $end\n"
+        tm.Unix.tm_mday (tm.Unix.tm_mon+1) (tm.Unix.tm_year + 1900) tm.Unix.tm_hour tm.Unix.tm_min;
+      fprintf oc_simview "$version Heptagon simulator 1.0 $end\n";
+      fprintf oc_simview "$timescale 1 ms $end\n";
+      fprintf oc_simview "$scope module top $end\n"
+  end;
 
   (* Adding inputs *)
 
   let inputs,_ =
     List.fold_left
       (fun (acc,n) { a_name = name; a_type = ty } ->
-   let name =
-     match name with
-     | None -> "Input " ^ (string_of_int n)
-     | Some name -> name in
-   let input = create_input name ty n input_frame in
-   let _chrono_label =
-     GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
-   let chrono_data = Array.make 10 (make_label()) in
-   for i = 0 to 9 do
-     let lab = make_label () in
-     chrono_data.(i) <- lab;
-     packing_chrono ~left:(i+1) ~top:n lab#coerce
-   done;
-   let save = ref [] in
-   saves := (name, save)::!saves;
-   Printf.fprintf oc_sim2chro "\"%s\":%s\n" name (sim2chro_type ty);
-   ((input,chrono_data,save)::acc),(n+1))
+        let name =
+          match name with
+          | None -> "Input " ^ (string_of_int n)
+          | Some name -> name in
+        let input = create_input name ty n input_frame in
+        let _chrono_label =
+          GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
+        let chrono_data =
+          Array.init 10
+            (fun i ->
+              let lab = make_label () in
+              packing_chrono ~left:(i+1) ~top:n lab#coerce;
+              lab) in
+        let save = ref [] in
+        let ty = simtype_of_type ty in
+        saves := (name, save)::!saves;
+        begin
+          match !format with
+          | Rif -> fprintf oc_simview "\"%s\":%s\n" name (sim2chro_type ty);
+          | VCD ->
+            let vartype, size =
+              begin match ty with
+                Tbool -> "wire", 1
+              | Tint -> "integer", 32
+              | Treal -> "real", 32
+              | Tother -> "event", 1
+              end in
+            fprintf oc_simview "$var %s %d %s %s $end\n" vartype size name name;
+        end;
+        ((name,ty,input,chrono_data,save)::acc),(n+1))
       ([],0)
       signature.node_inputs in
 
   let inputs = List.rev inputs in
 
-  output_string oc_sim2chro "@#\n";
-  output_string oc_sim2chro "#@outputs\n";
+  begin match !format with
+  | Rif ->
+    output_string oc_simview "@#\n";
+    output_string oc_simview "#@outputs\n";
+  | _ -> ()
+  end;
 
   (* Adding outputs *)
 
   let outputs,_ =
     List.fold_left
       (fun (acc,n) { a_name = name; a_type = ty } ->
-   let name =
-     match name with
-     | None -> "Output " ^ (string_of_int n)
-     | Some name -> name in
-   let output = create_output name ty n output_frame in
-   let n = n + nb_inputs in
-   let _chrono_label =
-     GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
-   let chrono_data = Array.make 10 (make_label()) in
-   for i = 0 to 9 do
-     let lab = make_label () in
-     chrono_data.(i) <- lab;
-     packing_chrono ~left:(i+1) ~top:n lab#coerce
-   done;
-   let save = ref [] in
-   Printf.fprintf oc_sim2chro "\"%s\":%s\n" name (sim2chro_type ty);
-   saves := (name, save)::!saves;
-   ((output,chrono_data,save)::acc),(n+1))
+        let name =
+          match name with
+          | None -> "Output " ^ (string_of_int n)
+          | Some name -> name in
+        let output = create_output name ty n output_frame in
+        let n = n + nb_inputs in
+        let _chrono_label =
+          GMisc.label ~text:name ~packing:(packing_chrono ~left:0 ~top:n) () in
+        let chrono_data =
+          Array.init 10
+            (fun i ->
+              let lab = make_label () in
+              packing_chrono ~left:(i+1) ~top:n lab#coerce;
+              lab) in
+        let save = ref [] in
+        let ty = simtype_of_type ty in
+        begin
+          match !format with
+          | Rif -> fprintf oc_simview "\"%s\":%s\n" name (sim2chro_type ty);
+          | VCD ->
+            let vartype, size =
+              begin match ty with
+                Tbool -> "wire", 1
+              | Tint -> "integer", 32
+              | Treal -> "real", 32
+              | Tother -> "event", 1
+              end in
+            fprintf oc_simview "$var %s %d %s %s $end\n" vartype size name name;
+        end;
+        saves := (name, save)::!saves;
+        ((name,ty,output,chrono_data,save)::acc),(n+1))
       ([],0)
       signature.node_outputs in
 
   let outputs = List.rev outputs in
 
+  let all_vars =
+    (List.map (fun (name,ty,_,chrono_data,save) -> (name,ty,chrono_data,save)) inputs) @
+    (List.map (fun (name,ty,_,chrono_data,save) -> (name,ty,chrono_data,save)) outputs) in
+
   (* create simulating process *)
   let (ic_sim,oc_sim) = Unix.open_process !exec_name in
 
-  let output_latex () =
-    let oc = open_out (!node_name ^ ".tex") in
+  (* Exports of traces *)
+
+  let open_filedlg outf default_filename () =
+    (* File chooser dialog for exports *)
+    let dlg = GWindow.file_chooser_dialog ~action:`SAVE () in
+    dlg#add_select_button_stock `SAVE `SAVE_EVENT;
+    dlg#add_button_stock `CANCEL `CANCEL_EVENT;
+    let callback evt =
+      match evt with
+      | `DELETE_EVENT -> ()
+      | `CANCEL_EVENT -> dlg#misc#hide ()
+      | `SAVE_EVENT ->
+        begin match dlg#filename with
+          None -> ()
+        | Some f -> outf f
+        end;
+        dlg#misc#hide ()
+    in
+    ignore(dlg#connect#response ~callback:callback);
+    ignore(dlg#set_filename default_filename);
+    dlg#show ()
+  in
+
+  let output_latex filename =
+    let oc = open_out filename in
     output_string oc "\\[\n";
     output_string oc "\\begin{array}{l|";
-    output_string oc (String.make (List.length !(snd (List.hd !saves))) 'c');
+    output_string oc (String.make (List.length !((fun (_,_,_,s) -> s) (List.hd all_vars))) 'c');
     output_string oc "c}\n";
     output_string oc "\\hline\n";
     List.iter
-      (fun (name,save) ->
+      (fun (name,_,_,save) ->
         output_string oc ("\\mbox{\\tt " ^ name ^ "}");
         List.iter
           (fun x -> output_string oc (" & " ^ x))
           (List.rev !save);
         output_string oc " & ...\\\\ ";
         output_string oc "\\hline\n")
-      (List.rev !saves);
+      all_vars;
     output_string oc "\\end{array}\n\\]\n";
-    flush stdout in
+    close_out oc in
+
+  let output_tikz filename =
+    let oc = open_out filename in
+
+    (* printing with grouped repeated values *)
+    (* [n] is the number of occurrence of [List.hd s] directly preceding [s] *)
+    let print_signal print_value s =
+      let rec print n s =
+        match s,n with
+          [],_ -> ()
+        | [x],0 -> print_value oc x
+        | [x],_ -> fprintf oc " %d%a" (n+1) print_value x
+        | x1 :: ((x2 :: _) as l),_ when x1 = x2 -> print (n+1) l
+        | x :: l, 0 -> print_value oc x; print 0 l
+        | x :: l, _ -> fprintf oc " %d%a" (n+1) print_value x; print 0 l
+      in print 0 s
+    in
+
+    output_string oc "\\begin{tikztimingtable}\n";
+    List.iter
+      (fun (name,ty,_,save) ->
+        output_string oc (name ^ " & ");
+        print_signal
+          (match ty with
+            Tbool -> (fun oc x -> output_string oc (if x = "0" then "L" else "H"))
+          | _ -> (fun oc x -> output_string oc ("D{" ^ x ^ "}")))
+          (List.rev !save);
+        output_string oc " \\\\\n")
+      all_vars;
+    output_string oc "\\end{tikztimingtable}\n";
+    close_out oc
+  in
 
   let output_gnuplot () =
     let dt = 1.0 in
     List.iter
-      (fun (name,save) ->
+      (fun (name,_,_,save) ->
         let oc = open_out (name ^ ".gnuplot") in
         let t = ref 0.0 in
           List.iter
@@ -528,21 +672,47 @@ let main () =
               t := !t +. dt)
             (List.rev !save);
           close_out oc)
-        (List.rev !saves)
+        all_vars
     in
 
-  output_string oc_sim2chro "@#\n";
-  flush oc_sim2chro;
+  begin match !format with
+  | Rif -> output_string oc_simview "@#\n";
+  | VCD ->
+    output_string oc_simview "$upscope $end\n";
+    output_string oc_simview "$enddefinitions $end\n";
+    output_string oc_simview "#1\n"
+  end;
 
-  let step_sim2chro (i,o) =
-      output_string oc_sim2chro ("#step " ^ (string_of_int !nb_step) ^ "\n");
+  flush oc_simview;
+
+  let step_rif (i,o) =
+      output_string oc_simview ("#step " ^ (string_of_int !nb_step) ^ "\n");
       let print_value v =
-        output_string oc_sim2chro (v ^ "\t") in
+        output_string oc_simview (v ^ "\t") in
       List.iter print_value (List.rev i);
-      output_string oc_sim2chro "#outs\t";
+      output_string oc_simview "#outs\t";
       List.iter print_value (List.rev o);
-      output_string oc_sim2chro "\n";
-      flush oc_sim2chro
+      output_string oc_simview "\n";
+      flush oc_simview
+  in
+
+  let step_vcd () =
+    List.iter
+      (fun (name,ty,_,save) ->
+        let print x =
+          begin match ty with
+          | Tbool -> fprintf oc_simview "%s%s\n" x name (* 1/0 value *)
+          | Tint | Treal -> fprintf oc_simview "r%s %s\n" x name (* "real" value *)
+          | Tother -> fprintf oc_simview "x %s\n" name (* "x" -> "unknown" value *)
+          end in
+        match !save with
+        | x1 :: x2 :: _ when x1 <> x2 -> print x1
+        | [x] -> print x
+        | _ -> ()
+      )
+      all_vars;
+    fprintf oc_simview "#%d\n" (!nb_step + 1);
+    flush oc_simview
   in
 
   let step () =
@@ -550,58 +720,61 @@ let main () =
     (* write inputs to simulating process *)
     let input_strings =
       List.fold_left
-  (fun acc (input,chrono,save) ->
-     let s =
-       if brandom#active
-       then input#get_random_input
-       else input#get_input in
-     input#reset;
-     Printf.fprintf oc_sim "%s\n" s;
-     save := s::!save;
-     if !nb_step <= 10 then
-       ignore
-               (List.fold_right
-      (fun x i ->
-         (chrono.(i))#set_text x ; i+1)
-      !save 0)
-     else
-       begin
-         (chrono.(0))#set_text "...";
-         for i = 1 to 9 do
-     (chrono.(i))#set_text (List.nth !save (9-i))
-         done
-       end;
-     s::acc)
-  []
-  inputs in
+        (fun acc (_name,_ty,input,chrono,save) ->
+          let s =
+            if brandom#active
+            then input#get_random_input
+            else input#get_input in
+          input#reset;
+          Printf.fprintf oc_sim "%s\n" s;
+          save := s::!save;
+          if !nb_step <= 10 then
+            ignore
+              (List.fold_right
+                 (fun x i ->
+                   (chrono.(i))#set_text x ; i+1)
+                 !save 0)
+          else
+            begin
+              (chrono.(0))#set_text "...";
+              for i = 1 to 9 do
+                (chrono.(i))#set_text (List.nth !save (9-i))
+              done
+            end;
+          s::acc)
+        []
+        inputs in
 
     flush oc_sim;
 
     (* read outputs *)
     let output_strings =
       List.fold_left
-  (fun acc (output,chrono,save) ->
-     let s = input_line ic_sim in
-     output#set_output s;
-     save := s::!save;
-     if !nb_step <= 10 then
-       ignore
-               (List.fold_right
-      (fun x i ->
-         (chrono.(i))#set_text x ; i+1)
-      !save 0)
-     else
-       begin
-         (chrono.(0))#set_text "...";
-         for i = 1 to 9 do
-     (chrono.(i))#set_text (List.nth !save (9-i))
-         done
-       end;
-     s::acc)
-  []
-  outputs in
+        (fun acc (_name,_ty,output,chrono,save) ->
+          let s = input_line ic_sim in
+          output#set_output s;
+          save := s::!save;
+          if !nb_step <= 10 then
+            ignore
+              (List.fold_right
+                 (fun x i ->
+                   (chrono.(i))#set_text x ; i+1)
+                 !save 0)
+          else
+            begin
+              (chrono.(0))#set_text "...";
+              for i = 1 to 9 do
+                (chrono.(i))#set_text (List.nth !save (9-i))
+              done
+            end;
+          s::acc)
+        []
+        outputs in
 
-    step_sim2chro (input_strings,output_strings);
+    begin match !format with
+    | Rif -> step_rif (input_strings,output_strings)
+    | VCD -> step_vcd ()
+    end;
 
     step_label#set_label ("Step: " ^ (string_of_int !nb_step))
   in
@@ -609,7 +782,7 @@ let main () =
   let toggle_autostep () =
     match !autostep with
     | None -> autostep := Some step
-    | Some f -> autostep := None
+    | Some _f -> autostep := None
   in
 
   let rec run () =
@@ -625,18 +798,19 @@ let main () =
     | None ->
   let t = Thread.create run () in
   running_thread := Some t
-    | Some t -> running_thread := None
+    | Some _t -> running_thread := None
   in
 
   let quit() =
     begin try
       ignore(Unix.close_process_out oc_sim);
-      ignore(Unix.close_process_out oc_sim2chro)
+      ignore(Unix.close_process_out oc_simview)
     with _ -> ()
     end;
     exit 0 in
 
-  ignore (blatex#connect#clicked ~callback:output_latex);
+  ignore (blatex#connect#clicked ~callback:(open_filedlg output_latex (!node_name ^ ".tex")));
+  ignore (btikz#connect#clicked ~callback:(open_filedlg output_tikz (!node_name ^ ".tex")));
   ignore (bgnuplot#connect#clicked ~callback:output_gnuplot);
   chrono#show ();
   ignore (bstep#connect#clicked ~callback:step);
