@@ -42,7 +42,7 @@ let print_qualname ff ({ Names.name = n } as qn) =
 
 let print_shortname ff ({ Names.name = n } as qn) =
   Global_printer.print_shortname ff { qn with Names.name = jname_of_name n }
-  
+
 let java_print_string ff s =
   pp_print_string ff (jname_of_name s)
 
@@ -166,7 +166,7 @@ and op ff (f, e_l) =
         | "not" ->
             let e = Misc.assert_1 e_l in
             fprintf ff "!%a" exp e
-        | "~-" ->
+        | "~-" | "~-." ->
             let e = Misc.assert_1 e_l in
             fprintf ff "-%a" exp e
         | "assert" ->
@@ -204,10 +204,10 @@ and act ff = function
   | Aexp e -> fprintf ff "@[%a@];" exp e
   | Aswitch (e, c_b_l) ->
       let pcb ff (c,b) =
-	let print_case ff c =
-	  match c with
-	  | Senum c -> bare_constructor_name ff c
-	  | Sexp e -> exp ff e in
+        let print_case ff c =
+          match c with
+          | Senum c -> bare_constructor_name ff c
+          | Sexp e -> exp ff e in
         fprintf ff "@[<v4>case %a:@ %a@ break;@]" print_case c block b in
     (*  let switch_hack ff c_b_l = (* TODO java : better thing to do ? *)
         fprintf ff "@[<2>default ://Dead code. Hack to prevent \
