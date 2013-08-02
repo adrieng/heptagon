@@ -94,6 +94,9 @@ The tools below are optional or are related to some subparts of Heptagon:
 \item The graphical display tool \texttt{sim2chro} can be obtained from
 Verimag\footnote{\url{http://www-verimag.imag.fr/~raymond/edu/distrib/}}. It can
 be used together with the graphical simulator \texttt{hepts} (see Section~\ref{sec:simulation}).
+\item Alternatively to \texttt{sim2chro}, the
+  GTKWave\footnote{\url{http://gtkwave.sourceforge.net}} wave/chronograms viewer
+  can be used with \texttt{hepts}.
 \item The \texttt{Sigali} tool for model-checking and discrete controller
   synthesis \cite{sigali}
   \footnote{\url{http://www.irisa.fr/vertecs/Logiciels/sigali.html}} is
@@ -182,7 +185,7 @@ language must then be given by the \texttt{-target} option:
 \end{alltt}
 
 Where \texttt{<language>} is the name of the target language. For now, available
-languages are C (\texttt{c} option) and Java (\texttt{java} option).
+languages are C (\texttt{c} option) and Java (\texttt{java} or \texttt{java14} option).
 
 \subsection{Generated code}
 \label{sec:generated-code}
@@ -937,7 +940,7 @@ tel
 \label{sec:known-issues}
 
 Heptagon is a research prototype. Users are kindly invited to submit bugs to the
-Heptagon developers via \url{heptagon-developers@lists.}
+Heptagon developers via \url{heptagon-developers@lists.gforge.inria.fr}
 
 Yet, the following subject are known to be issues for the current Heptagon
 version:
@@ -1012,7 +1015,7 @@ typedef struct \{
   t$'_1$ y$_{1}$;
   ...
   t$'_p$ y$_{p}$;
-\} Example__f_ans;
+\} Example__f_out;
 \end{lstlisting}
 \end{itemize}
 
@@ -1064,15 +1067,16 @@ option (see Section~\ref{sec:simulation}).
 %   end
 % \end{alltt}
 
-\subsection{Java generated code}
+\subsection{Java generated code (Java 1.5 and above)}
 \label{sec:java-generated-code}
 
 Java generated files from an Heptagon program \texttt{example.ept} are placed in
-a directory named \texttt{example\_java}. This directory contains one Java class
-\texttt{f} (in the file \texttt{f.java}) for each node \texttt{f} of the source
-program. Assuming that \texttt{f} has inputs $(x_1:t_1,\ldots,x_n:t_n)$ and
-outputs $(y_1:t'_1,\ldots,y_p:t'_p)$, $t_i$ and $t'_i$ being the data types of
-these inputs and outputs, then this \texttt{f} class implements the following
+a directory named \texttt{java/Example}, constituted in a Java package named
+\texttt{Example}. This directory contains one Java class \texttt{F} (in the file
+\texttt{F.java}) for each node \texttt{f} of the source program. Assuming that
+\texttt{f} has inputs $(x_1:t_1,\ldots,x_n:t_n)$ and outputs
+$(y_1:t'_1,\ldots,y_p:t'_p)$, $t_i$ and $t'_i$ being the data types of these
+inputs and outputs, then this \texttt{f} class implements the following
 interface:
 
 
@@ -1081,19 +1085,41 @@ public interface f {
     
     public void reset();
 
-    public fAnswer step(t$_{1}$ x$_{1}$, ..., t$_{n}$ x$_{n}$);
+    public jeptagon.Pervasives.Tuple$n$ step(t$_{1}$ x$_{1}$, ..., t$_{n}$ x$_{n}$);
 }
 \end{lstlisting}
 
-The \texttt{fAnswer} class being a structure containing the outputs:
+The \texttt{Tuple$n$} class is a $n$-uple (as a composite of $n$ \texttt{Object}
+instances). The output $y_1\ldots y_n$ are accessible through the properties
+\texttt{c0}\ldots\texttt{c$(n-1)$} of the \texttt{Tuple$n$}'s instance.
+
+\subsection{Java generated code (Java 1.4)}
+\label{sec:java14-generated-code}
+
+The option \texttt{-target java14} generated Java 1.4 compliant code (typically,
+without enumerated types and genericity).
+
+Java generated files from an Heptagon program \texttt{example.ept} are placed in
+a directory named \texttt{java/Example}, constituted in a Java package named
+\texttt{Example}. This directory contains one Java class \texttt{F} (in the file
+\texttt{F.java}) for each node \texttt{f} of the source program. Assuming that
+\texttt{f} has inputs $(x_1:t_1,\ldots,x_n:t_n)$ and outputs
+$(y_1:t'_1,\ldots,y_p:t'_p)$, $t_i$ and $t'_i$ being the data types of these
+inputs and outputs, then this \texttt{f} class implements the following
+interface:
 
 \begin{lstlisting}[language=Java]
-public class fAnswer {
-  t$'\sb{1}$ y$_{1}$;
-  ...
-  t$'\sb{p}$ y$_{p}$;
+public interface f {
+    
+    public void reset();
+
+    public void step(t$_{1}$ x$_{1}$, ..., t$_{n}$ x$_{n}$);
+
+    public $\mathtt{t}'_1$ getOutput0();
+    $\vdots$
 }
 \end{lstlisting}
+
 
 \bibliographystyle{plain}
 \bibliography{manual}
