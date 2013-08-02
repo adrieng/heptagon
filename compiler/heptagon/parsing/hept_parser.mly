@@ -142,7 +142,7 @@ optsnlist(S,x) :
 /* Separated list with delimiter, even for empty list*/
 adelim_slist(S, L, R, x) :
   | L R                    {[]}
-  | L l=snlist(S, x) R      {l}
+  | L l=optsnlist(S, x) R      {l}
 
 %inline tuple(x)           : LPAREN h=x COMMA t=snlist(COMMA,x) RPAREN { h::t }
 %inline soption(P,x):
@@ -230,7 +230,8 @@ params:
 ;
 
 nonmt_params:
-  | param               { $1 }
+  | param                      { $1 }
+  | param SEMICOL              { $1 }
   | param SEMICOL nonmt_params { $1 @ $3 }
 ;
 
@@ -247,6 +248,7 @@ out_params:
 
 nonmt_out_params:
   | var_last { $1 }
+  | var_last SEMICOL { $1 }
   | var_last SEMICOL nonmt_out_params { $1 @ $3 }
 ;
 
@@ -475,8 +477,13 @@ pat:
 ;
 
 nonmtexps:
-  | exp                 {[$1]}
+  | exp opt_comma       {[$1]}
   | exp COMMA nonmtexps {$1 :: $3}
+;
+
+opt_comma:
+  | {}
+  | COMMA {}
 ;
 
 exps:
