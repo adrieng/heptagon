@@ -291,7 +291,7 @@ let translate_eq f
              ident_list) in
       acc_states,acc_init,
       acc_inputs,acc_eqs
-  | Minils.Evarpat(n), _ when actual_ty e.Minils.e_ty = Tbool ->
+  | Minils.Evarpat(n), _ ->
       begin try
         (* assert : no fby, no node application in e *)
         let e' = translate prefix e in
@@ -308,17 +308,12 @@ let translate_eq f
         with Untranslatable ->
           untranslatable_warn e;
           current_inputs := IdentSet.add n !current_inputs;
-          acc_states,acc_init,
-          (acc_inputs @ [(n,(prefixed (name n)))]),
-          acc_eqs
-      end
-  | Minils.Evarpat(n), _ ->
-      begin
-        untranslatable_warn e;
-        (* Mark n as input: unusable as local variable *)
-	Format.printf "Adding non-bool variable %s in current_inputs@\n" (name n);
-        current_inputs := IdentSet.add n !current_inputs;
-        acc_states,acc_init,acc_inputs,acc_eqs
+	  let acc_inputs =
+	    match actual_ty e.Minils.e_ty with
+	      | Tbool -> acc_inputs @ [(n,(prefixed (name n)))]
+	      | _ -> acc_inputs
+	  in
+          acc_states,acc_init,acc_inputs,acc_eqs
       end
   | _ -> assert false
 
