@@ -32,7 +32,7 @@
 open Names
 
 (* version of the compiler *)
-let version = "1.0"
+let version = "1.00.01"
 let date = "DATE"
 
 (* standard module *)
@@ -61,7 +61,7 @@ let locate_stdlib () =
 let show_version () =
   Format.printf "The Heptagon compiler, version %s (%s)@."
     version date;
-  Format.printf 
+  Format.printf
     "This program is free software and comes with ABSOLUTELY NO WARRANTY.@.";
   locate_stdlib ()
 
@@ -143,8 +143,9 @@ let do_mem_alloc_and_typing () =
 let use_old_scheduler = ref false
 
 let strict_ssa = ref false
-(* if this option is on, generate code that first copies the whole array and then modifies one element.
-   Otherwise, generate two loops so that each element in the array is only assigned once. *)
+(* if this option is on, generate code that first copies the whole
+   array and then modifies one element.  Otherwise, generate two loops
+   so that each element in the array is only assigned once. *)
 let memcpy_array_and_struct = ref true
 
 let set_strict_ssa () =
@@ -155,7 +156,7 @@ let unroll_loops = ref false
 
 let optim = ref false
 let do_optim () =
-(*  do_iterator_fusion := true; *)(*TODO reset when itfusion is fixed *)
+  (*  do_iterator_fusion := true; *)(*TODO reset when itfusion is fixed *)
   do_mem_alloc_and_typing ();
   tomato := true;
   deadcode := true
