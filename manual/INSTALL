@@ -16,7 +16,11 @@ The  tools below  are  optional or  are  related to  some subparts  of
 Heptagon:
 - The  graphical display tool  sim2chro can  be obtained  from Verimag
   [1]. It can be used together with the graphical simulator hepts.
-- The  Sigali  tool [2]  for  model-checking  and discrete  controller
+
+- Alternatively to  sim2chro, the GTKWave [2]  wave/chronograms viewer
+  can be used with hepts.
+
+- The  Sigali  tool [3]  for  model-checking  and discrete  controller
   synthesis  is mandatory  for the  use  of contracts.  Sigali can  be
   downloaded on the BZR website : http://bzr.inria.fr.
 
@@ -28,12 +32,12 @@ Compilation and installation
 * Required libraries and tools for the compilation
 
 The compilation of the Heptagon compiler requires:
-- OCaml [3] (version >= 3.11), and the ocamlbuild and ocamlfind tools
-- the Menhir [4] parser generator
-- the ocamlgraph [5] library.
+- OCaml [4] (version >= 3.11), and the ocamlbuild and ocamlfind tools
+- the Menhir [5] parser generator
+- the ocamlgraph [6] library.
 
 The  compilation of  the  Heptagon simulator  (optional) requires  the
-LablGTK2 [6] library.
+LablGTK2 [7] library.
 
 
 * Compilation
@@ -64,9 +68,10 @@ By default, this will install the binaries (heptc and hepts) into
 URLs
 ----
 
-[1] sim2chro : http://www-verimag.imag.fr/~raymond/edu/distrib
-[2] Sigali : http://www.irisa.fr/vertecs/Logiciels/sigali.html
-[3] OCaml : http://caml.inria.fr
-[4] Menhir : http://gallium.inria.fr/~fpottier/menhir/
-[5] ocamlgraph : http://ocamlgraph.lri.fr
-[6] LablGTK2 : http://wwwfun.kurims.kyoto-u.ac.jp/soft/lsl/lablgtk.html
+[1] sim2chro : http://www-verimag.imag.fr/DIST-TOOLS/SYNCHRONE/lustre-v4/distrib/
+[2] GTKWave : http://gtkwave.sourceforge.net
+[3] Sigali : http://www.irisa.fr/vertecs/Logiciels/sigali.html
+[4] OCaml : http://caml.inria.fr
+[5] Menhir : http://gallium.inria.fr/~fpottier/menhir/
+[6] ocamlgraph : http://ocamlgraph.lri.fr
+[7] LablGTK2 : http://wwwfun.kurims.kyoto-u.ac.jp/soft/lsl/lablgtk.html
