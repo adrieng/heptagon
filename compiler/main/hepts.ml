@@ -380,24 +380,28 @@ let main () =
   ignore (GMain.init ());
 
   (* main windows *)
-  let win      = GWindow.window ~title:(!node_name ^ " - commands") () in
+  let win      = GWindow.window ~allow_shrink:true ~title:(!node_name ^ " - commands") () in
   let box      = GPack.vbox ~packing:win#add () in
-  let up_part  = GPack.vbox ~packing:box#add () in
-  let mid_part = GPack.hbox ~packing:box#add () in
-  let period_part = GPack.hbox ~packing:box#add () in
-  let low_part = GPack.button_box `HORIZONTAL ~packing:box#add () in
+  let up_part  = GPack.paned `VERTICAL ~packing:(box#pack ~expand:true) () in
+  let mid_part = GPack.hbox ~packing:(box#pack ~expand:false) () in
+  let period_part = GPack.hbox ~packing:(box#pack ~expand:false) () in
+  let low_part = GPack.button_box `HORIZONTAL ~packing:(box#pack ~expand:false) () in
 
   (* Input frame *)
-  let in_frame     = GBin.frame ~label:"Inputs" ~packing:up_part#add () in
+  let in_frame     = GBin.frame ~label:"Inputs" ~packing:up_part#add1 () in
+  let scroll_in    =
+    GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:in_frame#add () in
   let input_frame  = GPack.table ~columns:3 ~rows:nb_inputs
-    ~packing:in_frame#add () in
+    ~packing:scroll_in#add_with_viewport () in
 
   (* Output frame *)
-  let out_frame     = GBin.frame ~label:"Outputs" ~packing:up_part#add () in
+  let out_frame     = GBin.frame ~label:"Outputs" ~packing:up_part#add2 () in
+  let scroll_out    =
+    GBin.scrolled_window ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC ~packing:out_frame#add () in
   (*   let output_frame = GPack.table ~row_spacings:0 ~border_width:1 ~columns:2 ~rows:nb_outputs *)
   (*     ~packing:out_frame#add () in *)
   let output_frame = GPack.table ~columns:2 ~rows:nb_outputs
-    ~packing:out_frame#add () in
+    ~packing:scroll_out#add_with_viewport () in
 
   (* Step label *)
   let step_label   = GMisc.label ~text:"Step: -" ~packing:mid_part#add () in
