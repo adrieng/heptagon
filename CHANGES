@@ -1,0 +1,10 @@
+
+Heptagon 1.00.02 (29/10/2013)
+-----------------------------
+
+ - scrollbars in graphical simulator hepts
+
+Heptagon 1.00.01 (05/08/2013)
+-----------------------------
+
+ - bug fix : abstraction of integer in Sigali code generation
