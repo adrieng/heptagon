@@ -5,4 +5,3 @@ To do so, go to the lablgtk library directory and type:
 
 ocamlc -a gtkThread.cmo -o lablgtkthread.cma
 ocamlopt -a gtkThread.cmx -o lablgtkthread.cmxa
- 

@@ -99,7 +99,7 @@ let rec split_last = function
 
 (** [split_nlasts l] returns l without its last n elements and
     the last n elements of l. *)
-let rec split_nlast n l =
+let split_nlast n l =
   let rec aux l = match l with
     | [] -> [], [], 0
     | a::l ->
@@ -133,8 +133,8 @@ let drop n l =
   l
 
 let rec nth_of_list n l = match n, l with
-  | 1, h::t -> h
-  | n, h::t -> nth_of_list (n-1) t
+  | 1, h::_ -> h
+  | n, _::t -> nth_of_list (n-1) t
   | _ -> raise List_too_short
 
 
@@ -190,7 +190,7 @@ let rec list_diff l dl = match l with
       let l = list_diff l dl in
       if List.mem x dl then l else x::l
 
-(** { 3 Compiler iterators } *)
+(** {3 Compiler iterators} *)
 
 (** Mapfold *) (* TODO optim : in a lot of places we don't need the List.rev *)
 let mapfold f acc l =

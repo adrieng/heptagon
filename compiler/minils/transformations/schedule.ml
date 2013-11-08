@@ -29,11 +29,8 @@
 (* scheduling of equations *)
 
 
-open Misc
-open Minils
 open Mls_utils
 open Sgraph
-open Dep
 
 (* possible overlapping between clocks *)
 let join ck1 ck2 =

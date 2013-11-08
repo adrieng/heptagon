@@ -635,7 +635,7 @@ let global_name = ref "";;
 
 
 
-(** {2 step() and reset() functions generation *)
+(** {2 step() and reset() functions generation} *)
 
 let qn_append q suffix =
   { qual = q.qual; name = q.name ^ suffix }

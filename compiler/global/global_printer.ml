@@ -27,7 +27,6 @@
 (*                                                                     *)
 (***********************************************************************)
 open Names
-open Idents
 open Signature
 open Types
 open Clocks
@@ -195,5 +194,3 @@ let print_interface ff =
   NamesEnv.iter
     (fun key sigtype -> Format.fprintf ff "%a@," print_interface_value (key,sigtype)) m.m_values;
   Format.fprintf ff "@]@."
-
-

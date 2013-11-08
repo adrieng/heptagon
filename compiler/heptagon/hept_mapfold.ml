@@ -216,7 +216,7 @@ and block_it funs acc b = funs.block funs acc b
 and block funs acc b =
   let b_local, acc = mapfold (var_dec_it funs) acc b.b_local in
   let b_equs, acc = mapfold (eq_it funs) acc b.b_equs in
-  let b_defnames, acc = 
+  let b_defnames, acc =
     Idents.Env.fold
       (fun v v_dec (env,acc) ->
          let v, acc = var_ident_it funs.global_funs acc v in
@@ -332,7 +332,7 @@ and program_desc_it funs acc pd =
   with Fallback -> program_desc funs acc pd
 and program_desc funs acc pd = match pd with
   | Pconst cd -> let cd, acc = const_dec_it funs acc cd in Pconst cd, acc
-  | Ptype td -> pd, acc (* TODO types *)
+  | Ptype _td -> pd, acc (* TODO types *)
   | Pnode n -> let n, acc = node_dec_it funs acc n in Pnode n, acc
 
 let defaults = {
@@ -380,8 +380,3 @@ let defaults_stop = {
   program = stop;
   program_desc = stop;
   global_funs = Global_mapfold.defaults_stop }
-
-
-
-
-

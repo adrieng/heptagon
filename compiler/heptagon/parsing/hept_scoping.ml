@@ -54,7 +54,6 @@
     op<a1,a2> (a3) ==> op <a1> (a2,a3) ==> op (a1,a2,a3) *)
 
 open Location
-open Types
 open Hept_parsetree
 open Names
 open Idents
@@ -221,7 +220,7 @@ let build_const loc vd_list =
   List.fold_left build NamesSet.empty vd_list
 
 
-(** { 3 Translate the AST into Heptagon. } *)
+(** {3 Translate the AST into Heptagon} *)
 let translate_iterator_type = function
   | Imap -> Heptagon.Imap
   | Imapi -> Heptagon.Imapi
@@ -236,7 +235,7 @@ let rec translate_static_exp se =
   with
     | ScopingError err -> message se.se_loc err
 
-and translate_static_exp_desc loc ed =
+and translate_static_exp_desc _loc ed =
   let t = translate_static_exp in
   match ed with
     | Svar (Q q) -> Types.Svar q
@@ -579,7 +578,7 @@ let translate_signature s =
   let p, _ = params_of_var_decs Rename.empty s.sig_params in
   let c = List.map translate_constrnt s.sig_param_constraints in
   let sig_node =
-    Signature.mk_node 
+    Signature.mk_node
       ~extern:s.sig_external s.sig_loc i o s.sig_stateful s.sig_unsafe p in
   Check_signature.check_signature sig_node;
   safe_add s.sig_loc add_value n sig_node;

@@ -30,7 +30,6 @@
 (* inspired from the source of the Caml Light 0.73 compiler *)
 
 open Lexing
-open Parsing
 open Format
 
 (* two important global variables: [input_name] and [input_chan] *)
@@ -54,7 +53,7 @@ let error_prompt = ">"
 
 
 (** Prints [n] times char [c] on [oc]. *)
-let prints_n_chars ff n c = for i = 1 to n do pp_print_char ff c done
+let prints_n_chars ff n c = for _i = 1 to n do pp_print_char ff c done
 
 (** Prints out to [oc] a line designed to be printed under [line] from file [ic]
   underlining from char [first] to char [last] with char [ch].
@@ -82,7 +81,7 @@ let underline_line ic ff ch line first last =
 
 
 let copy_lines nl ic ff prompt =
-  for i = 1 to nl do
+  for _i = 1 to nl do
     pp_print_string ff prompt;
     (try pp_print_string ff (input_line ic)
      with End_of_file -> pp_print_string ff "<EOF>");
@@ -90,13 +89,13 @@ let copy_lines nl ic ff prompt =
   done
 
 let copy_chunk p1 p2 ic ff =
-  try for i = p1 to p2 - 1 do pp_print_char ff (input_char ic) done
+  try for _i = p1 to p2 - 1 do pp_print_char ff (input_char ic) done
   with End_of_file -> pp_print_string ff "<EOF>"
 
 
 
 let skip_lines n ic =
-  try for i = 1 to n do
+  try for _i = 1 to n do
     let _ = input_line ic in ()
     done
   with End_of_file -> ()

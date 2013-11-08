@@ -39,12 +39,10 @@
 (* Requis : typage *)
 
 open Misc
-open Names
 open Idents
 open Heptagon
 open Types
 open Location
-open Format
 
 type typ =
   | Iproduct of typ list
@@ -349,7 +347,7 @@ and typing_automaton h state_handlers =
   let initialized h { s_block = { b_defnames = l } } =
     let env_update x h =
       try
-        let xl = IEnv.find_last x h in (* it's a last in the env, good. *)
+        let _xl = IEnv.find_last x h in (* it's a last in the env, good. *)
         IEnv.add_last x (IEnv.find_var x h) h
       with Not_found -> h (* nothing to do *)
     in
@@ -412,5 +410,3 @@ let typing_node { n_input = i_list; n_output = o_list;
 let program ({ p_desc = pd } as p) =
   List.iter (function Pnode n -> typing_node n | _ -> ()) pd;
   p
-
-

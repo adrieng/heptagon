@@ -98,7 +98,7 @@ let cycle g_list =
   (* store nodes in a stack *)
   let s = Stack.create () in
   (* flush the connected component *)
-  let rec flush index =
+  let rec flush _index =
     if Stack.is_empty s then []
     else let v = Stack.pop s in
     v.g_containt :: flush v.g_tag in
@@ -164,4 +164,3 @@ let print_node print g =
     g.g_depends_on;
   printf "@]"
 *)
-

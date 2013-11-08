@@ -30,7 +30,6 @@
 open Compiler_options
 open Compiler_utils
 open Location
-open Global_printer
 
 let pp p = if !verbose then Hept_printer.print stdout p
 
@@ -72,4 +71,3 @@ let parse_interface modname lexbuf =
   (* Convert the parse tree to Heptagon AST *)
   let i = do_silent_pass "Scoping" Hept_scoping.translate_interface i in
   i
-

@@ -39,7 +39,6 @@ open Static
 open Types
 open Global_printer
 open Heptagon
-open Hept_mapfold
 open Pp_tools
 open Format
 
@@ -440,7 +439,7 @@ let rec _unify cenv t1 t2 =
         _unify cenv ty1 ty2
     | _ -> raise Unify
 
-(** { 3 Constraints related functions } *)
+(** {3 Constraints related functions} *)
 and (curr_constrnt : constrnt list ref) = ref []
 
 and solve ?(unsafe=false) c_l =
@@ -1193,7 +1192,7 @@ let typing_contract cenv h contract =
         let typed_e_g = expect cenv h' (Tid Initial.pbool) e_g in
         let typed_e_g_loc = expect cenv h' (Tid Initial.pbool) e_g_loc in
 
-        let typed_c, (c_names, h) = build cenv h c in
+        let typed_c, (_c_names, h) = build cenv h c in
 
         Some { c_block = typed_b;
                c_assume = typed_e_a;
@@ -1222,7 +1221,7 @@ let node ({ n_name = f; n_input = i_list; n_output = o_list;
   try
     let typed_params, cenv =
       build_node_params QualEnv.empty node_params in
-    let typed_i_list, (input_names, h) = build cenv Env.empty i_list in
+    let typed_i_list, (_input_names, h) = build cenv Env.empty i_list in
     let typed_o_list, (output_names, h) = build cenv h o_list in
 
     (* typing contract *)

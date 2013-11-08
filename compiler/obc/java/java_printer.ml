@@ -32,7 +32,6 @@
 open Java
 open Pp_tools
 open Format
-open Misc
 
 
 let print_ident ff id =  Format.fprintf ff "%s" (jname_of_name (Idents.name id))
@@ -295,4 +294,3 @@ let output_classe base_dir c =
 
 let output_program dir (p:Java.program) =
   List.iter (output_classe dir) p
-

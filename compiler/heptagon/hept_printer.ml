@@ -28,18 +28,12 @@
 (***********************************************************************)
 (* The Heptagon printer *)
 
-open Location
 open Misc
 open Names
-open Idents
-open Modules
-open Static
 open Format
 open Global_printer
 open Pp_tools
-open Types
 open Linearity
-open Signature
 open Heptagon
 
 let iterator_to_string i =
@@ -334,7 +328,7 @@ and print_sblock sep ff { b_local = v_list; b_equs = eqs } =
       fprintf ff "@[<v>%a@,%a@]" (print_local_vars sep) v_list print_eq_list eqs
 
 
-let rec print_type_def ff { t_name = name; t_desc = tdesc } =
+let print_type_def ff { t_name = name; t_desc = tdesc } =
   let print_type_desc ff = function
     | Type_abs -> ()
     | Type_alias ty -> fprintf ff  " =@ %a" print_type ty

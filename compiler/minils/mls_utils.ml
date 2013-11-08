@@ -33,10 +33,8 @@ open Location
 open Names
 open Idents
 open Signature
-open Static
 open Types
 open Clocks
-open Misc
 
 (** Error Kind *)
 type err_kind = | Enot_static_exp
@@ -48,7 +46,7 @@ let err_message exp ?(loc=exp.e_loc) = function
         print_exp exp;
       raise Errors.Error
 
-let rec static_exp_of_exp e =
+let static_exp_of_exp e =
   match e.e_desc with
     | Eextvalue w -> (match w.w_desc with
       | Wconst se -> se
@@ -215,7 +213,7 @@ end
 let node_memory_vars n =
   let rec eq funs acc ({ eq_lhs = pat; eq_rhs = e } as equ) =
     match pat, e.e_desc with
-    | Evarpat x, Ewhen(e,_,_) -> eq funs acc {equ with eq_rhs = e}
+    | Evarpat _, Ewhen(e,_,_) -> eq funs acc {equ with eq_rhs = e}
     | Evarpat x, Efby(_, _) ->
         let acc = (x, e.e_ty) :: acc in
         equ, acc

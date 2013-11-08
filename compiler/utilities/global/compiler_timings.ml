@@ -27,8 +27,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-open Unix
-
 let current_module = ref ""
 let timings = ref []
 let compilation_start = ref 0.
@@ -76,7 +74,7 @@ let report_statistics () =
 
       let display (name, time) =
         print_string name;
-        for i = 1 to max_size - String.length name do
+        for _i = 1 to max_size - String.length name do
           print_string " "
         done;
 
@@ -84,7 +82,7 @@ let report_statistics () =
       in
 
       let print_sep () =
-        for i = 1 to max_size + 22 + String.length big_space do
+        for _i = 1 to max_size + 22 + String.length big_space do
           print_string "#"
         done;
         Printf.printf "\n"
@@ -101,7 +99,7 @@ let report_statistics () =
       print_sep ();
 
       Printf.printf "TOTAL";
-      for i = 1 to max_size - 5 do
+      for _i = 1 to max_size - 5 do
         print_string " "
       done;
       let percent = List.fold_left (+) 0 (List.map compute_percent (List.map snd !timings)) in

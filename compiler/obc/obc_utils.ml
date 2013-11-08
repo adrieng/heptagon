@@ -30,7 +30,6 @@
 open Names
 open Idents
 open Location
-open Misc
 open Types
 open Linearity
 open Obc
@@ -293,6 +292,6 @@ let rec ext_value_of_pattern patt =
     | Larray (p, e) -> Warray (ext_value_of_pattern p, e) in
   mk_ext_value ~loc:patt.pat_loc patt.pat_ty desc
 
-let rec exp_of_pattern patt =
+let exp_of_pattern patt =
   let w = ext_value_of_pattern patt in
   mk_exp w.w_ty (Eextvalue w)

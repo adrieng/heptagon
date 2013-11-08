@@ -49,8 +49,9 @@ clean:
 	$(OCAMLBUILD) -clean
 
 .PHONY: doc
-doc:
-	 find _build -regex '.*.cmi?' -printf '%f\n' \
+doc: $(TARGET)
+#	Filter unused modules by scanning built ones:
+	find _build -regex '.*.cmi?' -printf '%f\n' \
 	   | sed -e '/ocamlbuild/ d; s/\(.*\)\.cmi$$/\u\1/' \
 	   | sort > doc.odocl;
 	$(OCAMLBUILD) doc.docdir/index.html

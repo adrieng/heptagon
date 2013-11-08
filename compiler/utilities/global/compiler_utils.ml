@@ -61,9 +61,9 @@ let comment ?(sep=separateur) s =
 
 let do_pass d f p pp =
   comment (d ^ " ...\n");
-  let start = Unix.gettimeofday () in
+  let _start = Unix.gettimeofday () in
   let r = Compiler_timings.time_pass d f p in
-  let stop = Unix.gettimeofday () in
+  let _stop = Unix.gettimeofday () in
   pp r;
   comment ~sep:"*** " (d ^ " done.");
   r
@@ -138,4 +138,3 @@ let print_header_info ff cbeg cend =
     cend
 
 let errmsg = "Options are:"
-

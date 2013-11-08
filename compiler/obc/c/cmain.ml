@@ -27,20 +27,15 @@
 (*                                                                     *)
 (***********************************************************************)
 
-open Format
 open List
-open Misc
 open Names
 open Idents
 open Obc
 open Obc_utils
 open Types
-open Modules
 open Signature
 open C
 open Cgen
-open Location
-open Format
 open Compiler_utils
 
 (** {1 Main C function generation} *)
@@ -102,7 +97,7 @@ let assert_node_res cd =
             Cif (Cuop ("!", Cfield (Cvar (fst out), local_qn outn)),
                  [Csexpr (Cfun_call ("fprintf",
                                      [Cvar "stderr";
-                                      Cconst (Cstrlit ("Node \"" 
+                                      Cconst (Cstrlit ("Node \""
 						       ^ (Names.fullname cd.cd_name)
                                                             ^ "\" failed at step" ^
                                                               " %d.\n"));
@@ -248,17 +243,17 @@ let main_def_of_class_def cd =
                                  :: ep))],
              match nbuf_opt with
              | None -> []
-             | Some _ -> [(varn, Cty_arr (20, Cty_char))]) 
+             | Some _ -> [(varn, Cty_arr (20, Cty_char))])
         end
     | Tprod _ | Tinvalid -> failwith("write_lhs_of_ty: untranslatable type")
   in
-        
+
   let stepm = find_step_method cd in
   let (scanf_calls, scanf_decls) =
     let read_lhs_of_ty_for_vd vd =
       read_lhs_of_ty (Cvar (Idents.name vd.v_ident)) vd.v_type in
     split (map read_lhs_of_ty_for_vd stepm.m_inputs) in
-  
+
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
       let (stm, vars) =

@@ -28,12 +28,7 @@
 (***********************************************************************)
 open Misc
 open Names
-open Signature
-open Idents
-open Types
 open Linearity
-open Clocks
-open Static
 open Format
 open Global_printer
 open Pp_tools
@@ -225,7 +220,7 @@ and print_eqs ff = function
 
 let print_open_module ff name = fprintf ff "open %s@." (modul_to_string name)
 
-let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
+let print_type_dec ff { t_name = name; t_desc = tdesc } =
   let print_type_desc ff = function
     | Type_abs -> ()
     | Type_alias ty -> fprintf ff  " =@ %a" print_type ty

@@ -28,10 +28,8 @@
 (*                                                                     *)
 (***********************************************************************)
 
-open Signature
 open Location
 open Names
-open Types
 open Linearity
 open Hept_parsetree
 

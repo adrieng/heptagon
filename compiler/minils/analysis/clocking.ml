@@ -37,14 +37,12 @@
 
  *)
 
-open Misc
 open Idents
 open Names
 open Minils
 open Global_printer
 open Mls_printer
 open Signature
-open Types
 open Clocks
 open Location
 open Format
@@ -179,7 +177,7 @@ let typing_eq h ({ eq_lhs = pat; eq_rhs = e; eq_loc = loc } as eq) =
           Ck ck, ck
       | Ewhen (e,c,n) ->
           let ck_n = ck_of_name h n in
-          let base = expect (skeleton ck_n e.e_ty) e in
+          let _base = expect (skeleton ck_n e.e_ty) e in
           let base_ck = if stateful e then ck_n else Con (ck_n, c, n) in
           skeleton (Con (ck_n, c, n)) e.e_ty, base_ck
       | Emerge (x, c_e_list) ->
@@ -201,7 +199,7 @@ let typing_eq h ({ eq_lhs = pat; eq_rhs = e; eq_loc = loc } as eq) =
                 typing_app h base_ck pat op (pargs@args)
             | Imapi -> (* clocking the node with the extra i input on [ck_r] *)
                 let il (* stubs i as 0 *) =
-                  List.map (fun x -> mk_extvalue ~ty:Initial.tint ~linearity:Linearity.Ltop
+                  List.map (fun _ -> mk_extvalue ~ty:Initial.tint ~linearity:Linearity.Ltop
                     ~clock:base_ck (Wconst (Initial.mk_static_int 0))) nl
                 in
                 typing_app h base_ck pat op (pargs@args@il)
@@ -212,7 +210,7 @@ let typing_eq h ({ eq_lhs = pat; eq_rhs = e; eq_loc = loc } as eq) =
                 ct
             | Ifoldi -> (* clocking the node with the extra i and last in/out constraints *)
                 let il (* stubs i as 0 *) =
-                  List.map (fun x -> mk_extvalue ~ty:Initial.tint ~linearity:Linearity.Ltop
+                  List.map (fun _ -> mk_extvalue ~ty:Initial.tint ~linearity:Linearity.Ltop
                     ~clock:base_ck (Wconst (Initial.mk_static_int 0))) nl
                 in
                 let rec insert_i args = match args with
@@ -303,4 +301,3 @@ let program p =
     | _ -> pd
   in
     { p with p_desc = List.map program_desc p.p_desc; }
-

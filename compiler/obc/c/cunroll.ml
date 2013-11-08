@@ -29,13 +29,9 @@
 
 (* Unroll loops *)
 
-open Format
-open List
-open Modules
-open Names
 open C
 
-let rec unroll id start stop body =
+let unroll id start stop body =
   let rec aux i l =
     let rec exp e = match e with
       | Cuop (s, e) -> Cuop (s, exp e)
@@ -77,7 +73,7 @@ let rec unroll id start stop body =
 
   aux start []
 
-let rec static_eval e = match e with
+let static_eval e = match e with
   | Cconst (Ccint i) -> Some i
   | _ -> None
 

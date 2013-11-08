@@ -29,3 +29,6 @@ lib/java/.classpath
 /test/async/build/*
 /test/image_filters/java/*
 compiler/doc.odocl
+compiler/doc.docdir
+config
+config.status

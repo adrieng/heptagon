@@ -77,7 +77,7 @@ type type_def =
 type const_def = { c_type : ty; c_value : static_exp }
 
 
-(** { 3 Signature helper functions } *)
+(** {3 Signature helper functions} *)
 
 let rec ck_to_sck ck =
   let ck = Clocks.ck_repr ck in
@@ -120,6 +120,3 @@ let rec field_assoc f = function
   | { f_name = n; f_type = ty }::l ->
       if f = n then ty
       else field_assoc f l
-
-
-

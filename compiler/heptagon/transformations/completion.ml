@@ -28,9 +28,7 @@
 (***********************************************************************)
 (* complete partial definitions with [x = last(x)] *)
 
-open Misc
 open Heptagon
-open Global_mapfold
 open Hept_utils
 open Hept_mapfold
 open Idents
@@ -67,7 +65,7 @@ let funs_collect =
 (* adds an equation [x = last(x)] for every partially defined variable *)
 (* in a control structure *)
 let complete_with_last defined_names local_defined_names eq_list =
-  let last n vd = mk_exp (Elast n) vd.v_type Linearity.Ltop in
+  let last n vd = mk_exp (Elast n) vd.v_type ~linearity:Linearity.Ltop in
   let equation n vd eq_list =
     (mk_equation (Eeq(Evarpat n, last n vd)))::eq_list in
   let d = Env.diff defined_names local_defined_names in
@@ -86,11 +84,10 @@ let eqdesc funs _ ed = match ed with
       let ed, defnames =
         Hept_mapfold.eqdesc funs_collect Env.empty ed in
       (* add missing defnames *)
-      let ed, defnames = Hept_mapfold.eqdesc funs defnames ed in
+      let ed, _defnames = Hept_mapfold.eqdesc funs defnames ed in
       ed, Env.empty
   | _ -> raise Errors.Fallback
 
 let funs = { Hept_mapfold.defaults with eqdesc = eqdesc; block = block; }
 
 let program p = let p, _ = program_it funs Env.empty p in p
-

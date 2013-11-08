@@ -37,7 +37,6 @@ open Obc_utils
 open Obc_mapfold
 open Types
 open Clocks
-open Static
 open Initial
 
 
@@ -83,7 +82,7 @@ let fresh_for = fresh_for "mls2obc"
 
 let op_from_string op = { qual = Pervasives; name = op; }
 
-let rec pattern_of_idx_list p l =
+let pattern_of_idx_list p l =
   let rec aux p l = match Modules.unalias_type p.pat_ty, l with
     | _, [] -> p
     | Tarray (ty',_), idx :: l -> aux (mk_pattern ty' (Larray (p, idx))) l
@@ -103,7 +102,7 @@ let rec extvalue_of_idx_list w l = match Modules.unalias_type w.w_ty, l with
     extvalue_of_idx_list (mk_ext_value ty' (Warray (w, idx))) l
   | _ -> internal_error "mls2obc extvalue_of_idx_list"
 
-let rec ext_value_of_trunc_idx_list p l =
+let ext_value_of_trunc_idx_list p l =
   let mk_between idx se =
     mk_exp_int (Eop (mk_pervasives "between", [idx; mk_ext_value_exp se.se_ty (Wconst se)]))
   in
@@ -116,7 +115,7 @@ let rec ext_value_of_trunc_idx_list p l =
 
 let rec ty_of_idx_list ty idx_list = match ty, idx_list with
   | _, [] -> ty
-  | Tarray(ty, _), idx::idx_list -> ty_of_idx_list ty idx_list
+  | Tarray(ty, _), _idx::idx_list -> ty_of_idx_list ty idx_list
   | _, _ -> internal_error "mls2obc ty_of_idx_list"
 
 let mk_static_array_power ty c params = match params with
@@ -133,7 +132,7 @@ let array_elt_of_exp idx e =
       mk_ext_value_exp ty (Warray(ext_value_of_exp e, idx))
   | _ -> internal_error "mls2obc array_elt_of_exp"
 
-let rec array_elt_of_exp_list idx_list e =
+let array_elt_of_exp_list idx_list e =
   match e.e_desc, Modules.unalias_type e.e_ty with
     | Eextvalue { w_desc = Wconst { se_desc = Sarray_power (c, params) } }, Tarray (ty,n) ->
       let new_params, _ = Misc.split_at (List.length params - List.length idx_list) params in
@@ -244,7 +243,7 @@ let rec translate_extvalue map w = match w.Minils.w_desc with
   | _ ->
     let desc = match w.Minils.w_desc with
       | Minils.Wconst v -> Wconst v
-      | Minils.Wvar x -> assert false
+      | Minils.Wvar _ -> assert false
       | Minils.Wfield (w1, f) -> Wfield (translate_extvalue map w1, f)
       | Minils.Wwhen (w1, _, _) | Minils.Wreinit(_, w1)  -> (translate_extvalue map w1).w_desc
     in
@@ -318,7 +317,7 @@ and translate_act map pat
         let cpt1, cpt1d = fresh_it () in
         let cpt2, cpt2d = fresh_it () in
         let x = var_from_name map x in
-        let t = x.pat_ty in
+        let _t = x.pat_ty in
         (match e1.Minils.w_ty, e2.Minils.w_ty with
            | Tarray (t1, n1), Tarray (t2, n2) ->
                let e1 = translate_extvalue_to_exp map e1 in
@@ -391,7 +390,7 @@ and translate_act map pat
 
     | Minils.Evarpat x, Minils.Eapp ({ Minils.a_op = Minils.Eselect_trunc }, e1::idx, _) ->
         let x = var_from_name map x in
-        let bounds = Mls_utils.bounds_list e1.Minils.w_ty in
+        let _bounds = Mls_utils.bounds_list e1.Minils.w_ty in
         let e1 = translate_extvalue map e1 in
         let idx = List.map (translate_extvalue_to_exp map) idx in
         let w = ext_value_of_trunc_idx_list e1 idx in
@@ -459,7 +458,7 @@ let rec translate_eq map call_context
     (v, si, j, s) =
   let { Minils.e_desc = desc; Minils.e_loc = loc } = e in
   match (pat, desc) with
-    | pat, Minils.Ewhen (e,_,_) ->
+    | _pat, Minils.Ewhen (e,_,_) ->
         translate_eq map call_context {eq with Minils.eq_rhs = e} (v, si, j, s)
     (* TODO Efby and Eifthenelse should be dealt with in translate_act, no ? *)
     | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
@@ -485,7 +484,7 @@ let rec translate_eq map call_context
         let action = mk_ifthenelse cond true_act false_act in
         v, si, j, (control map ck action) :: s
 
-    | pat, Minils.Eapp({ Minils.a_op =
+    | _pat, Minils.Eapp({ Minils.a_op =
         Minils.Efun ({ qual = Module "Iostream"; name = "printf" | "fprintf" } as q)},
                        args, _) ->
       let action = Aop (q, List.map (translate_extvalue_to_exp map) args) in
@@ -784,7 +783,7 @@ let program { Minils.p_modname = p_modname; Minils.p_opened = p_o; Minils.p_desc
     | Minils.Pnode n when not (Itfusion.is_anon_node n.Minils.n_name) ->
         Pclass (translate_node n) :: acc
     (* dont't translate anonymous nodes, they will be inlined *)
-    | Minils.Pnode n -> acc
+    | Minils.Pnode _ -> acc
     | Minils.Ptype t -> Ptype (translate_ty_def t) :: acc
     | Minils.Pconst c -> Pconst (translate_const_def c) :: acc
   in

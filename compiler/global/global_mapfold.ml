@@ -100,7 +100,7 @@ and ck funs acc c = match c with
   | Cbase -> c, acc
   | Cvar(link_ref) ->
       let l, acc = link_it funs acc link_ref.contents in
-      Cvar {link_ref with contents = l}, acc
+      Cvar {contents = l}, acc
   | Con(ck, constructor_name, v) ->
       let ck, acc = ck_it funs acc ck in
       let v, acc = var_ident_it funs acc v in
@@ -114,7 +114,7 @@ and link funs acc l = match l with
 
 
 and var_ident_it funs acc i = funs.var_ident funs acc i
-and var_ident funs acc i = i, acc
+and var_ident _funs acc i = i, acc
 
 and structure_it funs acc s = funs.structure funs acc s
 and structure funs acc s =

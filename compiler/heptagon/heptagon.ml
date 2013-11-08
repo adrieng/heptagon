@@ -28,15 +28,12 @@
 (***********************************************************************)
 (* the internal representation *)
 open Location
-open Misc
 open Names
 open Idents
-open Static
 open Signature
 open Types
 open Linearity
 open Clocks
-open Initial
 
 type state_name = name
 
@@ -217,4 +214,3 @@ and interface_desc =
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
-

@@ -41,7 +41,6 @@
 open Format
 open Misc
 open Names
-open Modules
 open Signature
 open Obc
 open Obc_utils
@@ -86,7 +85,7 @@ let fresh_nfor s_l body =
 
  (* current module is not translated to keep track,
     there is no issue since printed without the qualifier *)
-let rec translate_modul m = m (*match m with
+let translate_modul m = m (*match m with
   | Pervasives
   | LocalModule -> m
   | _ when m = g_env.current_mod -> m
@@ -189,7 +188,7 @@ let rec static_exp param_env se = match se.Types.se_desc with
   | Types.Sarray se_l ->
       Enew_array (ty param_env se.Types.se_ty, List.map (static_exp param_env) se_l)
   | Types.Srecord f_e_l ->
-      let ty_name = 
+      let ty_name =
         match se.Types.se_ty with
         | Types.Tid ty_name -> qualname_to_package_classe ty_name
         | _ -> Misc.internal_error "Obc2java"
@@ -220,7 +219,7 @@ and boxed_ty param_env t = match Modules.unalias_type t with
     Tarray (t, s_l)
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
-and tuple_ty param_env ty_l =
+and tuple_ty _param_env ty_l =
   let ln = ty_l |> List.length |> Pervasives.string_of_int in
   Tclass (java_pervasive_class ("Tuple"^ln))
 
@@ -319,7 +318,7 @@ let obj_ref param_env o = match o with
 let jop_of_op param_env op_name e_l =
   match op_name with
   | { qual = Module "Iostream"; name = "printf" } ->
-      Emethod_call (Eclass(Names.qualname_of_string "java.lang.System.out"), 
+      Emethod_call (Eclass(Names.qualname_of_string "java.lang.System.out"),
                     "printf",
                     (exp_list param_env e_l))
   | _ ->
@@ -371,7 +370,7 @@ let rec act_list param_env act_l acts =
               let _, _else = List.find (fun (c,_) -> c = Initial.pfalse) c_b_l in
               (Aifelse (exp param_env e, block param_env _then, block param_env _else)) :: acts)
     | Obc.Acase (e, c_b_l) ->
-        let _c_b (c,b) = 
+        let _c_b (c,b) =
 	  Senum (translate_constructor_name c),
 	  block param_env b in
         let acase = Aswitch (exp param_env e, List.map _c_b c_b_l) in
@@ -426,7 +425,7 @@ let class_def_list classes cd_l =
     let class_name = qualname_to_package_classe cd.cd_name in
     (* [param_env] is an env mapping local param name to ident *)
     (* [params] : fields to stock the static parameters, arguments of the constructors *)
-    let fields_params, vds_params, exps_params, param_env =
+    let fields_params, vds_params, _exps_params, param_env =
       let v, env = sig_params_to_vds cd.cd_params in
       let f = vds_to_fields ~protection:Pprotected v in
       let e = vds_to_exps v in
@@ -550,18 +549,18 @@ let type_dec_list classes td_l =
             mk_field jty field
           in
 	  let f_l =
-	    List.sort 
+	    List.sort
 	      (fun f1 f2 ->
 		 compare (f1.Signature.f_name.name) (f2.Signature.f_name.name))
 	      f_l in
 	  let fields = List.map mk_field_jfield f_l in
 	  let cons_params = List.map (fun f -> mk_var_dec f.f_ident false f.f_type) fields in
-	  let cons_body = 
+	  let cons_body =
 	    List.map
 	      (fun f -> Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
 	      fields in
 	  let cons =
-	    mk_methode 
+	    mk_methode
 	      ~args:cons_params
 	      (mk_block cons_body)
 	      classe_name.name in
@@ -602,6 +601,3 @@ let program p =
   let classes = type_dec_list classes ts in
   let p = class_def_list classes ns in
   get_classes()@p
-
-
-

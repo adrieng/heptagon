@@ -34,7 +34,6 @@ open Minils
 open Linearity
 open Interference_graph
 open Containers
-open Printf
 
 let print_interference_graphs = false
 let verbose_mode = false
@@ -421,7 +420,7 @@ let init_interference_graph () =
     TyEnv.add_element ty (mk_node iv) env
   in
   (** Adds a node for the variable and all fields of a variable. *)
-  let rec add_ivar env iv ty =
+  let add_ivar env iv ty =
     let ivars = all_ivars [] iv None ty in
       List.fold_left add_tyenv env ivars
   in
@@ -440,7 +439,7 @@ let init_interference_graph () =
     the list. If force is true, then interference is added
     whatever the variables are, without checking if interference
     is real. *)
-let rec add_interferences_from_list force vars =
+let add_interferences_from_list force vars =
   let add_interference ivx ivy =
     if force or should_interfere (ivx, ivy) then
       add_interference_link_from_ivar ivx ivy
@@ -629,10 +628,10 @@ let add_init_return_eq f =
 
    (** a_1,..,a_p = __init__  *)
   let eq_init = mk_equation false (pat_from_dec_list f.n_input)
-    (mk_extvalue_exp Cbase Initial.tint Ltop (Wconst (Initial.mk_static_int 0))) in
+    (mk_extvalue_exp Cbase Initial.tint ~linearity:Ltop (Wconst (Initial.mk_static_int 0))) in
     (** __return__ = o_1,..,o_q, mem_1, ..., mem_k *)
   let eq_return = mk_equation false (Etuplepat [])
-    (mk_exp Cbase Tinvalid Ltop (tuple_from_dec_and_mem_list f.n_output)) in
+    (mk_exp Cbase Tinvalid ~linearity:Ltop (tuple_from_dec_and_mem_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
 
 (** Coalesce Imem x and Ivar x *)

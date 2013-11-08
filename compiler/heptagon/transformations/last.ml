@@ -46,10 +46,11 @@ let last (eq_list, env, v) { v_ident = n; v_type = t; v_linearity = lin; v_last 
         let eq =
           mk_equation (Eeq (Evarpat lastn,
                             mk_exp (Epre (default,
-                                          mk_exp (Evar n) t Linearity.Ltop)) t lin)) in
+                                          mk_exp (Evar n) t ~linearity:Linearity.Ltop))
+                              t ~linearity:lin)) in
         eq:: eq_list,
         Env.add n lastn env,
-        (mk_var_dec lastn t lin) :: v
+        (mk_var_dec lastn t ~linearity:lin) :: v
 
 let extend_env env v = List.fold_left last ([], env, []) v
 

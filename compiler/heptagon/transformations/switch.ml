@@ -59,7 +59,6 @@ with one defined var y ( defnames = {y} ) and used var x
 
 
 
-open Misc
 open Heptagon
 open Hept_utils
 open Hept_mapfold
@@ -81,7 +80,6 @@ module Env = struct
 
 
 open Idents
-open Names
 open Clocks
 
 type t = Base | Level of ck * IdentSet.t * t
@@ -152,7 +150,7 @@ let level_up defnames constr h =
 let add_to_locals vd_env locals h =
   let add_one n nn (locals,vd_env) =
     let orig_vd = Idents.Env.find n vd_env in
-    let vd_nn = mk_var_dec nn orig_vd.v_type orig_vd.v_linearity in
+    let vd_nn = mk_var_dec nn orig_vd.v_type ~linearity:orig_vd.v_linearity in
     vd_nn::locals, Idents.Env.add vd_nn.v_ident vd_nn vd_env
   in
     fold add_one h (locals, vd_env)
@@ -197,7 +195,7 @@ let eqdesc funs (vd_env,env,h) eqd = match eqd with
       (* create a clock var corresponding to the switch condition [e] *)
       let ck = fresh_clock_id () in
       let e, (vd_env,env,h) = exp_it funs (vd_env,env,h) e in
-      let locals = [mk_var_dec ck e.e_ty e.e_linearity] in
+      let locals = [mk_var_dec ck e.e_ty ~linearity:e.e_linearity] in
       let equs = [mk_equation (Eeq (Evarpat ck, e))] in
 
       (* typing have proved that defined variables are the same among states *)
@@ -246,8 +244,3 @@ let program p =
                     exp = exp; eq = eq; eqdesc = eqdesc } in
   let p, _ = program_it funs (Idents.Env.empty,Env.Base,Rename.empty) p in
     p
-
-
-
-
-

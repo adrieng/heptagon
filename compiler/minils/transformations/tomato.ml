@@ -28,12 +28,10 @@
 (***********************************************************************)
 
 open Misc
-open Names
 open Idents
 open Signature
 open Minils
 open Mls_utils
-open Mls_printer
 open Global_printer
 open Types
 open Clocks
@@ -312,8 +310,8 @@ and extvalue is_input w class_id_list =
 (* Regroup classes from a minimization environment                 *)
 (*******************************************************************)
 
-let rec compute_classes tenv =
-  let rec add_eq_repr _ repr cenv =
+let compute_classes tenv =
+  let add_eq_repr _ repr cenv =
     let repr_list = try IntMap.find repr.er_class cenv with Not_found -> [] in
     IntMap.add repr.er_class (repr :: repr_list) cenv in
   PatMap.fold add_eq_repr tenv IntMap.empty
@@ -375,15 +373,15 @@ let construct_mapping (_, cenv) =
 
   IntMap.fold construct_mapping_eq_repr cenv Env.empty
 
-let rec reconstruct ((tenv, cenv) as env) mapping =
+let rec reconstruct ((_tenv, cenv) as _env) mapping =
 
-  let reconstruct_class id eq_repr_list eq_list =
+  let reconstruct_class _id eq_repr_list eq_list =
     assert (List.length eq_repr_list > 0);
 
     let repr = List.hd eq_repr_list in
 
     let e =
-      let children =
+      let _children =
         Misc.take (List.length repr.er_children - repr.er_when_count) repr.er_children in
 
       let ed = reconstruct_exp_desc mapping repr.er_head.e_desc repr.er_children in
@@ -433,7 +431,7 @@ and reconstruct_exp_desc mapping headd children =
 
   | Ewhen _ -> assert false (* no Ewhen in exprs *)
 
-  | Emerge (x_ref, clause_list) ->
+  | Emerge (_x_ref, clause_list) ->
     let x_ref, children = List.hd children, List.tl children in
     Emerge (reconstruct_class_ref mapping x_ref,
             reconstruct_clauses clause_list children)
@@ -534,7 +532,7 @@ module EqClasses = Map.Make(
              (if unsafe e2 then -1 else list_compare compare_children cr_list1 cr_list2))
   end)
 
-let rec path_environment tenv =
+let path_environment tenv =
   let enrich_env pat { er_class = id } env =
     let rec enrich pat path env = match pat with
       | Evarpat x -> Env.add x (id, path) env
@@ -576,11 +574,11 @@ let compute_new_class (tenv : tom_env) =
 
   in
 
-  let classes = PatMap.fold add_eq_repr tenv EqClasses.empty in
+  let _classes = PatMap.fold add_eq_repr tenv EqClasses.empty in
 
   (get_id (), tenv)
 
-let rec separate_classes tenv =
+let separate_classes tenv =
   let rec fix (id, tenv) =
     let new_id, tenv = compute_new_class tenv in
     debug_do (fun () -> Format.printf "New tenv %d:\n%a@." id debug_tenv tenv) ();
@@ -639,7 +637,7 @@ let update_node nd =
   ignore (Modules.replace_value nd.n_name sign)
 
 let node nd =
-  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name);
+  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name) ();
   Idents.enter_node nd.n_name;
 
   (* Initial environment *)
@@ -649,7 +647,7 @@ let node nd =
       | None -> []
       | Some c -> c.c_controllables in
     let inputs = nd.n_input @ controllables in
-    let is_input id = 
+    let is_input id =
       List.exists (fun vd -> ident_compare vd.v_ident id = 0) inputs in
     List.fold_left (add_equation is_input) PatMap.empty nd.n_equs in
 

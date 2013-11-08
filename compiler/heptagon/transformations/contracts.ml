@@ -93,7 +93,7 @@ let mk_unique_node nd =
   let subst_contract funs subst c =
     let c_block, subst' = subst_contract_block funs subst c.c_block in
     let c_assume, subst' = exp_it funs subst' c.c_assume in
-    let c_enforce, subst' = exp_it funs subst' c.c_enforce in
+    let c_enforce, _subst' = exp_it funs subst' c.c_enforce in
     let subst =
     List.fold_left
       (fun subst vd ->
@@ -323,4 +323,3 @@ let program p =
   assert (newequs = []);
   assert (contracts = []);
   p
-

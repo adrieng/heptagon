@@ -46,6 +46,8 @@ let ocamlfind_after_rules () =
     flag ["ocaml"; "infer_interface"; "syntax_"^syntax] & S[A"-syntax"; A syntax];
   end (find_syntaxes ());
 
+  flag ["ocaml"; "doc"; "thread"] & S[A"-I"; A"+threads"];
+
   (* Use both ml and mli files to build documentation: *)
   rule "ocaml: ml & mli -> odoc"
     ~insert:`top

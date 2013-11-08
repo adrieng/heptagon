@@ -26,8 +26,6 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Misc
-open Location
 open Compiler_utils
 open Compiler_options
 

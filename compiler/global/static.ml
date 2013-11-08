@@ -28,9 +28,8 @@
 (***********************************************************************)
 
 (** This module defines static expressions, used in params and for constants.
-    const n: int = 3;
-    var x : int^n; var y : int^(n + 2);
-    x[n - 1], x[1 + 3],... *)
+    [const n: int = 3;
+     var x : int^n; var y : int^(n + 2); x[n - 1], x[1 + 3],...] *)
 
 open Names
 open Format
@@ -193,14 +192,14 @@ let rec simplify_type env ty = match ty with
 
 (** [eval env e] does the same as [simplify]
     but if it returns, there are no variables nor op left.
-    @raise [Errors.Error] when it cannot fully evaluate. *)
+    @raise Errors.Error when it cannot fully evaluate. *)
 let eval env se =
   try eval_core false env se
   with exn -> message exn
 
 (** [int_of_static_exp env e] returns the value of the expression
     [e] in the environment [env], mapping vars to integers.
-    @raise [Errors.Error] if it cannot be computed.*)
+    @raise Errors.Error if it cannot be computed.*)
 let int_of_static_exp env se = match (eval env se).se_desc with
   | Sint i -> i
   | _ -> Misc.internal_error "static int_of_static_exp"
@@ -258,4 +257,3 @@ let instanciate_constr m constr =
     | Cfalse -> Cfalse in
   List.map (replace_one m) constr
 *)
-

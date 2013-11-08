@@ -29,9 +29,6 @@
 
 open Compiler_utils
 open Compiler_options
-open Obc
-open Minils
-open Misc
 
 (** Definition of a target. A target starts either from
     dataflow code (ie Minils) or sequential code (ie Obc),

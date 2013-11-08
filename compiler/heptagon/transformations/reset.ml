@@ -31,7 +31,6 @@
 (* REQUIRES automaton stateful present *)
 
 open Misc
-open Idents
 open Heptagon
 open Hept_utils
 open Types
@@ -117,7 +116,7 @@ let block funs (res,_) b =
 (* Transform reset blocks in blocks with reseted exps,
    create a var to store the reset condition evaluation if not already a var. *)
 let eqdesc funs (res,stateful) = function
-  | Ereset(b, ({ e_desc = Evar x } as e)) ->
+  | Ereset(b, ({ e_desc = Evar _ } as e)) ->
         let r = if stateful then merge_resets res (Some e) else res in
         let b, _ = Hept_mapfold.block_it funs (r,stateful) b in
         Eblock(b), (res,stateful)

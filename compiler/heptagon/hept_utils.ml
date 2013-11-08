@@ -28,10 +28,7 @@
 (***********************************************************************)
 (* the internal representation *)
 open Location
-open Misc
-open Names
 open Idents
-open Static
 open Signature
 open Types
 open Linearity
@@ -139,4 +136,3 @@ let signature_of_node n =
       node_param_constraints = n.n_param_constraints;
       node_external = false;
       node_loc = n.n_loc }
-

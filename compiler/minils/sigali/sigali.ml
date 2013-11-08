@@ -166,9 +166,6 @@ module Printer =
           fprintf ff "%s@ " sep;
           print_list ff print sep l
 
-    let print_string ff s =
-      fprintf ff "%s" s
-
     let print_name ff n =
       fprintf ff "%s" n
 
@@ -432,7 +429,7 @@ module Printer =
               fprintf ff "%s_triang : Triang(constraint(%s),controllables,phantom_vars);@,"
                 name name;
 
-              
+
               let states =
                 match !Compiler_options.nosink with
                   true -> states
@@ -465,4 +462,3 @@ module Printer =
     let print dir p_l =
       List.iter (print_processus dir) p_l
   end
-

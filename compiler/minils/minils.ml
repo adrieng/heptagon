@@ -33,7 +33,6 @@ open Location
 open Names
 open Idents
 open Signature
-open Static
 open Types
 open Linearity
 open Clocks
@@ -71,7 +70,7 @@ and extvalue_desc =
   | Wconst of static_exp (*no tuple*)
   | Wvar of var_ident
   | Wfield of extvalue * field_name
-  | Wwhen of extvalue * constructor_name * var_ident (** extvalue when Constructor(ident) *)
+  | Wwhen of extvalue * constructor_name * var_ident (** {!extvalue} [when Constructor(ident)] *)
   | Wreinit of extvalue * extvalue
 
 and exp = {
@@ -85,17 +84,17 @@ and exp = {
 and edesc =
   | Eextvalue of extvalue
   | Efby of static_exp option * extvalue
-                       (** static_exp fby extvalue *)
+                       (** {!static_exp} [fby] {!extvalue} *)
   | Eapp of app * extvalue list * var_ident option
-                       (** app ~args=(extvalue,extvalue...) reset ~r=ident *)
-  | Ewhen of exp * constructor_name * var_ident  (** e when C(c) *)
+                       (** [app ~args=(]{!extvalue}[,extvalue...) reset ~r=ident] *)
+  | Ewhen of exp * constructor_name * var_ident  (** [e when C(c)] *)
   | Emerge of var_ident * (constructor_name * extvalue) list
-                       (** merge ident (Constructor -> extvalue)+ *)
+                       (** [merge ident (Constructor -> ]{!extvalue}[)+] *)
   | Estruct of (field_name * extvalue) list
-                       (** { field=extvalue; ... } *)
+                       (** [{ field=extvalue; ... }] *)
   | Eiterator of iterator_type * app * static_exp list
                  * extvalue list * extvalue list * var_ident option
-                       (** map f <<n>> <(extvalue)> (extvalue) reset ident *)
+                       (** [map f <<n>> <(extvalue)> (extvalue) reset ident] *)
 
 and app = { a_op: op;
             a_params: static_exp list;
@@ -106,19 +105,19 @@ and app = { a_op: op;
         and be delicate about optimizations, !be careful! *)
 
 and op =
-  | Eequal             (** arg1 = arg2 *)
-  | Efun of fun_name   (** "Stateless" longname <<a_params>> (args) reset r *)
-  | Enode of fun_name  (** "Stateful" longname <<a_params>> (args) reset r *)
-  | Eifthenelse        (** if arg1 then arg2 else arg3 *)
-  | Efield_update      (** { arg1 with a_param1 = arg2 } *)
-  | Earray             (** [ args ] *)
-  | Earray_fill        (** [arg1^a_param1^..^a_paramn] *)
-  | Eselect            (** arg1[a_params] *)
-  | Eselect_slice      (** arg1[a_param1..a_param2] *)
-  | Eselect_dyn        (** arg1.[arg3...] default arg2 *)
-  | Eselect_trunc      (** arg1[>arg_2 ...<]*)
-  | Eupdate            (** [ arg1 with arg3..arg_n = arg2 ] *)
-  | Econcat            (** arg1@@arg2 *)
+  | Eequal             (** [arg1 = arg2] *)
+  | Efun of fun_name   (** "Stateless" [longname <<a_params>> (args) reset r] *)
+  | Enode of fun_name  (** "Stateful" [longname <<a_params>> (args) reset r] *)
+  | Eifthenelse        (** [if arg1 then arg2 else arg3] *)
+  | Efield_update      (** [{ arg1 with a_param1 = arg2 }] *)
+  | Earray             (** [[ args ]] *)
+  | Earray_fill        (** [[arg1^a_param1^..^a_paramn]] *)
+  | Eselect            (** [arg1[a_params]] *)
+  | Eselect_slice      (** [arg1[a_param1..a_param2]] *)
+  | Eselect_dyn        (** [arg1.[arg3...] default arg2] *)
+  | Eselect_trunc      (** [arg1[>arg_2 ...<]]*)
+  | Eupdate            (** [[ arg1 with arg3..arg_n = arg2 ]] *)
+  | Econcat            (** [arg1\@\@arg2] *)
 
 type pat =
   | Etuplepat of pat list
@@ -264,4 +263,3 @@ let mk_const_dec id ty e loc =
 let mk_app ?(params=[]) ?(unsafe=false) ?(id=None) ?(inlined=false) op =
   { a_op = op; a_params = params; a_unsafe = unsafe;
     a_id = id; a_inlined = inlined }
-
