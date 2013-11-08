@@ -26,12 +26,26 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Misc
-open Location
 open Compiler_utils
 open Compiler_options
 
 let pp p = if !verbose then Mls_printer.print stdout p
+
+(* NB: I localize file name determination logics for CtrlNbac output into this
+   module, because its place is not in CtrlNbacGen... *)
+(** [gen_n_output_ctrln p] translates the Minils program [p] into
+    Controllable-Nbac format, and then output its nodes separately in files
+    under a specific directory; typically, a node ["n"] in file ["f.ept"] is
+    output into a file called "f_ctrln/n.nbac" *)
+let gen_n_output_ctrln p =
+  let cnp, p = CtrlNbacGen.gen p in
+  let filename = filename_of_name cnp.CtrlNbac.cnp_name in
+  let dir = clean_dir (build_path (filename ^"_ctrln")) in
+  CtrlNbac.Printer.dump begin fun n ->
+    let oc = open_out (dir ^"/"^ n ^".nbac") in
+    Format.formatter_of_out_channel oc, (fun _ -> close_out oc)
+  end cnp;
+  p
 
 let compile_program p =
   (* Clocking *)
@@ -71,6 +85,10 @@ let compile_program p =
     else
       pass "Scheduling" true Schedule.program p pp
   in
+
+  let ctrln = List.mem "ctrl-n" !target_languages in
+  let _p = pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp in
+  (* NB: XXX _p is ignored for now... *)
 
   let z3z = List.mem "z3z" !target_languages in
   let p = pass "Sigali generation" z3z Sigalimain.program p pp in
