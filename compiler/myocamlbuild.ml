@@ -31,7 +31,6 @@ open Ocamlbuild_plugin.Options
 open Myocamlbuild_config
 
 let df = function
-  | Before_options ->  ocamlfind_before_options ()
   | After_rules ->
       ocamlfind_after_rules ();
 

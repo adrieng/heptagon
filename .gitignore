@@ -28,3 +28,4 @@ test/_check_builds
 lib/java/.classpath
 /test/async/build/*
 /test/image_filters/java/*
+compiler/doc.odocl

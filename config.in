@@ -16,7 +16,7 @@ INSTALL_BINDIR=$(bindir)
 INSTALL_LIBDIR=$(libdir)/heptagon
 STDLIB_DIR=@stdlib_dir@
 
-OCAMLBUILD=STDLIB=$(STDLIB_DIR) @OCAMLBUILD@
+OCAMLBUILD=STDLIB=$(STDLIB_DIR) @OCAMLBUILD@ -use-ocamlfind
 
 TARGET=byte
 ENABLE_SIMULATOR=@enable_simulator@

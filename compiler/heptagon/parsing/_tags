@@ -1,1 +1,1 @@
-<hept_parser.ml>: pkg_menhirLib
+<hept_parser.ml>: package(menhirLib)

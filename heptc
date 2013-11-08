@@ -33,7 +33,7 @@ then
     HEPTC=$HEPTC_DEBUG
   else
     pushd "$COMPILER_DIR" > /dev/null
-    ocamlbuild -j 0 "$COMPILER"
+    ocamlbuild -use-ocamlfind -j 0 "$COMPILER"
     popd > /dev/null
   fi
 fi
