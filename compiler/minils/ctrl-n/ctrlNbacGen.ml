@@ -300,8 +300,9 @@ let translate_node typdefs = function
         cn_decls = gd.decls;
         cn_init = gd.init;
         cn_assertion = mk_or' init_cond gd.assertion;
-        cn_invariance = Some (mk_or' init_cond gd.invariant);
-        cn_reachability = None;
+        cn_invariant = Some (mk_or' init_cond gd.invariant);
+        cn_reachable = None;
+        cn_attractive = None;
       } in
       node, Some ctrln_proc
 

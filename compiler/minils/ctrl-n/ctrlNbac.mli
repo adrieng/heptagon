@@ -97,10 +97,6 @@ type exp =
   | `Nexp of nexp
   ]
 
-(* type pbexp = [ exp | bexp ] *)
-(* type peexp = [ exp | eexp ] *)
-(* type pnexp = [ exp | nexp ] *)
-
 (* -------------------------------------------------------------------------- *)
 (** {3 Nodes & Programs} *)
 
@@ -118,8 +114,9 @@ type process =
       cn_decls: decls;
       cn_init: bexp;
       cn_assertion: bexp;
-      cn_invariance: bexp option;
-      cn_reachability: bexp option;
+      cn_invariant: bexp option;
+      cn_reachable: bexp option;
+      cn_attractive: bexp option;
     }
 type prog =
     {

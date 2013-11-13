@@ -157,8 +157,9 @@ type process =
       cn_decls: decls;               (** all variable specifications *)
       cn_init: bexp;                 (** initial state specification *)
       cn_assertion: bexp;            (** assertion on environment *)
-      cn_invariance: bexp option;    (** {e invariance} property to enforce *)
-      cn_reachability: bexp option;  (** {e reachability} property to enforce *)
+      cn_invariant: bexp option;     (** {e invariance} property to enforce *)
+      cn_reachable: bexp option;     (** {e reachability} property to enforce *)
+      cn_attractive: bexp option;    (** {e attractivity} property to enforce *)
     }
 
 (** A whole controllable-nbac program contains type definitions and
@@ -176,7 +177,7 @@ type prog =
 (** Building variables *)
 let mk_var s = s
 
-(** Prefixing variables with a string. *)
+(** Prefixing variables with a string *)
 let (^~) = Printf.sprintf "%s%s"
 
 (* -------------------------------------------------------------------------- *)
@@ -198,15 +199,15 @@ type process_infos =
     of various information about [process]. *)
 let gather_info { cn_decls } =
   let empty = VMap.empty in
-  let s, i, c, l, d, f = VMap.fold begin fun v -> function
-    | t, NBstate e -> fun (s,i,c,l,d,f) -> (VMap.add v t s,i,c,l, d,VMap.add v e f)
-    | t, NBlocal e -> fun (s,i,c,l,d,f) -> (s,i,c,VMap.add v t l, VMap.add v e d,f)
-    | t, NBinput   -> fun (s,i,c,l,d,f) -> (s,VMap.add v t i,c,l, d,f)
-    | t, NBcontr p -> fun (s,i,c,l,d,f) -> (s,i,VMap.add v (t,p) c,l, d,f)
+  let s, i, c, l, d, f = VMap.fold begin fun v (t, e) -> match e with
+    | NBstate e -> fun (s,i,c,l,d,f) -> (VMap.add v t s,i,c,l, d,VMap.add v e f)
+    | NBlocal e -> fun (s,i,c,l,d,f) -> (s,i,c,VMap.add v t l, VMap.add v e d,f)
+    | NBinput   -> fun (s,i,c,l,d,f) -> (s,VMap.add v t i,c,l, d,f)
+    | NBcontr p -> fun (s,i,c,l,d,f) -> (s,i,VMap.add v (t,p) c,l, d,f)
   end cn_decls (empty, empty, empty, empty, empty, empty) in
   let cl = VMap.bindings c in
   let cl = List.sort (fun (_, (_, a)) (_, (_, b)) -> compare a b) cl in
-  let cl = List.map (fun (v, (t, _)) -> (v, t)) cl in            (* forger rank *)
+  let cl = List.map (fun (v, (t, _)) -> (v, t)) cl in             (* forget rank *)
   { cni_state_vars = s;
     cni_input_vars = i;
     cni_contr_vars = c; cni_contr_vars' = cl;
@@ -529,8 +530,9 @@ module Printer = struct
     print_cat  fmt "transition" print_trans pi.cni_trans_specs;
     print_cat  fmt "initial" print_predicate process.cn_init;
     print_cat  fmt "assertion" print_predicate process.cn_assertion;
-    print_cao' fmt "invariant" print_predicate process.cn_invariance;
-    print_cao' fmt "reachable" print_predicate process.cn_reachability
+    print_cao' fmt "invariant" print_predicate process.cn_invariant;
+    print_cao' fmt "reachable" print_predicate process.cn_reachable;
+    print_cao' fmt "attractive" print_predicate process.cn_attractive
 
   (** [dumps mk_fmt p] dumps separately each process of program [p] in
       formatters produced calling [mk_fmt] with the process's name. The latter
