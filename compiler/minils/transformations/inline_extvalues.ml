@@ -54,7 +54,7 @@ let gather_extvalues_node nd =
     let env = add_l (add_l (add_l Env.empty nd.n_output) nd.n_local) nd.n_input in
     match nd.n_contract with
     | None -> env
-    | Some c -> add_l env c.c_controllables
+    | Some c -> add_l (add_l env c.c_controllables) c.c_local
   in
 
   (* Check for implicit cast from linear to non-linear type *)
