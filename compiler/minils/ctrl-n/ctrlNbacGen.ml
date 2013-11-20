@@ -126,11 +126,13 @@ let rec translate_ext_bexp ~pref : _ -> bexp = function
 and translate_ext_eexp ~pref : _ -> eexp = function
   | Wconst se -> translate_static_eexp se
   | Wvar id -> `Ref (pref & mk_var & name id)
+  | Wwhen (ev, _, _) -> translate_ext_eexp ~pref ev.w_desc
   | _ -> failwith "TODO Unsupported Enum expression!"
 
 and translate_ext_nexp ~pref : _ -> nexp = function
   | Wconst se -> translate_static_nexp se
   | Wvar id -> `Ref (pref & mk_var & name id)
+  | Wwhen (ev, _, _) -> translate_ext_nexp ~pref ev.w_desc
   | _ -> failwith "TODO Unsupported Numerical expression!"
 
 let translate_ext ~pref ext = match translate_typ ext.w_ty with
