@@ -168,7 +168,7 @@ let translate_app ~pref op el =
 
 (** [translate_exp gd e] translates the {e memoryless} expression [e] into its
     Controllable Nbac representation.  *)
-let translate_exp ~pref t ({ e_desc = desc; e_ty = ty }) =      (* XXX clock? *)
+let rec translate_exp ~pref t ({ e_desc = desc; e_ty = ty }) =  (* XXX clock? *)
   let typ = translate_typ ty in assert (t = typ); match desc with
     | Eextvalue ext -> translate_ext ~pref ext
     | Eapp ({ a_op }, el, _) -> translate_app ~pref a_op el
@@ -180,7 +180,7 @@ let translate_exp ~pref t ({ e_desc = desc; e_ty = ty }) =      (* XXX clock? *)
             (translate_ext ~pref e) x)
           (translate_ext ~pref e)
           l
-    | Ewhen _ -> failwith "TODO Unsupported operation: isolated `when'!"
+    | Ewhen (exp, _, _) -> translate_exp ~pref t exp
     | Efby _ -> failwith "TODO: translate_exp (fby)"
     | Estruct _ -> failwith "TODO: translate_exp (struct)"
     | _ -> failwith "TODO: translate_exp"
