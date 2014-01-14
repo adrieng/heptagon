@@ -119,6 +119,8 @@ val a_inf : exp -> exp -> exp
 
 val a_sup : exp -> exp -> exp
 
+val a_iminv : exp -> exp -> exp
+
 module Printer :
   sig
     val print : string -> processus list -> unit

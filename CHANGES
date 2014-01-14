@@ -1,8 +1,14 @@
 
+Heptagon 1.00.04 (14/01/2014)
+-----------------------------
+
+ - bug fix: comparison between two non-constant integer expressions in Sigali
+ - bug fix: correct handling of "=" and "<>" operators in Sigali
+
 Heptagon 1.00.03 (20/11/2013)
 -----------------------------
 
- - buf fix: tomato application with contracts
+ - bug fix: tomato application with contracts
 
 Heptagon 1.00.02 (29/10/2013)
 -----------------------------
