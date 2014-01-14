@@ -1,0 +1,15 @@
+type s = bool^10
+type t = { x : s }
+
+node g() returns (c : t)
+var
+      b : s;
+let
+    c = {x = false^10};
+    b = map <<10>> (not) (true^10);
+tel
+
+node main() returns (c:t)
+let
+  c = g();
+tel

@@ -1,0 +1,152 @@
+
+type pixel = float^3
+
+node nat() returns (n :int)
+let
+  n = 0 fby n+1
+tel
+
+fun pix_sum(x1,x2 :pixel) returns (r :pixel)
+let
+  r = map<<3>> (+.) (x1,x2);
+tel
+
+fun pix_div(x :pixel; c :float) returns (r :pixel)
+let
+  r = map<<3>> (/.) (x, c^3);
+tel
+
+const pix_zero :pixel = 0.0^3
+const pix_o :pixel = [1.0,1.0,1.0]
+
+node counter() returns (cpt :int)
+let
+  cpt = (0 fby cpt) + 1
+tel
+
+node counter_r(res :bool) returns (cpt :int)
+let
+  reset
+    cpt = inlined counter()
+  every res
+tel
+
+(* count from 1 to m included, reset to 1 when [res] *)
+node mod_counter_r<<m :int>>(res :bool) returns (cpt :int)
+let
+  reset
+    cpt = (0 fby cpt) + 1
+  every (res or (0 fby cpt = m))
+tel
+
+(* count from 1 to m included *)
+node mod_counter<<m:int>>() returns (cpt :int)
+let
+  cpt = inlined mod_counter_r<<m>>(false)
+tel
+
+
+node current(x :int; ck :bool) returns (c :int)
+let
+  c = merge ck x ((0 fby c) whenot ck)
+tel
+node current_bool(x :bool; ck :bool) returns (c :bool)
+let
+  c = merge ck x ((false fby c) whenot ck)
+tel
+
+fun flatten_clock(x :pixel ::.on ck on ck2; ck :bool ::.; ck2 :bool ::.on ck) returns (y :pixel; ck2_flat :bool :: .)
+var x_ck, x_base : pixel;
+let
+  x_ck = merge ck2 x pix_o;
+  x_base = merge ck x_ck pix_o;
+  ck2_flat = merge ck ck2 false;
+  y = x_base when ck2_flat;
+tel
+
+
+node transpose<<x, y : int>>(i :pixel) returns (o :pixel)
+var store :pixel^x^y^2; (*This is the double buffer*)
+    i_x, i_y, o_x, o_y :int; (*These are current buffer indexes*)
+    i_line, o_line, i_img :bool; (*These define line and img beginning*)
+    i_buff, o_buff :int; (*These are used to control the double buffering*)
+let
+  i_x = mod_counter<<x>>() - 1;
+  i_line = i_x = 0;
+  i_y = current (mod_counter<<y>>() - 1, i_line);
+  i_img = (i_x = 0) & (i_y = 0);
+  i_buff = current(mod_counter<<2>>() - 1, i_img);
+  o_buff = (i_buff + 1) % 2;
+  o_y = mod_counter<<y>>() -1;
+  o_line = o_y = 0;
+  o_x = current (mod_counter<<x>>()-1, o_line);
+  store = (pix_zero^x^y^2) fby [store with [i_buff][i_y][i_x] = i];
+  o = store[>o_buff<][>o_y<][>o_x<];
+tel
+
+
+(* a fby-n would be nice to allow average of the last n pixels *)
+(* returns the average of the last 3 pixels when asked *)
+node down(x :pixel; out :bool) returns (r :pixel :: . on out)
+var x1, x2 : pixel;
+let
+  x1 = x fby x;
+  x2 = x fby x1;
+  r = pix_div(pix_sum(x when out, pix_sum(x1 when out, x2 when out)), 3.0 );
+tel
+
+node down_line<<ratio :int>>(x :pixel) returns (r :pixel; r_clock :bool)
+let
+  r_clock = mod_counter<<ratio>>() = ratio;
+  r = down(x,r_clock);
+tel
+
+
+node down_img <<size_x, size_y, ratio_x, ratio_y :int>> (x :pixel :: .)
+returns (y_flat :pixel; y_clock :bool;
+           y, y_dh, y_dh_t, y_dhv_t :pixel;
+         ck_y_dh, ck_y_dhv :bool
+        )
+var
+    x_line, y_dh_t_line :bool;
+
+let
+    x_line = mod_counter<<size_x>>() = 1;
+    reset
+      (y_dh, ck_y_dh) = down_line<<ratio_x>>(x)
+    every x_line;
+    y_dh_t = transpose<<size_x/ratio_x, size_y>>(y_dh);
+    y_dh_t_line = current_bool(mod_counter<<size_y>>() = 1, ck_y_dh);
+    reset
+      (y_dhv_t, ck_y_dhv) = down_line<<ratio_y>>(y_dh_t)
+    every y_dh_t_line;
+    y = transpose<<size_x/ratio_x, size_y/ratio_y>>(y_dhv_t);
+ (*flatten clock of y, in order to return only one, instead of ck_y_dh on ck_y_dhv*)
+    (y_flat, y_clock) = flatten_clock(y, ck_y_dh, ck_y_dhv);
+tel
+
+
+(*node main () returns (img, out : pixel; ck_out, ck_out_2 :bool)
+(*var img : pixel;*)
+let
+  img = pix_o;
+  (out, ck_out, ck_out_2) = down_img<<2,2,2,2>>(img);
+tel*)
+
+node mainp<<size_x, size_y:int>> () returns (img, out : pixel; ck_out :bool;
+        y, y_dh, y_dh_t, y_dhv_t :pixel;
+        ck_y_dh, ck_y_dhv :bool)
+(*var img : pixel;*)
+let
+  (*ck_out = true fby false fby not ck_out;*)
+  img = pix_o fby pix_sum(img, pix_o);
+  (out, ck_out, y, y_dh, y_dh_t, y_dhv_t, ck_y_dh, ck_y_dhv) = down_img<<size_x,size_y,3,3>>(img);
+tel
+
+node main() returns (img, out : pixel; ck_out :bool;
+        y, y_dh, y_dh_t, y_dhv_t :pixel;
+        ck_y_dh, ck_y_dhv :bool)
+let
+  (img, out, ck_out, y, y_dh, y_dh_t, y_dhv_t, ck_y_dh, ck_y_dhv) = mainp<<640,480>>();
+tel
+

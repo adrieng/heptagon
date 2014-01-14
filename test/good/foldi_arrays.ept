@@ -1,0 +1,24 @@
+
+type t = A | B | C
+
+const n:int = 10
+
+type couple = { t1 : int^n; t2 : int^n }
+
+fun f (a:t;b:float;i:int;acc_in:couple) = (acc_out:couple)
+let
+  switch a
+  | A do acc_out = { t1 = [ acc_in.t1 with [1] = acc_in.t1[1] + 1 ]; t2 = acc_in.t2 }
+  | B do acc_out = acc_in
+  | C do acc_out = { acc_in with .t2 = map<<n>> (+)(acc_in.t1,acc_in.t2) }
+  end
+tel
+
+
+node main() returns (o:couple)
+var a:t^n; b:float^n;
+let
+  a = [A, B, C, A, B, C, A, B, C, A];
+  b = 0.001^n;
+  o = foldi<<n>> f (a, b, { t1 = 0^n; t2 = 0^n });
+tel
