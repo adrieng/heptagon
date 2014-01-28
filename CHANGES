@@ -1,3 +1,7 @@
+Heptagon 1.00.05 (28/01/2014)
+-----------------------------
+
+ - bug fix: correct handling of nodes with contracts inside automata and switches
 
 Heptagon 1.00.04 (14/01/2014)
 -----------------------------
