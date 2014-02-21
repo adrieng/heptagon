@@ -1,3 +1,8 @@
+Heptagon 1.00.06 (21/02/2014)
+-----------------------------
+
+ - allowed abstractions (non-inlined subnodes calls) in contracts
+
 Heptagon 1.00.05 (28/01/2014)
 -----------------------------
 
