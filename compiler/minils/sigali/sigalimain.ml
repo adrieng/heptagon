@@ -346,7 +346,7 @@ let translate_contract f contract =
       let body =
         [{ stmt_name = var_g; stmt_def = Sconst(Ctrue) };
          { stmt_name = var_a; stmt_def = Sconst(Ctrue) }] in
-      [],[],body,(Svar(var_a),Svar(var_g)),[],[],[]
+      [],[],[],body,(Svar(var_a),Svar(var_g)),[],[],[]
   | Some {Minils.c_local = locals;
           Minils.c_eq = l_eqs;
           Minils.c_assume = e_a;
@@ -355,7 +355,6 @@ let translate_contract f contract =
           Minils.c_enforce_loc = e_g_loc;
           Minils.c_controllables = cl} ->
       let states,init,inputs,body = translate_eq_list f l_eqs in
-      assert (inputs = []);
       let e_a = translate_ext prefix e_a in
       let e_g = translate_ext prefix e_g in
       let e_a_loc = translate_ext prefix e_a_loc in
@@ -367,7 +366,7 @@ let translate_contract f contract =
       let controllables =
         List.map
           (fun ({ Minils.v_ident = id } as v) -> v,(prefix ^ (name id))) cl in
-      states,init,body,(Svar(var_a),Svar(var_g)),controllables,(locals@cl),l_eqs
+      states,init,inputs,body,(Svar(var_a),Svar(var_g)),controllables,(locals@cl),l_eqs
 
 
 
@@ -395,9 +394,9 @@ let translate_node
       (fun { Minils.v_ident = v } -> f ^ "_" ^ (name v)) o_list in
   let states,init,add_inputs,body =
     translate_eq_list f eq_list in
-  let states_c,init_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c =
+  let states_c,init_c,inputs_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c =
     translate_contract f contract in
-  let inputs = inputs @ add_inputs in
+  let inputs = inputs @ add_inputs @ inputs_c in
   let body = List.rev body in
   let states = List.rev states in
   let body_c = List.rev body_c in
