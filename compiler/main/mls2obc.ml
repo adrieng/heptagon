@@ -697,7 +697,7 @@ let remove m d_list =
 
 let translate_contract map mem_var_tys =
   function
-    | None -> ([], [], [], [])
+    | None -> ([], [], [], [], [])
     | Some
         {
           Minils.c_eq = eq_list;
@@ -705,9 +705,9 @@ let translate_contract map mem_var_tys =
         } ->
         let (v, si, j, s_list) = translate_eq_list map empty_call_context eq_list in
         let d_list = translate_var_dec (v @ d_list) in
-        let d_list = List.filter
-          (fun vd -> not (List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys)) d_list in
-         (si, j, s_list, d_list)
+        let m, d_list = List.partition
+          (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) d_list in
+         (m, si, j, s_list, d_list)
 
 (** Returns a map, mapping variables names to the variables
     where they will be stored. *)
@@ -734,7 +734,7 @@ let translate_node
     | Some c -> c.Minils.c_controllables, c.Minils.c_local in
   let subst_map = subst_map i_list o_list c_list c_locals d_list mem_var_tys in
   let (v, si, j, s_list) = translate_eq_list subst_map empty_call_context eq_list in
-  let (si', j', s_list', d_list') = translate_contract subst_map mem_var_tys contract in
+  let (m_c, si', j', s_list', d_list') = translate_contract subst_map mem_var_tys contract in
   let i_list = translate_var_dec i_list in
   let o_list = translate_var_dec o_list in
   let d_list = translate_var_dec (v @ d_list) in
@@ -751,7 +751,7 @@ let translate_node
   in
   let resetm = { m_name = Mreset; m_inputs = []; m_outputs = []; m_body = mk_block si } in
   if stateful
-  then { cd_name = f; cd_stateful = true; cd_mems = m' @ m; cd_params = params;
+  then { cd_name = f; cd_stateful = true; cd_mems = m' @ m @ m_c; cd_params = params;
          cd_objs = j; cd_methods = [stepm; resetm]; cd_loc = loc; cd_mem_alloc = mem_alloc }
   else (
     (* Functions won't have [Mreset] or memories,
