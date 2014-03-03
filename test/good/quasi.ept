@@ -1,0 +1,51 @@
+(* include "notsameperiod2.lus" *)
+
+type data = int
+
+const v:data = 0
+
+node current (v : data; c : bool; u : data)
+returns (o : data)
+let
+  o = merge c u ((v fby o) whenot c)
+tel
+
+node mem (v : data; cw : bool; u : data)
+returns (o : data)
+let
+  o = v fby (current (v, cw, u))
+tel
+
+node mcounter (start, limit : int)
+returns (o : int)
+let
+    o = (start -> (pre o + 1)) % limit;
+tel
+
+node twonodes (cw, cr : bool)
+returns (ok : bool)
+var uw, ur : int;
+let
+  uw = mcounter((0, 5) when cw);
+  ur = mem(v, cw, uw) when cr;
+  ok = (mem(v, cr, ur) = mem(v, cw, uw))
+       or (mem(v, cr, ur)= mem(v, cw, v fby uw))
+       or (mem(v, cr, ur) = mem(v, cw, v fby v fby uw));
+tel
+
+(*
+node verify (cw, cr : bool)
+returns (ok : bool)
+let
+    ok = twonodes(cw, cr);
+    assert(not notsameperiod2(cw, cr));
+tel
+*)
+
+node main() returns (ok:bool)
+  var cw, cr : bool;
+let
+  cw = false fby not cw;
+  cr = not cw;
+  ok = twonodes(cw,cr);
+tel

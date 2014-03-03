@@ -1,0 +1,19 @@
+fun pip_line<<m1,m2,y :int>> (line1 :int^m1; line2 :int^m2) returns (r :int^m1)
+let
+  r = line1[0 .. y-1] @ line2 @ line1[y+m2 .. m1-1]
+tel
+
+fun pip<<n1,m1,n2,m2,x,y :int>> (t1 :int^n1^m1; t2 :int^n2^m2) returns (r :int^n1^m1)
+var t12 :int^m1^n2;
+let
+  t12 = map<<n2>> (pip_line<<m1,m2,y>>) (t1[x..x+n2-1], t2);
+  r = t1[0 .. x-1] @ t12 @ t1[x+n2 .. n1-1];
+tel
+
+node main() returns (r :int^10^10)
+var x,y:int;
+let
+  x = 0 fby x+1;
+  y = x*x;
+  r = pip<<10,10,2,2,3,3>>(x^10^10,y^2^2);
+tel

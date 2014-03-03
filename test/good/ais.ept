@@ -1,0 +1,8 @@
+type int_array = int^8
+type s = { t : int_array }
+
+node f(x : int_array) returns (r : s)
+let
+  r = { t = x };
+tel
+

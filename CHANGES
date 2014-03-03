@@ -1,8 +1,23 @@
+Heptagon 1.00.06 (21/02/2014)
+-----------------------------
+
+ - allowed abstractions (non-inlined subnodes calls) in contracts
+
+Heptagon 1.00.05 (28/01/2014)
+-----------------------------
+
+ - bug fix: correct handling of nodes with contracts inside automata and switches
+
+Heptagon 1.00.04 (14/01/2014)
+-----------------------------
+
+ - bug fix: comparison between two non-constant integer expressions in Sigali
+ - bug fix: correct handling of "=" and "<>" operators in Sigali
 
 Heptagon 1.00.03 (20/11/2013)
 -----------------------------
 
- - buf fix: tomato application with contracts
+ - bug fix: tomato application with contracts
 
 Heptagon 1.00.02 (29/10/2013)
 -----------------------------

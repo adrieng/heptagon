@@ -153,6 +153,9 @@ let a_inf e1 e2 =
 let a_sup e1 e2 =
   Sprim ("a_sup", [e1;e2])
 
+let a_iminv e1 e2 =
+  Sprim ("a_iminv", [e1;e2])
+
 module Printer =
   struct
     open Format

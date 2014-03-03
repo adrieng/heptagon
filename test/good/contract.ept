@@ -1,0 +1,41 @@
+node f(x : bool) returns (y : bool)
+
+contract
+var c, cx : bool;
+let
+  c = not y;
+  cx = not (x & false fby x);
+tel
+assume cx
+enforce c
+
+let
+  automaton
+    state A do y = x unless x then B
+    state B do y = false fby x until x then A
+  end
+tel
+
+node g(x : bool) returns (y : bool)
+
+contract
+var ok : bool;
+let
+  automaton
+    state No_x do ok = true until x then One_x
+    state One_x do ok = not x
+    until x then Error
+        | not x then One_no_x
+    state One_no_x do ok = not x
+    until x then Error
+        | not x then No_x
+    state Error do ok = false
+  end
+tel
+assume ok
+enforce not y
+
+let
+  y = f(x);
+tel
+

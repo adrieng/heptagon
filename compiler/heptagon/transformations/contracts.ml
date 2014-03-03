@@ -164,9 +164,11 @@ let mk_unique_contract nd =
                  edesc = subst_edesc; } in
   fst (Hept_mapfold.node_dec funs () nd)
 
-let exp funs (env, newvars, newequs, contracts) exp =
-  let exp, (env, newvars, newequs, contracts) =
-    Hept_mapfold.exp funs (env, newvars, newequs, contracts) exp in
+let mk_vd_bool v = mk_var_dec ~last:(Last (Some (mk_static_bool true))) v tbool ~linearity:Ltop
+
+let exp funs (env, newvars, newequs, cont_vars, contracts) exp =
+  let exp, (env, newvars, newequs, cont_vars, contracts) =
+    Hept_mapfold.exp funs (env, newvars, newequs, cont_vars, contracts) exp in
   match exp.e_desc with
   | Eapp ({ a_op = (Enode nn | Efun nn); } as op, argl, rso) ->
     begin try
@@ -219,9 +221,13 @@ let exp funs (env, newvars, newequs, contracts) exp =
       (* variables for assume and guarantee *)
       let v_a = fresh ((shortname nn) ^ "_assume") in
       let v_g = fresh ((shortname nn) ^ "_guarantee") in
+      (* variable declarations for assume/guarantee *)
+      let vd_a = mk_vd_bool v_a in
+      let vd_g = mk_vd_bool v_g in
       (* equations for assume/guarantee *)
       let eq_a = mk_equation (Eeq (Evarpat v_a, ci.c_assume)) in
       let eq_g = mk_equation (Eeq (Evarpat v_g, ci.c_enforce)) in
+
 
       let newvars = ni.n_input @ ci.c_block.b_local @ ni.n_output @ newvars
       and newequs =
@@ -229,7 +235,8 @@ let exp funs (env, newvars, newequs, contracts) exp =
         @ List.map add_reset ci.c_block.b_equs
         @ [ eq_app; eq_a; eq_g ]
         @ newequs
-      and contracts = (v_a,v_g)::contracts in
+      and cont_vars = vd_a :: vd_g :: cont_vars
+      and contracts = (vd_a,vd_g)::contracts in
 
       (* For clocking reason we cannot create 1-tuples. *)
       let res_e = match ni.n_output with
@@ -239,19 +246,27 @@ let exp funs (env, newvars, newequs, contracts) exp =
                           List.map mk_output_exp ni.n_output, None)) exp.e_ty
                    ~linearity:exp.e_linearity in
 
-      (res_e, (env, newvars, newequs, contracts))
+      (res_e, (env, newvars, newequs, cont_vars, contracts))
 
     with
       | Not_found ->
-        exp, (env, newvars, newequs, contracts)
+        exp, (env, newvars, newequs, cont_vars, contracts)
     end
-  | _ -> exp, (env, newvars, newequs, contracts)
+  | _ -> exp, (env, newvars, newequs, cont_vars, contracts)
 
-let block funs (env, newvars, newequs, contracts) blk =
-  let (blk, (env, newvars', newequs', contracts')) =
-    Hept_mapfold.block funs (env, [], [], contracts) blk in
-  ({ blk with b_local = newvars' @ blk.b_local; b_equs = newequs' @ blk.b_equs; },
-   (env, newvars, newequs, contracts'))
+let block funs (env, newvars, newequs, cont_vars, contracts) blk =
+  let (blk, (env, newvars', newequs', cont_vars', contracts')) =
+    Hept_mapfold.block funs (env, [], [], [], contracts) blk in
+  (* let defnames = List.fold_left (fun env v -> Env.add v.v_ident v env) blk.b_defnames newvars' in *)
+  let defnames = List.fold_left
+    (fun env v -> Env.add v.v_ident v env)
+    blk.b_defnames cont_vars' in
+  ({ blk with 
+    b_local = newvars' @ blk.b_local;
+    b_equs = newequs' @ blk.b_equs;
+    b_defnames = defnames;
+   },
+   (env, newvars, newequs, (cont_vars @ cont_vars'), contracts'))
 
 let not_exp e = mk_exp (mk_op_app (Efun pnot) [e]) tbool ~linearity:Ltop
 
@@ -264,11 +279,9 @@ let var_exp v = mk_exp (Evar v) tbool ~linearity:Ltop
 
 let true_exp = mk_exp (Econst (mk_static_bool true)) tbool ~linearity:Ltop
 
-let mk_vd_bool v = mk_var_dec ~last:(Last (Some (mk_static_bool true))) v tbool ~linearity:Ltop
-
-let node_dec funs (env, newvars, newequs, contracts) nd =
-  let nd, (env, newvars, newequs, contracts) =
-    Hept_mapfold.node_dec funs (env, newvars, newequs, contracts) nd in
+let node_dec funs (env, newvars, newequs, cont_vars, contracts) nd =
+  let nd, (env, newvars, newequs, cont_vars, contracts) =
+    Hept_mapfold.node_dec funs (env, newvars, newequs, cont_vars, contracts) nd in
 
   (* Build assume and guarantee parts from contract list (list of
      ident pairs (v_a,v_g)). Returns also a list of variable
@@ -277,16 +290,16 @@ let node_dec funs (env, newvars, newequs, contracts) nd =
     match contracts with
       [] -> true_exp, true_exp, []
     | [(v_a,v_g)] ->
-        let e_a = var_exp v_a in
-        let e_g = var_exp v_g in
+        let e_a = var_exp v_a.v_ident in
+        let e_g = var_exp v_g.v_ident in
         (* assume part : e_a => e_g ; guarantee part : e_a *)
-        (e_a => e_g), e_a, [mk_vd_bool v_a; mk_vd_bool v_g]
+        (e_a => e_g), e_a, [v_a; v_g]
     | (v_a,v_g)::l ->
         let e_a_l,e_g_l,vd_l = build_contract l in
-        let e_a = var_exp v_a in
-        let e_g = var_exp v_g in
+        let e_a = var_exp v_a.v_ident in
+        let e_g = var_exp v_g.v_ident in
         ((e_a => e_g) &&& e_a_l), (e_a &&& e_g_l),
-        ((mk_vd_bool v_a) :: (mk_vd_bool v_g) :: vd_l)
+        (v_a :: v_g :: vd_l)
   in
 
   let assume_loc, enforce_loc, vd_contracts = build_contract contracts in
@@ -312,13 +325,13 @@ let node_dec funs (env, newvars, newequs, contracts) nd =
             b_local = newvars @ vd_contracts @ nd.n_block.b_local;
             b_equs = newequs @ nd.n_block.b_equs } } in
   let env = QualEnv.add nd.n_name nd env in
-   nd, (env, [], [], [])
+   nd, (env, [], [], [], [])
 
 let program p =
   let funs =
     { defaults with exp = exp; block = block; node_dec = node_dec; eq = eq; } in
-  let (p, (_, newvars, newequs, contracts)) =
-    Hept_mapfold.program funs (QualEnv.empty, [], [], []) p in
+  let (p, (_, newvars, newequs, cont_vars, contracts)) =
+    Hept_mapfold.program funs (QualEnv.empty, [], [], [], []) p in
   assert (newvars = []);
   assert (newequs = []);
   assert (contracts = []);

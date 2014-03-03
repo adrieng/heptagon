@@ -126,8 +126,7 @@ let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty }) =
   | Minils.Wreinit _ -> raise Untranslatable
 
 (* [translate e = c] *)
-let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
-  let ty = actual_ty ty in
+let rec translate prefix ({ Minils.e_desc = desc } as e) =
   match desc with
   | Minils.Eextvalue(ext) -> translate_ext prefix ext
   | Minils.Eapp (* pervasives binary or unary stateless operations *)
@@ -140,13 +139,24 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
                                (translate_ext prefix e2))
         | "&", [e1;e2] -> Sand((translate_ext prefix e1),
                                (translate_ext prefix e2))
-        | ("<="|"<"|">="|">"), [e1;e2] ->
+        | "=", [e1;e2] when (actual_ty e1.Minils.w_ty) = Tbool ->
+            let e1 = translate_ext prefix e1 in
+            let e2 = translate_ext prefix e2 in
+            (* e1 = e2 iff (e1 and e2) or (not e1 and not e2) *)
+            (e1 &~ e2) |~ ((~~ e1) &~ (~~ e2))
+        | "<>", [e1;e2] when (actual_ty e1.Minils.w_ty) = Tbool ->
+            let e1 = translate_ext prefix e1 in
+            let e2 = translate_ext prefix e2 in
+            (* e1 <> e2 iff (e1 and not e2) or (not e1 and e2) *)
+            (e1 &~ (~~ e2)) |~ ((~~ e1) &~ e2)
+        | ("<="|"<"|">="|">"|"="), [e1;e2] ->
             let op,modv =
               begin match n with
               | "<=" -> a_inf,0
               | "<"  -> a_inf,-1
               | ">=" -> a_sup,0
-              | _    -> a_sup,1
+              | ">"  -> a_sup,1
+	      | _    -> a_iminv,0  (* p(x)=k <> p = inverse image of k *)
               end in
             let e1 = translate_ext prefix e1 in
             let sig_e =
@@ -155,27 +165,30 @@ let rec translate prefix ({ Minils.e_desc = desc; Minils.e_ty = ty } as e) =
                   op e1 (Sconst(Cint(v+modv)))
               | _ ->
                   let e2 = translate_ext prefix e2 in
-                  op (Sminus(e1,e2)) (Sconst(Cint(modv)))
+                  op (Splus(e1,(Sprod(e2,(Sconst(Cint(-1))))))) (Sconst(Cint(modv)))
               end in
-            (* a_inf and a_sup : +1 to translate ideals to boolean
+            (* a_inf, a_sup and a_iminv : +1 to translate ideals to boolean
                polynomials *)
             Splus(sig_e,Sconst(Ctrue))
+	| "<>", [e1;e2] ->
+	    (* e1 <> e2 --> not(a_iminv((e1+(e2*(-1))),0)) *)
+            let e1 = translate_ext prefix e1 in
+            let sig_e =
+              begin match e2.Minils.w_desc with
+              | Minils.Wconst({se_desc = Sint(v)}) ->
+                  a_iminv e1 (Sconst(Cint(v)))
+              | _ ->
+                  let e2 = translate_ext prefix e2 in
+                  a_iminv (Splus(e1,(Sprod(e2,(Sconst(Cint(-1))))))) (Sconst(Cint(0)))
+              end in
+            (* a_iminv : +1 to translate ideals to boolean polynomials *)
+            Snot(Splus(sig_e,Sconst(Ctrue)))
         | "+", [e1;e2] -> Splus((translate_ext prefix e1),
                                 (translate_ext prefix e2))
         | "-", [e1;e2] -> Splus((translate_ext prefix e1),
                                 (Sprod((translate_ext prefix e2),(Sconst(Cint(-1))))))
         | "*", [e1;e2] -> Sprod((translate_ext prefix e1),
                                 (translate_ext prefix e2))
-        | "=", [e1;e2] when (ty = Tbool) ->
-            let e1 = translate_ext prefix e1 in
-            let e2 = translate_ext prefix e2 in
-            (* e1 = e2 iff (e1 and e2) or (not e1 and not e2) *)
-            (e1 &~ e2) |~ ((~~ e1) &~ (~~ e2))
-        | "<>", [e1;e2] when ty = Tbool ->
-            let e1 = translate_ext prefix e1 in
-            let e2 = translate_ext prefix e2 in
-            (* e1 <> e2 iff (e1 and not e2) or (not e1 and e2) *)
-            (e1 &~ (~~ e2)) |~ ((~~ e1) &~ e2)
         | _ -> raise Untranslatable
       end
         (* | Minils.Ewhen(e, c, var) when ((actual_ty e.Minils.e_ty) = Tbool) -> *)
@@ -333,7 +346,7 @@ let translate_contract f contract =
       let body =
         [{ stmt_name = var_g; stmt_def = Sconst(Ctrue) };
          { stmt_name = var_a; stmt_def = Sconst(Ctrue) }] in
-      [],[],body,(Svar(var_a),Svar(var_g)),[],[],[]
+      [],[],[],body,(Svar(var_a),Svar(var_g)),[],[],[]
   | Some {Minils.c_local = locals;
           Minils.c_eq = l_eqs;
           Minils.c_assume = e_a;
@@ -342,7 +355,6 @@ let translate_contract f contract =
           Minils.c_enforce_loc = e_g_loc;
           Minils.c_controllables = cl} ->
       let states,init,inputs,body = translate_eq_list f l_eqs in
-      assert (inputs = []);
       let e_a = translate_ext prefix e_a in
       let e_g = translate_ext prefix e_g in
       let e_a_loc = translate_ext prefix e_a_loc in
@@ -354,7 +366,7 @@ let translate_contract f contract =
       let controllables =
         List.map
           (fun ({ Minils.v_ident = id } as v) -> v,(prefix ^ (name id))) cl in
-      states,init,body,(Svar(var_a),Svar(var_g)),controllables,(locals@cl),l_eqs
+      states,init,inputs,body,(Svar(var_a),Svar(var_g)),controllables,(locals@cl),l_eqs
 
 
 
@@ -382,9 +394,9 @@ let translate_node
       (fun { Minils.v_ident = v } -> f ^ "_" ^ (name v)) o_list in
   let states,init,add_inputs,body =
     translate_eq_list f eq_list in
-  let states_c,init_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c =
+  let states_c,init_c,inputs_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c =
     translate_contract f contract in
-  let inputs = inputs @ add_inputs in
+  let inputs = inputs @ add_inputs @ inputs_c in
   let body = List.rev body in
   let states = List.rev states in
   let body_c = List.rev body_c in
