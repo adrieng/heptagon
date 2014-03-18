@@ -38,13 +38,16 @@ let pp p = if !verbose then Mls_printer.print stdout p
     under a specific directory; typically, a node ["n"] in file ["f.ept"] is
     output into a file called "f_ctrln/n.nbac" *)
 let gen_n_output_ctrln p =
-  let cnp, p = CtrlNbacGen.gen p in
-  let filename = filename_of_name cnp.CtrlNbac.cnp_name in
+  let nodes, p = CtrlNbacGen.gen p in
+  let filename = filename_of_name (Names.modul_to_string p.Minils.p_modname) in
   let dir = clean_dir (build_path (filename ^"_ctrln")) in
-  CtrlNbac.Printer.dump begin fun n ->
-    let oc = open_out (dir ^"/"^ n ^".nbac") in
-    Format.formatter_of_out_channel oc, (fun _ -> close_out oc)
-  end cnp;
+  let sm = CtrlNbac.Symb.string_man in
+  List.iter begin fun (node_name, node) ->
+    let oc = open_out (dir ^"/"^ node_name ^".nbac") in
+    let fmt = Format.formatter_of_out_channel oc in
+    CtrlNbac.AST.print sm ~print_header:print_header_info fmt node;
+    close_out oc
+  end nodes;
   p
 
 let compile_program p =
@@ -66,7 +69,7 @@ let compile_program p =
 
   (* Dataglow minimization *)
   let p =
-    let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
+    let call_tomato = !tomato || (List.length !tomato_nodes > 0) in
     let p = pass "Extended value inlining" call_tomato Inline_extvalues.program p pp in
     pass "Data-flow minimization" call_tomato Tomato.program p pp in
 
