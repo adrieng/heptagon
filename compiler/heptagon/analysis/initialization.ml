@@ -188,7 +188,6 @@ let rec less left_ty right_ty =
 module Printer = struct
   open Format
   open Pp_tools
-  open Global_printer
 
   let rec print_init ff i = match !i with
     | Izero -> fprintf ff "initialized"
@@ -212,8 +211,6 @@ module Printer = struct
 end
 
 module Error = struct
-  open Location
-
   type error = | Eclash of root * typ * typ
 
   exception Error of location * error

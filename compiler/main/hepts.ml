@@ -360,13 +360,11 @@ let main () =
     (fun s -> raise (Arg.Bad ("Invalid argument: " ^ s)))
     usage_msg;
 
-  if (!mod_name = "")
-    or (!node_name = "")
-    or (!exec_name = "") then
-      begin
-        Arg.usage arg_list usage_msg;
-        raise Error
-      end;
+  if (!mod_name = "") || (!node_name = "") || (!exec_name = "") then
+    begin
+      Arg.usage arg_list usage_msg;
+      raise Error
+    end;
 
   open_module (Module !mod_name);
 

@@ -233,7 +233,7 @@ and create_affect_stm dest src ty =
     | Cty_id ln ->
         (match src with
           | Cstructlit (_, ce_list) ->
-              let create_affect { f_name = f_name;
+              let create_affect { Signature.f_name = f_name;
                                   Signature.f_type = f_type; } e stm_list =
                 let cty = ctype_of_otype f_type in
                 create_affect_stm (CLfield (dest, f_name)) e cty @ stm_list in
@@ -263,7 +263,8 @@ let rec cexpr_of_static_exp se =
                      (cexpr_of_static_exp c) n_list)
     | Svar ln ->
       if !Compiler_options.unroll_loops && se.se_ty = Initial.tint
-      then cexpr_of_static_exp (Static.simplify QualEnv.empty (find_const ln).c_value)
+      then cexpr_of_static_exp
+        (Static.simplify QualEnv.empty (find_const ln).Signature.c_value)
       else Cvar (cname_of_qn ln)
     | Sop _ ->
         let se' = Static.simplify QualEnv.empty se in
@@ -497,7 +498,7 @@ let generate_function_call out_env var_env obj_env outvl objn args =
 let rec create_affect_const var_env (dest : clhs) c =
   match c.se_desc with
     | Svar ln ->
-        let se = Static.simplify QualEnv.empty (find_const ln).c_value in
+        let se = Static.simplify QualEnv.empty (find_const ln).Signature.c_value in
         create_affect_const var_env dest se
     | Sarray_power(c, n_list) ->
         let rec make_loop power_list replace = match power_list with
@@ -684,7 +685,7 @@ let fun_def_of_step_fun n obj_env mem objs md =
   let body = cstm_of_act_list out_env var_env obj_env md.m_body in
 
   Cfundef {
-    f_name = fun_name;
+    C.f_name = fun_name;
     f_retty = Cty_void;
     f_args = args;
     f_body = {
@@ -741,7 +742,7 @@ let reset_fun_def_of_class_def cd =
       []
   in
   Cfundef {
-    f_name = (cname_of_qn cd.cd_name) ^ "_reset";
+    C.f_name = (cname_of_qn cd.cd_name) ^ "_reset";
     f_retty = Cty_void;
     f_args = [("self", Cty_ptr (Cty_id (qn_append cd.cd_name "_mem")))];
     f_body = {
@@ -787,7 +788,7 @@ let cdefs_and_cdecls_of_type_decl otd =
       [], [Cdecl_typedef (ctype_of_otype ty, name)]
     | Type_enum nl ->
         let of_string_fun = Cfundef
-          { f_name = name ^ "_of_string";
+          { C.f_name = name ^ "_of_string";
             f_retty = Cty_id otd.t_name;
             f_args = [("s", Cty_ptr Cty_char)];
             f_body =
@@ -802,7 +803,7 @@ let cdefs_and_cdecls_of_type_decl otd =
                   map gen_if nl; }
           }
         and to_string_fun = Cfundef
-          { f_name = "string_of_" ^ name;
+          { C.f_name = "string_of_" ^ name;
             f_retty = Cty_ptr Cty_char;
             f_args = [("x", Cty_id otd.t_name); ("buf", Cty_ptr Cty_char)];
             f_body =

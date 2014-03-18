@@ -185,7 +185,7 @@ and print_app ff (app, args) =
   match app.a_op with
     | Etuple -> print_exp_tuple ff args
     (* we need a special case for '*' and '*.' as printing (_*_) is incorrect *)
-    | Efun { name = n } when (n = "*" or n = "*.") ->
+    | Efun { name = n } when (n = "*" || n = "*.") ->
       let a1, a2 = assert_2 args in
       fprintf ff "@[%a@, %s@, %a@]" print_exp a1  n  print_exp a2
     | Efun ({ qual = Pervasives; name = n } as f) when (is_infix n) ->

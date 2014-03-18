@@ -48,7 +48,10 @@ open Location
 open Format
 
 (** Error Kind *)
-type error_kind = | Etypeclash of ct * ct | Eclockclash of ck * ck | Edefclock
+type error_kind =
+  | Etypeclash of ct * ct
+  | Eclockclash of Clocks.ck * Clocks.ck
+  | Edefclock
 
 let error_message loc = function
   | Etypeclash (actual_ct, expected_ct) ->
@@ -111,10 +114,10 @@ let rec typing h pat e =
     | Ewhen (e,c,n) ->
         let ck_n = ck_of_name h n in
         let _base = expect h pat (skeleton ck_n e.e_ty) e in
-        skeleton (Con (ck_n, c, n)) e.e_ty, Con (ck_n, c, n)
+        skeleton (Clocks.Con (ck_n, c, n)) e.e_ty, Clocks.Con (ck_n, c, n)
     | Emerge (x, c_e_list) ->
         let ck = ck_of_name h x in
-        List.iter (fun (c,e) -> expect h pat (Ck(Con (ck,c,x))) e) c_e_list;
+        List.iter (fun (c,e) -> expect h pat (Ck(Clocks.Con (ck,c,x))) e) c_e_list;
         Ck ck, ck
     | Estruct l ->
         let ck = fresh_clock () in
@@ -264,9 +267,9 @@ let typing_contract h contract =
              c_controllables = c_list } ->
         let h' = typing_block h b in
         (* assumption *)
-        expect h' (Etuplepat []) (Ck Cbase) e_a;
+        expect h' (Etuplepat []) (Ck Clocks.Cbase) e_a;
         (* property *)
-        expect h' (Etuplepat []) (Ck Cbase) e_g;
+        expect h' (Etuplepat []) (Ck Clocks.Cbase) e_g;
 
         append_env h c_list
 
@@ -276,9 +279,9 @@ let typing_local_contract h contract =
     | Some { c_assume_loc = e_a_loc;
              c_enforce_loc = e_g_loc } ->
         (* assumption *)
-        expect h (Etuplepat []) (Ck Cbase) e_a_loc;
+        expect h (Etuplepat []) (Ck Clocks.Cbase) e_a_loc;
         (* property *)
-        expect h (Etuplepat []) (Ck Cbase) e_g_loc
+        expect h (Etuplepat []) (Ck Clocks.Cbase) e_g_loc
 
 (* check signature causality and update it in the global env *)
 let update_signature h node =
@@ -299,7 +302,7 @@ let typing_node node =
   let h = typing_block h node.n_block in
   typing_local_contract h node.n_contract;
   (* synchronize input and output on base : find the free vars and set them to base *)
-  Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;
+  Env.iter (fun _ ck -> unify_ck Clocks.Cbase (root_ck_of ck)) h0;
   (*update clock info in variables descriptions *)
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
   let node = { node with n_input = List.map set_clock node.n_input;

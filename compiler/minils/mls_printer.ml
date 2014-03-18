@@ -53,7 +53,7 @@ let rec print_pat ff = function
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
 
 let print_vd ?(show_ck=false) ff { v_ident = n; v_type = ty; v_linearity = lin; v_clock = ck } =
- if show_ck or !Compiler_options.full_type_info then
+ if show_ck || !Compiler_options.full_type_info then
     fprintf ff "%a : %a%a :: %a" print_ident n print_type ty print_linearity lin print_ck ck
   else fprintf ff "%a : %a%a" print_ident n print_type ty print_linearity lin
 

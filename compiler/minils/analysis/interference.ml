@@ -112,8 +112,8 @@ module InterfRead = struct
   exception Const_extvalue
 
   let rec vars_ck acc = function
-    | Con(ck2, _, n) -> (Ivar n)::(vars_ck acc ck2)
-    | Cbase | Cvar { contents = Cindex _ } -> acc
+    | Clocks.Con(ck2, _, n) -> (Ivar n)::(vars_ck acc ck2)
+    | Clocks.Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
   let rec vars_ct acc ct = match ct with
@@ -343,7 +343,7 @@ let all_ivars_list ivs =
 
 let is_fast_memory x =
   match ck_repr (World.ivar_clock (Imem x)) with
-    | Cbase -> false
+    | Clocks.Cbase -> false
     | _ -> true
 
 (* TODO: variables with no use ?? *)
@@ -405,7 +405,7 @@ let should_interfere (ivx, ivy) =
           not ((x_is_mem && not x_is_when) ||
                   (y_is_mem && not y_is_when)) && Clocks.are_disjoint ckx cky
         in
-        not (disjoint_clocks or are_copies)
+        not (disjoint_clocks || are_copies)
   )
 
 let should_interfere = Misc.memoize_couple should_interfere
@@ -417,7 +417,7 @@ let should_interfere = Misc.memoize_couple should_interfere
 let init_interference_graph () =
   let add_tyenv env iv =
     let ty = Static.simplify_type Names.QualEnv.empty (World.ivar_type iv) in
-    TyEnv.add_element ty (mk_node iv) env
+    TyEnv.add_element ty (Interference_graph.mk_node iv) env
   in
   (** Adds a node for the variable and all fields of a variable. *)
   let add_ivar env iv ty =
@@ -441,7 +441,7 @@ let init_interference_graph () =
     is real. *)
 let add_interferences_from_list force vars =
   let add_interference ivx ivy =
-    if force or should_interfere (ivx, ivy) then
+    if force || should_interfere (ivx, ivy) then
       add_interference_link_from_ivar ivx ivy
   in
     Misc.iter_couple add_interference vars
@@ -628,10 +628,10 @@ let add_init_return_eq f =
 
    (** a_1,..,a_p = __init__  *)
   let eq_init = mk_equation false (pat_from_dec_list f.n_input)
-    (mk_extvalue_exp Cbase Initial.tint ~linearity:Ltop (Wconst (Initial.mk_static_int 0))) in
+    (mk_extvalue_exp Clocks.Cbase Initial.tint ~linearity:Ltop (Wconst (Initial.mk_static_int 0))) in
     (** __return__ = o_1,..,o_q, mem_1, ..., mem_k *)
   let eq_return = mk_equation false (Etuplepat [])
-    (mk_exp Cbase Tinvalid ~linearity:Ltop (tuple_from_dec_and_mem_list f.n_output)) in
+    (mk_exp Clocks.Cbase Tinvalid ~linearity:Ltop (tuple_from_dec_and_mem_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
 
 (** Coalesce Imem x and Ivar x *)

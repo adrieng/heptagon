@@ -162,7 +162,7 @@ struct
     let rec min_same_ck (min_eq, min_c, min_same_ctrl) l = match l with
       | [] -> min_eq
       | (eq, c, same_ctrl)::l ->
-          if (c < min_c) or (c = min_c && (same_ctrl && not min_same_ctrl)) then
+          if (c < min_c) || (c = min_c && (same_ctrl && not min_same_ctrl)) then
             min_same_ck (eq, c, same_ctrl) l
           else
             min_same_ck (min_eq, min_c, min_same_ctrl) l

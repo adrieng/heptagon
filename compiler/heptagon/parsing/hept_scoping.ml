@@ -66,13 +66,13 @@ module Error =
 struct
   type error =
     | Evar_unbound of name
-    | Equal_notfound of name*qualname
+    | Equal_notfound of name*Names.qualname
     | Equal_unbound of name*name
     | Enot_last of name
     | Evariable_already_defined of name
     | Econst_variable_already_defined of name
     | Estatic_exp_expected
-    | Eredefinition of qualname
+    | Eredefinition of Names.qualname
     | Elinear_type_no_memalloc
 
   let message loc kind =
@@ -123,7 +123,7 @@ open Error
 
 let safe_add loc add n x =
   try ((add n x) : unit)
-  with Modules.Already_defined -> message loc (Eredefinition n)
+  with Modules.Already_defined -> Error.message loc (Eredefinition n)
 
 (** {3 Qualify when ToQ and check when Q according to the global env } *)
 
@@ -155,30 +155,29 @@ let qualify_const local_const c = match c with
 
 module Rename =
 struct
-  open Error
   include
     (Map.Make (struct type t = string let compare = String.compare end))
   (** Rename a var *)
   let var loc env n =
     try fst (find n env)
-    with Not_found -> message loc (Evar_unbound n)
+    with Not_found -> Error.message loc (Evar_unbound n)
   (** Rename a last *)
   let last loc env n =
     try
       let id, last = find n env in
-      if not last then message loc (Enot_last n) else id
-    with Not_found -> message loc (Evar_unbound n)
+      if not last then Error.message loc (Enot_last n) else id
+    with Not_found -> Error.message loc (Evar_unbound n)
   (** Adds a name to the list of used names and idents. *)
   let add_used_name env n =
     add n (ident_of_name n, false) env
   (** Add a var *)
   let add_var loc env n =
-    if mem n env then message loc (Evariable_already_defined n)
+    if mem n env then Error.message loc (Evariable_already_defined n)
     else
         add n (ident_of_name n, false) env
   (** Add a last *)
   let add_last loc env n =
-    if mem n env then message loc (Evariable_already_defined n)
+    if mem n env then Error.message loc (Evariable_already_defined n)
     else
         add n (ident_of_name n, true) env
   (** Add a var dec *)
@@ -233,7 +232,7 @@ let rec translate_static_exp se =
     let se_d = translate_static_exp_desc se.se_loc se.se_desc in
     Types.mk_static_exp Types.Tinvalid ~loc:se.se_loc se_d
   with
-    | ScopingError err -> message se.se_loc err
+    | ScopingError err -> Error.message se.se_loc err
 
 and translate_static_exp_desc _loc ed =
   let t = translate_static_exp in
@@ -256,7 +255,7 @@ and translate_static_exp_desc _loc ed =
 
 let expect_static_exp e = match e.e_desc with
   | Econst se -> translate_static_exp se
-  | _ ->  message e.e_loc Estatic_exp_expected
+  | _ ->  Error.message e.e_loc Estatic_exp_expected
 
 let rec translate_type loc ty =
   try
@@ -270,7 +269,7 @@ let rec translate_type loc ty =
       | Tinvalid -> Types.Tinvalid
     )
   with
-    | ScopingError err -> message loc err
+    | ScopingError err -> Error.message loc err
 
 let rec translate_some_clock loc env ck = match ck with
   | None -> Clocks.fresh_clock()
@@ -293,7 +292,7 @@ let rec translate_exp env e =
       Heptagon.e_level_ck = Clocks.Cbase;
       Heptagon.e_ct_annot = Misc.optional (translate_ct e.e_loc env) e.e_ct_annot;
       Heptagon.e_loc = e.e_loc }
-  with ScopingError(error) -> message e.e_loc error
+  with ScopingError(error) -> Error.message e.e_loc error
 
 and translate_desc loc env = function
   | Econst c -> Heptagon.Econst (translate_static_exp c)
@@ -424,7 +423,7 @@ and translate_switch_handler loc env sh =
     { Heptagon.w_name = qualify_constrs sh.w_name;
       Heptagon.w_block = fst (translate_block env sh.w_block) }
   with
-    | ScopingError err -> message loc err
+    | ScopingError err -> Error.message loc err
 
 and translate_var_dec env vd =
   (* env is initialized with the declared vars before their translation *)

@@ -81,7 +81,7 @@ struct
       {
         mutable er_class : int;
         er_clock_type : ct;
-        er_base_ck : ck;
+        er_base_ck : Clocks.ck;
         er_pattern : pat;
         er_head : exp;
         er_children : class_ref list;
@@ -96,7 +96,7 @@ struct
   open Mls_printer
 
   let print_class_ref fmt cr = match cr with
-    | Cr_plain id -> print_ident fmt id
+    | Cr_plain id -> Global_printer.print_ident fmt id
     | Cr_input w -> Format.fprintf fmt "%a (input)" print_extvalue w
 
   let debug_tenv fmt tenv =
@@ -149,19 +149,19 @@ struct
   let rec clock_compare ck1 ck2 = match ck1, ck2 with
     | Cvar { contents = Clink ck1; }, _ -> clock_compare ck1 ck2
     | _, Cvar { contents = Clink ck2; } -> clock_compare ck1 ck2
-    | Cbase, Cbase -> 0
+    | Clocks.Cbase, Clocks.Cbase -> 0
     | Cvar lr1, Cvar lr2 -> link_compare_modulo !lr1 !lr2
-    | Con (ck1, cn1, vi1), Con (ck2, cn2, vi2) ->
+    | Clocks.Con (ck1, cn1, vi1), Clocks.Con (ck2, cn2, vi2) ->
       let cr1 = compare cn1 cn2 in
       if cr1 <> 0 then cr1 else
         let cr2 = ident_compare_modulo vi1 vi2 in
         if cr2 <> 0 then cr2 else clock_compare ck1 ck2
-    | Cbase , _ -> 1
+    | Clocks.Cbase , _ -> 1
 
-    | Cvar _, Cbase -> -1
+    | Cvar _, Clocks.Cbase -> -1
     | Cvar _, _ -> 1
 
-    | Con _, _ -> -1
+    | Clocks.Con _, _ -> -1
 
   and link_compare_modulo li1 li2 = match li1, li2 with
     | Cindex _, Cindex _ -> 0
@@ -490,7 +490,7 @@ and reconstruct_class_ref mapping cr = match cr with
     x
 
 and reconstruct_clock mapping ck = match ck_repr ck with
-  | Con (ck, c, x) -> Con (reconstruct_clock mapping ck, c, new_name mapping x)
+  | Clocks.Con (ck, c, x) -> Clocks.Con (reconstruct_clock mapping ck, c, new_name mapping x)
   | _ -> ck
 
 and reconstruct_clock_type mapping ct = match ct with
@@ -562,7 +562,8 @@ let compute_new_class (tenv : tom_env) =
       | Cr_input _ -> None
       | Cr_plain x ->
         try Some (Env.find x mapping)
-        with Not_found -> Format.eprintf "Unknown class %a@." print_ident x; assert false
+        with Not_found -> Format.eprintf "Unknown class %a@."
+          Global_printer.print_ident x; assert false
     in
     let children = List.map map_class_ref eqr.er_children in
 

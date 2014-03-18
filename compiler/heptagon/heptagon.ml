@@ -48,7 +48,7 @@ type exp = {
   e_desc      : desc;
   e_ty        : ty;
   mutable e_ct_annot  : ct option; (* exists when a source annotation exists *)
-  e_level_ck  : ck; (* set by the switch pass, represents the activation base of the expression *)
+  e_level_ck  : Clocks.ck; (* set by the switch pass, represents the activation base of the expression *)
   mutable e_linearity : linearity;
   e_loc       : location }
 
@@ -141,7 +141,7 @@ and var_dec = {
   v_ident : var_ident;
   v_type  : ty;
   v_linearity : linearity;
-  v_clock : ck;
+  v_clock : Clocks.ck;
   v_last  : last;
   v_loc   : location }
 

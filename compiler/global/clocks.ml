@@ -98,7 +98,7 @@ and unify_ck ck1 ck2 =
     match (ck1, ck2) with
      | Cbase, Cbase -> ()
      | Cvar { contents = Cindex n1 }, Cvar { contents = Cindex n2 } when n1 = n2 -> ()
-     | Con (ck1, c1, n1), Con (ck2, c2, n2) when (c1 = c2) & (n1 = n2) ->
+     | Con (ck1, c1, n1), Con (ck2, c2, n2) when (c1 = c2) && (n1 = n2) ->
          unify_ck ck1 ck2
      | Cvar ({ contents = Cindex n } as v), ck
      | ck, Cvar ({ contents = Cindex n } as v) ->

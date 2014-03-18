@@ -61,7 +61,7 @@ and tdesc =
 
 and extvalue = {
   w_desc      : extvalue_desc;
-  mutable w_ck: ck;
+  mutable w_ck: Clocks.ck;
   w_ty        : ty;
   w_linearity : linearity;
   w_loc       : location }
@@ -75,7 +75,7 @@ and extvalue_desc =
 
 and exp = {
   e_desc            : edesc;
-  e_level_ck        : ck; (*when no data dep, execute the exp on this clock (set by [switch] *)
+  e_level_ck        : Clocks.ck; (*when no data dep, execute the exp on this clock (set by [switch] *)
   mutable e_ct      : ct;
   e_ty              : ty;
   e_linearity : linearity;
@@ -127,14 +127,14 @@ type eq = {
   eq_lhs    : pat;
   eq_rhs    : exp;
   eq_unsafe : bool;
-  eq_base_ck : ck;
+  eq_base_ck : Clocks.ck;
   eq_loc    : location }
 
 type var_dec = {
   v_ident     : var_ident;
   v_type      : ty;
   v_linearity : linearity;
-  v_clock     : ck;
+  v_clock     : Clocks.ck;
   v_loc       : location }
 
 type contract = {

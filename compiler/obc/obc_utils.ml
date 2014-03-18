@@ -100,7 +100,7 @@ let mk_if cond true_act =
 
 let rec var_name x =
   match x.pat_desc with
-    | Lvar x -> x
+    | Obc.Lvar x -> x
     | Lmem x -> x
     | Lfield(x,_) -> var_name x
     | Larray(l, _) -> var_name l
@@ -109,7 +109,7 @@ let rec var_name x =
     a list of var_dec. *)
 let rec vd_mem n = function
   | [] -> false
-  | vd::l -> vd.v_ident = n or (vd_mem n l)
+  | vd::l -> vd.v_ident = n || (vd_mem n l)
 
 (** Returns the var_dec object corresponding to the name n
     in a list of var_dec. *)
@@ -286,7 +286,7 @@ let interface_types i =
 
 let rec ext_value_of_pattern patt =
   let desc = match patt.pat_desc with
-    | Lvar id -> Wvar id
+    | Obc.Lvar id -> Wvar id
     | Lmem id -> Wmem id
     | Lfield (p, fn) -> Wfield (ext_value_of_pattern p, fn)
     | Larray (p, e) -> Warray (ext_value_of_pattern p, e) in

@@ -38,8 +38,8 @@ open Obc_mapfold
 
 let appears_in_exp, appears_in_lhs =
   let lhsdesc _ (x, acc) ld = match ld with
-    | Lvar y -> ld, (x, acc or (x=y))
-    | Lmem y -> ld, (x, acc or (x=y))
+    | Lvar y -> ld, (x, acc || (x=y))
+    | Lmem y -> ld, (x, acc || (x=y))
     | _ -> raise Errors.Fallback
   in
   let funs = { Obc_mapfold.defaults with lhsdesc = lhsdesc } in
@@ -75,14 +75,14 @@ let rec is_modified_by_call x args e_list = match args, e_list with
 
 let is_modified_handlers j x handlers =
   let act _ acc a = match a with
-    | Aassgn(l, _) -> a, acc or (appears_in_lhs x l)
+    | Aassgn(l, _) -> a, acc || (appears_in_lhs x l)
     | Acall (name_list, o, Mstep, e_list) ->
         (* first, check if e is one of the output of the function*)
         if List.exists (appears_in_lhs x) name_list then
           a, true
         else (
           let sig_info = find_obj (obj_ref_name o) j in
-            a, acc or (is_modified_by_call x sig_info.node_inputs e_list)
+            a, acc || (is_modified_by_call x sig_info.node_inputs e_list)
         )
     | _ -> raise Errors.Fallback
   in

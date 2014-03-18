@@ -108,7 +108,7 @@ let translate_app app =
 let mk_extvalue e w =
   let clock = match e.Heptagon.e_ct_annot with
     | None -> fresh_clock ()
-    | Some ct -> assert_1 (unprod ct)
+    | Some ct -> assert_1 (Clocks.unprod ct)
   in
   mk_extvalue ~loc:e.Heptagon.e_loc ~linearity:e.Heptagon.e_linearity
     ~ty:e.Heptagon.e_ty ~clock:clock w

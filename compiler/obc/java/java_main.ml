@@ -26,7 +26,6 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Misc
 open Names
 open Modules
 open Signature
@@ -67,7 +66,7 @@ let program p =
     Idents.enter_node class_name;
     let field_step_dnb, id_step_dnb =
       let id = Idents.gen_var "java_main" "default_step_nb" in
-      mk_field ~static:true ~final:true ~value:(Some (Sint 30000)) Tint id, id
+      Java.mk_field ~static:true ~final:true ~value:(Some (Sint 30000)) Tint id, id
     in
     let main_methode =
 

@@ -42,7 +42,7 @@ module LinListEnv =
     end)
 
 let rec ivar_of_pat l = match l.pat_desc with
-  | Lvar x -> Ivar x
+  | Obc.Lvar x -> Ivar x
   | Lfield(l, f) -> Ifield (ivar_of_pat l, f)
   | _ -> assert false
 
@@ -57,7 +57,7 @@ let rec repr_from_ivar env iv =
       (try
          let lhs = Env.find x env in lhs.pat_desc
        with
-           Not_found -> Lvar x)
+           Not_found -> Obc.Lvar x)
     | Ifield(iv, f) ->
       let ty = Tid (Modules.find_field f) in
       let lhs = mk_pattern ty (repr_from_ivar env iv) in
@@ -82,9 +82,9 @@ let choose_representative m inputs outputs mems ty vars =
   let desc = match inputs, outputs, mems with
       | [], [], [] -> choose_record_field m vars
       | [], [], (Ivar m)::_ -> Lmem m
-      | [Ivar vin], [], [] -> Lvar vin
-      | [], [Ivar vout], [] -> Lvar vout
-      | [Ivar vin], [Ivar _], [] -> Lvar vin
+      | [Ivar vin], [], [] -> Obc.Lvar vin
+      | [], [Ivar vout], [] -> Obc.Lvar vout
+      | [Ivar vin], [Ivar _], [] -> Obc.Lvar vin
       | _, _, _ ->
         Interference.print_debug "@.Something is wrong with the coloring : %a@." print_ivar_list vars;
         Interference.print_debug "\tInputs : %a@." print_ivar_list inputs;
@@ -115,7 +115,7 @@ let memalloc_subst_map inputs outputs mems subst_lists =
 let rec lhs funs (env, mut, j) l = match l.pat_desc with
   | Lmem _ -> l, (env, mut, j)
   | Larray _ | Lfield _ -> Obc_mapfold.lhs funs (env, mut, j) l
-  | Lvar _ ->
+  | Obc.Lvar _ ->
     (* replace with representative *)
     let iv = ivar_of_pat l in
     let lhs_desc = repr_from_ivar env iv in
@@ -135,7 +135,8 @@ let extvalue funs (env, mut, j) w = match w.w_desc with
   | Warray _ | Wfield _ -> Obc_mapfold.extvalue funs (env, mut, j) w
   | Wvar x ->
     (* replace with representative *)
-    let lhs, _ = lhs funs (env, mut, j) (mk_pattern Types.invalid_type (Lvar x)) in
+    let lhs, _ = lhs funs (env, mut, j)
+      (mk_pattern Types.invalid_type (Obc.Lvar x)) in
     let neww = ext_value_of_pattern lhs in
     { w with w_desc = neww.w_desc }, (env, mut, j)
 

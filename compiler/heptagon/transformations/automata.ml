@@ -90,7 +90,7 @@ let intro_type type_name state_env =
     Moore automatons doesn't have strong transitions,
     Mealy automatons may have some. *)
 let no_strong_transition state_handlers =
-  let handler no_strong { s_unless = l } = no_strong & (l = []) in
+  let handler no_strong { s_unless = l } = no_strong && (l = []) in
   List.fold_left handler true state_handlers
 
 

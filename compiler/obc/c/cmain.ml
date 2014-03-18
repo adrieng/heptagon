@@ -313,7 +313,7 @@ let main_def_of_class_def cd =
     variable list [var_list], prologue [prologue] and loop body [body]. *)
 let main_skel var_list prologue body =
   Cfundef {
-    f_name = "main";
+    C.f_name = "main";
     f_retty = Cty_int;
     f_args = [("argc", Cty_int); ("argv", Cty_ptr (Cty_ptr Cty_char))];
     f_body = {

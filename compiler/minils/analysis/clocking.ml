@@ -48,7 +48,10 @@ open Location
 open Format
 
 (** Error Kind *)
-type error_kind = | Etypeclash of ct * ct | Eclockclash of ck * ck | Edefclock
+type error_kind =
+  | Etypeclash of ct * ct
+  | Eclockclash of Clocks.ck * Clocks.ck
+  | Edefclock
 
 let error_message loc = function
   | Etypeclash (actual_ct, expected_ct) ->
@@ -88,7 +91,7 @@ let rec typing_extvalue h w =
     | Wwhen (w1, c, n) ->
         let ck_n = ck_of_name h n in
         expect_extvalue h ck_n w1;
-        Con (ck_n, c, n)
+        Clocks.Con (ck_n, c, n)
     | Wfield (w1, _) ->
         typing_extvalue h w1
     | Wreinit (w1, w2) ->
@@ -178,11 +181,11 @@ let typing_eq h ({ eq_lhs = pat; eq_rhs = e; eq_loc = loc } as eq) =
       | Ewhen (e,c,n) ->
           let ck_n = ck_of_name h n in
           let _base = expect (skeleton ck_n e.e_ty) e in
-          let base_ck = if stateful e then ck_n else Con (ck_n, c, n) in
-          skeleton (Con (ck_n, c, n)) e.e_ty, base_ck
+          let base_ck = if stateful e then ck_n else Clocks.Con (ck_n, c, n) in
+          skeleton (Clocks.Con (ck_n, c, n)) e.e_ty, base_ck
       | Emerge (x, c_e_list) ->
           let ck = ck_of_name h x in
-          List.iter (fun (c,e) -> expect_extvalue h (Con (ck,c,x)) e) c_e_list;
+          List.iter (fun (c,e) -> expect_extvalue h (Clocks.Con (ck,c,x)) e) c_e_list;
           Ck ck, ck
       | Estruct l ->
           let ck = fresh_clock () in
@@ -265,10 +268,10 @@ let typing_contract h0 h contract =
         (* assumption *)
         (* property *)
         let eq_list = typing_eqs h' eq_list in
-        expect_extvalue h' Cbase e_a;
-        expect_extvalue h' Cbase e_g;
-        expect_extvalue h Cbase e_a_loc;
-        expect_extvalue h Cbase e_g_loc;
+        expect_extvalue h' Clocks.Cbase e_a;
+        expect_extvalue h' Clocks.Cbase e_g;
+        expect_extvalue h Clocks.Cbase e_a_loc;
+        expect_extvalue h Clocks.Cbase e_g_loc;
         let h = append_env h c_list in
         Some { contract with c_eq = eq_list }, h
 
@@ -281,7 +284,7 @@ let typing_node node =
   (*   let h = append_env h node.n_local in *)
   let equs = typing_eqs h node.n_equs in
   (* synchronize input and output on base : find the free vars and set them to base *)
-  Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;
+  Env.iter (fun _ ck -> unify_ck Clocks.Cbase (root_ck_of ck)) h0;
   (*update clock info in variables descriptions *)
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
   let node = { node with n_input = List.map set_clock node.n_input;

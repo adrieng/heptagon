@@ -39,7 +39,6 @@
   [p = e] when [e] is an array is understand as a copy of the reference, not a copy of the array.*)
 
 open Format
-open Misc
 open Names
 open Signature
 open Obc
@@ -58,8 +57,8 @@ let add_classe, get_classes =
     with [body] a function from [var_ident] (the iterator) to [act] list *)
 let fresh_for size body =
   let i = Idents.gen_var "obc2java" "i" in
-  let id = mk_var_dec i false Tint in
-  Afor (id, Sint 0, size, mk_block (body i))
+  let id = Java.mk_var_dec i false Tint in
+  Java.Afor (id, Sint 0, size, Java.mk_block (body i))
 
 (** fresh nested Afor from 0 to [size]
     with [body] a function from [var_ident] list (the iterator list) to [act] list :
@@ -73,12 +72,12 @@ let fresh_nfor s_l body =
   let rec aux s_l i_l = match s_l with
     | [s] ->
         let i = Idents.gen_var "obc2java" "i" in
-        let id = (mk_var_dec i false Tint) in
-        Afor (id, Sint 0, s, mk_block (body (List.rev (i::i_l))))
+        let id = (Java.mk_var_dec i false Tint) in
+        Java.Afor (id, Sint 0, s, Java.mk_block (body (List.rev (i::i_l))))
     | s::s_l ->
         let i = Idents.gen_var "obc2java" "i" in
-        let id = mk_var_dec i false Tint in
-        Afor (id, Sint 0, s, mk_block ([aux s_l (i::i_l)]))
+        let id = Java.mk_var_dec i false Tint in
+        Java.Afor (id, Sint 0, s, Java.mk_block ([aux s_l (i::i_l)]))
     | [] -> Misc.internal_error "Fresh nfor called with empty size list"
   in
   aux s_l []
@@ -327,19 +326,19 @@ let jop_of_op param_env op_name e_l =
 
 let rec act_list param_env act_l acts =
   let _act act acts = match act with
-    | Obc.Aassgn (p,e) -> (Aassgn (pattern param_env p, exp param_env e))::acts
+    | Obc.Aassgn (p,e) -> (Java.Aassgn (pattern param_env p, exp param_env e))::acts
     | Obc.Aop (op,e_l) -> Aexp (jop_of_op param_env op e_l) :: acts
     | Obc.Acall ([], obj, Mstep, e_l) ->
         let acall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         Aexp acall::acts
     | Obc.Acall ([p], obj, Mstep, e_l) ->
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
-        let assgn = Aassgn (pattern param_env p, ecall) in
+        let assgn = Java.Aassgn (pattern param_env p, ecall) in
         assgn::acts
     | Obc.Acall (p_l, obj, Mstep, e_l) ->
         let return_ty = p_l |> pattern_list_to_type |> (ty param_env) in
         let return_id = Idents.gen_var "obc2java" "out" in
-        let return_vd = mk_var_dec return_id false return_ty in
+        let return_vd = Java.mk_var_dec return_id false return_ty in
         let ecall = Emethod_call (obj_ref param_env obj, "step", exp_list param_env e_l) in
         let assgn = Anewvar (return_vd, ecall) in
         let copy_return_to_var i p =
@@ -351,7 +350,7 @@ let rec act_list param_env act_l acts =
             | _ -> Ecast(t, e)
           in
           let p = pattern param_env p in
-          Aassgn (p, cast t (Efield (Evar return_id, "c"^(string_of_int i))))
+          Java.Aassgn (p, cast t (Efield (Evar return_id, "c"^(string_of_int i))))
         in
         let copies = Misc.mapi copy_return_to_var p_l in
         assgn::(copies@acts)
@@ -364,7 +363,9 @@ let rec act_list param_env act_l acts =
           | [(c,b)] when c = Initial.ptrue ->
               (Aif (exp param_env e, block param_env b)):: acts
           | [(c,b)] when c = Initial.pfalse ->
-              (Aifelse (exp param_env e, {b_locals = []; b_body = []}, block param_env b)) :: acts
+              (Aifelse (exp param_env e, {Java.b_locals = [];
+                                          Java.b_body = []},
+                        block param_env b)) :: acts
           | _ ->
               let _, _then = List.find (fun (c,_) -> c = Initial.ptrue) c_b_l in
               let _, _else = List.find (fun (c,_) -> c = Initial.pfalse) c_b_l in
@@ -376,11 +377,12 @@ let rec act_list param_env act_l acts =
         let acase = Aswitch (exp param_env e, List.map _c_b c_b_l) in
         acase::acts
     | Obc.Afor (v, se, se', b) ->
-        let afor = Afor (var_dec param_env v,
-                        exp param_env se, exp param_env se', block param_env b) in
+        let afor = Java.Afor (var_dec param_env v,
+                              exp param_env se, exp param_env se',
+                              block param_env b) in
         afor::acts
     | Obc.Ablock b ->
-        let ablock = Ablock (block param_env b) in
+        let ablock = Java.Ablock (block param_env b) in
         ablock::acts
   in
   List.fold_right _act act_l acts
@@ -389,7 +391,7 @@ and block param_env ?(locals=[]) ?(end_acts=[]) ob =
   let blocals = var_dec_list param_env ob.Obc.b_locals in
   let locals = locals @ blocals in
   let acts = act_list param_env ob.Obc.b_body end_acts in
-  { b_locals = locals; b_body = acts }
+  { Java.b_locals = locals; Java.b_body = acts }
 
 
 
@@ -400,7 +402,7 @@ and block param_env ?(locals=[]) ?(end_acts=[]) ob =
 let sig_params_to_vds p_l =
   let param_to_arg param_env p =
     let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
-    let p_vd = mk_var_dec p_ident false (ty param_env p.Signature.p_type) in
+    let p_vd = Java.mk_var_dec p_ident false (ty param_env p.Signature.p_type) in
     let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
     p_vd, param_env
   in Misc.mapfold param_to_arg NamesEnv.empty p_l
@@ -410,12 +412,12 @@ let sig_args_to_vds param_env a_l =
   let arg_to_vd { a_name = n; a_type = t } =
     let n = match n with None -> "v" | Some s -> s in
     let id = Idents.gen_var "obc2java" n in
-    mk_var_dec id false (ty param_env t)
+    Java.mk_var_dec id false (ty param_env t)
   in List.map arg_to_vd a_l
 
 (** [copy_to_this vd_l] creates [this.x = x] for all [x] in [vd_l] *)
 let copy_to_this vd_l =
-  let _vd vd = Aassgn (Pthis vd.vd_ident, Evar vd.vd_ident) in
+  let _vd vd = Java.Aassgn (Pthis vd.vd_ident, Evar vd.vd_ident) in
   List.map _vd vd_l
 
 
@@ -442,7 +444,7 @@ let class_def_list classes cd_l =
         let reset_mems = block param_env (remove_resets oreset.Obc.m_body) in
         mk_methode body "reset", reset_mems
       with Not_found -> (* stub reset method *)
-        mk_methode (mk_block []) "reset", mk_block []
+        mk_methode (Java.mk_block []) "reset", Java.mk_block []
     in
      (* [obj_env] gives the type of an [obj_ident],
         needed in async because we change the classe for async obj *)
@@ -460,14 +462,14 @@ let class_def_list classes cd_l =
           match od.o_size with
             | None ->
                 let t = Idents.Env.find od.o_ident obj_env in
-                (Aassgn (Pthis od.o_ident, Enew (t, params)))::acts
+                (Java.Aassgn (Pthis od.o_ident, Enew (t, params)))::acts
             | Some size_l ->
                 let size_l = List.rev (List.map (static_exp param_env) size_l) in
                 let t = Idents.Env.find od.o_ident obj_env in
                 let assgn_elem i_l =
-                  [ Aassgn (Parray_elem (Pthis od.o_ident, List.map mk_var i_l), Enew (t, params)) ]
+                  [ Java.Aassgn (Parray_elem (Pthis od.o_ident, List.map mk_var i_l), Enew (t, params)) ]
                 in
-                (Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size_l), [])))
+                (Java.Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size_l), [])))
                  :: (fresh_nfor size_l assgn_elem)
                  :: acts
         in
@@ -475,24 +477,24 @@ let class_def_list classes cd_l =
         let allocate acts vd = match Modules.unalias_type vd.v_type with
           | Types.Tarray _ ->
               let t = ty param_env vd.v_type in
-              ( Aassgn (Pthis vd.v_ident, Enew_array (t,[])) ):: acts
+              ( Java.Aassgn (Pthis vd.v_ident, Enew_array (t,[])) ):: acts
           | _ -> acts
         in
         (* init actions [acts] in reverse order : *)
         (* init member variables *)
-        let acts = [Ablock reset_mems] in
+        let acts = [Java.Ablock reset_mems] in
         (* allocate member arrays *)
         let acts = List.fold_left allocate acts cd.cd_mems in
         (* init member objects *)
         let acts = List.fold_left obj_init_act acts cd.cd_objs in
         (* init static params *)
         let acts = (copy_to_this vds_params)@acts in
-        { b_locals = []; b_body = acts }
+        { Java.b_locals = []; Java.b_body = acts }
       in mk_methode ~args:vds_params body (shortname class_name), obj_env
     in
     let fields =
       let mem_to_field fields vd =
-        (mk_field ~protection:Pprotected (ty param_env vd.v_type) vd.v_ident) :: fields
+        (Java.mk_field ~protection:Pprotected (ty param_env vd.v_type) vd.v_ident) :: fields
       in
       let obj_to_field fields od =
         let jty = match od.o_size with
@@ -500,7 +502,7 @@ let class_def_list classes cd_l =
           | Some size_l -> Tarray (Idents.Env.find od.o_ident obj_env,
                                    List.map (static_exp param_env) size_l)
         in
-        (mk_field ~protection:Pprotected jty od.o_ident) :: fields
+        (Java.mk_field ~protection:Pprotected jty od.o_ident) :: fields
       in
       let fields = fields_params in
       let fields = List.fold_left mem_to_field fields cd.cd_mems in
@@ -546,7 +548,7 @@ let type_dec_list classes td_l =
             (* [translate_field_name] will give the right result anywhere it is used,
             since the [ident_of_name] will keep it as it is unique in the class,
             see [Idents.enter_node classe_name] *)
-            mk_field jty field
+            Java.mk_field jty field
           in
 	  let f_l =
 	    List.sort
@@ -554,15 +556,15 @@ let type_dec_list classes td_l =
 		 compare (f1.Signature.f_name.name) (f2.Signature.f_name.name))
 	      f_l in
 	  let fields = List.map mk_field_jfield f_l in
-	  let cons_params = List.map (fun f -> mk_var_dec f.f_ident false f.f_type) fields in
+	  let cons_params = List.map (fun f -> Java.mk_var_dec f.f_ident false f.Java.f_type) fields in
 	  let cons_body =
 	    List.map
-	      (fun f -> Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
+	      (fun f -> Java.Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
 	      fields in
 	  let cons =
 	    mk_methode
 	      ~args:cons_params
-	      (mk_block cons_body)
+	      (Java.mk_block cons_body)
 	      classe_name.name in
           (mk_classe ~fields:fields ~constrs:[cons] classe_name) :: classes
   in
@@ -582,7 +584,7 @@ let const_dec_list cd_l = match cd_l with
         (* thus [translate_const_name] will gives the right result anywhere it is used. *)
         let value = Some (static_exp param_env ovalue) in
         let t = ty param_env otype in
-        mk_field ~static: true ~final: true ~value: value t name
+        Java.mk_field ~static: true ~final: true ~value: value t name
       in
       let fields = List.map mk_const_field cd_l in
       [mk_classe ~fields: fields classe_name]

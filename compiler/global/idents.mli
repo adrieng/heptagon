@@ -27,8 +27,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-open Names
-
 (** This modules manages unique identifiers,
   /!\ To be effective, [enter_node] has to be called when entering a node
   [gen_var] generates a variable identifier

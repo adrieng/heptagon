@@ -38,7 +38,7 @@ type 'a global_it_funs = {
   static_exp_desc    : 'a global_it_funs -> 'a -> static_exp_desc -> static_exp_desc * 'a;
   ty                 : 'a global_it_funs -> 'a -> ty -> ty * 'a;
   ct               : 'a global_it_funs -> 'a -> ct -> ct * 'a;
-  ck                 : 'a global_it_funs -> 'a -> ck -> ck * 'a;
+  ck                 : 'a global_it_funs -> 'a -> Clocks.ck -> Clocks.ck * 'a;
   link               : 'a global_it_funs -> 'a -> link -> link * 'a;
   var_ident          : 'a global_it_funs -> 'a -> var_ident -> var_ident * 'a;
   param              : 'a global_it_funs -> 'a -> param -> param * 'a;
@@ -97,14 +97,14 @@ and ct funs acc c = match c with
 
 and ck_it funs acc c = try funs.ck funs acc c with Fallback -> ck funs acc c
 and ck funs acc c = match c with
-  | Cbase -> c, acc
-  | Cvar(link_ref) ->
+  | Clocks.Cbase -> c, acc
+  | Clocks.Cvar(link_ref) ->
       let l, acc = link_it funs acc link_ref.contents in
-      Cvar {contents = l}, acc
-  | Con(ck, constructor_name, v) ->
+      Clocks.Cvar {contents = l}, acc
+  | Clocks.Con(ck, constructor_name, v) ->
       let ck, acc = ck_it funs acc ck in
       let v, acc = var_ident_it funs acc v in
-      Con (ck, constructor_name, v), acc
+      Clocks.Con (ck, constructor_name, v), acc
 
 and link_it funs acc c =
   try funs.link funs acc c with Fallback -> link funs acc c

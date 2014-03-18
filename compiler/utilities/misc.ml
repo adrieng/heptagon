@@ -172,7 +172,7 @@ let repeat_list v n =
 (** Same as List.mem_assoc but using the value instead of the key. *)
 let rec memd_assoc value = function
   | [] -> false
-  | (_,d)::l -> (d = value) or (memd_assoc value l)
+  | (_,d)::l -> (d = value) || (memd_assoc value l)
 
 (** Same as List.assoc but searching for a data and returning the key. *)
 let rec assocd value = function

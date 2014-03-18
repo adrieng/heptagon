@@ -216,9 +216,9 @@ let ssa_update_record dest src f v =
   List.map assgn_act fields
 
 let rec control map ck s = match ck with
-  | Cbase | Cvar { contents = Cindex _ } -> s
+  | Clocks.Cbase | Cvar { contents = Cindex _ } -> s
   | Cvar { contents = Clink ck } -> control map ck s
-  | Con(ck, c, n)  ->
+  | Clocks.Con(ck, c, n)  ->
     let x = ext_value_exp_from_name map n in
     control map ck (Acase(x, [(c, mk_block [s])]))
 
@@ -771,10 +771,10 @@ let translate_ty_def { Minils.t_name = name; Minils.t_desc = tdesc;
 
 let translate_const_def { Minils.c_name = name; Minils.c_value = se;
                           Minils.c_type = ty; Minils.c_loc = loc } =
-  { c_name = name;
-    c_value = se;
-    c_type = ty;
-    c_loc = loc }
+  { Obc.c_name = name;
+    Obc.c_value = se;
+    Obc.c_type = ty;
+    Obc.c_loc = loc }
 
 let program { Minils.p_modname = p_modname; Minils.p_opened = p_o; Minils.p_desc = pd; } =
   build_anon pd;

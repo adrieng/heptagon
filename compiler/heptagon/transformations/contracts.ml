@@ -261,7 +261,7 @@ let block funs (env, newvars, newequs, cont_vars, contracts) blk =
   let defnames = List.fold_left
     (fun env v -> Env.add v.v_ident v env)
     blk.b_defnames cont_vars' in
-  ({ blk with 
+  ({ blk with
     b_local = newvars' @ blk.b_local;
     b_equs = newequs' @ blk.b_equs;
     b_defnames = defnames;
@@ -280,7 +280,7 @@ let var_exp v = mk_exp (Evar v) tbool ~linearity:Ltop
 let true_exp = mk_exp (Econst (mk_static_bool true)) tbool ~linearity:Ltop
 
 let node_dec funs (env, newvars, newequs, cont_vars, contracts) nd =
-  let nd, (env, newvars, newequs, cont_vars, contracts) =
+  let nd, (env, newvars, newequs, _cont_vars, contracts) =
     Hept_mapfold.node_dec funs (env, newvars, newequs, cont_vars, contracts) nd in
 
   (* Build assume and guarantee parts from contract list (list of
@@ -330,7 +330,7 @@ let node_dec funs (env, newvars, newequs, cont_vars, contracts) nd =
 let program p =
   let funs =
     { defaults with exp = exp; block = block; node_dec = node_dec; eq = eq; } in
-  let (p, (_, newvars, newequs, cont_vars, contracts)) =
+  let (p, (_, newvars, newequs, _cont_vars, contracts)) =
     Hept_mapfold.program funs (QualEnv.empty, [], [], [], []) p in
   assert (newvars = []);
   assert (newequs = []);

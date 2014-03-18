@@ -63,36 +63,36 @@ let edesc funs stateful ed =
       | Eapp({ a_op = (Enode f | Efun f) } as app, e_list, r) ->
           let ty_desc = find_value f in
           let op = if ty_desc.node_stateful then Enode f else Efun f in
-          Eapp({ app with a_op = op }, e_list, r), ty_desc.node_stateful or stateful
+          Eapp({ app with a_op = op }, e_list, r), ty_desc.node_stateful || stateful
       | Eiterator(it, ({ a_op = (Enode f | Efun f) } as app), n, pe_list, e_list, r) ->
           let ty_desc = find_value f in
           let op = if ty_desc.node_stateful then Enode f else Efun f in
           Eiterator(it, { app with a_op = op }, n, pe_list, e_list, r),
-          ty_desc.node_stateful or stateful
+          ty_desc.node_stateful || stateful
       | _ -> ed, stateful
 
 (* Automatons have an hidden state whatever *)
 let eqdesc funs stateful eqd =
   let eqd, stateful = Hept_mapfold.eqdesc funs stateful eqd in
   let is_automaton = match eqd with | Eautomaton _ -> true | _ -> false in
-  eqd, stateful or is_automaton
+  eqd, stateful || is_automaton
 
 (* update eq_stateful field *)
 let eq funs acc eq =
   let eq, stateful = Hept_mapfold.eq funs false eq in
-    { eq with eq_stateful = stateful }, stateful or acc
+    { eq with eq_stateful = stateful }, stateful || acc
 
 (* update b_stateful field *)
 let block funs acc b =
   let b, stateful = Hept_mapfold.block funs false b in
-    { b with b_stateful = stateful }, acc or stateful
+    { b with b_stateful = stateful }, acc || stateful
 
 (* Strong preemption should be decided with stateles expressions *)
 let escape_unless funs acc esc =
   let esc, stateful = Hept_mapfold.escape funs false esc in
     if stateful then
       message esc.e_cond.e_loc Eexp_should_be_stateless;
-    esc, acc or stateful
+    esc, acc || stateful
 
 (* Present conditions should be stateless *)
 let present_handler funs acc ph =
@@ -107,8 +107,8 @@ let present_handler funs acc ph =
 let node_dec funs _ n =
   Idents.enter_node n.n_name;
   let n, stateful = Hept_mapfold.node_dec funs false n in
-  if stateful & (not n.n_stateful) then message n.n_loc Eshould_be_a_node;
-  if not stateful & n.n_stateful (* update the global env if stateful is not necessary *)
+  if stateful && (not n.n_stateful) then message n.n_loc Eshould_be_a_node;
+  if not stateful && n.n_stateful (* update the global env if stateful is not necessary *)
   then Modules.replace_value n.n_name
          { (Modules.find_value n.n_name) with Signature.node_stateful = false };
   { n with n_stateful = stateful }, false (* set stateful only if needed *)

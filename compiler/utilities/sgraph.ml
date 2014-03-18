@@ -47,7 +47,7 @@ let tag = ref 0
 let new_tag () = incr tag; !tag
 let containt g = g.g_containt
 let linked g1 g2 =
-  (List.memq g2 g1.g_depends_on) or (List.memq g1 g2.g_depends_on)
+  (List.memq g2 g1.g_depends_on) || (List.memq g1 g2.g_depends_on)
 let make c =
   { g_containt = c; g_tag = new_tag (); g_visited = false;
     g_mark = -1; g_depends_on = []; g_depends_by = [] }

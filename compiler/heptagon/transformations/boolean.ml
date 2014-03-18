@@ -324,15 +324,15 @@ let rec on_list ck bl vtree =
   | [], _ -> ck
   | b::bl', VNode(v,t0,t1) ->
       let (c,t) = if b then (ctrue,t1) else (cfalse,t0) in
-      on_list (Con(ck,c,v)) bl' t
+      on_list (Clocks.Con(ck,c,v)) bl' t
   | _::_, Vempty -> failwith("on_list: non-coherent boolean list and tree")
 
 let rec translate_ck env ck =
   match ck with
-  | Cbase -> Cbase
-  | Cvar {contents = Clink(ck)} -> translate_ck env ck
-  | Cvar {contents = Cindex(_)} -> ck
-  | Con(ck,c,n) ->
+  | Clocks.Cbase -> Clocks.Cbase
+  | Clocks.Cvar {contents = Clink(ck)} -> translate_ck env ck
+  | Clocks.Cvar {contents = Cindex(_)} -> ck
+  | Clocks.Con(ck,c,n) ->
       let ck = translate_ck env ck in
       begin
         try
@@ -341,7 +341,7 @@ let rec translate_ck env ck =
           on_list ck bl info.clocked_var
         with Not_found ->
           (* Boolean clock *)
-          Con(ck,c,n)
+          Clocks.Con(ck,c,n)
       end
 
 let rec translate_ct env ct =
@@ -418,21 +418,21 @@ let rec when_list e bl vtree =
       let ck = assert_ck e.e_ct_annot in
       (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck))) ty_bool in *)
       let e_when = { e with
-                       e_ct_annot = Some (Ck(Con(ck,c,v)));
+                       e_ct_annot = Some (Ck(Clocks.Con(ck,c,v)));
                        e_desc = Ewhen(e,c,v) } in
       when_list e_when bl' t
   | _::_, Vempty -> failwith("when_list: non-coherent boolean list and tree")
 
 let rec when_ck desc li ty ck =
   match ck with
-  | Cbase | Cvar _ ->
+  | Clocks.Cbase | Clocks.Cvar _ ->
       { e_desc = desc;
         e_level_ck = ck;
         e_ct_annot = Some(Ck(ck));
         e_linearity = li;
         e_ty = ty;
         e_loc = no_location }
-  | Con(ck',c,v) ->
+  | Clocks.Con(ck',c,v) ->
       let e = when_ck desc li ty ck' in
       (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck'))) ty_bool in *)
       { e_desc = Ewhen(e,c,v);
@@ -480,7 +480,7 @@ let rec base_value ck li ty =
                 let e_list = aux [] n in
                 { e_desc = mk_tuple e_list;
                   e_ty = Tprod(List.map (fun _ -> ty_bool) e_list);
-                  e_level_ck = Cbase;
+                  e_level_ck = Clocks.Cbase;
                   e_ct_annot = Some(Ck(ck));
                   e_linearity = li;
                   e_loc = no_location }
@@ -492,7 +492,7 @@ let rec base_value ck li ty =
       let e_list = List.map (base_value ck li) ty_list in
       { e_desc = mk_tuple e_list;
         e_ty = Tprod(List.map (fun e -> e.e_ty) e_list);
-        e_level_ck = Cbase;
+        e_level_ck = Clocks.Cbase;
         e_ct_annot = Some(Ck(ck));
         e_linearity = li;
         e_loc = no_location;
@@ -501,7 +501,7 @@ let rec base_value ck li ty =
       let e = base_value ck li ty in
       { e_desc = Eapp((mk_app ~params:[se] Earray_fill), [e], None);
         e_ty = Tarray(e.e_ty,se);
-        e_level_ck = Cbase;
+        e_level_ck = Clocks.Cbase;
         e_ct_annot = Some(Ck(ck));
         e_linearity = li;
         e_loc = no_location;
@@ -515,13 +515,13 @@ let rec merge_tree ck ty li e_map btree vtree =
       let e = QualEnv.find name e_map in
       { e with e_ct_annot = Some(Ck(ck)) }
   | Tree(t1,t2), VNode(v,vt1,vt2) ->
-      let e1 = merge_tree (Con(ck,cfalse,v)) ty li e_map t1 vt1
-      and e2 = merge_tree (Con(ck,ctrue,v)) ty li e_map t2 vt2
+      let e1 = merge_tree (Clocks.Con(ck,cfalse,v)) ty li e_map t1 vt1
+      and e2 = merge_tree (Clocks.Con(ck,ctrue,v)) ty li e_map t2 vt2
       in
       (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck))) ty_bool in *)
       { e_desc = Emerge(v,[(cfalse,e1);(ctrue,e2)]);
         e_ty = ty;
-        e_level_ck = Cbase;
+        e_level_ck = Clocks.Cbase;
         e_ct_annot = Some(Ck(ck));
         e_linearity = li;
         e_loc = no_location }
@@ -672,7 +672,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
           e_ty = ty_bool;
           e_linearity = var_from.v_linearity;
           e_loc = no_location }
-    | _ckvar::l, Con(ck',c,v) ->
+    | _ckvar::l, Clocks.Con(ck',c,v) ->
         (* assert v = _ckvar *)
         let e = when_ck l ck' var in
         (* let e_v = mk_exp (Evar v) ~ct_annot:(Some(Ck(ck'))) ty_bool in *)
@@ -718,7 +718,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
     | v1::v_list, [] ->
         (* Root : no new id, only rec calls for sons *)
         (* Build left son (ck on False(vi_...)) *)
-        let ck_0 = Con(ck,cfalse,v1) in
+        let ck_0 = Clocks.Con(ck,cfalse,v1) in
         let acc_loc,acc_eq,t0 =
           clocked_tree
             (acc_loc,acc_eq)
@@ -726,7 +726,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
             ("_0")
             v_list ck_0 in
         (* Build right son (ck on True(vi_...))*)
-        let ck_1 = Con(ck,ctrue,v1) in
+        let ck_1 = Clocks.Con(ck,ctrue,v1) in
         let acc_loc,acc_eq,t1 =
           clocked_tree
             (acc_loc,acc_eq)
@@ -750,7 +750,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
           (mk_equation (Eeq(Evarpat(id),(when_ck acc_var ck vi))))
           ::acc_eq in
         (* Build left son (ck on False(vi_...)) *)
-        let ck_0 = Con(ck,cfalse,id) in
+        let ck_0 = Clocks.Con(ck,cfalse,id) in
         let acc_loc,acc_eq,t0 =
           clocked_tree
             (acc_loc,acc_eq)
@@ -758,7 +758,7 @@ let var_dec_list (acc_vd,acc_loc,acc_eq) var_from n =
             (suffix ^ "_0")
             v_list ck_0 in
         (* Build right son (ck on True(vi_...))*)
-        let ck_1 = Con(ck,ctrue,id) in
+        let ck_1 = Clocks.Con(ck,ctrue,id) in
         let acc_loc,acc_eq,t1 =
           clocked_tree
             (acc_loc,acc_eq)
@@ -796,7 +796,7 @@ let buildenv_var_dec (acc_vd,acc_loc,acc_eq,env) ({v_type = ty} as v) =
                           v info.ty_nb_var in
                       let env =
                         Env.add
-                          v.v_ident 
+                          v.v_ident
                           { var_enum = info;
                             var_list = vl;
                             clocked_var = t }

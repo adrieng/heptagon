@@ -95,7 +95,7 @@ and new_init_ty ff t = _ty true true ff t
 and ty ff t = _ty false false ff t
 
 and var_dec init ff vd =
-  if init & not vd.vd_alias then
+  if init && not vd.vd_alias then
     fprintf ff "%a %a = %a" ty vd.vd_type var_ident vd.vd_ident exp (Java.default_value vd.vd_type)
   else
     fprintf ff "%a %a" ty vd.vd_type var_ident vd.vd_ident
