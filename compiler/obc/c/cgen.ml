@@ -218,7 +218,7 @@ let rec create_affect_lit dest l ty =
 
 (** Creates the expression dest <- src (copying arrays if necessary). *)
 and create_affect_stm dest src ty =
-  match ty with
+  match unalias_ctype ty with
     | Cty_arr (n, bty) ->
         (match src with
            | Carraylit l -> create_affect_lit dest l bty
