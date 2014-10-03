@@ -31,5 +31,4 @@
 (* Interface documentation is in `ctrlNbacGen.ml' only. *)
 (** *)
 
-val gen: Minils.program ->
-  (string * CtrlNbac.Symb.t CtrlNbac.AST.node) list * Minils.program
+val gen: Minils.program -> (string * 'f CtrlNbac.AST.node) list * Minils.program

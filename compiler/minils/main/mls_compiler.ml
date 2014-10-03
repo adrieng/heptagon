@@ -41,11 +41,10 @@ let gen_n_output_ctrln p =
   let nodes, p = CtrlNbacGen.gen p in
   let filename = filename_of_name (Names.modul_to_string p.Minils.p_modname) in
   let dir = clean_dir (build_path (filename ^"_ctrln")) in
-  let sm = CtrlNbac.Symb.string_man in
   List.iter begin fun (node_name, node) ->
-    let oc = open_out (dir ^"/"^ node_name ^".nbac") in
+    let oc = open_out (dir ^"/"^ node_name ^".ctrln") in
     let fmt = Format.formatter_of_out_channel oc in
-    CtrlNbac.AST.print sm ~print_header:print_header_info fmt node;
+    CtrlNbac.AST.print_node ~print_header:print_header_info fmt node;
     close_out oc
   end nodes;
   p
@@ -89,7 +88,7 @@ let compile_program p =
       pass "Scheduling" true Schedule.program p pp
   in
 
-  let ctrln = List.mem "ctrl-n" !target_languages in
+  let ctrln = List.mem "ctrln" !target_languages in
   let _p = pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp in
   (* NB: XXX _p is ignored for now... *)
 

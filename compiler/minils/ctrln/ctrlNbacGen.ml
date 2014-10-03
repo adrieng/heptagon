@@ -39,10 +39,8 @@ open Types
 open Names
 open Idents
 open Minils
-open BatMap
-open CtrlNbac.AST
 open CtrlNbac
-module SSet = Set.Make (Symb)
+open AST
 
 let (&) f g = f g
 
@@ -51,25 +49,24 @@ exception Untranslatable of string                    (* XXX not catched yet! *)
 (* --- *)
 
 (** Private record gathering temporary generation data *)
-type gen_data =
+type 'f gen_data =
     {
-      typdefs: Symb.t typdefs;
-      decls: Symb.t decls;
+      typdefs: 'f typdefs;
+      decls: 'f node_decls;
       outputs: SSet.t;
-      init: Symb.t bexp;
-      init_cond: Symb.t bexp;
-      assertion: Symb.t bexp;
-      invariant: Symb.t bexp;
+      init_cond: 'f bexp;
+      init_state: 'f bexp;
+      assertion: 'f bexp;
+      invariant: 'f bexp;
       (* reachable: bexp; *)
     }
 
 (* --- *)
 
-let sm = Symb.string_man
 let tt = mk_bcst' true
 let ff = mk_bcst' false
-let init_state_var = "__init__"                            (* XXX uniqueness? *)
-let init_cond = `Ref init_state_var
+let init_cond_str = "__init__"                             (* XXX uniqueness? *)
+and sink_state_str = "__sink__"
 
 let ref_of_typ = function
   | `Bool -> mk_bref
@@ -78,8 +75,8 @@ let ref_of_typ = function
 
 (* --- *)
 
-let translate_constr { name } = mk_label sm name   (* XXX use module name (?) *)
-let translate_constrs cl = mk_etyp sm (List.map translate_constr cl)
+let translate_constr { name } = mk_label & mk_symb name (* XXX use module name (?) *)
+let translate_constrs cl = mk_etyp (List.map translate_constr cl)
 
 (* --- *)
 
@@ -88,7 +85,7 @@ let translate_typ typ = match Modules.unalias_type typ with
   | Tid ({ qual = Pervasives; name = "int" }) -> `Int
   | Tid ({ qual = Pervasives; name = "real" }) -> `Real                (* XXX? *)
   | Tid ({ name = tn } as t) -> (match Modules.find_type t with
-      | Tenum _ -> `Enum (mk_typname sm tn)
+      | Tenum _ -> `Enum (mk_typname (mk_symb tn))
       | _ -> raise & Untranslatable ("type "^ fullname t))
   | Tprod _ -> raise & Untranslatable ("product type")
   | Tarray _ -> raise & Untranslatable ("array type")
@@ -119,22 +116,22 @@ let translate_static_nexp se = match simplify_static_exp se with
 
 (* --- *)
 
-let rec translate_ext_bexp ~pref : _ -> string bexp = function
+let rec translate_ext_bexp ~pref : _ -> 'f bexp = function
   | Wconst se -> translate_static_bexp se
-  | Wvar id -> mk_bref' (pref & name id)
+  | Wvar id -> mk_bref' (pref & mk_symb & name id)
   | Wfield _ -> failwith "TODO Unsupported Boolean `field' expression!"
   | Wwhen (ev, _, _) -> translate_ext_bexp ~pref ev.w_desc
   | Wreinit _ -> failwith "TODO Unsupported Boolean `reinit' expression!"
 
-and translate_ext_eexp ~pref : _ -> string eexp = function
+and translate_ext_eexp ~pref : _ -> 'f eexp = function
   | Wconst se -> translate_static_eexp se
-  | Wvar id -> mk_eref' (pref & name id)
+  | Wvar id -> mk_eref' (pref & mk_symb & name id)
   | Wwhen (ev, _, _) -> translate_ext_eexp ~pref ev.w_desc
   | _ -> failwith "TODO Unsupported Enum expression!"
 
-and translate_ext_nexp ~pref : _ -> string nexp = function
+and translate_ext_nexp ~pref : _ -> 'f nexp = function
   | Wconst se -> translate_static_nexp se
-  | Wvar id -> mk_nref' (pref & name id)
+  | Wvar id -> mk_nref' (pref & mk_symb & name id)
   | Wwhen (ev, _, _) -> translate_ext_nexp ~pref ev.w_desc
   | _ -> failwith "TODO Unsupported Numerical expression!"
 
@@ -157,7 +154,7 @@ let translate_app ~pref op el =
     |("<=" | "<=."), [e;f]  -> mk_le e f
     |(">"  | ">."),  [e;f]  -> mk_gt e f
     |(">=" | ">=."), [e;f]  -> mk_ge e f
-    |("+"  | "+."), e::f::l -> mk_add e f l
+    |("+"  | "+."), e::f::l -> mk_sum e f l
     |("-"  | "-."), e::f::l -> mk_sub e f l
     |("*"  | "*."), e::f::l -> mk_mul e f l
     |("/"  | "/."), e::f::l -> mk_div e f l
@@ -166,6 +163,7 @@ let translate_app ~pref op el =
   match op, List.map (translate_ext ~pref) el with
     | Eequal, [e;f] -> mk_eq e f
     | Efun { qual=Pervasives; name }, el -> pervasives (name, el)
+    (*  *)
     | Eifthenelse, [c;t;e] -> mk_cond c t e
     | _ -> failwith "Unsupported application!"
 
@@ -176,7 +174,7 @@ let rec translate_exp ~pref t ({ e_desc = desc; e_ty = ty }) =  (* XXX clock? *)
     | Eextvalue ext -> translate_ext ~pref ext
     | Eapp ({ a_op }, el, _) -> translate_app ~pref a_op el
     | Emerge (v, (_c, e) :: l) ->
-        let v = pref & name v in
+        let v = pref & mk_symb & name v in
         List.fold_left
           (fun x (c, e) -> mk_cond
             (mk_eq (mk_eref v) (mk_ecst (translate_constr c)))
@@ -194,27 +192,27 @@ let rec translate_clk ~pref on off = function
   | Clocks.Cbase | Clocks.Cvar { contents = Clocks.Cindex _ } -> on
   | Clocks.Cvar { contents = Clocks.Clink ck } -> translate_clk ~pref on off ck
   | Clocks.Con (ck, {name = cstr}, v) ->
-      let v = pref & name v in
-      let c = mk_eq (mk_eref v) (mk_ecst (mk_label sm cstr)) in
+      let v = pref & mk_symb & name v in
+      let c = mk_eq (mk_eref v) (mk_ecst (mk_label (mk_symb cstr))) in
       translate_clk ~pref (mk_cond c on off) off ck
 
 (* --- *)
 
-let add_state_var gd v typ exp i =
-  let mk_init = match typ, i with
-    | _,       None   -> mk_and' tt
+let add_state_var gd v typ exp init =
+  let mk_init = match typ, init with
+    | _,       None   -> (fun b -> b)
     | `Bool,   Some i -> mk_and' (mk_beq' (mk_bref' v) (translate_static_bexp i))
     | `Enum _, Some i -> mk_and' (mk_eeq' (mk_eref' v) (translate_static_eexp i))
     | #ntyp,   Some i -> mk_and' (mk_neq' (mk_nref' v) (translate_static_nexp i))
   in
   { gd with
-    decls = PMap.add v (typ, NBstate exp) gd.decls;
-    init = mk_init gd.init; }
+    decls = SMap.add v (typ, `State (exp, None), None) gd.decls;
+    init_state = mk_init gd.init_state; }
 
 let add_output_var gd v typ exp = add_state_var gd v typ exp None
 
 let add_local_var gd v typ exp =
-  { gd with decls = PMap.add v (typ, NBlocal exp) gd.decls; }
+  { gd with decls = SMap.add v (typ, `Local (exp, None), None) gd.decls; }
 
 (* --- *)
 
@@ -225,7 +223,7 @@ let translate_eq ~pref gd ({ eq_lhs = pat;
   match pat with
     | Evarpat id ->
         begin
-          let v = pref & name id in
+          let v = pref & mk_symb & name id in
           match exp with
             | Efby (init, ev) ->
                 let ev = translate_ext ~pref ev in
@@ -242,13 +240,14 @@ let translate_eqs ~pref = List.fold_left (translate_eq ~pref)
 
 (* --- *)
 
-let prefix_vars ~pref vars =
+let prefix_vars ~pref vars : symb -> symb =
   let vars = List.fold_left
     (fun acc { v_ident = id } ->                                (* XXX "_" only? *)
-      let v = name id in PMap.add v (sm.sm_prepend "_" v) acc)
-    (PMap.create Symb.compare) vars
+      let v = mk_symb & name id in
+      SMap.add v (mk_symb ("_" ^ Symb.to_string v)) acc)
+    (SMap.empty) vars
   in
-  fun p -> pref (try PMap.find p vars with Not_found -> p)
+  fun p -> pref (try SMap.find p vars with Not_found -> p)
 
 (** Contract translation *)
 let translate_contract ~pref gd
@@ -256,11 +255,14 @@ let translate_contract ~pref gd
        c_assume = a;      c_enforce = g;
        c_assume_loc = a'; c_enforce_loc = g';
        c_controllables = cl }) =
-  let declare_contr decls { v_ident = id; v_type = typ } i =
-    let v = name id in
-    PMap.add v (translate_typ typ, NBcontr (0, i)) decls in
-  let declare_contrs decls cl = fst & List.fold_left
-    (fun (decls, i) c -> (declare_contr decls c i, succ i)) (decls, 0) cl in
+  let declare_contr decls { v_ident = id; v_type = typ } rank =
+    let v = mk_symb & name id in
+    SMap.add v (translate_typ typ, `Contr (AST.one, rank, None), None) decls in
+  let declare_contrs decls cl =
+    fst & List.fold_left
+      (fun (decls, rank) c -> (declare_contr decls c rank, AST.succ rank))
+      (decls, one) cl
+  in
 
   let pref = prefix_vars ~pref c_local in
   let gd = { gd with decls = declare_contrs gd.decls cl } in
@@ -271,7 +273,7 @@ let translate_contract ~pref gd
   let gd, ok =
     if !Compiler_options.nosink
     then (gd, ok)
-    else let sink = pref "_ok_state_flag" in               (* XXX uniqueness? *)
+    else let sink = pref & mk_symb sink_state_str in
          let ok = `Bexp (mk_bcond' gd.init_cond tt ok) in
          (add_state_var gd sink `Bool ok None, mk_bref' sink)
   in
@@ -283,34 +285,41 @@ let translate_contract ~pref gd
 
 (** Node translation. Note the given node is not expored if it does not comprize a
     contract. *)
-let translate_node typdefs = function
+let translate_node typdefs : 'n -> 'n * (name * 'f AST.node) option = function
   | ({ n_contract = None } as node) -> node, None
   | ({ n_name; n_input; n_output; n_equs; n_contract = Some contr } as node) ->
-      let declare_output om { v_ident = id } = SSet.add (name id) om in
+      let declare_output s { v_ident = id } = SSet.add (mk_symb & name id) s in
       let declare_input decls { v_ident = id; v_type = typ } =
-        PMap.add (name id) (translate_typ typ, NBinput 0) decls in
+        SMap.add (mk_symb & name id) (translate_typ typ, `Input one, None)
+          decls in
 
       let pref p = p in
-      let empty = PMap.create Symb.compare in
       let outputs = List.fold_left declare_output SSet.empty n_output in
-      let decls = List.fold_left declare_input empty n_input in
-      let decls = PMap.add init_state_var (`Bool, NBstate (`Bexp ff)) decls in
+      let decls = List.fold_left declare_input SMap.empty n_input in
 
-      let gd = { typdefs; decls; outputs; init_cond; init = init_cond;
+
+      let init_cond_var = mk_symb init_cond_str in
+      let init_cond = mk_bref' init_cond_var in
+      let decls = SMap.add init_cond_var
+        (`Bool, `State (`Bexp ff, None), None) decls in
+      (* let init_cond = tt in *)
+
+      let gd = { typdefs; decls; outputs;
+                 init_cond; init_state = tt;
                  assertion = tt; invariant = tt; } in
       let gd = translate_contract ~pref gd contr in
       let gd = translate_eqs ~pref gd n_equs in
 
-      let ctrln_node = {
+      let ctrln_node_desc = {
         cn_typs = typdefs;
         cn_decls = gd.decls;
-        cn_init = gd.init;
-        cn_assertion = mk_or' init_cond gd.assertion;
+        cn_init = mk_and' gd.init_state init_cond;
+        cn_assertion = (* mk_or' init_cond  *)gd.assertion;
         cn_invariant = Some (mk_or' init_cond gd.invariant);
         cn_reachable = None;
         cn_attractive = None;
       } in
-      node, Some (n_name.name, ctrln_node)
+      node, Some (n_name.name, (`Desc ctrln_node_desc : 'f AST.node))
 
 (* --- *)
 
@@ -334,11 +343,11 @@ let gen ({ p_desc = desc } as p) =
             | node, None -> (typdefs, nodes, Pnode node :: descs)
           end
       | Ptype { t_name = { name }; t_desc = Type_enum cl } ->
-          let tn = mk_typname sm name and typ = translate_constrs cl in
-          let typdefs = declare_typ sm tn typ typdefs in
+          let tn = mk_typname & mk_symb name and typ = translate_constrs cl in
+          let typdefs = declare_typ tn typ typdefs in
           (typdefs, nodes, descs)
       | p -> (typdefs, nodes, p :: descs)
-    end (empty_typdefs sm, [], []) desc
+    end (empty_typdefs, [], []) desc
   in
   (* let cnp_name = Names.modul_to_string p.p_modname *)
   let cnp_nodes = List.rev nodes and p_desc = List.rev descs in

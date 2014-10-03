@@ -81,7 +81,7 @@ let targets =
     mk_target ~load_conf:java_conf "java" (Obc Java_main.program);
     mk_target ~load_conf:java_conf "java14" (Obc Java14_main.program);
     mk_target "z3z" (Minils_no_params ignore);
-    mk_target "ctrl-n" (Minils_no_params ignore);            (* NB: `ignore'? *)
+    mk_target "ctrln" (Minils_no_params ignore);             (* NB: `ignore'? *)
     mk_target "obc" (Obc write_obc_file);
     mk_target "obc_np" (Obc_no_params write_obc_file);
     mk_target "epo" (Minils write_object_file) ]
