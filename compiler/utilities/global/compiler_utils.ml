@@ -59,6 +59,10 @@ let separateur = "\n*********************************************\
 let comment ?(sep=separateur) s =
   if !verbose then Format.printf "%s%s@." sep s
 
+let warn: ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a = fun f ->
+  Format.kfprintf (fun f -> Format.kfprintf (fun f -> Format.pp_print_newline f ()) f)
+    Format.std_formatter "Warning: " f
+
 let do_pass d f p pp =
   comment (d ^ " ...\n");
   let _start = Unix.gettimeofday () in

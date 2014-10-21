@@ -30,5 +30,6 @@ lib/java/.classpath
 /test/image_filters/java/*
 compiler/doc.odocl
 compiler/doc.docdir
+compiler/_tags
 config
 config.status

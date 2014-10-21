@@ -1,9 +1,13 @@
 include ../config
 
-ifeq ($(ENABLE_SIMULATOR), yes)
-BIN:=heptc.$(TARGET) hepts.$(TARGET)
-else
 BIN:=heptc.$(TARGET)
+
+ifeq ($(ENABLE_SIMULATOR), yes)
+  BIN:=$(BIN) hepts.$(TARGET)
+endif
+
+ifeq ($(ENABLE_CTRL2EPT), yes)
+  BIN:=$(BIN) ctrl2ept.$(TARGET)
 endif
 
 .PHONY: all clean native byte clean debug install

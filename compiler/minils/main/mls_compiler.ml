@@ -31,6 +31,8 @@ open Compiler_options
 
 let pp p = if !verbose then Mls_printer.print stdout p
 
+;; IFDEF HAS_CTRLNBAC THEN
+
 (* NB: I localize file name determination logics for CtrlNbac output into this
    module, because its place is not in CtrlNbacGen... *)
 (** [gen_n_output_ctrln p] translates the Minils program [p] into
@@ -48,6 +50,17 @@ let gen_n_output_ctrln p =
     close_out oc
   end nodes;
   p
+
+let maybe_ctrln_pass p =
+  let ctrln = List.mem "ctrln" !target_languages in
+  let _p = pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp in
+  ()
+
+;; ELSE
+
+let maybe_ctrln_pass p = p
+
+;; END
 
 let compile_program p =
   (* Clocking *)
@@ -88,8 +101,7 @@ let compile_program p =
       pass "Scheduling" true Schedule.program p pp
   in
 
-  let ctrln = List.mem "ctrln" !target_languages in
-  let _p = pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp in
+  let _p = maybe_ctrln_pass p in
   (* NB: XXX _p is ignored for now... *)
 
   let z3z = List.mem "z3z" !target_languages in

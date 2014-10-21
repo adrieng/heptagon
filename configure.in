@@ -61,7 +61,12 @@ AC_CHECK_OCAML_PKG([lablgtk2])
 
 AC_CHECK_OCAML_PKG([reatk.ctrlNbac])
  if test "${OCAML_PKG_reatk_ctrlNbac}" = "no"; then
-   AC_MSG_ERROR([Please install reatk package.])
+   package_reatk_ctrlNbac="ocaml"; #dummy flag
+   ctrln_pp="-UENABLE_CTRLN"
+   AC_MSG_WARN([Controllable-Nbac backend and translators disabled.])
+ else
+   package_reatk_ctrlNbac="package(reatk.ctrlNbac)"
+   ctrln_pp="-DENABLE_CTRLN"
  fi
 
 if test "$enable_local_stdlib" = "yes"; then
@@ -77,3 +82,7 @@ AC_SUBST(stdlib_dir)
 AC_SUBST(enable_simulator)
 
 AC_OUTPUT(config)
+
+AC_SUBST(package_reatk_ctrlNbac)
+AC_SUBST(ctrln_pp)
+AC_OUTPUT(compiler/_tags)
