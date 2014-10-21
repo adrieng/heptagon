@@ -586,6 +586,7 @@ LIBOBJS
 enable_simulator
 stdlib_dir
 INSTALL
+OCAML_PKG_reatk_ctrlNbac
 OCAML_PKG_lablgtk2
 OCAML_PKG_ocamlgraph
 OCAML_PKG_menhirLib
@@ -3969,6 +3970,34 @@ $as_echo "not found" >&6; }
     enable_simulator=no
     { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Could not find 'lablgtk2'. The simulator will not be built" >&5
 $as_echo "$as_me: WARNING: Could not find 'lablgtk2'. The simulator will not be built" >&2;}
+ fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OCaml findlib package reatk.ctrlNbac" >&5
+$as_echo_n "checking for OCaml findlib package reatk.ctrlNbac... " >&6; }
+
+  unset found
+  unset pkg
+  found=no
+  for pkg in reatk.ctrlNbac  ; do
+    if $OCAMLFIND query $pkg >/dev/null 2>/dev/null; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: found" >&5
+$as_echo "found" >&6; }
+      OCAML_PKG_reatk_ctrlNbac=$pkg
+      found=yes
+      break
+    fi
+  done
+  if test "$found" = "no" ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: not found" >&5
+$as_echo "not found" >&6; }
+    OCAML_PKG_reatk_ctrlNbac=no
+  fi
+
+
+
+ if test "${OCAML_PKG_reatk_ctrlNbac}" = "no"; then
+   as_fn_error $? "Please install reatk package." "$LINENO" 5
  fi
 
 if test "$enable_local_stdlib" = "yes"; then
