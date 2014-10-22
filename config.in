@@ -11,6 +11,7 @@ INSTALL= @INSTALL@
 BUILD= _build
 COMPILER=heptc
 SIMULATOR=hepts
+CTRLNBAC2EPT_TRANSLATOR=ctrl2ept
 
 INSTALL_BINDIR=$(bindir)
 INSTALL_LIBDIR=$(libdir)/heptagon
@@ -20,3 +21,4 @@ OCAMLBUILD=STDLIB=$(STDLIB_DIR) @OCAMLBUILD@ -use-ocamlfind
 
 TARGET=byte
 ENABLE_SIMULATOR=@enable_simulator@
+ENABLE_CTRL2EPT_TRANSLATOR=@enable_ctrl2ept@

@@ -32,20 +32,9 @@
 open Lexing
 open Format
 
-(* two important global variables: [input_name] and [input_chan] *)
 type location =
     Loc of position  (* Position of the first character *)
          * position  (* Position of the next character following the last one *)
-
-
-let input_name = ref ""                 (* Input file name. *)
-
-let input_chan = ref stdin              (* The channel opened on the input. *)
-
-let initialize iname ic =
-  input_name := iname;
-  input_chan := ic
-
 
 let no_location =  Loc (dummy_pos, dummy_pos)
 

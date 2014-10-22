@@ -1,13 +1,13 @@
 include ../config
 
-BIN:=heptc.$(TARGET)
+BIN:=$(COMPILER)
 
 ifeq ($(ENABLE_SIMULATOR), yes)
-  BIN:=$(BIN) hepts.$(TARGET)
+  BIN:=$(BIN) $(SIMULATOR)
 endif
 
-ifeq ($(ENABLE_CTRL2EPT), yes)
-  BIN:=$(BIN) ctrl2ept.$(TARGET)
+ifeq ($(ENABLE_CTRL2EPT_TRANSLATOR), yes)
+  BIN:=$(BIN) $(CTRLNBAC2EPT_TRANSLATOR)
 endif
 
 .PHONY: all clean native byte clean debug install
@@ -15,39 +15,20 @@ endif
 all: $(TARGET)
 
 native:
-ifeq ($(ENABLE_SIMULATOR), yes)
-	$(OCAMLBUILD) $(COMPILER).native $(SIMULATOR).native
-else
-	$(OCAMLBUILD) $(COMPILER).native
-endif
+	$(OCAMLBUILD) $(addsuffix .native,$(BIN))
 
 byte:
-ifeq ($(ENABLE_SIMULATOR), yes)
-	$(OCAMLBUILD) $(COMPILER).byte $(SIMULATOR).byte
-else
-	$(OCAMLBUILD) $(COMPILER).byte
-endif
+	$(OCAMLBUILD) $(addsuffix .byte,$(BIN))
 
 debug:
-ifeq ($(ENABLE_SIMULATOR), yes)
-	$(OCAMLBUILD) $(COMPILER).d.byte $(SIMULATOR).d.byte
-else
-	$(OCAMLBUILD) $(COMPILER).d.byte
-endif
+	$(OCAMLBUILD) $(addsuffix .d.byte,$(BIN))
 
 profile:
-ifeq ($(ENABLE_SIMULATOR), yes)
-	$(OCAMLBUILD) $(COMPILER).p.native $(SIMULATOR).p.native
-else
-	$(OCAMLBUILD) $(COMPILER).p.native
-endif
+	$(OCAMLBUILD) $(addsuffix .p.native,$(BIN))
 
 install: 
 	$(INSTALL) -d $(INSTALL_BINDIR)
-	$(INSTALL) $(COMPILER).$(TARGET) $(INSTALL_BINDIR)/$(COMPILER)
-ifeq ($(ENABLE_SIMULATOR), yes)
-	$(INSTALL) $(SIMULATOR).$(TARGET) $(INSTALL_BINDIR)/$(SIMULATOR)
-endif
+	$(foreach t,$(BIN),$(INSTALL) $(t).$(TARGET) $(INSTALL_BINDIR)/$(t);)
 
 clean:
 	$(OCAMLBUILD) -clean

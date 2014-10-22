@@ -59,9 +59,20 @@ let separateur = "\n*********************************************\
 let comment ?(sep=separateur) s =
   if !verbose then Format.printf "%s%s@." sep s
 
+let info: ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a = fun f ->
+  if !verbose then
+    Format.kfprintf (fun f -> Format.kfprintf (fun f -> Format.pp_print_newline f ()) f)
+      Format.err_formatter "Info: " f
+  else
+    Format.ifprintf Format.err_formatter f
+
 let warn: ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a = fun f ->
   Format.kfprintf (fun f -> Format.kfprintf (fun f -> Format.pp_print_newline f ()) f)
-    Format.std_formatter "Warning: " f
+    Format.err_formatter "Warning: " f
+
+let error: ('a, Format.formatter, unit, unit, unit, unit) format6 -> 'a = fun f ->
+  Format.kfprintf (fun f -> Format.kfprintf (fun f -> Format.pp_print_newline f ()) f)
+    Format.err_formatter "Error: " f
 
 let do_pass d f p pp =
   comment (d ^ " ...\n");
