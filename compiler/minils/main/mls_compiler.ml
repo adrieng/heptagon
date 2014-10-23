@@ -31,7 +31,7 @@ open Compiler_options
 
 let pp p = if !verbose then Mls_printer.print stdout p
 
-;; IFDEF HAS_CTRLNBAC THEN
+;; IFDEF ENABLE_CTRLN THEN
 
 (* NB: I localize file name determination logics for CtrlNbac output into this
    module, because its place is not in CtrlNbacGen... *)
