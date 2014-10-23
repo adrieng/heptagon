@@ -4012,6 +4012,7 @@ $as_echo "not found" >&6; }
  if test "${OCAML_PKG_reatk_ctrlNbac}" = "no"; then
    package_reatk_ctrlNbac="ocaml"; #dummy flag
    ctrln_pp="-UENABLE_CTRLN"
+   enable_ctrl2ept=no
    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Controllable-Nbac backend and translators disabled." >&5
 $as_echo "$as_me: WARNING: Controllable-Nbac backend and translators disabled." >&2;}
  else
