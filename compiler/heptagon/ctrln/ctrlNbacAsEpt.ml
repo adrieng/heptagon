@@ -28,6 +28,7 @@
 (*                                                                     *)
 (***********************************************************************)
 
+open Signature
 open Types
 open Names
 open Idents
@@ -119,6 +120,17 @@ let eqrel: eqrel -> fun_name = function
   | `Eq -> Initial.mk_pervasives "="
   | `Ne -> Initial.mk_pervasives "<>"
 
+let totrel t : totrel -> fun_name = function
+  | `Lt when t = Initial.tfloat -> Initial.mk_pervasives "<"
+  | `Le when t = Initial.tfloat -> Initial.mk_pervasives "<="
+  | `Gt when t = Initial.tfloat -> Initial.mk_pervasives ">"
+  | `Ge when t = Initial.tfloat -> Initial.mk_pervasives ">="
+  | `Lt -> Initial.mk_pervasives "<"
+  | `Le -> Initial.mk_pervasives "<="
+  | `Gt -> Initial.mk_pervasives ">"
+  | `Ge -> Initial.mk_pervasives ">="
+  | #eqrel as r -> eqrel r
+
 let nuop t : nuop -> fun_name = function
   | `Opp when t = Initial.tfloat -> Initial.mk_pervasives "~-."
   | `Opp -> Initial.mk_pervasives "~-"
@@ -161,13 +173,13 @@ let translate_expr gd e =
     | `Buop (op, e) -> mkb (mk_uapp (Efun (buop op)) (tb e))
     | `Bnop (op, e, f, l) -> mkb_bapp ?flag (Efun (bnop op)) tb e f l
     | `Bcmp (re, e, f) -> mkb (mk_bapp (Efun (eqrel re)) (tb e) (tb f))
-    | `Ncmp _ -> assert false
     | `Ecmp (re, e, f) -> mkb (mk_bapp (Efun (eqrel re)) (te e) (te f))
     | `Pcmp (re, e, f) -> mkb (mk_bapp (Efun (eqrel re)) (tp e) (tp f))
+    | `Ncmp (re, e, f) -> mkb_ncmp re e f
     | `Pin (e, f, l) -> mkb_bapp_eq ?flag tp e f l
     | `Bin (e, f, l) -> mkb_bapp_eq ?flag tb e f l
     | `Ein (e, f, l) -> mkb_bapp_eq ?flag te e f l
-    | `BIin _ -> assert false
+    | `BIin _ -> raise (Untranslatable ("bounded Integer membership", flag))
     | #cond as c -> trcond ?flag tb tb c
     | #flag as e -> apply' tb e
   and te ?flag = ignore flag; function
@@ -183,11 +195,15 @@ let translate_expr gd e =
     | `Int i -> mkp Initial.tint (Econst (Initial.mk_static_int i))
     | `Real r -> mkp Initial.tfloat (Econst (Initial.mk_static_float r))
     | `Mpq r -> tn ?flag (`Real (Mpqf.to_float r))
-    | `Bint _ -> assert false
+    | `Bint (s, w, _) -> raise (Untranslatable (Format.asprintf "constant of \
+                                 type %a" print_typ (`Bint (s, w)), flag))
     | `Nuop (op, e) -> mk_nuapp ?flag op e
     | `Nnop (op, e, f, l) -> mk_nnapp ?flag op e f l
     | #cond as c -> trcond ?flag tb tn c
     | #flag as e -> apply' tn e
+  and mkb_ncmp ?flag re e f =
+    let { e_ty } as e = tn ?flag e and f = tn f in
+    mkb (mk_bapp (Efun (totrel e_ty re)) e f)
   and mk_nuapp ?flag op e =
     let { e_ty } as e = tn ?flag e in
     mkp e_ty (mk_uapp (Efun (nuop e_ty op)) e)
@@ -223,18 +239,26 @@ let decl_typs typdefs gd =
 
 (* --- *)
 
-let decl_var_acc gd v t acc =
-  let ident = ident_of_name (Symb.to_string v) in
+let decl_var' gd v id t =
   let vd = {
-    v_ident = ident;
-    v_type = translate_typ gd v t;
+    v_ident = id;
+    v_type = t;
     v_linearity = Linearity.Ltop;
     v_clock = Clocks.Cbase;
     v_last = Var;
     v_loc = Location.no_location;
   } in
-  gd.env <- Env.add ident vd gd.env;
-  gd.var_names <- SMap.add v ident gd.var_names;
+  gd.env <- Env.add id vd gd.env;
+  gd.var_names <- SMap.add v id gd.var_names;
+  vd
+
+let decl_ident gd id t =
+  let v = mk_symb (name id) in
+  decl_var' gd v id t
+
+let decl_symb_acc gd v t acc =
+  let ident = ident_of_name (Symb.to_string v) in
+  let vd = decl_var' gd v ident (translate_typ gd v t) in
   vd :: acc
 
 (* --- *)
@@ -250,7 +274,7 @@ let translate_equ_acc gd v e acc =
 (* --- *)
 
 let block_of_func gd { fni_local_vars; fni_all_specs } =
-  let locals = SMap.fold (decl_var_acc gd) fni_local_vars [] in
+  let locals = SMap.fold (decl_symb_acc gd) fni_local_vars [] in
   let equs = SMap.fold (translate_equ_acc gd) fni_all_specs [] in
   {
     b_local = locals;
@@ -269,26 +293,41 @@ let io_of_func gd { fni_io_vars } =
      List.rev_append (SMap.bindings fnig_output_vars) o)) ([], []) fni_io_vars
   in
   let i = List.sort (fun (a, _) (b, _) -> scmp b a) i in                 (* rev. *)
-  let i = List.fold_left (fun acc (v, t) -> decl_var_acc gd v t acc) [] i in
+  let i = List.fold_left (fun acc (v, t) -> decl_symb_acc gd v t acc) [] i in
   let o = List.sort (fun (a, _) (b, _) -> scmp b a) o in                 (* rev. *)
-  let o = List.fold_left (fun acc (v, t) -> decl_var_acc gd v t acc) [] o in
+  let o = List.fold_left (fun acc (v, t) -> decl_symb_acc gd v t acc) [] o in
   i, o
 
 (* --- *)
 
-let node_of_func gd func =
-  let n_name = gd.qname "func" in
-  enter_node n_name;
+(* /!\ Inputs omitted in the signature w.r.t the Controllable-Nbac model should
+   not appear anywhere in equations... *)
+let io_of_func_match gd { node_inputs; node_outputs } =
+  let decl_arg = function
+    | { a_name = Some n; a_type = ty } -> decl_ident gd (ident_of_name n) ty
+    | _ -> failwith "Missing argument names in signature"
+  in
+  let i = List.map decl_arg node_inputs in
+  let o = List.map decl_arg node_outputs in
+  i, o
+
+(* --- *)
+
+let node_of_func gd ?node_sig n_name func =
+  enter_node n_name;                                                   (* ??? *)
   let fi = gather_func_info func in
-  let n_input, n_output = io_of_func gd fi in
+  let n_input, n_output = match node_sig with
+    | None -> io_of_func gd fi
+    | Some s -> io_of_func_match gd s
+  in
   let block = block_of_func gd fi in
-  {
+  Pnode {
     n_name;
-    n_stateful = false;                                                (* ??? *)
-    n_unsafe = false;                                                  (* ??? *)
+    n_stateful = false;
+    n_unsafe = false;
     n_input;
     n_output;
-    n_contract = None;                                             (* <- TODO *)
+    n_contract = None;                                    (* <- TODO: assume? *)
     n_block = block;
     n_loc = Location.no_location;
     n_params = [];
@@ -297,14 +336,25 @@ let node_of_func gd func =
 
 (* --- *)
 
-let gen_func ~module_name func =
+let gen_func ?node_sig ~node_name func =
   let { fn_typs; fn_decls } = func_desc func in
-  let gd = mk_gen_data module_name (fn_decls:> ('f, 'f var_spec) decls) fn_typs in
-  let typs = decl_typs fn_typs gd in
-  let typs = List.rev_map (fun t -> Ptype t) typs in
-  let node = node_of_func gd func in
+  let modul = modul node_name in
+  let gd = mk_gen_data modul (fn_decls:> ('f, 'f var_spec) decls) fn_typs in
+  let typs = List.map (fun t -> Ptype t) (decl_typs fn_typs gd) in
+  let node = node_of_func gd ?node_sig node_name func in
+  node, typs
+
+(* --- *)
+
+let create_prog modul =
   {
-    p_modname = Module module_name;
+    p_modname = modul;
     p_opened = [];
-    p_desc = List.rev (Pnode node :: typs);
+    p_desc = [];
   }
+
+let add_to_prog e ({ p_desc } as p) =
+  (* TODO: check typ duplicates *)
+  { p with p_desc = List.rev (e :: List.rev p_desc); }
+
+(* --- *)

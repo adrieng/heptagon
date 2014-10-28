@@ -114,7 +114,9 @@ let compile source_f =
 
 (** [main] function to be launched *)
 let main () =
-  let read_qualname f = Arg.String (fun s -> f (Names.qualname_of_string s)) in
+  let read_qualname f =
+    Arg.String (fun s -> f (try Names.qualname_of_string s with
+      | Exit -> raise (Arg.Bad ("Invalid name: "^ s)))) in
   try
     Arg.parse
       [

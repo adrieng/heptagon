@@ -56,7 +56,8 @@ and add_include d =
 (* where is the standard library *)
 let locate_stdlib () =
   print_string (try Sys.getenv "HEPTLIB" with Not_found -> standard_lib);
-  print_newline ()
+  print_newline ();
+  exit 0
 
 let show_version () =
   Format.printf "The Heptagon compiler, version %s (%s)@."

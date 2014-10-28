@@ -7,8 +7,9 @@
 (* Adrien Guatto, Parkas, ENS                                          *)
 (* Cedric Pasteur, Parkas, ENS                                         *)
 (* Marc Pouzet, Parkas, ENS                                            *)
+(* Nicolas Berthier, SUMO, INRIA                                       *)
 (*                                                                     *)
-(* Copyright 2012 ENS, INRIA, UJF                                      *)
+(* Copyright 2014 ENS, INRIA, UJF                                      *)
 (*                                                                     *)
 (* This file is part of the Heptagon compiler.                         *)
 (*                                                                     *)
@@ -26,32 +27,41 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Ocamlbuild_plugin
-open Ocamlbuild_plugin.Options
-open Myocamlbuild_config
+open Compiler_utils
+open Names
 
-let df = function
-  | After_rules ->
-      ocamlfind_after_rules ();
+let dirname_for_modul modul =
+  build_path (filename_of_name (modul_to_string modul) ^ "_ctrln")
 
-      (* Tell ocamlbuild about the camlp4 library. *)
-      ocaml_lib ~extern:true ~dir:(ocamlfind_query "camlp4") "camlp4";
+let ctrln_for_node { qual; name } =
+  dirname_for_modul qual ^"/"^ name ^".ctrln"
 
-      (* Add preproc.cmo to the ocaml pre-processor when use_preproc is set *)
-      flag ["ocaml"; "pp"; "use_preproc"] (A "preproc.cmo");
+let ctrls_for_node { qual; name } =
+  Printf.sprintf "%s/%s.%d.ctrls" (dirname_for_modul qual) name
 
-      (* Running ocamldep on ocaml code that is tagged with use_preproc will
-         require the cmo.  Note that you only need this declaration when the
-         syntax extension is part of the sources to be compiled with
-         ocamlbuild. *)
-      dep ["ocaml"; "ocamldep"; "use_preproc"] ["preproc.cmo"];
+let ctrlf_for_node { qual; name } =
+  Printf.sprintf "%s/%s.ctrlf" (dirname_for_modul qual) name
 
-      flag ["ocaml"; "parser" ; "menhir" ; "use_menhir"] (S[A"--explain";
-                                                            A"--table"]);
+let controller_modul = function
+  | Module n -> Module (n ^ "_ctrls")
+  | QualModule ({ name = n } as q) -> QualModule { q with name = n ^ "_ctrls" }
+  | _ -> failwith "Unexpected module"
 
-      flag ["ocaml"; "compile" ] (S[A"-w"; A"Ae"; A"-warn-error"; A"PU";
-                                    A"-w"; A"-9-48"]);
+let controller_node ?num { qual; name } = match num with
+  | Some num -> { qual = controller_modul qual;
+                 name = Printf.sprintf "%s_ctrlr%d" name num }
+  | None -> { qual = controller_modul qual;
+             name = Printf.sprintf "%s_ctrlr0" name }
 
-  | _ -> ()
+let save_controller_modul_for modul =
+  let om = Modules.current () in
+  let cm = controller_modul modul in
+  let epci = String.uncapitalize (Names.modul_to_string cm) ^ ".epci" in
+  Modules.select cm;
+  let oc = open_out_bin epci in
+  output_value oc (Modules.current_module ());
+  close_out oc;
+  Modules.select om
 
-let _ = dispatch df
+let init_cond_str = "__init__"                             (* XXX uniqueness? *)
+and sink_state_str = "__sink__"

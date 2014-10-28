@@ -160,6 +160,10 @@ let initialize modul =
   List.iter open_module !default_used_modules
 
 
+let current () = g_env.current_mod
+let select modul = g_env.current_mod <- modul
+
+
 (** {3 Add functions prevent redefinitions} *)
 
 let _check_not_defined env f =

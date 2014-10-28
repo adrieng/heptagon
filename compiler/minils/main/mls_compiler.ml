@@ -7,6 +7,7 @@
 (* Adrien Guatto, Parkas, ENS                                          *)
 (* Cedric Pasteur, Parkas, ENS                                         *)
 (* Marc Pouzet, Parkas, ENS                                            *)
+(* Nicolas Berthier, SUMO, INRIA                                       *)
 (*                                                                     *)
 (* Copyright 2012 ENS, INRIA, UJF                                      *)
 (*                                                                     *)
@@ -41,10 +42,10 @@ let pp p = if !verbose then Mls_printer.print stdout p
     output into a file called "f_ctrln/n.nbac" *)
 let gen_n_output_ctrln p =
   let nodes, p = CtrlNbacGen.gen p in
-  let filename = filename_of_name (Names.modul_to_string p.Minils.p_modname) in
-  let dir = clean_dir (build_path (filename ^"_ctrln")) in
+  Ctrln_utils.save_controller_modul_for p.Minils.p_modname;
+  ignore (clean_dir (Ctrln_utils.dirname_for_modul p.Minils.p_modname));
   List.iter begin fun (node_name, node) ->
-    let oc = open_out (dir ^"/"^ node_name ^".ctrln") in
+    let oc = open_out (Ctrln_utils.ctrln_for_node node_name) in
     let fmt = Format.formatter_of_out_channel oc in
     CtrlNbac.AST.print_node ~print_header:print_header_info fmt node;
     close_out oc
@@ -53,12 +54,11 @@ let gen_n_output_ctrln p =
 
 let maybe_ctrln_pass p =
   let ctrln = List.mem "ctrln" !target_languages in
-  let _p = pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp in
-  ()
+  pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp
 
 ;; ELSE
 
-let maybe_ctrln_pass p = p
+let maybe_ctrln_pass p = None
 
 ;; END
 
@@ -101,19 +101,22 @@ let compile_program p =
       pass "Scheduling" true Schedule.program p pp
   in
 
-  let _p = maybe_ctrln_pass p in
-  (* NB: XXX _p is ignored for now... *)
-
   let z3z = List.mem "z3z" !target_languages in
+  let ctrln = List.mem "ctrln" !target_languages in
+  let ctrl = z3z || ctrln in
+  if z3z && ctrln then
+    warn "ignoring target `ctrln' (incompatible with target `z3z').";
+
+  let p = maybe_ctrln_pass p in
   let p = pass "Sigali generation" z3z Sigalimain.program p pp in
-  (* Re-scheduling after sigali generation *)
+
+  (* Re-scheduling after generation *)
   let p =
     if not !Compiler_options.use_old_scheduler then
-      pass "Scheduling (with minimization of interferences)" z3z Schedule_interf.program p pp
+      pass "Scheduling (with minimization of interferences)" ctrl Schedule_interf.program p pp
     else
-      pass "Scheduling" z3z Schedule.program p pp
+      pass "Scheduling" ctrl Schedule.program p pp
   in
-
 
   (* Memory allocation *)
   let p = pass "Memory allocation" !do_mem_alloc Interference.program p pp in

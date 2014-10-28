@@ -34,6 +34,7 @@
 
 (* -------------------------------------------------------------------------- *)
 
+open Ctrln_utils
 open Signature
 open Types
 open Names
@@ -48,34 +49,56 @@ exception Untranslatable of string                    (* XXX not catched yet! *)
 
 (* --- *)
 
+let tt = mk_bcst' true
+let ff = mk_bcst' false
+
+(* --- *)
+
 (** Private record gathering temporary generation data *)
 type 'f gen_data =
     {
       typdefs: 'f typdefs;
       decls: 'f node_decls;
-      outputs: SSet.t;
+      base: (var_ident * ty) SMap.t;
+      local: (var_ident * ty) SMap.t;
+      contrs: (var_ident * ty) SMap.t;
+      output: IdentSet.t;
       init_cond: 'f bexp;
       init_state: 'f bexp;
       assertion: 'f bexp;
       invariant: 'f bexp;
       (* reachable: bexp; *)
+      remaining_contrs: SSet.t;      (* All controllable inputs that has not yet
+                                        been assigned to a U/C group. *)
+      local_contr_deps: SSet.t SMap.t;         (* All variables that depend on a
+                                                  controllable. *)
+      extra_inputs: SSet.t;
+      uc_groups: (SSet.t * SSet.t) list;
     }
 
 (* --- *)
 
-let tt = mk_bcst' true
-let ff = mk_bcst' false
-let init_cond_str = "__init__"                             (* XXX uniqueness? *)
-and sink_state_str = "__sink__"
-
-let ref_of_typ = function
-  | `Bool -> mk_bref
-  | `Enum _ -> mk_eref
-  | `Int | `Real -> mk_nref
+let mk_gen_data typdefs decls input local output init_cond =
+  {
+    typdefs;
+    decls;
+    base = input;
+    local;
+    contrs = SMap.empty;
+    output;
+    remaining_contrs = SSet.empty;
+    local_contr_deps = SMap.empty;
+    extra_inputs = SSet.empty;
+    uc_groups = [];
+    init_cond;
+    init_state = tt;
+    assertion = tt;
+    invariant = tt;
+  }
 
 (* --- *)
 
-let translate_constr { name } = mk_label & mk_symb name (* XXX use module name (?) *)
+let translate_constr { name } = mk_label & mk_symb name (* XXX use qual name? *)
 let translate_constrs cl = mk_etyp (List.map translate_constr cl)
 
 (* --- *)
@@ -91,18 +114,23 @@ let translate_typ typ = match Modules.unalias_type typ with
   | Tarray _ -> raise & Untranslatable ("array type")
   | Tinvalid -> failwith "Encountered an invalid type!"
 
+let ref_of_ty ty = match translate_typ ty with
+  | `Bool -> mk_bref
+  | `Enum _ -> mk_eref
+  | `Int | `Real -> mk_nref
+
 (* --- *)
 
 let simplify_static_exp se = (Static.simplify QualEnv.empty se).se_desc
 
 let translate_static_bexp se = match simplify_static_exp se with
-  | Sbool true | Sconstructor { qual=Pervasives; name="true" } -> tt
-  | Sbool false | Sconstructor { qual=Pervasives; name="false" } -> ff
+  | Sbool true | Sconstructor { qual = Pervasives; name = "true" } -> tt
+  | Sbool false | Sconstructor { qual = Pervasives; name = "false" } -> ff
   | _ -> failwith ("Boolean static expression expected!")
 
 let translate_static_eexp se = match simplify_static_exp se with
-  | Sconstructor { qual=Pervasives; name="true" as n }
-  | Sconstructor { qual=Pervasives; name="false" as n } ->
+  | Sconstructor { qual = Pervasives; name = "true" as n }
+  | Sconstructor { qual = Pervasives; name = "false" as n } ->
       failwith ("Enum static expression expected! (found `"^n^"')")
   | Sconstructor c -> `Enum (translate_constr c)
   | _ -> failwith ("Enum static expression expected!")
@@ -110,8 +138,8 @@ let translate_static_eexp se = match simplify_static_exp se with
 let translate_static_nexp se = match simplify_static_exp se with
   | Sint v -> `Int v
   | Sfloat v -> `Real v
-  | Sop ({ qual=Pervasives; name="~-" },[{ se_desc=Sint v }]) -> `Int (-v)
-  | Sop ({ qual=Pervasives; name="~-." },[{ se_desc=Sfloat v }]) -> `Real (-.v)
+  | Sop ({ qual = Pervasives; name="~-" },[{ se_desc = Sint v }]) -> `Int (-v)
+  | Sop ({ qual = Pervasives; name="~-." },[{ se_desc=Sfloat v }]) -> `Real (-.v)
   | _ -> failwith ("Numerical static expression expected!")
 
 (* --- *)
@@ -162,15 +190,14 @@ let translate_app ~pref op el =
   in
   match op, List.map (translate_ext ~pref) el with
     | Eequal, [e;f] -> mk_eq e f
-    | Efun { qual=Pervasives; name }, el -> pervasives (name, el)
-    (*  *)
+    | Efun { qual = Pervasives; name }, el -> pervasives (name, el)
     | Eifthenelse, [c;t;e] -> mk_cond c t e
     | _ -> failwith "Unsupported application!"
 
 (** [translate_exp gd e] translates the {e memoryless} expression [e] into its
     Controllable Nbac representation.  *)
-let rec translate_exp ~pref t ({ e_desc = desc; e_ty = ty }) =  (* XXX clock? *)
-  let typ = translate_typ ty in assert (t = typ); match desc with
+let rec translate_exp ~pref ({ e_desc = desc }) =               (* XXX clock? *)
+  match desc with
     | Eextvalue ext -> translate_ext ~pref ext
     | Eapp ({ a_op }, el, _) -> translate_app ~pref a_op el
     | Emerge (v, (_c, e) :: l) ->
@@ -181,7 +208,7 @@ let rec translate_exp ~pref t ({ e_desc = desc; e_ty = ty }) =  (* XXX clock? *)
             (translate_ext ~pref e) x)
           (translate_ext ~pref e)
           l
-    | Ewhen (exp, _, _) -> translate_exp ~pref t exp
+    | Ewhen (exp, _, _) -> translate_exp ~pref exp
     | Efby _ -> failwith "TODO: translate_exp (fby)"
     | Estruct _ -> failwith "TODO: translate_exp (struct)"
     | _ -> failwith "TODO: translate_exp"
@@ -198,7 +225,18 @@ let rec translate_clk ~pref on off = function
 
 (* --- *)
 
-let add_state_var gd v typ exp init =
+let acc_dependencies_on vars deps_on_vars i e = fold_exp_dependencies
+  (fun v s ->
+    if SSet.mem v vars then SSet.add v s
+    else try SSet.union s (SMap.find v deps_on_vars) with
+      | Not_found -> s)
+  e i
+
+(* --- *)
+
+let add_state_var' ~pref gd id ty exp init =
+  let v = pref & mk_symb & name id in
+  let typ = translate_typ ty in
   let mk_init = match typ, init with
     | _,       None   -> (fun b -> b)
     | `Bool,   Some i -> mk_and' (mk_beq' (mk_bref' v) (translate_static_bexp i))
@@ -207,119 +245,299 @@ let add_state_var gd v typ exp init =
   in
   { gd with
     decls = SMap.add v (typ, `State (exp, None), None) gd.decls;
-    init_state = mk_init gd.init_state; }
+    init_state = mk_init gd.init_state; }, v
 
-let add_output_var gd v typ exp = add_state_var gd v typ exp None
+let add_state_var ~pref gd id ty exp init =
+  let gd, v = add_state_var' ~pref gd id ty exp init in
+  { gd with base = SMap.add v (id, ty) gd.base; }
 
-let add_local_var gd v typ exp =
-  { gd with decls = SMap.add v (typ, `Local (exp, None), None) gd.decls; }
+let add_output_var ~pref gd id ty exp =
+  add_state_var' ~pref gd id ty exp None |> fst
+
+
+let add_local_var ~pref gd id ty exp =
+  let v = pref & mk_symb & name id in
+  let typ = translate_typ ty in
+  let ldeps = fold_exp_dependencies (fun v acc ->
+    if SSet.mem v gd.remaining_contrs then SSet.add v acc
+    else try SSet.union acc (SMap.find v gd.local_contr_deps) with
+      | Not_found -> acc)
+    exp
+    SSet.empty
+  in
+  let local_contr_deps = SMap.add v ldeps gd.local_contr_deps in
+  { gd with
+    decls = SMap.add v (typ, `Local (exp, None), None) gd.decls;
+    local_contr_deps; }
+
+let declare_additional_input ~pref gd id =
+  let l = mk_symb & name id in
+  try
+    let v = pref l in
+    let t = SMap.find l gd.local |> snd |> translate_typ in
+    { gd with
+      decls = SMap.add v (t, `Input one, None) gd.decls;
+      extra_inputs = SSet.add v gd.extra_inputs; }
+  with
+    | Not_found ->                                 (* output of the main node. *)
+        assert (IdentSet.mem id gd.output);
+        gd
 
 (* --- *)
 
-let translate_eq ~pref gd ({ eq_lhs = pat;
-                             eq_rhs = { e_desc = exp; e_ty = typ } as rhs;
-                             eq_base_ck = clk }) =
-  let typ = translate_typ typ in
+let close_uc_group gd defined_contrs =
+  let rem = SSet.diff gd.remaining_contrs defined_contrs in
+  let lcd = SMap.map (SSet.inter rem) gd.local_contr_deps in
+  let lcd = SMap.filter (fun _ d -> not (SSet.is_empty d)) lcd in
+  { gd with
+    remaining_contrs = rem;
+    extra_inputs = SSet.empty;
+    local_contr_deps = lcd;
+    uc_groups = (gd.extra_inputs, defined_contrs) :: gd.uc_groups; }
+
+(* --- *)
+
+let pat_ids pat =
+  let rec acc_pat acc = function
+    | Evarpat id -> ((* pref &  *)(* mk_symb & name  *)id) :: acc
+    | Etuplepat pats -> List.fold_left acc_pat acc pats
+  in
+  acc_pat [] pat |> List.rev
+
+let translate_abstract_app ~pref gd pat _f args =
+  let results = pat_ids (* ~pref *) pat in
+  let args = List.map (translate_ext ~pref) args in
+  let gd =
+    (* in case of dependencies on remainging controllable variables, switch to
+       next U/C group. *)
+    let depc = List.fold_left
+      (acc_dependencies_on gd.remaining_contrs gd.local_contr_deps)
+      SSet.empty args
+    in
+    if SSet.is_empty depc then gd else close_uc_group gd depc
+  in
+  (* declare extra inputs. *)
+  (List.fold_left (declare_additional_input ~pref) gd results, [])
+
+(* --- *)
+
+let translate_eq ~pref (gd, equs)
+    ({ eq_lhs = pat;
+       eq_rhs = { e_desc = exp; e_ty = ty } as rhs;
+       eq_base_ck = clk } as eq)
+    =
   match pat with
     | Evarpat id ->
-        begin
-          let v = pref & mk_symb & name id in
-          match exp with
-            | Efby (init, ev) ->
-                let ev = translate_ext ~pref ev in
-                let ev = translate_clk ~pref ev (ref_of_typ typ v) clk in
-                add_state_var gd v typ ev init
-            | _ when SSet.mem v gd.outputs ->
-                add_output_var gd v typ (translate_exp ~pref typ rhs)
-            | _ ->
-                add_local_var gd v typ (translate_exp ~pref typ rhs)
+        begin match exp with
+          | Efby (init, ev) ->
+              let v = pref & mk_symb & name id in
+              let ev = translate_ext ~pref ev in
+              let ev = translate_clk ~pref ev (ref_of_ty ty v) clk in
+              (add_state_var ~pref gd id ty ev init, eq :: equs)
+          | Eapp ({ a_op = (Enode f | Efun f) }, args, None)
+                when f.qual <> Pervasives ->
+              let gd, equs' = translate_abstract_app ~pref gd pat f args in
+              (gd, eq :: equs' @ equs)
+          | _ when IdentSet.mem id gd.output ->
+              (add_output_var ~pref gd id ty (translate_exp ~pref rhs),
+               eq :: equs)
+          | _ ->
+              (add_local_var ~pref gd id ty (translate_exp ~pref rhs),
+               eq :: equs)
         end
-    | Etuplepat _ -> failwith "TODO: Minils.Etuplepat!"
+    | Etuplepat _ ->
+        begin match exp with
+          | Eapp ({ a_op = (Enode f | Efun f) }, args, None)
+                when f.qual <> Pervasives ->
+              let gd, equs' = translate_abstract_app ~pref gd pat f args in
+              (gd, eq :: equs' @ equs)
+          | _ -> failwith "TODO: Minils.Etuplepat construct!"
+        end
 
-let translate_eqs ~pref = List.fold_left (translate_eq ~pref)
+let translate_eqs ~pref acc equs =
+  let gd, equs = List.fold_left (translate_eq ~pref) acc equs in
+  gd, List.rev equs
 
 (* --- *)
 
 let prefix_vars ~pref vars : symb -> symb =
-  let vars = List.fold_left
-    (fun acc { v_ident = id } ->                                (* XXX "_" only? *)
-      let v = mk_symb & name id in
-      SMap.add v (mk_symb ("_" ^ Symb.to_string v)) acc)
-    (SMap.empty) vars
-  in
+  let vars = List.fold_left begin fun acc { v_ident = id } ->
+    let v = mk_symb & name id in
+    SMap.add v (mk_symb ("c_" ^ Symb.to_string v)) acc
+  end (SMap.empty) vars in
   fun p -> pref (try SMap.find p vars with Not_found -> p)
+
+let declare_contr (decls, contrs, vds)
+    ({ v_ident = id; v_type = ty } as vd) rank =
+  let v = mk_symb & name id in
+  SMap.add v (translate_typ ty, `Contr (one, rank, None), None) decls,
+  SMap.add v (id, ty) contrs,
+  vd :: vds
 
 (** Contract translation *)
 let translate_contract ~pref gd
     ({ c_local;           c_eq = equs;
        c_assume = a;      c_enforce = g;
        c_assume_loc = a'; c_enforce_loc = g';
-       c_controllables = cl }) =
-  let declare_contr decls { v_ident = id; v_type = typ } rank =
-    let v = mk_symb & name id in
-    SMap.add v (translate_typ typ, `Contr (AST.one, rank, None), None) decls in
-  let declare_contrs decls cl =
+       c_controllables = cl } as contract) =
+  let declare_contrs acc cl =
     fst & List.fold_left
-      (fun (decls, rank) c -> (declare_contr decls c rank, AST.succ rank))
-      (decls, one) cl
+      (fun (acc, rank) c -> (declare_contr acc c rank, AST.succ rank))
+      (acc, one) cl
   in
 
   let pref = prefix_vars ~pref c_local in
-  let gd = { gd with decls = declare_contrs gd.decls cl } in
-  let gd = translate_eqs ~pref gd equs in
+  let decls, contrs, locals = declare_contrs (gd.decls, SMap.empty, []) cl in
+  let c = SMap.fold (fun v _ -> SSet.add v) contrs SSet.empty in
+  let gd = { gd with decls; contrs; remaining_contrs = c; } in
+  let gd, equs' = translate_eqs ~pref (gd, []) equs in
   let ak = as_bexp & mk_and (translate_ext ~pref a) (translate_ext ~pref a')
   and ok = as_bexp & mk_and (translate_ext ~pref g) (translate_ext ~pref g') in
 
   let gd, ok =
     if !Compiler_options.nosink
     then (gd, ok)
-    else let sink = pref & mk_symb sink_state_str in
-         let ok = `Bexp (mk_bcond' gd.init_cond tt ok) in
-         (add_state_var gd sink `Bool ok None, mk_bref' sink)
+    else let sink = gen_var "" sink_state_str in
+         let sink_expr = mk_bref' & pref & mk_symb & name sink in
+         let ok = `Bexp ((* mk_bcond' gd.init_cond tt *) ok) in
+         (add_state_var ~pref gd sink Initial.tbool ok None, sink_expr)
   in
-  { gd with
-    assertion = mk_and' gd.assertion ak;
-    invariant = mk_and' gd.invariant ok; }
+  let assertion = mk_and' gd.assertion ak
+  and invariant = mk_and' gd.invariant ok in
+  ({ gd with assertion; invariant; }, { contract with c_eq = equs'; }, locals)
+
+(* --- *)
+
+let declare_output s { v_ident = id } =
+  IdentSet.add id s
+
+let declare_input m { v_ident = id; v_type = typ } =
+  SMap.add (mk_symb & name id) (translate_typ typ, `Input one, None) m
+
+let register_var_typ m { v_ident = id; v_type = typ } =
+  SMap.add (mk_symb & name id) (id, typ) m
+
+(* --- *)
+
+let finalize_uc_groups gd =
+  let gd = if SSet.is_empty gd.remaining_contrs then gd else
+      (* switch to last U/C group here, and declare controller call. *)
+      close_uc_group gd gd.remaining_contrs
+  in
+  if SSet.is_empty gd.extra_inputs then gd else
+    { gd with
+      extra_inputs = SSet.empty;
+      uc_groups = (gd.extra_inputs, SSet.empty) :: gd.uc_groups; }
+
+(* Note uc_groups are reversed in gd BEFORE the call to this function. *)
+let assign_uc_groups gd =
+  let gd = finalize_uc_groups gd in
+  let uc_groups = List.rev gd.uc_groups in      (* start from the first group *)
+  let decls, _ = List.fold_left begin fun (decls, group) (u, c) ->
+    let decls = SSet.fold (fun u decls -> match SMap.find u decls with
+      | (t, `Input _, l) ->
+          SMap.add u (t, `Input group, l) decls
+      | _ -> decls) u decls
+    in
+    let decls = SSet.fold (fun c decls -> match SMap.find c decls with
+      | (t, `Contr (_, r, l'), l) ->
+          SMap.add c (t, `Contr (group, r, l'), l) decls
+      | _ -> decls) c decls
+    in
+    decls, AST.succ group
+  end (gd.decls, AST.succ one) (List.tl uc_groups) in
+  { gd with decls; uc_groups }
+
+(* --- *)
+
+let scmp a b = String.compare (Symb.to_string a) (Symb.to_string b)
+
+let var_exp v ty =
+  mk_extvalue ~ty ~clock:Clocks.Cbase ~linearity:Linearity.Ltop (Wvar v)
+
+let decl_arg (v, t) =
+  mk_arg (Some (name v)) t Linearity.Ltop Signature.Cbase
+
+let gen_ctrlf_calls gd node_name equs =
+
+  let equs, _, _ = List.fold_left begin fun (equs, ubase, num) (u, c) ->
+
+    (* Controllable inputs of the current U/C group *)
+    let c = SSet.elements c in
+    let c = List.sort scmp c in                       (* XXX now optional (x) *)
+    let o = List.map (fun v -> SMap.find v gd.contrs) c in
+    let os = List.map decl_arg o in
+    let ov, ot = List.split o in
+    let ov = Etuplepat (List.map (fun v -> Evarpat v) ov) in
+
+    (* Accumulate state variables and all non-controllable inputs from the
+       beginning, plus all controllables from previous U/C groups *)
+    let u = SSet.fold (fun v -> SMap.add v (SMap.find v gd.local)) u ubase in
+    let i = SMap.bindings u in
+    let i = List.sort (fun (a, _) (b, _) -> scmp b a) i in  (* rev. i + ibid (x) *)
+    let is = List.rev_map (fun (_, p) -> decl_arg p) i in
+    let i = List.rev_map (fun (_, (v, t)) -> var_exp v t) i in
+
+    (* Build controller call *)
+    let func_name = controller_node ~num node_name in
+    let app = Eapp (mk_app (Efun func_name), i, None) in
+    let exp = mk_exp ~linearity:Linearity.Ltop Clocks.Cbase (Tprod ot) app in
+    let equ = mk_equation false ov exp in
+
+    (* Declare new node *)
+    let node_sig = Signature.mk_node Location.no_location ~extern:false is os
+      false false [] in
+    Modules.add_value func_name node_sig;
+
+    (* Augment base non-controllble inputs with current controllables *)
+    let u = List.fold_left (fun u v -> SMap.add v (SMap.find v gd.contrs) u) u c in
+
+    (equ :: equs, u, num + 1)
+  end (equs, gd.base, 0) gd.uc_groups in
+
+  equs
 
 (* --- *)
 
 (** Node translation. Note the given node is not expored if it does not comprize a
     contract. *)
-let translate_node typdefs : 'n -> 'n * (name * 'f AST.node) option = function
+let translate_node typdefs : 'n -> 'n * (qualname * 'f AST.node) option = function
   | ({ n_contract = None } as node) -> node, None
-  | ({ n_name; n_input; n_output; n_equs; n_contract = Some contr } as node) ->
-      let declare_output s { v_ident = id } = SSet.add (mk_symb & name id) s in
-      let declare_input decls { v_ident = id; v_type = typ } =
-        SMap.add (mk_symb & name id) (translate_typ typ, `Input one, None)
-          decls in
-
+  | ({ n_name; n_input; n_output; n_local; n_equs;
+       n_contract = Some contr } as node) ->
       let pref p = p in
-      let outputs = List.fold_left declare_output SSet.empty n_output in
+      let local = List.fold_left register_var_typ SMap.empty n_local in
+      let input = List.fold_left register_var_typ SMap.empty n_input in
+      let output = List.fold_left declare_output IdentSet.empty n_output in
       let decls = List.fold_left declare_input SMap.empty n_input in
 
-
       let init_cond_var = mk_symb init_cond_str in
-      let init_cond = mk_bref' init_cond_var in
-      let decls = SMap.add init_cond_var
-        (`Bool, `State (`Bexp ff, None), None) decls in
-      (* let init_cond = tt in *)
+      let init_cond = mk_bref' init_cond_var in    (* XXX what about gd.base? *)
+      let init_cond_spec = (`Bool, `State (`Bexp ff, None), None) in
+      let decls = SMap.add init_cond_var init_cond_spec decls in
 
-      let gd = { typdefs; decls; outputs;
-                 init_cond; init_state = tt;
-                 assertion = tt; invariant = tt; } in
-      let gd = translate_contract ~pref gd contr in
-      let gd = translate_eqs ~pref gd n_equs in
+      let gd = mk_gen_data typdefs decls input local output init_cond in
+      let gd, contract, locals' = translate_contract ~pref gd contr in
+      let gd, equs' = translate_eqs ~pref (gd, []) n_equs in
+      let gd = assign_uc_groups gd in
+      let equs' = gen_ctrlf_calls gd n_name equs' in
 
-      let ctrln_node_desc = {
-        cn_typs = typdefs;
-        cn_decls = gd.decls;
-        cn_init = mk_and' gd.init_state init_cond;
-        cn_assertion = (* mk_or' init_cond  *)gd.assertion;
-        cn_invariant = Some (mk_or' init_cond gd.invariant);
-        cn_reachable = None;
-        cn_attractive = None;
-      } in
-      node, Some (n_name.name, (`Desc ctrln_node_desc : 'f AST.node))
+      let ctrln_node_desc =
+        { cn_typs = typdefs;
+          cn_decls = gd.decls;
+          cn_init = mk_and' gd.init_state init_cond;
+          cn_assertion = (* mk_or' init_cond  *)gd.assertion;
+          cn_invariant = Some (mk_or' init_cond gd.invariant);
+          cn_reachable = None;
+          cn_attractive = None; }
+      and node =
+        { node with
+          n_equs = equs';
+          n_local = List.rev_append locals' n_local;
+          n_contract = Some contract; }
+      in
+
+      (node, Some (n_name, (`Desc ctrln_node_desc : 'f AST.node)))
 
 (* --- *)
 
@@ -330,9 +548,7 @@ let translate_node typdefs : 'n -> 'n * (name * 'f AST.node) option = function
     necessitating controller synthesis), (TODO: and a new Minils program, in
     which those nodes have been transformed so that they "call" their respective
     controller). *)
-let gen ({ p_desc = desc } as p) =
-  (* Highly insprited by Sigalimain.program. *)
-
+let gen ({ p_desc } as p) =
   let _cnp_typs, nodes, descs =
     (* XXX Should we gather all the type definitions before translating any
        node? *)
@@ -347,8 +563,7 @@ let gen ({ p_desc = desc } as p) =
           let typdefs = declare_typ tn typ typdefs in
           (typdefs, nodes, descs)
       | p -> (typdefs, nodes, p :: descs)
-    end (empty_typdefs, [], []) desc
+    end (empty_typdefs, [], []) p_desc
   in
-  (* let cnp_name = Names.modul_to_string p.p_modname *)
   let cnp_nodes = List.rev nodes and p_desc = List.rev descs in
   cnp_nodes, { p with p_desc }

@@ -23,12 +23,12 @@ let abort ?filename n msgs =
 (** File extensions officially understood by the tool, with associated input
     types. *)
 let ityps_alist = [
-  (* "ctrln", `Ctrln; "cn", `Ctrln; *)
   "ctrlf", `Ctrlf; "cf", `Ctrlf;
-  (* "ctrlr", `Ctrlr; "cr", `Ctrlr; *)
+  "ctrls", `Ctrlf; "cs", `Ctrlf; (* No need to discriminate between weaved and
+                                    split functions (for now). *)
 ]
 
-(** Name of official input types as understood by the tool. *)
+(** name of official input types as understood by the tool. *)
 let ityps = List.map fst ityps_alist
 
 let set_input_type r t =
@@ -38,16 +38,31 @@ let set_input_type r t =
 let inputs = ref []
 let output = ref ""
 let input_type = ref None
+let node = ref ""
 
+exception Help
+let usage = "Usage: ctrl2ept [options] { [-i] <filename> | -n <node> } \
+                    [ -- { <filename> } ]"
+let print_vers () =
+  fprintf err_formatter "ctrl2ept, version %s (compiled on %s)@." version date;
+  exit 0
 let anon x = inputs := x :: !inputs
-let options =
+let it = Arg.Symbol (ityps, set_input_type input_type)
+let options = Arg.align
   [
-    "-v",Arg.Set verbose, doc_verbose;
-    "-version", Arg.Unit show_version, doc_version;
-    "-i", Arg.String anon, "<file> ";
-    "-input-type", Arg.Symbol (ityps, set_input_type input_type), "Input file type";
-    "--input-type", Arg.Symbol (ityps, set_input_type input_type), "";
-    "-o", Arg.Set_string output, "<file> ";
+    "-i", Arg.String anon, "<file> Input file (`-' means standard input)";
+    "-input-type", it, " Input file type";
+    "--input-type", it, "";
+    "-o", Arg.Set_string output, "<file> Select output file (`-' means \
+                                  standard output)";
+    "-n", Arg.Set_string node, "<node> Select base input node";
+    "--", Arg.Rest anon, " Treat all remaining arguments as input files";
+    "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
+    "-stdlib", Arg.String set_stdlib, doc_stdlib;
+    "-v",Arg.Set verbose, " Set verbose mode";
+    "-version", Arg.Unit print_vers, " Print the version of the compiler";
+    "--version", Arg.Unit print_vers, "";
+    "-h", Arg.Unit (fun _ -> raise Help), "";
   ]
 
 (* -------------------------------------------------------------------------- *)
@@ -63,7 +78,7 @@ type out =
 let mk_oc basename =
   {
     out_exec = (fun ext ->
-      let filename = asprintf "%s.%s" basename ext in
+      let filename = asprintf "%s%s" basename ext in
       let oc = open_out filename in
       info "Outputting into `%s'…" filename;
       oc, (fun () -> flush oc; close_out oc));
@@ -101,13 +116,97 @@ let parse_input ?filename (parse: ?filename:string -> _) =
 
 (* -------------------------------------------------------------------------- *)
 
-let handle_ctrlf ?filename mk_oc =
+exception Error of string
+
+(* let hack_filter_inputs = let open AST in function *)
+(*   | `Desc ({ fn_decls = decls } as f) -> *)
+(*       (\* TODO: we should actually _substitute_ these variables with ff in the *)
+(*          definitions; yet I think they are unlikely to appear anywhere in the *)
+(*          controller. *\) *)
+(*       let init_symb = Symb.of_string Ctrln_utils.init_cond_str *)
+(*       and sink_symb = Symb.of_string Ctrln_utils.sink_state_str in *)
+(*       let decls = SMap.remove init_symb decls in *)
+(*       let decls = SMap.remove sink_symb decls in *)
+(*       `Desc { f with fn_decls = decls } *)
+(*   | _ -> failwith "should be given an unchecked function!" *)
+
+let parse_n_gen_ept_node ?filename ?node_name ?node_sig () =
   let name, func = parse_input ?filename CtrlNbac.Parser.Unsafe.parse_func in
-  let name = match name with None -> "ctrlr" | Some n -> n ^"_ctrlr" in
-  let prog = CtrlNbacAsEpt.gen_func ~module_name:name func in
+  let node_name = match node_name with Some n -> n
+    | None -> match name with None -> assert false
+        | Some n -> Names.local_qn (n ^ "_ctrlr")
+  in
+  (* let name = match name with None -> "ctrlr" | Some n -> n ^"_ctrlr" in *)
+  (* let func = hack_filter_inputs func in *)
+  name, CtrlNbacAsEpt.gen_func ~node_name ?node_sig func
+
+let handle_ctrlf ?filename mk_oc =
+  let _, (node, typs) = parse_n_gen_ept_node ?filename () in
+  let prog = CtrlNbacAsEpt.create_prog Names.LocalModule in    (* don't care? *)
+  let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
+  let prog = CtrlNbacAsEpt.add_to_prog node prog in
   let oc, close = mk_oc.out_exec "ept" in
   Hept_printer.print oc prog;
   close ()
+
+(* -------------------------------------------------------------------------- *)
+
+let parse_nodename nn = try Names.qualname_of_string nn with
+  | Exit -> raise (Error (sprintf "Invalid node name: `%s'" nn))
+
+let output_prog prog modul =
+  Modules.select modul;
+  let filename = String.uncapitalize (Names.modul_to_string modul) ^ ".ept" in
+  let oc = open_out filename in
+  info "Outputting into `%s'…" filename;
+  Hept_printer.print oc prog;
+  close_out oc
+
+let input_function prog filename node_name node_sig =
+  info "Reading function from `%s'…" filename;
+  let res = parse_n_gen_ept_node ~filename ~node_name ~node_sig () in
+  let node, typs = snd res in
+  let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
+  let prog = CtrlNbacAsEpt.add_to_prog node prog in
+  prog
+
+let try_ctrlf nn prog =
+  let node_name = Ctrln_utils.controller_node nn in
+  if Modules.check_value node_name then
+    let filename = Ctrln_utils.ctrlf_for_node nn in
+    let node_sig = Modules.find_value node_name in
+    input_function prog filename node_name node_sig
+  else
+    raise (Error "Unable to load any controller function.")
+
+let try_ctrls nn prog =
+  let rec try_ctrls num prog =
+    let node_name = Ctrln_utils.controller_node ~num nn in
+    if Modules.check_value node_name then
+      let filename = Ctrln_utils.ctrls_for_node nn num in
+      let node_sig = Modules.find_value node_name in
+      let prog = input_function prog filename node_name node_sig in
+      try_ctrls (succ num) prog
+    else
+      prog
+  in
+  try_ctrls 0 prog
+
+let handle_node arg =
+  let nn = parse_nodename arg in
+
+  let mo = Names.modul nn in
+  if mo = Names.Pervasives || mo = Names.LocalModule then
+    raise (Error (sprintf "Invalid node specification: `%s'." arg));
+
+  Initial.initialize Names.Pervasives;
+  info "Loading module of controllers for node %s…" (Names.fullname nn);
+  let om = Ctrln_utils.controller_modul mo in
+  Modules.open_module om;
+  let prog = CtrlNbacAsEpt.create_prog om in
+  let prog = try_ctrls nn prog in
+  let prog = if prog.Heptagon.p_desc = [] then try_ctrlf nn prog else prog in
+  output_prog prog om
 
 (* -------------------------------------------------------------------------- *)
 
@@ -137,11 +236,8 @@ let guesstyp_n_output filename =
     | Not_found ->
         raise (Arg.Bad (sprintf "Cannot guess input type of `%s'" filename))
 
-let handle_input_file ?ityp filename =
-  let ityp, mk_oc = match ityp with
-    | None -> guesstyp_n_output filename
-    | Some ityp -> ityp, snd (guesstyp_n_output filename)
-  in
+let handle_input_file filename =
+  let ityp, mk_oc = guesstyp_n_output filename in
   let itypname, handle = ityp_name_n_handle ityp in
   info "Reading %s from `%s'…" itypname filename;
   handle ~filename mk_oc
@@ -157,10 +253,12 @@ let handle_input_stream = function
 
 (** [main] function to be launched *)
 let main () =
-  Arg.parse options anon errmsg;
+  Arg.parse options anon usage;
   match List.rev !inputs with
+    | [] when !node <> "" -> handle_node !node
     | [] -> handle_input_stream !input_type
-    | lst -> List.iter (handle_input_file ?ityp:!input_type) lst
+    | lst -> (if !node <> "" then handle_node !node;
+             List.iter handle_input_file lst)
 
 (* -------------------------------------------------------------------------- *)
 (** Launch the [main] *)
@@ -168,5 +266,6 @@ let _ =
   try
     main ()
   with
+    | Help -> Arg.usage options usage
     | Errors.Error -> error "aborted."; exit 2
-    | Arg.Bad s | Sys_error s -> error "%s" s; exit 2
+    | Error s | Arg.Bad s | Sys_error s -> error "%s" s; exit 2
