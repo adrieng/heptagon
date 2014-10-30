@@ -31,5 +31,5 @@
 (* Interface documentation is in `ctrlNbacGen.ml' only. *)
 (** *)
 
-val gen: Minils.program ->
+val gen: ?requalify_declared_types:bool -> Minils.program ->
   (Names.qualname * 'f CtrlNbac.AST.node) list * Minils.program

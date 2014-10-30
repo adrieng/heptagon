@@ -166,6 +166,9 @@ let input_function prog filename node_name node_sig =
   info "Reading function from `%s'…" filename;
   let res = parse_n_gen_ept_node ~filename ~node_name ~node_sig () in
   let node, typs = snd res in
+  (* XXX: check types are also in signature? maybe we should only use the types
+     declared in the signature instead, as long as the controller synthesis tool
+     does not introduce new types. *)
   let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
   let prog = CtrlNbacAsEpt.add_to_prog node prog in
   prog
@@ -184,6 +187,8 @@ let try_ctrls nn prog =
     let node_name = Ctrln_utils.controller_node ~num nn in
     if Modules.check_value node_name then
       let filename = Ctrln_utils.ctrls_for_node nn num in
+      if num = 0 && not (Sys.file_exists filename) then
+        raise Exit;                                                  (* abort *)
       let node_sig = Modules.find_value node_name in
       let prog = input_function prog filename node_name node_sig in
       try_ctrls (succ num) prog
@@ -203,9 +208,8 @@ let handle_node arg =
   info "Loading module of controllers for node %s…" (Names.fullname nn);
   let om = Ctrln_utils.controller_modul mo in
   Modules.open_module om;
-  let prog = CtrlNbacAsEpt.create_prog om in
-  let prog = try_ctrls nn prog in
-  let prog = if prog.Heptagon.p_desc = [] then try_ctrlf nn prog else prog in
+  let prog = CtrlNbacAsEpt.create_prog ~open_modul:[ ] om in
+  let prog = try try_ctrls nn prog with Exit -> try_ctrlf nn prog in
   output_prog prog om
 
 (* -------------------------------------------------------------------------- *)

@@ -30,6 +30,8 @@
 open Compiler_utils
 open Names
 
+let ctrlr_mod_suffix = "_controller"
+
 let dirname_for_modul modul =
   build_path (filename_of_name (modul_to_string modul) ^ "_ctrln")
 
@@ -43,8 +45,9 @@ let ctrlf_for_node { qual; name } =
   Printf.sprintf "%s/%s.ctrlf" (dirname_for_modul qual) name
 
 let controller_modul = function
-  | Module n -> Module (n ^ "_ctrls")
-  | QualModule ({ name = n } as q) -> QualModule { q with name = n ^ "_ctrls" }
+  | Module n -> Module (n ^ ctrlr_mod_suffix)
+  | QualModule ({ name = n } as q) ->
+      QualModule { q with name = n ^ ctrlr_mod_suffix }
   | _ -> failwith "Unexpected module"
 
 let controller_node ?num { qual; name } = match num with

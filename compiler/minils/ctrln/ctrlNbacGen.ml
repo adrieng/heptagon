@@ -458,7 +458,7 @@ let var_exp v ty =
 let decl_arg (v, t) =
   mk_arg (Some (name v)) t Linearity.Ltop Signature.Cbase
 
-let gen_ctrlf_calls gd node_name equs =
+let gen_ctrlf_calls ~requal_types gd node_name equs =
 
   let equs, _, _ = List.fold_left begin fun (equs, ubase, num) (u, c) ->
 
@@ -484,6 +484,18 @@ let gen_ctrlf_calls gd node_name equs =
     let exp = mk_exp ~linearity:Linearity.Ltop Clocks.Cbase (Tprod ot) app in
     let equ = mk_equation false ov exp in
 
+    let is, os = if requal_types then
+        (* Optional requalification of types declared in the exported module: *)
+        let requal_arg = function
+          | { a_type = Tid { qual; name } } as arg when qual = node_name.qual ->
+              { arg with a_type = Tid { qual = func_name.qual; name } }
+          | a -> a
+        in
+        List.map requal_arg is, List.map requal_arg os
+      else
+        is, os
+    in
+
     (* Declare new node *)
     let node_sig = Signature.mk_node Location.no_location ~extern:false is os
       false false [] in
@@ -501,7 +513,7 @@ let gen_ctrlf_calls gd node_name equs =
 
 (** Node translation. Note the given node is not expored if it does not comprize a
     contract. *)
-let translate_node typdefs : 'n -> 'n * (qualname * 'f AST.node) option = function
+let translate_node ~requal_types typdefs = function
   | ({ n_contract = None } as node) -> node, None
   | ({ n_name; n_input; n_output; n_local; n_equs;
        n_contract = Some contr } as node) ->
@@ -520,7 +532,7 @@ let translate_node typdefs : 'n -> 'n * (qualname * 'f AST.node) option = functi
       let gd, contract, locals' = translate_contract ~pref gd contr in
       let gd, equs' = translate_eqs ~pref (gd, []) n_equs in
       let gd = assign_uc_groups gd in
-      let equs' = gen_ctrlf_calls gd n_name equs' in
+      let equs' = gen_ctrlf_calls ~requal_types gd n_name equs' in
 
       let ctrln_node_desc =
         { cn_typs = typdefs;
@@ -541,29 +553,112 @@ let translate_node typdefs : 'n -> 'n * (qualname * 'f AST.node) option = functi
 
 (* --- *)
 
+(** Moves all type declarations into the given module, declare aliases for them
+    (in cases). Also requalifies constructor names in the program, FIXME: as
+    well as types of expressions to avoid some errors in code generation later
+    on. *)
+let requal_declared_types prog =
+
+  let cmodul = controller_modul prog.p_modname in
+  let requal m = m = prog.p_modname in
+
+  let requal_it ({ qual; name } as cstr) =
+    if requal qual then { qual = cmodul; name } else cstr in
+
+  let requal_type = function
+    | Tid { qual; name } when requal qual -> Tid { qual = cmodul; name }
+    | t -> t
+  in
+
+  let open Mls_mapfold in
+  let open Global_mapfold in
+  let funcs = { Mls_mapfold.defaults with
+
+    type_dec = (fun _ () -> function
+      | { t_name = tn; t_desc = Type_enum cl } as t when requal tn.qual ->
+          let tn' = requal_it tn in
+          let t = { t with
+            t_name = tn';
+            t_desc = Type_alias (Tid { qual = cmodul; name = tn.name});
+          } in
+          Modules.replace_type tn (Signature.Talias (Tid tn));
+          Modules.add_type tn' (Signature.Tenum (List.map requal_it cl));
+          t, ()
+      | _ -> raise Errors.Fallback);
+
+    edesc = (fun funs () -> function
+      | Ewhen (e, c, x) ->
+          Ewhen (exp_it funs () e |> fst, requal_it c,
+                 var_ident_it funs.global_funs () x |> fst), ()
+      | Emerge (i, l) ->
+          Emerge (var_ident_it funs.global_funs () i |> fst,
+                  List.map (fun (c, x) -> requal_it c,
+                    extvalue_it funs () x |> fst) l), ()
+      | _ -> raise Errors.Fallback);
+
+    extvalue_desc = (fun funs () -> function
+      | Wwhen (w, c, v) ->
+          Wwhen (extvalue_it funs () w |> fst, requal_it c,
+                 var_ident_it funs.global_funs () v |> fst), ()
+      | _ -> raise Errors.Fallback);
+
+    global_funs = { Global_mapfold.defaults with
+
+      ty = (fun _ () ty -> requal_type ty, ());
+
+      ck = (fun funs () -> function
+        | Clocks.Con (ck, c, i) ->
+            Clocks.Con (ck_it funs () ck |> fst, requal_it c,
+                        var_ident_it funs () i |> fst), ()
+        | _ -> raise Errors.Fallback);
+
+      static_exp_desc = (fun _ () -> function
+        | Sconstructor c -> Sconstructor (requal_it c), ()
+        | _ -> raise Errors.Fallback);
+
+    };
+  } in
+
+  program funcs () prog |> fst
+
+(* --- *)
+
 (** [gen p] translates all type definitions, plus the nodes comprizing a
     contract, into Controllable-Nbac.
 
     @return a Controllable-Nbac program comprizing one process for each node
-    necessitating controller synthesis), (TODO: and a new Minils program, in
-    which those nodes have been transformed so that they "call" their respective
-    controller). *)
-let gen ({ p_desc } as p) =
+    necessitating controller synthesis), and a new Minils program, in which
+    those nodes have been transformed so that they "call" their respective
+    controller.
+
+    XXX The [requalify_declared_types] argument is here to avoid cyclic
+    dependencies between modules due to type declarations. Yet, a better idea
+    might be to integrate the generated controllers into the original program
+    later on.  *)
+let gen ?(requalify_declared_types = true) ({ p_desc } as p) =
+
+  let requal_types = requalify_declared_types in
+
   let _cnp_typs, nodes, descs =
-    (* XXX Should we gather all the type definitions before translating any
-       node? *)
     List.fold_left begin fun (typdefs, nodes, descs) -> function
       | Pnode n ->
-          begin match translate_node typdefs n with
+          begin match translate_node ~requal_types typdefs n with
             | node, Some n -> (typdefs, n :: nodes, Pnode node :: descs)
             | node, None -> (typdefs, nodes, Pnode node :: descs)
           end
-      | Ptype { t_name = { name }; t_desc = Type_enum cl } ->
+      | Ptype { t_name = ({ name }); t_desc = Type_enum cl } as ty ->
           let tn = mk_typname & mk_symb name and typ = translate_constrs cl in
           let typdefs = declare_typ tn typ typdefs in
-          (typdefs, nodes, descs)
+          (typdefs, nodes, ty :: descs)
       | p -> (typdefs, nodes, p :: descs)
     end (empty_typdefs, [], []) p_desc
   in
+
   let cnp_nodes = List.rev nodes and p_desc = List.rev descs in
-  cnp_nodes, { p with p_desc }
+  let prog = { p with p_desc } in
+  let prog =                            (* moving types to controller module? *)
+    if requalify_declared_types
+    then requal_declared_types prog
+    else prog
+  in
+  cnp_nodes, prog

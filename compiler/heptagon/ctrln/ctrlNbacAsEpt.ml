@@ -53,11 +53,11 @@ type 'f gen_data =
 
 (* --- *)
 
-let mk_gen_data _module_name decls typdefs =
+let mk_gen_data qual decls typdefs =
   {
     decls;
     ltyps = label_typs typdefs;
-    qname = (fun name -> { qual = (* Module module_name *)LocalModule; name });
+    qname = (fun name -> { qual; name });
     tdefs = SMap.empty;
     env = Env.empty;
     var_names = SMap.empty;
@@ -300,8 +300,8 @@ let io_of_func gd { fni_io_vars } =
 
 (* --- *)
 
-(* /!\ Inputs omitted in the signature w.r.t the Controllable-Nbac model should
-   not appear anywhere in equations... *)
+(* XXX /!\ Inputs omitted in the signature w.r.t the Controllable-Nbac model
+   should not appear anywhere in equations... *)
 let io_of_func_match gd { node_inputs; node_outputs } =
   let decl_arg = function
     | { a_name = Some n; a_type = ty } -> decl_ident gd (ident_of_name n) ty
@@ -346,10 +346,10 @@ let gen_func ?node_sig ~node_name func =
 
 (* --- *)
 
-let create_prog modul =
+let create_prog ?(open_modul = []) modul =
   {
     p_modname = modul;
-    p_opened = [];
+    p_opened = open_modul;
     p_desc = [];
   }
 

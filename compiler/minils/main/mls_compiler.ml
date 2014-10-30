@@ -41,8 +41,14 @@ let pp p = if !verbose then Mls_printer.print stdout p
     under a specific directory; typically, a node ["n"] in file ["f.ept"] is
     output into a file called "f_ctrln/n.nbac" *)
 let gen_n_output_ctrln p =
+
+  (* Main generation procedure. *)
   let nodes, p = CtrlNbacGen.gen p in
+
+  (* Save the controller module. *)
   Ctrln_utils.save_controller_modul_for p.Minils.p_modname;
+
+  (* Output Controllable-Nbac contoller. *)
   ignore (clean_dir (Ctrln_utils.dirname_for_modul p.Minils.p_modname));
   List.iter begin fun (node_name, node) ->
     let oc = open_out (Ctrln_utils.ctrln_for_node node_name) in
