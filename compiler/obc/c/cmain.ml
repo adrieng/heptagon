@@ -127,7 +127,7 @@ let main_def_of_class_def cd =
     | Types.Tid id when id = Initial.pfloat -> None
     | Types.Tid id when id = Initial.pint -> None
     | Types.Tid id when id = Initial.pbool -> None
-    | Tid { name = n } -> Some n
+    | Tid tn -> Some (cname_of_qn tn)
   in
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
 
