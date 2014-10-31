@@ -374,18 +374,18 @@ let declare_contr (decls, contrs, vds)
   SMap.add v (id, ty) contrs,
   vd :: vds
 
+let declare_contrs acc cl =
+  fst & List.fold_left
+    (fun (acc, rank) c -> (declare_contr acc c rank, AST.succ rank))
+    (acc, one) cl
+
 (** Contract translation *)
 let translate_contract ~pref gd
     ({ c_local;           c_eq = equs;
        c_assume = a;      c_enforce = g;
        c_assume_loc = a'; c_enforce_loc = g';
-       c_controllables = cl } as contract) =
-  let declare_contrs acc cl =
-    fst & List.fold_left
-      (fun (acc, rank) c -> (declare_contr acc c rank, AST.succ rank))
-      (acc, one) cl
-  in
-
+       c_controllables = cl } as contract)
+    =
   let pref = prefix_vars ~pref c_local in
   let decls, contrs, locals = declare_contrs (gd.decls, SMap.empty, []) cl in
   let c = SMap.fold (fun v _ -> SSet.add v) contrs SSet.empty in
@@ -394,14 +394,16 @@ let translate_contract ~pref gd
   let ak = as_bexp & mk_and (translate_ext ~pref a) (translate_ext ~pref a')
   and ok = as_bexp & mk_and (translate_ext ~pref g) (translate_ext ~pref g') in
 
-  let gd, ok =
+  let gd, ok, locals =                  (* Generate error variable if needed: *)
     if !Compiler_options.nosink
-    then (gd, ok)
-    else let sink = gen_var "" sink_state_str in
+    then (gd, ok, locals)
+    else let sink = gen_var "cn" "error_state" in
          let sink_expr = mk_bref' & pref & mk_symb & name sink in
-         let ok = `Bexp ((* mk_bcond' gd.init_cond tt *) ok) in
-         (add_state_var ~pref gd sink Initial.tbool ok None, sink_expr)
+         let ok = `Bexp (mk_bcond' gd.init_cond tt ok) in
+         (add_state_var ~pref gd sink Initial.tbool ok None, sink_expr,
+          mk_var_dec sink Initial.tbool Linearity.Ltop Clocks.Cbase :: locals)
   in
+
   let assertion = mk_and' gd.assertion ak
   and invariant = mk_and' gd.invariant ok in
   ({ gd with assertion; invariant; }, { contract with c_eq = equs'; }, locals)
@@ -517,6 +519,9 @@ let translate_node ~requal_types typdefs = function
   | ({ n_contract = None } as node) -> node, None
   | ({ n_name; n_input; n_output; n_local; n_equs;
        n_contract = Some contr } as node) ->
+
+      enter_node n_name;              (* for optional sink symbol generation. *)
+
       let pref p = p in
       let local = List.fold_left register_var_typ SMap.empty n_local in
       let input = List.fold_left register_var_typ SMap.empty n_input in
