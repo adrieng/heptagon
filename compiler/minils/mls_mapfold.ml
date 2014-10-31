@@ -188,9 +188,9 @@ and contract funs acc c =
   let c_local, acc = var_decs_it funs acc c.c_local in
   let c_eq, acc = eqs_it funs acc c.c_eq in
   { c with
-      c_assume = c_assume; 
+      c_assume = c_assume;
       c_enforce = c_enforce;
-      c_assume_loc = c_assume_loc; 
+      c_assume_loc = c_assume_loc;
       c_enforce_loc = c_enforce_loc;
       c_local = c_local;
       c_eq = c_eq }
@@ -221,7 +221,9 @@ and const_dec funs acc c =
   { c with c_type = ty; c_value = se }, acc
 
 
-and type_dec_it funs acc t = funs.type_dec funs acc t
+and type_dec_it funs acc t =
+  try funs.type_dec funs acc t
+  with Fallback -> type_dec funs acc t
 and type_dec funs acc t =
   let tdesc, acc = tdesc_it funs acc t.t_desc in
     { t with t_desc = tdesc }, acc

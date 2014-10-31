@@ -562,11 +562,25 @@ let requal_declared_types prog =
   let cmodul = controller_modul prog.p_modname in
   let requal m = m = prog.p_modname in
 
-  let requal_it ({ qual; name } as cstr) =
+  let requal_constr ({ qual; name } as cstr) =
     if requal qual then { qual = cmodul; name } else cstr in
 
-  let requal_type = function
-    | Tid { qual; name } when requal qual -> Tid { qual = cmodul; name }
+  let requal_type_dec = function
+    | { t_name = tn; t_desc = Type_enum cl } as t when requal tn.qual ->
+        let tn' = { tn with qual = cmodul } in
+        let t = { t with t_name = tn; t_desc = Type_alias (Tid tn') } in
+        Modules.replace_type tn (Signature.Talias (Tid tn'));
+        Modules.add_type tn' (Signature.Tenum (List.map requal_constr cl));
+        t
+    | _ -> raise Errors.Fallback
+  in
+
+  let requal_type = function                    (* requalify only enum types. *)
+    | Tid ({ qual; name } as ty) as t when requal qual ->
+        begin match Modules.find_type ty with
+          | Tenum _ -> Tid { qual = cmodul; name }
+          | _ -> t
+        end
     | t -> t
   in
 
@@ -574,31 +588,21 @@ let requal_declared_types prog =
   let open Global_mapfold in
   let funcs = { Mls_mapfold.defaults with
 
-    type_dec = (fun _ () -> function
-      | { t_name = tn; t_desc = Type_enum cl } as t when requal tn.qual ->
-          let tn' = requal_it tn in
-          let t = { t with
-            t_name = tn';
-            t_desc = Type_alias (Tid { qual = cmodul; name = tn.name});
-          } in
-          Modules.replace_type tn (Signature.Talias (Tid tn));
-          Modules.add_type tn' (Signature.Tenum (List.map requal_it cl));
-          t, ()
-      | _ -> raise Errors.Fallback);
+    type_dec = (fun _ () td -> requal_type_dec td, ());
 
     edesc = (fun funs () -> function
       | Ewhen (e, c, x) ->
-          Ewhen (exp_it funs () e |> fst, requal_it c,
+          Ewhen (exp_it funs () e |> fst, requal_constr c,
                  var_ident_it funs.global_funs () x |> fst), ()
       | Emerge (i, l) ->
           Emerge (var_ident_it funs.global_funs () i |> fst,
-                  List.map (fun (c, x) -> requal_it c,
+                  List.map (fun (c, x) -> requal_constr c,
                     extvalue_it funs () x |> fst) l), ()
       | _ -> raise Errors.Fallback);
 
     extvalue_desc = (fun funs () -> function
       | Wwhen (w, c, v) ->
-          Wwhen (extvalue_it funs () w |> fst, requal_it c,
+          Wwhen (extvalue_it funs () w |> fst, requal_constr c,
                  var_ident_it funs.global_funs () v |> fst), ()
       | _ -> raise Errors.Fallback);
 
@@ -608,12 +612,12 @@ let requal_declared_types prog =
 
       ck = (fun funs () -> function
         | Clocks.Con (ck, c, i) ->
-            Clocks.Con (ck_it funs () ck |> fst, requal_it c,
+            Clocks.Con (ck_it funs () ck |> fst, requal_constr c,
                         var_ident_it funs () i |> fst), ()
         | _ -> raise Errors.Fallback);
 
       static_exp_desc = (fun _ () -> function
-        | Sconstructor c -> Sconstructor (requal_it c), ()
+        | Sconstructor c -> Sconstructor (requal_constr c), ()
         | _ -> raise Errors.Fallback);
 
     };
