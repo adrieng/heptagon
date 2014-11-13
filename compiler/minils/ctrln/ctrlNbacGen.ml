@@ -397,7 +397,7 @@ let translate_contract ~pref gd
   let gd, ok, locals =                  (* Generate error variable if needed: *)
     if !Compiler_options.nosink
     then (gd, ok, locals)
-    else let sink = gen_var "cn" "error_state" in
+    else let sink = gen_var "cn" "ok" in
          let sink_expr = mk_bref' & pref & mk_symb & name sink in
          let ok = `Bexp (mk_bcond' gd.init_cond tt ok) in
          (add_state_var ~pref gd sink Initial.tbool ok None, sink_expr,

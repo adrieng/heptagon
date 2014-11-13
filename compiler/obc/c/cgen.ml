@@ -795,9 +795,9 @@ let cdefs_and_cdecls_of_type_decl otd =
               { var_decls = [];
                 block_body =
                   let gen_if t =
-                    let t = cname_of_qn t in
+                    let t = cname_of_qn t and t' = t.name in
                     let funcall = Cfun_call ("strcmp", [Cvar "s";
-                                                        Cconst (Cstrlit t)]) in
+                                                        Cconst (Cstrlit t')]) in
                     let cond = Cbop ("==", funcall, Cconst (Ccint 0)) in
                     Cif (cond, [Creturn (Cconst (Ctag t))], []) in
                   map gen_if nl; }
@@ -810,10 +810,10 @@ let cdefs_and_cdecls_of_type_decl otd =
               { var_decls = [];
                 block_body =
                   let gen_clause t =
-                    let t = cname_of_qn t in
+                    let t = cname_of_qn t and t' = t.name in
                     let fun_call =
                       Cfun_call ("strcpy", [Cvar "buf";
-                                            Cconst (Cstrlit t)]) in
+                                            Cconst (Cstrlit t')]) in
                     (t, [Csexpr fun_call]) in
                   [Cswitch (Cvar "x", map gen_clause nl);
                    Creturn (Cvar "buf")]; }

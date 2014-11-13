@@ -66,9 +66,7 @@ let var_from_name map x =
         assert false
   end
 
-let ext_value_exp_from_name map x =
-  let w = ext_value_of_pattern (var_from_name map x) in
-  mk_exp w.w_ty (Eextvalue w)
+let ext_value_exp_from_name map x = exp_of_pattern (var_from_name map x)
 
 (* let lvar_from_name map ty x = mk_pattern ty (Lvar (var_from_name map x)) *)
 

@@ -82,7 +82,10 @@ let symb_typ' gd s = translate_typ gd s (symb_typ gd s)
 
 let translate_label gd l = gd.qname (Symb.to_string (label_symb l))
 
-let ts gd v = SMap.find v gd.var_names
+let ts gd v = try SMap.find v gd.var_names with Not_found ->
+  failwith (Format.asprintf "Variable name `%a' unavailable; \
+                             was it an output of the main node?"
+              Symb.print v)
 
 let pat_of_var gd v = Evarpat (ts gd v)
 
