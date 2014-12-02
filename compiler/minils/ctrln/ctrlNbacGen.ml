@@ -435,19 +435,24 @@ let finalize_uc_groups gd =
 let assign_uc_groups gd =
   let gd = finalize_uc_groups gd in
   let uc_groups = List.rev gd.uc_groups in      (* start from the first group *)
-  let decls, _ = List.fold_left begin fun (decls, group) (u, c) ->
-    let decls = SSet.fold (fun u decls -> match SMap.find u decls with
-      | (t, `Input _, l) ->
-          SMap.add u (t, `Input group, l) decls
-      | _ -> decls) u decls
-    in
-    let decls = SSet.fold (fun c decls -> match SMap.find c decls with
-      | (t, `Contr (_, r, l'), l) ->
-          SMap.add c (t, `Contr (group, r, l'), l) decls
-      | _ -> decls) c decls
-    in
-    decls, AST.succ group
-  end (gd.decls, AST.succ one) (List.tl uc_groups) in
+  let decls, _ =
+    if uc_groups = [] then
+      gd.decls, one                                     (* no group to change *)
+    else
+      List.fold_left begin fun (decls, group) (u, c) ->
+        let decls = SSet.fold (fun u decls -> match SMap.find u decls with
+          | (t, `Input _, l) ->
+              SMap.add u (t, `Input group, l) decls
+          | _ -> decls) u decls
+        in
+        let decls = SSet.fold (fun c decls -> match SMap.find c decls with
+          | (t, `Contr (_, r, l'), l) ->
+              SMap.add c (t, `Contr (group, r, l'), l) decls
+          | _ -> decls) c decls
+        in
+        decls, AST.succ group
+      end (gd.decls, AST.succ one) (List.tl uc_groups)
+  in
   { gd with decls; uc_groups }
 
 (* --- *)
