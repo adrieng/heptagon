@@ -528,6 +528,10 @@ let gen_ctrlf_calls ~requal_types gd node_name equs =
     contract. *)
 let translate_node ~requal_types typdefs = function
   | ({ n_contract = None } as node) -> node, None
+  | ({ n_name; n_params } as node) when n_params <> [] ->
+      warn "Unsupported@ translation@ of@ parametric@ node@ `%s'@ with@ \
+            contract@ into@ Controllable-Nbac!" (Names.fullname n_name);
+      node, None
   | ({ n_name; n_input; n_output; n_local; n_equs;
        n_contract = Some contr } as node) ->
 

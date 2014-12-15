@@ -522,12 +522,17 @@ let translate_node
 let program p =
   let acc_proc, acc_p_desc =
     List.fold_left
-      (fun (acc_proc,acc_p_desc) p_desc ->
-         match p_desc with
-         | Minils.Pnode(node) ->
-             let (node,proc) = translate_node node in
-             (proc::acc_proc),((Minils.Pnode(node))::acc_p_desc)
-         | p -> (acc_proc,p::acc_p_desc))
+      (fun (acc_proc,acc_p_desc) -> function
+        | Minils.Pnode(node) as p when node.Minils.n_contract = None ->
+            (acc_proc,p::acc_p_desc)
+        | Minils.Pnode(node) as p when node.Minils.n_params <> [] ->
+            warn "Unsupported@ translation@ of@ parametric@ node@ `%s'@ with@ \
+                  contract@ into@ Z/3Z!" (Names.fullname node.Minils.n_name);
+            (acc_proc,p::acc_p_desc)
+        | Minils.Pnode(node) ->
+            let (node,proc) = translate_node node in
+            (proc::acc_proc),((Minils.Pnode(node))::acc_p_desc)
+        | p -> (acc_proc,p::acc_p_desc))
       ([],[])
       p.Minils.p_desc in
   let procs = List.rev acc_proc in
