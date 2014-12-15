@@ -34,6 +34,7 @@
 
 (* -------------------------------------------------------------------------- *)
 
+open Compiler_utils
 open Ctrln_utils
 open Signature
 open Types
@@ -103,12 +104,13 @@ let translate_constrs cl = mk_etyp (List.map translate_constr cl)
 
 (* --- *)
 
-let translate_typ typ = match Modules.unalias_type typ with
+let rec translate_typ typ = match Modules.unalias_type typ with
   | Tid ({ qual = Pervasives; name = "bool" }) -> `Bool
   | Tid ({ qual = Pervasives; name = "int" }) -> `Int
-  | Tid ({ qual = Pervasives; name = "real" }) -> `Real                (* XXX? *)
+  | Tid ({ qual = Pervasives; name = "float" }) -> `Real
   | Tid ({ name = tn } as t) -> (match Modules.find_type t with
       | Tenum _ -> `Enum (mk_typname (mk_symb tn))
+      | Talias t -> translate_typ t                                    (* XXX? *)
       | _ -> raise & Untranslatable ("type "^ fullname t))
   | Tprod _ -> raise & Untranslatable ("product type")
   | Tarray _ -> raise & Untranslatable ("array type")
@@ -126,21 +128,24 @@ let simplify_static_exp se = (Static.simplify QualEnv.empty se).se_desc
 let translate_static_bexp se = match simplify_static_exp se with
   | Sbool true | Sconstructor { qual = Pervasives; name = "true" } -> tt
   | Sbool false | Sconstructor { qual = Pervasives; name = "false" } -> ff
-  | _ -> failwith ("Boolean static expression expected!")
+  | _ -> failwith (Format.asprintf "Boolean static expression expected! (found@ \
+                    `%a')" Global_printer.print_static_exp se)
 
 let translate_static_eexp se = match simplify_static_exp se with
   | Sconstructor { qual = Pervasives; name = "true" as n }
   | Sconstructor { qual = Pervasives; name = "false" as n } ->
       failwith ("Enum static expression expected! (found `"^n^"')")
   | Sconstructor c -> `Enum (translate_constr c)
-  | _ -> failwith ("Enum static expression expected!")
+  | _ -> failwith (Format.asprintf "Enum static expression expected! (found@ \
+                    `%a')" Global_printer.print_static_exp se)
 
 let translate_static_nexp se = match simplify_static_exp se with
   | Sint v -> `Int v
   | Sfloat v -> `Real v
   | Sop ({ qual = Pervasives; name="~-" },[{ se_desc = Sint v }]) -> `Int (-v)
   | Sop ({ qual = Pervasives; name="~-." },[{ se_desc=Sfloat v }]) -> `Real (-.v)
-  | _ -> failwith ("Numerical static expression expected!")
+  | _ -> failwith (Format.asprintf "Numerical static expression expected! (found\
+                    @ `%a')" Global_printer.print_static_exp se)
 
 (* --- *)
 
@@ -173,6 +178,7 @@ let translate_ext ~pref ext = match translate_typ ext.w_ty with
 let translate_app ~pref op el =
   let pervasives = function
     | "not",          [e]   -> mk_neg e
+    |("~-" | "~-."),  [e]   -> mk_opp e
     | "or",           e::l  -> mk_disj e l
     | "&",            e::l  -> mk_conj e l
     | "xor",         [e;f]  -> mk_xor e f
@@ -564,9 +570,8 @@ let translate_node ~requal_types typdefs = function
 (* --- *)
 
 (** Moves all type declarations into the given module, declare aliases for them
-    (in cases). Also requalifies constructor names in the program, FIXME: as
-    well as types of expressions to avoid some errors in code generation later
-    on. *)
+    (in cases). Also requalifies constructor names in the program, as well as
+    types of expressions to avoid some errors in code generation later on. *)
 let requal_declared_types prog =
 
   let cmodul = controller_modul prog.p_modname in
@@ -575,23 +580,27 @@ let requal_declared_types prog =
   let requal_constr ({ qual; name } as cstr) =
     if requal qual then { qual = cmodul; name } else cstr in
 
+  let requal_type = function               (* requalify enum and alias types. *)
+    | Tid ({ qual; name } as ty) as t when requal qual ->
+        (match Modules.find_type ty with
+          | Tenum _ | Talias _ -> Tid { qual = cmodul; name }
+          | _ -> t)
+    | t -> t
+  in
+
   let requal_type_dec = function
-    | { t_name = tn; t_desc = Type_enum cl } as t when requal tn.qual ->
+    | { t_name = tn; t_desc } as t when requal tn.qual ->
+        let new_type = match t_desc with
+          | Type_enum cl -> Signature.Tenum (List.map requal_constr cl)
+          | Type_alias t -> Signature.Talias (requal_type t)
+          | _ -> raise Errors.Fallback
+        in
         let tn' = { tn with qual = cmodul } in
         let t = { t with t_name = tn; t_desc = Type_alias (Tid tn') } in
         Modules.replace_type tn (Signature.Talias (Tid tn'));
-        Modules.add_type tn' (Signature.Tenum (List.map requal_constr cl));
+        Modules.add_type tn' new_type;
         t
     | _ -> raise Errors.Fallback
-  in
-
-  let requal_type = function                    (* requalify only enum types. *)
-    | Tid ({ qual; name } as ty) as t when requal qual ->
-        begin match Modules.find_type ty with
-          | Tenum _ -> Tid { qual = cmodul; name }
-          | _ -> t
-        end
-    | t -> t
   in
 
   let open Mls_mapfold in

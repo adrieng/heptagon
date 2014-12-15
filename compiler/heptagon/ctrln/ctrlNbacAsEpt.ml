@@ -28,6 +28,7 @@
 (*                                                                     *)
 (***********************************************************************)
 
+open Format
 open Signature
 open Types
 open Names
@@ -72,7 +73,7 @@ let translate_typ gd vdecl = function
   | `Int -> Initial.tint
   | `Real -> Initial.tfloat
   | `Enum tn -> Tid (SMap.find tn gd.tdefs)
-  | t -> raise (Untranslatable (Format.asprintf "type %a" print_typ t,
+  | t -> raise (Untranslatable (asprintf "type %a" print_typ t,
                                opt_decl_loc gd vdecl))
 
 let symb_typ gd s = try match SMap.find s gd.decls with | typ, _, _ -> typ with
@@ -83,9 +84,8 @@ let symb_typ' gd s = translate_typ gd s (symb_typ gd s)
 let translate_label gd l = gd.qname (Symb.to_string (label_symb l))
 
 let ts gd v = try SMap.find v gd.var_names with Not_found ->
-  failwith (Format.asprintf "Variable name `%a' unavailable; \
-                             was it an output of the main node?"
-              Symb.print v)
+  failwith (asprintf "Variable name `%a' unavailable; \
+                      was it an output of the main node?" Symb.print v)
 
 let pat_of_var gd v = Evarpat (ts gd v)
 
@@ -123,30 +123,43 @@ let eqrel: eqrel -> fun_name = function
   | `Eq -> Initial.mk_pervasives "="
   | `Ne -> Initial.mk_pervasives "<>"
 
-let totrel t : totrel -> fun_name = function
-  | `Lt when t = Initial.tfloat -> Initial.mk_pervasives "<"
-  | `Le when t = Initial.tfloat -> Initial.mk_pervasives "<="
-  | `Gt when t = Initial.tfloat -> Initial.mk_pervasives ">"
-  | `Ge when t = Initial.tfloat -> Initial.mk_pervasives ">="
-  | `Lt -> Initial.mk_pervasives "<"
-  | `Le -> Initial.mk_pervasives "<="
-  | `Gt -> Initial.mk_pervasives ">"
-  | `Ge -> Initial.mk_pervasives ">="
-  | #eqrel as r -> eqrel r
+let float_typ t = Modules.unalias_type t = Initial.tfloat
 
-let nuop t : nuop -> fun_name = function
-  | `Opp when t = Initial.tfloat -> Initial.mk_pervasives "~-."
-  | `Opp -> Initial.mk_pervasives "~-"
+let totrel t : totrel -> fun_name =
+  if float_typ t
+  then function
+    | `Lt -> Initial.mk_pervasives "<."
+    | `Le -> Initial.mk_pervasives "<=."
+    | `Gt -> Initial.mk_pervasives ">."
+    | `Ge -> Initial.mk_pervasives ">=."
+    | `Eq -> Initial.mk_pervasives "=."                    (* XXX: error case? *)
+    | `Ne -> Initial.mk_pervasives "<>."                   (* ibid *)
+  else function
+    | `Lt -> Initial.mk_pervasives "<"
+    | `Le -> Initial.mk_pervasives "<="
+    | `Gt -> Initial.mk_pervasives ">"
+    | `Ge -> Initial.mk_pervasives ">="
+    | #eqrel as r -> eqrel r
 
-let nnop t : nnop -> fun_name = function
-  | `Sum when t = Initial.tfloat -> Initial.mk_pervasives "+."
-  | `Sub when t = Initial.tfloat -> Initial.mk_pervasives "-."
-  | `Mul when t = Initial.tfloat -> Initial.mk_pervasives "*."
-  | `Div when t = Initial.tfloat -> Initial.mk_pervasives "/."
-  | `Sum -> Initial.mk_pervasives "+"
-  | `Sub -> Initial.mk_pervasives "-"
-  | `Mul -> Initial.mk_pervasives "*"
-  | `Div -> Initial.mk_pervasives "/"
+let nuop t : nuop -> fun_name =
+  if float_typ t
+  then function
+    | `Opp -> Initial.mk_pervasives "~-."
+  else function
+    | `Opp -> Initial.mk_pervasives "~-"
+
+let nnop t : nnop -> fun_name =
+  if float_typ t
+  then function
+    | `Sum -> Initial.mk_pervasives "+."
+    | `Sub -> Initial.mk_pervasives "-."
+    | `Mul -> Initial.mk_pervasives "*."
+    | `Div -> Initial.mk_pervasives "/."
+  else function
+    | `Sum -> Initial.mk_pervasives "+"
+    | `Sub -> Initial.mk_pervasives "-"
+    | `Mul -> Initial.mk_pervasives "*"
+    | `Div -> Initial.mk_pervasives "/"
 
 let buop: buop -> fun_name = function
   | `Neg -> Initial.pnot
@@ -198,8 +211,8 @@ let translate_expr gd e =
     | `Int i -> mkp Initial.tint (Econst (Initial.mk_static_int i))
     | `Real r -> mkp Initial.tfloat (Econst (Initial.mk_static_float r))
     | `Mpq r -> tn ?flag (`Real (Mpqf.to_float r))
-    | `Bint (s, w, _) -> raise (Untranslatable (Format.asprintf "constant of \
-                                 type %a" print_typ (`Bint (s, w)), flag))
+    | `Bint (s, w, _) -> raise (Untranslatable (asprintf "constant of type \
+                                 %a" print_typ (`Bint (s, w)), flag))
     | `Nuop (op, e) -> mk_nuapp ?flag op e
     | `Nnop (op, e, f, l) -> mk_nnapp ?flag op e f l
     | #cond as c -> trcond ?flag tb tn c
@@ -228,17 +241,56 @@ let translate_expr gd e =
 
 (* --- *)
 
-let decl_typs typdefs gd =
-  fold_typdefs begin fun tname tdef typs ->
-    let name = gd.qname (Symb.to_string tname |> String.uncapitalize) in
-    match tdef with
-      | EnumDef labels ->
-          let constrs = List.map (fun (l, _) -> translate_label gd l) labels in
-          gd.tdefs <- SMap.add tname name gd.tdefs;
-          { t_name = name;
-            t_desc = Type_enum constrs;
-            t_loc = Location.no_location }:: typs
-  end typdefs []
+(* let decl_typs typdefs gd = *)
+(*   fold_typdefs begin fun tname tdef typs -> *)
+(*     let name = gd.qname (Symb.to_string tname |> String.uncapitalize) in *)
+(*     match tdef with *)
+(*       | EnumDef labels -> *)
+(*           let constrs = List.map (fun (l, _) -> translate_label gd l) labels in *)
+(*           gd.tdefs <- SMap.add tname name gd.tdefs; *)
+(*           Ptype { t_name = name; *)
+(*                   t_desc = Type_enum constrs; *)
+(*                   t_loc = Location.no_location } :: typs *)
+(*   end typdefs [] *)
+
+let decl_typs_from_module_itf gd =
+  (* Note we need to sort type declarations according to their respective
+     dependencies; hence the implicit topological traversal of the type
+     definitions. *)
+  let rec decl_types rem types =
+    if QualEnv.is_empty rem then
+      types
+    else
+      let t_name, tdef = QualEnv.choose rem in
+      let rem, types = decl_typ t_name tdef rem types in
+      decl_types rem types
+  and decl_typ t_name tdef rem types =
+    let rem = QualEnv.remove t_name rem in
+    if tdef = Tabstract || t_name.qual = Names.Pervasives then
+      rem, types
+    else
+      let t_desc, rem, types = match tdef with
+        | Tenum cl ->
+            (* Compiler_utils.info "declaring enum type %s" (shortname t_name); *)
+            let name = Symb.of_string (String.capitalize (shortname t_name)) in
+            gd.tdefs <- SMap.add name t_name gd.tdefs;
+            (Type_enum cl, rem, types)
+        | Talias (Tid tn) when tn.qual = t_name.qual ->    (* declare deps 1st *)
+            (* Compiler_utils.info "declaring alias type %s" (shortname t_name); *)
+            let tdef = QualEnv.find tn rem in
+            let rem, types = decl_typ tn tdef (QualEnv.remove tn rem) types in
+            (Type_alias (Tid tn), rem, types)
+        | Talias t ->
+            (* Compiler_utils.info "declaring alias type %s" (shortname t_name); *)
+            (Type_alias t, rem, types)
+        | Tstruct _ ->
+            failwith (asprintf "Unexpected struct type `%s' in module interface"
+                        (shortname t_name))
+        | Tabstract -> assert false
+      in
+      rem, Ptype { t_name; t_desc; t_loc = Location.no_location; } :: types
+  in
+  decl_types Modules.g_env.Modules.types []
 
 (* --- *)
 
@@ -343,13 +395,15 @@ let gen_func ?node_sig ~node_name func =
   let { fn_typs; fn_decls } = func_desc func in
   let modul = modul node_name in
   let gd = mk_gen_data modul (fn_decls:> ('f, 'f var_spec) decls) fn_typs in
-  let typs = List.map (fun t -> Ptype t) (decl_typs fn_typs gd) in
+  (* let typs = decl_typs fn_typs gd in *)
+  let typs = decl_typs_from_module_itf gd in
   let node = node_of_func gd ?node_sig node_name func in
   node, typs
 
 (* --- *)
 
 let create_prog ?(open_modul = []) modul =
+  Modules.open_module modul;
   {
     p_modname = modul;
     p_opened = open_modul;

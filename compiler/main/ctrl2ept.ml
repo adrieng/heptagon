@@ -204,10 +204,9 @@ let handle_node arg =
   if mo = Names.Pervasives || mo = Names.LocalModule then
     raise (Error (sprintf "Invalid node specification: `%s'." arg));
 
-  Initial.initialize Names.Pervasives;
+  Modules.open_module Names.Pervasives;
   info "Loading module of controllers for node %s…" (Names.fullname nn);
   let om = Ctrln_utils.controller_modul mo in
-  Modules.open_module om;
   let prog = CtrlNbacAsEpt.create_prog ~open_modul:[ ] om in
   let prog = try try_ctrls nn prog with Exit -> try_ctrlf nn prog in
   output_prog prog om
