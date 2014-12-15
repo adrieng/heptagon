@@ -175,6 +175,18 @@ let rec translate kind context e =
         merge context e n tag_e_list
     | Eapp({ a_op = Eifthenelse }, [e1; e2; e3], _) ->
         ifthenelse context e e1 e2 e3
+    (* XXX Huge hack to avoid comparing tuples... (temporary, until this is
+       fixed where it should be) *)
+    | Eapp({ a_op = (Efun ({ Names.qual = Names.Pervasives; Names.name = "=" }) as op)},
+           [x;y], reset) when is_list x ->
+        let x = e_to_e_list x and y = e_to_e_list y in
+        let xy = List.fold_left2 (fun acc x y ->
+          let cmp = mk_exp (mk_op_app op [x; y] ~reset) Initial.tbool ~linearity:Ltop in
+          mk_exp (mk_op_app (Efun Initial.pand) [acc; cmp] ~reset) Initial.tbool ~linearity:Ltop)
+          dtrue
+          x y
+        in
+        translate kind context xy
     | Eapp(app, e_list, r) ->
         let context, e_list = translate_list ExtValue context e_list in
           context, { e with e_desc = Eapp(app, flatten_e_list e_list, r) }

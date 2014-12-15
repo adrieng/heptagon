@@ -137,7 +137,8 @@ let typing_app h base pat op w_list = match op with
         | a::a_l, v::v_l -> (match a.a_name with
           | None -> build_env a_l v_l env
           | Some n -> build_env a_l v_l ((n,v)::env))
-        | _ -> Misc.internal_error "Clocking, non matching signature"
+        | _ -> Misc.internal_error ("Clocking, non matching signature in call of " ^
+                                      Names.fullname f)
       in
       let env_pat = build_env node.node_outputs pat_id_list [] in
       let env_args = build_env node.node_inputs w_list [] in
