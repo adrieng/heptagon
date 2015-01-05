@@ -346,28 +346,41 @@ let translate_contract f contract =
       let body =
         [{ stmt_name = var_g; stmt_def = Sconst(Ctrue) };
          { stmt_name = var_a; stmt_def = Sconst(Ctrue) }] in
-      [],[],[],body,(Sigali.Svar(var_a),Sigali.Svar(var_g)),[],[],[]
+      [],[],[],body,(Sigali.Svar(var_a),Sigali.Svar(var_g)),[],[],[],[]
   | Some {Minils.c_local = locals;
           Minils.c_eq = l_eqs;
           Minils.c_assume = e_a;
-          Minils.c_enforce = e_g;
+          Minils.c_objectives = objs;
           Minils.c_assume_loc = e_a_loc;
           Minils.c_enforce_loc = e_g_loc;
           Minils.c_controllables = cl} ->
       let states,init,inputs,body = translate_eq_list f l_eqs in
       let e_a = translate_ext prefix e_a in
-      let e_g = translate_ext prefix e_g in
       let e_a_loc = translate_ext prefix e_a_loc in
       let e_g_loc = translate_ext prefix e_g_loc in
+
+      (* separate reachability and attractivity and build one security objective [e_g] *)
+      let e_g,sig_objs =
+	List.fold_left
+	  (fun (e_g,sig_objs) o ->
+	     let e_obj = translate_ext prefix o.Minils.o_exp in
+	     match o.Minils.o_kind with
+	     | Minils.Obj_enforce -> (e_g &~ e_obj), sig_objs
+	     | Minils.Obj_reachable -> e_g, (Reachability e_obj) :: sig_objs
+	     | Minils.Obj_attractive -> e_g, (Attractivity e_obj) :: sig_objs)
+	  (e_g_loc,[])
+	  objs in
+      let sig_objs = List.rev sig_objs in
+
       let body =
-        {stmt_name = var_g; stmt_def = e_g &~ e_g_loc } ::
+        {stmt_name = var_g; stmt_def = e_g } ::
         {stmt_name = var_a; stmt_def = e_a &~ e_a_loc } ::
         body in
       let controllables =
         List.map
           (fun ({ Minils.v_ident = id } as v) -> v,(prefix ^ (name id))) cl in
       states,init,inputs,body,(Sigali.Svar(var_a),Sigali.Svar(var_g)),
-      controllables,(locals@cl),l_eqs
+      controllables,(locals@cl),l_eqs,sig_objs
 
 
 
@@ -395,7 +408,7 @@ let translate_node
       (fun { Minils.v_ident = v } -> f ^ "_" ^ (name v)) o_list in
   let states,init,add_inputs,body =
     translate_eq_list f eq_list in
-  let states_c,init_c,inputs_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c =
+  let states_c,init_c,inputs_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c,objs =
     translate_contract f contract in
   let inputs = inputs @ add_inputs @ inputs_c in
   let body = List.rev body in
@@ -429,7 +442,7 @@ let translate_node
               (Slist[g_c]))] in
 	(body_sink, sig_states_full, Sigali.Svar(error_state_name))
       end in
-  let obj = Security(obj_exp) in
+  let objs = Security(obj_exp) :: objs in
   let p = { proc_dep = [];
             proc_name = f;
             proc_inputs = sig_inputs@sig_ctrl;
@@ -440,7 +453,7 @@ let translate_node
             proc_init = init@init_c;
             proc_constraints = constraints;
             proc_body = body@body_c@body_sink;
-            proc_objectives = [obj] } in
+            proc_objectives = objs } in
   if !Compiler_options.nbvars then
     begin
       (* Print out nb of vars *)

@@ -850,11 +850,21 @@ and translate_eqs env eq_list =
     (fun context eq ->
        translate_eq env context eq) ([],[]) eq_list
 
+let translate_objectives env context objs =
+  let context, objs =
+    List.fold_left
+      (fun (context,ol) o ->
+       let context, e = translate env context o.o_exp in
+       context, { o with o_exp = e } :: ol)
+      (context, [])
+      objs in
+  context, List.rev objs
+
 let translate_contract env contract =
   match contract with
   | None -> None, env
   | Some { c_assume = e_a;
-           c_enforce = e_g;
+           c_objectives = objs;
            c_assume_loc = e_a_loc;
            c_enforce_loc = e_g_loc;
            c_controllables = cl;
@@ -866,14 +876,14 @@ let translate_contract env contract =
         = translate_block env cl_loc cl_eq b in
       let context, e_a = translate env' (v,eqs) e_a in
       let context, e_a_loc = translate env' context e_a_loc in
-      let context, e_g = translate env' context e_g in
+      let context, objs = translate_objectives env' context objs in
       let context, e_g_loc = translate env' context e_g_loc in
       let (d_list,eq_list) = context in
       Some { c_block = { b with
                            b_local = d_list;
                            b_equs = eq_list };
              c_assume = e_a;
-             c_enforce = e_g;
+             c_objectives = objs;
              c_assume_loc = e_a_loc;
              c_enforce_loc = e_g_loc;
              c_controllables = cl },

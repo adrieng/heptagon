@@ -443,6 +443,17 @@ and translate_last = function
   | Last (None) -> Heptagon.Last None
   | Last (Some e) -> Heptagon.Last (Some (expect_static_exp e))
 
+let translate_objective_kind obj =
+  match obj with
+  | Obj_enforce    -> Heptagon.Obj_enforce
+  | Obj_reachable  -> Heptagon.Obj_reachable
+  | Obj_attractive -> Heptagon.Obj_attractive
+
+let translate_objective env obj =
+  { Heptagon.o_kind = translate_objective_kind obj.o_kind;
+    Heptagon.o_exp = translate_exp env obj.o_exp
+  }
+
 let translate_contract env opt_ct =
   match opt_ct with
   | None -> None, env
@@ -450,7 +461,7 @@ let translate_contract env opt_ct =
       let env' = Rename.append env ct.c_controllables in
       let b, env = translate_block env ct.c_block in
       Some { Heptagon.c_assume = translate_exp env ct.c_assume;
-             Heptagon.c_enforce = translate_exp env ct.c_enforce;
+             Heptagon.c_objectives = List.map (translate_objective env) ct.c_objectives;
              Heptagon.c_assume_loc = translate_exp env ct.c_assume_loc;
              Heptagon.c_enforce_loc = translate_exp env ct.c_enforce_loc;
              Heptagon.c_controllables = translate_vd_list env' ct.c_controllables;

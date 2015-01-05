@@ -39,7 +39,7 @@ open Clocks
 
 (** Warning: Whenever Minils ast is modified,
     minils_format_version should be incremented. *)
-let minils_format_version = "3"
+let minils_format_version = "4"
 
 type iterator_type =
   | Imap
@@ -137,9 +137,18 @@ type var_dec = {
   v_clock     : Clocks.ck;
   v_loc       : location }
 
+type objective_kind =
+  | Obj_enforce
+  | Obj_reachable
+  | Obj_attractive
+
+type objective =
+    { o_kind : objective_kind;
+      o_exp : extvalue }
+
 type contract = {
   c_assume        : extvalue;
-  c_enforce       : extvalue;
+  c_objectives    : objective list;
   c_assume_loc    : extvalue;
   c_enforce_loc   : extvalue;
   c_controllables : var_dec list;
@@ -153,8 +162,6 @@ type node_dec = {
   n_input    : var_dec list;
   n_output   : var_dec list;
   n_contract : contract option;
-  (* GD: inglorious hack for controller call *)
-  mutable n_controller_call : string list * string list;
   n_local    : var_dec list;
   n_equs     : eq list;
   n_loc      : location;
@@ -235,7 +242,7 @@ let mk_equation ?(loc = no_location) ?(base_ck=fresh_clock()) unsafe pat exp =
   { eq_lhs = pat; eq_rhs = exp; eq_unsafe = unsafe; eq_base_ck = base_ck; eq_loc = loc }
 
 let mk_node
-    ?(input = []) ?(output = []) ?(contract = None) ?(pinst = ([],[]))
+    ?(input = []) ?(output = []) ?(contract = None)
     ?(local = []) ?(eq = [])
     ?(stateful = true) ~unsafe ?(loc = no_location) ?(param = []) ?(constraints = [])
     ?(mem_alloc=[])
@@ -246,7 +253,6 @@ let mk_node
     n_input = input;
     n_output = output;
     n_contract = contract;
-    n_controller_call = pinst;
     n_local = local;
     n_equs = eq;
     n_loc = loc;

@@ -88,6 +88,7 @@ type 'a hept_it_funs = {
   switch_handler : 'a hept_it_funs -> 'a -> switch_handler -> switch_handler * 'a;
   var_dec        : 'a hept_it_funs -> 'a -> var_dec -> var_dec * 'a;
   last           : 'a hept_it_funs -> 'a -> last -> last * 'a;
+  objective      : 'a hept_it_funs -> 'a -> objective -> objective * 'a;
   contract       : 'a hept_it_funs -> 'a -> contract -> contract * 'a;
   node_dec       : 'a hept_it_funs -> 'a -> node_dec -> node_dec * 'a;
   const_dec      : 'a hept_it_funs -> 'a -> const_dec -> const_dec * 'a;
@@ -277,16 +278,21 @@ and last funs acc l = match l with
       Last sto, acc
 
 
+and objective_it funs acc o = funs.objective funs acc o
+and objective funs acc o =
+  let e, acc = exp_it funs acc o.o_exp in
+  { o with o_exp = e }, acc
+
 and contract_it funs acc c = funs.contract funs acc c
 and contract funs acc c =
   let c_assume, acc = exp_it funs acc c.c_assume in
-  let c_enforce, acc = exp_it funs acc c.c_enforce in
+  let c_objectives, acc = mapfold (objective_it funs) acc c.c_objectives in
   let c_assume_loc, acc = exp_it funs acc c.c_assume_loc in
   let c_enforce_loc, acc = exp_it funs acc c.c_enforce_loc in
   let c_block, acc = block_it funs acc c.c_block in
   let c_controllables, acc = mapfold (var_dec_it funs) acc c.c_controllables in
   { c_assume = c_assume;
-    c_enforce = c_enforce;
+    c_objectives = c_objectives;
     c_assume_loc = c_assume_loc;
     c_enforce_loc = c_enforce_loc;
     c_block = c_block;
@@ -350,6 +356,7 @@ let defaults = {
   switch_handler = switch_handler;
   var_dec = var_dec;
   last = last;
+  objective = objective;
   contract = contract;
   node_dec = node_dec;
   const_dec = const_dec;
@@ -374,6 +381,7 @@ let defaults_stop = {
   switch_handler = stop;
   var_dec = stop;
   last = stop;
+  objective = stop;
   contract = stop;
   node_dec = stop;
   const_dec = stop;

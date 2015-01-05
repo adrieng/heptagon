@@ -1172,12 +1172,16 @@ and build cenv h dec =
   in
     mapfold var_dec (Env.empty, h) dec
 
+let typing_objective cenv h obj =
+  let typed_e = expect cenv h (Tid Initial.pbool) obj.o_exp in
+  { obj with o_exp = typed_e }
+
 let typing_contract cenv h contract =
   match contract with
     | None -> None,h
     | Some ({ c_block = b;
               c_assume = e_a;
-              c_enforce = e_g;
+              c_objectives = objs;
               c_assume_loc = e_a_loc;
               c_enforce_loc = e_g_loc;
               c_controllables = c }) ->
@@ -1188,15 +1192,20 @@ let typing_contract cenv h contract =
         (* assumption *)
         let typed_e_a = expect cenv h' (Tid Initial.pbool) e_a in
         let typed_e_a_loc = expect cenv h' (Tid Initial.pbool) e_a_loc in
-        (* property *)
-        let typed_e_g = expect cenv h' (Tid Initial.pbool) e_g in
+        (* objectives *)
+        let typed_objs =
+	  List.map
+	    (fun o ->
+	       let typed_exp = expect cenv h' (Tid Initial.pbool) o.o_exp in
+	       { o with o_exp = typed_exp; })
+	    objs in
         let typed_e_g_loc = expect cenv h' (Tid Initial.pbool) e_g_loc in
 
         let typed_c, (_c_names, h) = build cenv h c in
 
         Some { c_block = typed_b;
                c_assume = typed_e_a;
-               c_enforce = typed_e_g;
+               c_objectives = typed_objs;
                c_assume_loc = typed_e_a_loc;
                c_enforce_loc = typed_e_g_loc;
                c_controllables = typed_c }, h

@@ -338,13 +338,24 @@ let print_type_def ff { t_name = name; t_desc = tdesc } =
         fprintf ff " =@ %a" (print_record print_field) f_ty_list in
   fprintf ff "@[<2>type %a%a@]@." print_qualname name print_type_desc tdesc
 
+let print_objective_kind ff = function
+  | Obj_enforce -> fprintf ff "enforce"
+  | Obj_reachable -> fprintf ff "reachable"
+  | Obj_attractive -> fprintf ff "attractive"
+
+let print_objective ff o =
+  fprintf ff "@[<2>%a@ %a]"
+	  print_objective_kind o.o_kind
+	  print_exp o.o_exp
+
 let print_contract ff { c_block = b;
-                        c_assume = e_a; c_enforce = e_g;
-      c_controllables = c} =
-  fprintf ff "@[<v2>contract@\n%a@ assume %a@ enforce %a@ with (%a)@\n@]"
+                        c_assume = e_a;
+			c_objectives = objs;
+			c_controllables = c} =
+  fprintf ff "@[<v2>contract@\n%a@ assume %a%a@ with (%a)@\n@]"
     (print_block " do ") b
     print_exp e_a
-    print_exp e_g
+    (print_list print_objective "@ " "@ " "") objs 
     print_vd_tuple c
 
 let print_node ff

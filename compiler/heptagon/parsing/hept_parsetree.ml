@@ -188,9 +188,18 @@ and type_desc =
   | Type_enum of dec_name list
   | Type_struct of (dec_name * ty) list
 
+type objective_kind =
+  | Obj_enforce
+  | Obj_reachable
+  | Obj_attractive
+
+type objective =
+    { o_kind : objective_kind;
+      o_exp : exp }
+
 type contract =
   { c_assume  : exp;
-    c_enforce : exp;
+    c_objectives : objective list;
     c_assume_loc : exp;
     c_enforce_loc : exp;
     c_controllables : var_dec list;
@@ -292,6 +301,9 @@ let mk_var_dec ?(linearity=Linearity.Ltop) name ty ck last loc =
 let mk_block locals eqs loc =
   { b_local = locals; b_equs = eqs;
     b_loc = loc; }
+
+let mk_objective kind exp =
+  { o_kind = kind; o_exp = exp }
 
 let mk_const_dec id ty e loc =
   { c_name = id; c_type = ty; c_value = e; c_loc = loc }

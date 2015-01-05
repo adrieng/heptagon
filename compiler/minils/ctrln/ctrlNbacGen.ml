@@ -68,7 +68,8 @@ type 'f gen_data =
       init_state: 'f bexp;
       assertion: 'f bexp;
       invariant: 'f bexp;
-      (* reachable: bexp; *)
+      reachable: 'f bexp option;
+      attractive: 'f bexp option;
       remaining_contrs: SSet.t;      (* All controllable inputs that has not yet
                                         been assigned to a U/C group. *)
       local_contr_deps: SSet.t SMap.t;         (* All variables that depend on a
@@ -95,6 +96,8 @@ let mk_gen_data typdefs decls input local output init_cond =
     init_state = tt;
     assertion = tt;
     invariant = tt;
+    reachable = None;
+    attractive = None;
   }
 
 (* --- *)
@@ -388,7 +391,7 @@ let declare_contrs acc cl =
 (** Contract translation *)
 let translate_contract ~pref gd
     ({ c_local;           c_eq = equs;
-       c_assume = a;      c_enforce = g;
+       c_assume = a;      c_objectives = objs;
        c_assume_loc = a'; c_enforce_loc = g';
        c_controllables = cl } as contract)
     =
@@ -398,7 +401,7 @@ let translate_contract ~pref gd
   let gd = { gd with decls; contrs; remaining_contrs = c; } in
   let gd, equs' = translate_eqs ~pref (gd, []) equs in
   let ak = as_bexp & mk_and (translate_ext ~pref a) (translate_ext ~pref a')
-  and ok = as_bexp & mk_and (translate_ext ~pref g) (translate_ext ~pref g') in
+  and ok = as_bexp & translate_ext ~pref g' in
 
   let gd, ok, locals =                  (* Generate error variable if needed: *)
     if !Compiler_options.nosink
@@ -410,9 +413,25 @@ let translate_contract ~pref gd
           mk_var_dec sink Initial.tbool Linearity.Ltop Clocks.Cbase :: locals)
   in
 
-  let assertion = mk_and' gd.assertion ak
-  and invariant = mk_and' gd.invariant ok in
-  ({ gd with assertion; invariant; }, { contract with c_eq = equs'; }, locals)
+  let gd = { gd with 
+	     assertion = mk_and' gd.assertion ak;
+	     invariant = mk_and' gd.invariant ok; } in
+
+  let opt_and opt_e e' =
+    match opt_e with
+      None -> Some e'
+    | Some e -> Some (mk_and' e e') in
+
+  let add_objective gd o =
+    let e = as_bexp & translate_ext ~pref o.o_exp in
+    match o.o_kind with
+    | Obj_enforce -> { gd with invariant = mk_and' gd.invariant e; }
+    | Obj_reachable -> { gd with reachable = opt_and gd.reachable e; }
+    | Obj_attractive -> { gd with attractive = opt_and gd.attractive e; } in
+
+  let gd = List.fold_left add_objective gd objs in
+
+  (gd, { contract with c_eq = equs'; }, locals)
 
 (* --- *)
 
@@ -560,8 +579,8 @@ let translate_node ~requal_types typdefs = function
           cn_init = mk_and' gd.init_state init_cond;
           cn_assertion = (* mk_or' init_cond  *)gd.assertion;
           cn_invariant = Some (mk_or' init_cond gd.invariant);
-          cn_reachable = None;
-          cn_attractive = None; }
+          cn_reachable = gd.reachable;
+          cn_attractive = gd.attractive; }
       and node =
         { node with
           n_equs = equs';

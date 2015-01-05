@@ -263,13 +263,13 @@ let typing_contract h contract =
     | None -> h
     | Some { c_block = b;
              c_assume = e_a;
-             c_enforce = e_g;
+             c_objectives = objs;
              c_controllables = c_list } ->
         let h' = typing_block h b in
         (* assumption *)
         expect h' (Etuplepat []) (Ck Clocks.Cbase) e_a;
         (* property *)
-        expect h' (Etuplepat []) (Ck Clocks.Cbase) e_g;
+        List.iter (fun o -> expect h' (Etuplepat []) (Ck Clocks.Cbase) o.o_exp) objs;
 
         append_env h c_list
 

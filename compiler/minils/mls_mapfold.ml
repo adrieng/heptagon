@@ -47,6 +47,7 @@ type 'a mls_it_funs = {
   pat:           'a mls_it_funs -> 'a -> Minils.pat -> Minils.pat * 'a;
   var_dec:       'a mls_it_funs -> 'a -> Minils.var_dec -> Minils.var_dec * 'a;
   var_decs:      'a mls_it_funs -> 'a -> Minils.var_dec list -> Minils.var_dec list * 'a;
+  objective:     'a mls_it_funs -> 'a -> Minils.objective -> Minils.objective * 'a;
   contract:      'a mls_it_funs -> 'a -> Minils.contract -> Minils.contract * 'a;
   node_dec:      'a mls_it_funs -> 'a -> Minils.node_dec -> Minils.node_dec * 'a;
   const_dec:     'a mls_it_funs -> 'a -> Minils.const_dec -> Minils.const_dec * 'a;
@@ -178,18 +179,22 @@ and var_dec funs acc vd =
 and var_decs_it funs acc vds = funs.var_decs funs acc vds
 and var_decs funs acc vds = mapfold (var_dec_it funs) acc vds
 
+and objective_it funs acc o = funs.objective funs acc o
+and objective funs acc o =
+  let e, acc = extvalue_it funs acc o.o_exp in
+  { o with o_exp = e }, acc
 
 and contract_it funs acc c = funs.contract funs acc c
 and contract funs acc c =
   let c_assume, acc = extvalue_it funs acc c.c_assume in
   let c_assume_loc, acc = extvalue_it funs acc c.c_assume_loc in
-  let c_enforce, acc = extvalue_it funs acc c.c_enforce in
+  let c_objectives, acc = mapfold (objective_it funs) acc c.c_objectives in
   let c_enforce_loc, acc = extvalue_it funs acc c.c_enforce_loc in
   let c_local, acc = var_decs_it funs acc c.c_local in
   let c_eq, acc = eqs_it funs acc c.c_eq in
   { c with
       c_assume = c_assume;
-      c_enforce = c_enforce;
+      c_objectives = c_objectives;
       c_assume_loc = c_assume_loc;
       c_enforce_loc = c_enforce_loc;
       c_local = c_local;
@@ -267,6 +272,7 @@ let defaults = {
   pat = pat;
   var_dec = var_dec;
   var_decs = var_decs;
+  objective = objective;
   contract = contract;
   node_dec = node_dec;
   const_dec = const_dec;

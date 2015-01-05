@@ -236,7 +236,7 @@ let typing_contract loc contract =
     | Some { c_block = b;
              c_assume = e_a;
              c_assume_loc = e_a_loc;
-             c_enforce = e_g;
+             c_objectives = objs;
              c_enforce_loc = e_g_loc;
            } ->
         let teq = typing_eqs b.b_equs in
@@ -244,10 +244,11 @@ let typing_contract loc contract =
           cseq
             teq
             (ctuplelist
-               [(typing e_a);
-                (typing e_g);
-                (typing e_a_loc);
-                (typing e_g_loc)]) in
+               ((typing e_a) ::
+                (typing e_a_loc) ::
+                (typing e_g_loc) ::
+		(List.map (fun o -> typing o.o_exp) objs)
+	       )) in
         Causal.check loc t_contract;
         let t_contract = clear (build b.b_local) t_contract in
         t_contract

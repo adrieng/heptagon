@@ -387,14 +387,14 @@ let typing_contract h contract =
     | None -> h
     | Some { c_block = b;
              c_assume = e_a;
-             c_enforce = e_g;
+             c_objectives = objs;
              c_controllables = c } ->
         let h' = build h b.b_local in
         typing_eqs h' b.b_equs;
         (* assumption *)
         expect h' e_a (skeleton izero e_a.e_ty);
         (* property *)
-        expect h' e_g (skeleton izero e_g.e_ty);
+        List.iter (fun o -> expect h' o.o_exp (skeleton izero o.o_exp.e_ty)) objs;
         build_initialized h c
 
 let typing_node { n_input = i_list; n_output = o_list;

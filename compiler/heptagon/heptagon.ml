@@ -158,9 +158,18 @@ and type_dec_desc =
   | Type_enum of constructor_name list
   | Type_struct of structure
 
+type objective_kind =
+  | Obj_enforce
+  | Obj_reachable
+  | Obj_attractive
+
+type objective =
+    { o_kind : objective_kind;
+      o_exp : exp }
+
 type contract = {
   c_assume  : exp;
-  c_enforce : exp;
+  c_objectives : objective list;
   c_assume_loc : exp;
   c_enforce_loc : exp;
   c_controllables : var_dec list;

@@ -190,20 +190,29 @@ let translate_eq { Heptagon.eq_desc = desc; Heptagon.eq_loc = loc } =
     | Heptagon.Epresent _ | Heptagon.Eautomaton _ | Heptagon.Ereset _ ->
         Error.message loc Error.Eunsupported_language_construct
 
+let translate_objective o =
+  let e = translate_extvalue o.Heptagon.o_exp in
+  let kind =
+    match o.Heptagon.o_kind with
+    | Heptagon.Obj_enforce -> Obj_enforce
+    | Heptagon.Obj_reachable -> Obj_reachable
+    | Heptagon.Obj_attractive -> Obj_attractive in
+  { o_kind = kind; o_exp = e }
+
 let translate_contract contract =
   match contract with
     | None -> None
     | Some { Heptagon.c_block = { Heptagon.b_local = v;
                                   Heptagon.b_equs = eq_list };
              Heptagon.c_assume = e_a;
-             Heptagon.c_enforce = e_g;
+             Heptagon.c_objectives = objs;
              Heptagon.c_assume_loc = e_a_loc;
              Heptagon.c_enforce_loc = e_g_loc;
              Heptagon.c_controllables = l_c } ->
         Some { c_local = List.map translate_var v;
                c_eq = List.map translate_eq eq_list;
                c_assume = translate_extvalue e_a;
-               c_enforce = translate_extvalue e_g;
+               c_objectives = List.map translate_objective objs;
                c_assume_loc = translate_extvalue e_a_loc;
                c_enforce_loc = translate_extvalue e_g_loc;
                c_controllables = List.map translate_var l_c }
@@ -216,7 +225,6 @@ let node n =
     n_input = List.map translate_var n.Heptagon.n_input;
     n_output = List.map translate_var n.Heptagon.n_output;
     n_contract = translate_contract n.Heptagon.n_contract;
-    n_controller_call = ([],[]);
     n_local = List.map translate_var n.Heptagon.n_block.Heptagon.b_local;
     n_equs = List.map translate_eq n.Heptagon.n_block.Heptagon.b_equs;
     n_loc = n.Heptagon.n_loc ;
