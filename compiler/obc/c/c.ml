@@ -380,3 +380,12 @@ let rec array_base_ctype ty idx_list =
     | Cty_arr (_, ty), _::idx_list -> array_base_ctype ty idx_list
     | _ ->
       assert false
+
+(** Convert C expression to left-hand side *)
+let rec clhs_of_cexpr cexpr =
+  match cexpr with
+  | Cvar v -> CLvar v
+  | Cderef e -> CLderef (clhs_of_cexpr e) 
+  | Cfield (e,qn) -> CLfield (clhs_of_cexpr e, qn)
+  | Carray (e1,e2) -> CLarray (clhs_of_cexpr e1, e2)
+  | _ -> failwith("C expression not translatable to LHS")

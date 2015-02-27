@@ -145,12 +145,11 @@ class enum_input mod_name value_list (table:GPack.table) n : input =
 
   let _ = List.iter
     (fun (v,b) ->
-       let prefixed_value = mod_name ^ "_" ^ v in
        let click () =
    if not !click_processed then
      begin
        click_processed := true;
-       value := prefixed_value;
+       value := v;
        !active_button#set_active false;
        b#set_active true;
        active_button := b;
@@ -260,13 +259,13 @@ let create_input v_name v_ty n (table:GPack.table) =
   match v_ty with
   | Tid{ qual = Pervasives; name = "int" } ->
       new scale_input
-        0.0 0. 120.float_of_string
+        0. (-60.) 60. float_of_string
         (fun v ->
           string_of_int (int_of_float v))
         0
         table n
   | Tid{ qual = Pervasives; name = "float" } ->
-      new scale_input 0. 0. 100. float_of_string string_of_float 1 table n
+      new scale_input 0. (-100.) 100. float_of_string string_of_float 1 table n
   | Tid{ qual = Pervasives; name = "bool" } ->
       new boolean_input table n
   | Tid(name) ->

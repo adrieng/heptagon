@@ -162,12 +162,10 @@ let main_def_of_class_def cd =
                   (vn ^ "." ^ (shortname fn), args)
               | _ -> assert false in
             let (prompt, args_format_s) = mk_prompt lhs in
-            let scan_exp =
+            let scan_exp e =
               let printf_s = Format.sprintf "%s ? " prompt in
               let format_s = format_for_type ty in
-              let exp_scanf = Cfun_call ("scanf",
-                                         [Cconst (Cstrlit format_s);
-                                          Caddrof lhs]) in
+              let exp_scanf = Cfun_call ("scanf", [Cconst (Cstrlit format_s); e]) in
               let body =
                 if !Compiler_options.hepts_simulation
                 then (* hepts: systematically test and quit when EOF *)
@@ -186,12 +184,14 @@ let main_def_of_class_def cd =
               Csblock { var_decls = [];
                         block_body = body; } in
             match need_buf_for_ty ty with
-            | None -> ([scan_exp], [])
+            | None -> ([scan_exp (Caddrof lhs)], [])
             | Some tyn ->
                 let varn = fresh "buf" in
-                ([scan_exp;
-                  Csexpr (Cfun_call (tyn ^ "_of_string",
-                                     [Cvar varn]))],
+		let lhs = clhs_of_cexpr lhs in
+                ([scan_exp (Cvar varn);
+                  Caffect (lhs,
+			   (Cfun_call (tyn ^ "_of_string",
+                                     [Cvar varn])))],
                  [(varn, Cty_arr (20, Cty_char))])
         end
     | Tprod _ | Tinvalid -> failwith("read_lhs_of_ty: untranslatable type")
