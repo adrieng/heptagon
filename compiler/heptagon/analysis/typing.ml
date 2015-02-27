@@ -1213,7 +1213,7 @@ let typing_contract cenv h contract =
 
 let build_node_params cenv l =
   let check_param env p =
-    let ty = check_type cenv p.p_type in
+    let ty = check_type env p.p_type in
     let p = { p with p_type = ty } in
     let n = Names.local_qn p.p_name in
     p, QualEnv.add n ty env
