@@ -588,6 +588,7 @@ LIBOBJS
 enable_ctrl2ept
 enable_simulator
 stdlib_dir
+RM
 INSTALL
 OCAML_PKG_reatk_ctrlNbac
 OCAML_PKG_lablgtk2
@@ -2893,8 +2894,8 @@ if test "$OCAMLC" = "no"; then
 fi
 
 case "$OCAMLVERSION" in
-  0.*|1.*|2.*|3.0*)
-     as_fn_error $? "You need Objective Caml 3.10 or higher" "$LINENO" 5;;
+  0.*|1.*|2.*|3.*)
+     as_fn_error $? "You need Objective Caml 4.00 or higher" "$LINENO" 5;;
 esac
 
 
@@ -4025,6 +4026,7 @@ if test "$enable_local_stdlib" = "yes"; then
 else
     stdlib_dir=$libdir/heptagon
 fi
+
 
 
 

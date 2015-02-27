@@ -6,12 +6,14 @@ bindir      = @bindir@
 libdir      = @libdir@
 
 INSTALL= @INSTALL@
+RM=rm
 @SET_MAKE@
 
 BUILD= _build
 COMPILER=heptc
 SIMULATOR=hepts
 CTRLNBAC2EPT_TRANSLATOR=ctrl2ept
+BZREAX=bzreax
 
 INSTALL_BINDIR=$(bindir)
 INSTALL_LIBDIR=$(libdir)/heptagon

@@ -30,6 +30,9 @@ install:
 	$(INSTALL) -d $(INSTALL_BINDIR)
 	$(foreach t,$(BIN),$(INSTALL) $(t).$(TARGET) $(INSTALL_BINDIR)/$(t);)
 
+uninstall:
+	$(foreach t,$(BIN),$(RM) $(INSTALL_BINDIR)/$(t);)
+
 clean:
 	$(OCAMLBUILD) -clean
 
