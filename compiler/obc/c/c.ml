@@ -238,7 +238,8 @@ and pp_cstm fmt stm = match stm with
       let pp_clause fmt (tag, stml) =
         fprintf fmt "@[<v 2>case %a:%a@ break;@]"
           pp_cexpr (Cconst (Ctag tag)) pp_cstm_list stml in
-      fprintf fmt "@[<v>@[<v 2>switch (%a) {%a@]@ }@]"
+      fprintf fmt
+        "@[<v>@[<v 2>switch (%a) {%a@ @[<v 2>default:@ break;@]@]@ }@]"
         pp_cexpr e (pp_list pp_clause "") cl
   | Caffect (lhs, e) ->
       fprintf fmt "%a = %a" pp_clhs lhs pp_cexpr e
