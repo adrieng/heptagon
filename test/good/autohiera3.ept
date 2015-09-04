@@ -1,0 +1,17 @@
+node test(r,r1,e:bool) returns (st:int)
+let
+automaton 
+   state S1 do
+     st=0;
+   until r then S2
+   state S2 do
+       automaton 
+           state P1 do
+               st=1;
+           until r1 then P2
+           state P2 do
+               st=2;
+       end;
+   until e then S1
+end
+tel
