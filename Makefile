@@ -1,3 +1,5 @@
+include config
+
 .PHONY: all install
 
 all:
