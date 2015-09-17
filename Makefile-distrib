@@ -26,7 +26,7 @@ binary-distrib:
 	cp -r test/bad test/good test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptbindir)/test
 # manual
 	mkdir -p export/$(heptbindir)/manual
-	cp manual/heptagon-manual.pdf export/$(heptbindir)/manual
+	cp manual/heptagon-manual.pdf manual/heptreax-manual.pdf export/$(heptbindir)/manual
 # Makefile, config, INSTALL
 	cp config export/$(heptbindir)
 	cp Makefile-bin export/$(heptbindir)/Makefile
@@ -48,7 +48,7 @@ source-distrib:
 	cp -r test/bad test/good test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptdir)/test
 # manual
 	mkdir -p export/$(heptdir)/manual
-	cp manual/heptagon-manual.pdf export/$(heptdir)/manual
+	cp manual/heptagon-manual.pdf manual/heptreax-manual.pdf export/$(heptdir)/manual
 # Makefile, config.in, configure, install-sh, INSTALL, COPYING
 	cp config.in export/$(heptdir)
 	cp configure export/$(heptdir)
