@@ -7,5 +7,5 @@ This example show how to import an external function written in C in an Heptagon
 
 To make it work:
    heptc mathext.epi
-   heptc imports.ept
-   gcc -std=c99 -I . mathext.c imports_c/*.c -o imports
+   heptc -target c imports.ept
+   gcc -c -I /usr/local/lib/heptagon/c -I . mathext.c imports_c/*.c
