@@ -55,3 +55,188 @@
   month        = {September},
   year         = 2005,
 }
+
+@Article{ramadge-wonham:synthcont,
+  author       = {Ramadge, P. J. and Wonham, W. M.},
+  title	       = {Supervisory control of a class of discrete event
+                  processes},
+  journal      = {SIAM J. Control Optim.},
+  volume       = 25,
+  number       = 1,
+  year	       = 1987,
+  issn	       = {0363-0129},
+  pages	       = {206--230},
+  publisher    = {Society for Industrial and Applied Mathematics}
+}
+
+@article{marchand00c,
+  Author       = {Marchand, H. and Bournai, P. and Le Borgne, M. and
+                  Le Guernic, P.},
+  Title	       = {Synthesis of Discrete-Event Controllers based on the
+                  Signal Environment},
+  Journal      = {Discrete Event Dynamic System: Theory and
+                  Applications},
+  Volume       = 10,
+  Number       = 4,
+  Month	       = {October},
+  Year	       = 2000
+} 
+
+
+@Article{bzr_jdeds,
+  author       = {Delaval, Gwena\"{e}l and Rutten, \'{E}ric and
+                  Marchand, Herv\'{e}},
+  title        = {Integrating Discrete Controller Synthesis into a
+                  Reactive Programming Language Compiler},
+  journal      = {Discrete Event Dynamic Systems},
+  year         = {To appear},
+  key          = {me,bzr}
+}
+
+@InProceedings{gcm10:_qos_energ_coord_dcs,
+  author       = {{De Palma}, No\"{e}l and Delaval, Gwena\"{e}l and
+                  Rutten, \'{E}ric},
+  title	       = {QoS and Energy Management Coordination using
+                  Discrete Controller Synthesis},
+  key	       = {me,bzr},
+  booktitle    = {1st International Workshop on Green Computing
+                  Middleware (GCM'2010)},
+  year	       = 2010,
+  address      = {Bangalore, India},
+  month	       = nov,
+  abstract     = {Green computing is nowadays a major challenge for
+                  most IT organizations.  Administrators have to
+                  manage the trade-off between system performances and
+                  energy saving goals. Autonomic computing is a
+                  promising approach to control the QoS and the energy
+                  consumed by a system.  This paper precisely
+                  investigates the use of synchronous programming and
+                  discrete controller synthesis to automate the
+                  generation of a controller that enforces the
+                  required coordination between QoS and energy
+                  managers.  We illustrate our approach by describing
+                  the coordination between a simple admission
+                  controller and an energy controller.},
+  pdf	       =
+                  {http://pop-art.inrialpes.fr/people/delaval/pub/delaval-gcm10.pdf}
+}
+
+@InProceedings{delaval08:_modul_distr_applic_discr_contr_synth,
+  author       = {Delaval, G.},
+  title	       = {Modular Distribution and Application to Discrete
+                  Controller Synthesis},
+  key	       = {me,these},
+  year	       = 2008,
+  booktitle    = {International Workshop on Model-driven High-level
+                  Programming of Embedded Systems (SLA++P'08)},
+  month        = apr,
+  address      = {Budapest, Hungary},
+  abstract     = {This paper shows the application of the automatic
+                  distribution of synchronous reactive programs to the
+                  specific problem of discrete controller synthesis of
+                  complex reactive systems. Discrete controller
+                  synthesis is a formal method used to ensure
+                  properties on a flexible system which does not a
+                  priori verify them. However, this method is
+                  efficient only on boolean programs. More complex
+                  embedded systems, comprising complex data types and
+                  structures, cannot be addressed without abstraction
+                  means. We show how such abstractions can be obtained
+                  automatically using a type-directed projection
+                  operation. This operation allows then the safe
+                  recombination of the result of the synthesis with
+                  the original abstracted system, preserving the
+                  ensured properties.},
+  pdf	       =
+                  {http://pop-art.inrialpes.fr/people/delaval/pub/slap08.pdf}
+}
+
+@InProceedings{delaval10:_contracts_mod_dcs,
+  author       = {Delaval, Gwena\"{e}l and Marchand, Herv\'{e} and
+                  Rutten, \'{E}ric},
+  title	       = {Contracts for Modular Discrete Controller Synthesis},
+  key	       = {me,bzr},
+  booktitle    = {ACM International Conference on Languages,
+                  Compilers, and Tools for Embedded Systems (LCTES
+                  2010)},
+  year	       = 2010,
+  address      = {Stockholm, Sweden},
+  month	       = apr,
+  abstract     = {We describe the extension of a reactive programming
+                  language with a behavioral contract construct.  It
+                  is dedicated to the programming of reactive control
+                  of applications in embedded systems, and involves
+                  principles of the supervisory control of discrete
+                  event systems.  Our contribution is in a language
+                  approach where modular discrete controller synthesis
+                  (DCS) is integrated, and it is concretized in the
+                  encapsulation of DCS into a compilation process.
+                  From transition system specifications of possible
+                  behaviors, DCS automatically produces controllers
+                  that make the controlled system satisfy the property
+                  given as objective.  Our language features and
+                  compiling technique provide
+                  correctness-by-construction in that sense, and
+                  enhance reliability and verifiability.  Our
+                  application domain is adaptive and reconfigurable
+                  systems: closed-loop adaptation mechanisms enable
+                  flexible execution of functionalities w.r.t.
+                  changing resource and environment conditions.  Our
+                  language can serve programming such adaption
+                  controllers.  This paper particularly describes the
+                  compilation of the language.  We present a method
+                  for the modular application of discrete controller
+                  synthesis on synchronous programs, and its
+                  integration in the BZR language.  We consider
+                  structured programs, as a composition of nodes, and
+                  first apply DCS on particular nodes of the program,
+                  in order to reduce the complexity of the controller
+                  computation; then, we allow the abstraction of parts
+                  of the program for this computation; and finally, we
+                  show how to recompose the different controllers
+                  computed from different abstractions for their
+                  correct co-execution with the initial program.  Our
+                  work is illustrated with examples, and we present
+                  quantitative results about its implementation.},
+  pdf	       =
+                  {http://pop-art.inrialpes.fr/people/delaval/pub/lctes2010.pdf}
+}
+
+@inproceedings{gueye12:_coord_energ,
+  author =	 {Gueye, Soguy Mak-Kar{\'e} and de Palma, No{\"e}l and
+                  Rutten, Eric},
+  title =	 {Coordinating Energy-aware Administration Loops using
+                  Discrete Control},
+  booktitle =	 {Proc. of the Eighth International Conference on
+                  Autonomic and Autonomous Systems, ICAS 2012},
+  year =	 2012,
+  address =	 {St. Maarten, Netherlands Antilles},
+  month =	 mar,
+  pdf =		 {pub/icas12_20027.pdf}
+}
+
+@InProceedings{berthier14:_reax,
+  author = 	 {Nicolas Berthier and Herv{\'e} Marchand},
+  title = 	 {Discrete Controller Synthesis for Infinite State Systems with {ReaX}},
+  booktitle =	 {12th International Workshop on Discrete Event Systems},
+  year =	 2014,
+  doi =          {10.3182/20140514-3-FR-4046.00099},
+  pages =	 {46--53},
+  address =	 {Cachan, France}
+}
+
+@article{delaval13:bzr_jdeds,
+  title = {{Integrating Discrete Controller Synthesis into a Reactive Programming Language Compiler}},
+  author = {Delaval, Gwena{\"e}l and Rutten, {\'E}ric and Marchand, Herv{\'e}},
+  url = {https://hal.inria.fr/hal-00863286},
+  journal = {{Discrete Event Dynamic Systems}},
+  publisher = {{Springer Verlag (Germany)}},
+  volume = {23},
+  number = {4},
+  pages = {385-418},
+  year = {2013},
+  doi = {10.1007/s10626-013-0163-5},
+  pdf = {https://hal.inria.fr/hal-00863286/file/jdeds.pdf},
+  hal_id = {hal-00863286},
+  hal_version = {},
+}
