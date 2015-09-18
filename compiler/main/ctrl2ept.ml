@@ -118,33 +118,18 @@ let parse_input ?filename (parse: ?filename:string -> _) =
 
 exception Error of string
 
-(* let hack_filter_inputs = let open AST in function *)
-(*   | `Desc ({ fn_decls = decls } as f) -> *)
-(*       (\* TODO: we should actually _substitute_ these variables with ff in the *)
-(*          definitions; yet I think they are unlikely to appear anywhere in the *)
-(*          controller. *\) *)
-(*       let init_symb = Symb.of_string Ctrln_utils.init_cond_str *)
-(*       and sink_symb = Symb.of_string Ctrln_utils.sink_state_str in *)
-(*       let decls = SMap.remove init_symb decls in *)
-(*       let decls = SMap.remove sink_symb decls in *)
-(*       `Desc { f with fn_decls = decls } *)
-(*   | _ -> failwith "should be given an unchecked function!" *)
-
-let parse_n_gen_ept_node ?filename ?node_name ?node_sig () =
+let parse_n_gen_ept_node ?filename ?node_name ?node_sig ?typ_symbs () =
   let name, func = parse_input ?filename CtrlNbac.Parser.Unsafe.parse_func in
   let node_name = match node_name with Some n -> n
     | None -> match name with None -> assert false
         | Some n -> Names.local_qn (n ^ "_ctrlr")
   in
-  (* let name = match name with None -> "ctrlr" | Some n -> n ^"_ctrlr" in *)
-  (* let func = hack_filter_inputs func in *)
-  name, CtrlNbacAsEpt.gen_func ~node_name ?node_sig func
+  name, CtrlNbacAsEpt.gen_func ?typ_symbs ~node_name ?node_sig func
 
 let handle_ctrlf ?filename mk_oc =
-  let _, (node, typs) = parse_n_gen_ept_node ?filename () in
+  let _, decls = parse_n_gen_ept_node ?filename () in
   let prog = CtrlNbacAsEpt.create_prog Names.LocalModule in    (* don't care? *)
-  let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
-  let prog = CtrlNbacAsEpt.add_to_prog node prog in
+  let prog = List.fold_right CtrlNbacAsEpt.add_to_prog decls prog in
   let oc, close = mk_oc.out_exec "ept" in
   Hept_printer.print oc prog;
   close ()
@@ -162,27 +147,24 @@ let output_prog prog modul =
   Hept_printer.print oc prog;
   close_out oc
 
-let input_function prog filename node_name node_sig =
+let input_function prog typ_symbs filename node_name node_sig =
   info "Reading function from `%s'…" filename;
-  let res = parse_n_gen_ept_node ~filename ~node_name ~node_sig () in
-  let node, typs = snd res in
-  (* XXX: check types are also in signature? maybe we should only use the types
+  let _, decls = parse_n_gen_ept_node ~filename ~node_name ~node_sig ~typ_symbs () in
+  (* XXX: check types are also in signature? actually, we only use the types
      declared in the signature instead, as long as the controller synthesis tool
      does not introduce new types. *)
-  let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
-  let prog = CtrlNbacAsEpt.add_to_prog node prog in
-  prog
+  List.fold_right CtrlNbacAsEpt.add_to_prog decls prog
 
-let try_ctrlf nn prog =
+let try_ctrlf typ_symbs nn prog =
   let node_name = Ctrln_utils.controller_node nn in
   if Modules.check_value node_name then
     let filename = Ctrln_utils.ctrlf_for_node nn in
     let node_sig = Modules.find_value node_name in
-    input_function prog filename node_name node_sig
+    input_function prog typ_symbs filename node_name node_sig
   else
     raise (Error "Unable to load any controller function.")
 
-let try_ctrls nn prog =
+let try_ctrls typ_symbs nn prog =
   let rec try_ctrls num prog =
     let node_name = Ctrln_utils.controller_node ~num nn in
     if Modules.check_value node_name then
@@ -190,7 +172,7 @@ let try_ctrls nn prog =
       if num = 0 && not (Sys.file_exists filename) then
         raise Exit;                                                  (* abort *)
       let node_sig = Modules.find_value node_name in
-      let prog = input_function prog filename node_name node_sig in
+      let prog = input_function prog typ_symbs filename node_name node_sig in
       try_ctrls (succ num) prog
     else
       prog
@@ -207,8 +189,12 @@ let handle_node arg =
   Modules.open_module Names.Pervasives;
   info "Loading module of controllers for node %s…" (Names.fullname nn);
   let om = Ctrln_utils.controller_modul mo in
+  info "Translating type declarations of module %s…" (Names.modul_to_string om);
+  let typs, typ_symbs = CtrlNbacAsEpt.decl_typs_from_module_itf om in
   let prog = CtrlNbacAsEpt.create_prog ~open_modul:[ ] om in
-  let prog = try try_ctrls nn prog with Exit -> try_ctrlf nn prog in
+  let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
+  let prog = try try_ctrls typ_symbs nn prog with
+    | Exit -> try_ctrlf typ_symbs nn prog in
   output_prog prog om
 
 (* -------------------------------------------------------------------------- *)

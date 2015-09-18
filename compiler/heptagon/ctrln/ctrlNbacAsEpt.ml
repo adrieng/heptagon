@@ -47,19 +47,21 @@ type 'f gen_data =
       decls: ('f, 'f var_spec) decls;
       ltyps: (typ * 'f option) SMap.t;
       qname: string -> qualname;
-      mutable tdefs: type_name SMap.t;
+      typ_symbs: type_name SMap.t;
       mutable env: var_dec Env.t;
       mutable var_names: ident SMap.t;
     }
 
+let no_typ_symbs: type_name SMap.t = SMap.empty
+
 (* --- *)
 
-let mk_gen_data qual decls typdefs =
+let mk_gen_data qualname typ_symbs decls typdefs =
   {
     decls;
     ltyps = label_typs typdefs;
-    qname = (fun name -> { qual; name });
-    tdefs = SMap.empty;
+    qname = (fun name -> { qual = modul qualname; name });
+    typ_symbs;
     env = Env.empty;
     var_names = SMap.empty;
   }
@@ -72,7 +74,7 @@ let translate_typ gd vdecl = function
   | `Bool -> Initial.tbool
   | `Int -> Initial.tint
   | `Real -> Initial.tfloat
-  | `Enum tn -> Tid (SMap.find tn gd.tdefs)
+  | `Enum tn -> Tid (SMap.find tn gd.typ_symbs)
   | t -> raise (Untranslatable (asprintf "type %a" print_typ t,
                                opt_decl_loc gd vdecl))
 
@@ -80,8 +82,6 @@ let symb_typ gd s = try match SMap.find s gd.decls with | typ, _, _ -> typ with
   | Not_found -> fst (SMap.find s gd.ltyps)
 
 let symb_typ' gd s = translate_typ gd s (symb_typ gd s)
-
-let translate_label gd l = gd.qname (Symb.to_string (label_symb l))
 
 let ts gd v = try SMap.find v gd.var_names with Not_found ->
   failwith (asprintf "Variable name `%a' unavailable; \
@@ -241,56 +241,59 @@ let translate_expr gd e =
 
 (* --- *)
 
-(* let decl_typs typdefs gd = *)
-(*   fold_typdefs begin fun tname tdef typs -> *)
-(*     let name = gd.qname (Symb.to_string tname |> String.uncapitalize) in *)
-(*     match tdef with *)
-(*       | EnumDef labels -> *)
-(*           let constrs = List.map (fun (l, _) -> translate_label gd l) labels in *)
-(*           gd.tdefs <- SMap.add tname name gd.tdefs; *)
-(*           Ptype { t_name = name; *)
-(*                   t_desc = Type_enum constrs; *)
-(*                   t_loc = Location.no_location } :: typs *)
-(*   end typdefs [] *)
+let decl_typs modul_name typdefs =
+  let qualify name = { qual = modul modul_name; name } in
+  fold_typdefs begin fun tname tdef (types, typ_symbs) ->
+    let name = qualify (Symb.to_string tname |> String.uncapitalize) in
+    match tdef with
+      | EnumDef labels, _ ->
+          let constrs = List.map (fun (l, _) ->
+            qualify (Symb.to_string (label_symb l))) labels in
+          (Ptype { t_name = name;
+                   t_desc = Type_enum constrs;
+                   t_loc = Location.no_location } :: types,
+           SMap.add tname name typ_symbs)
+  end typdefs ([], no_typ_symbs)
 
-let decl_typs_from_module_itf gd =
+let decl_typs_from_module_itf modul_name =
   (* Note we need to sort type declarations according to their respective
      dependencies; hence the implicit topological traversal of the type
      definitions. *)
-  let rec decl_types rem types =
+  let rec decl_types rem acc =
     if QualEnv.is_empty rem then
-      types
+      acc
     else
       let t_name, tdef = QualEnv.choose rem in
-      let rem, types = decl_typ t_name tdef rem types in
-      decl_types rem types
-  and decl_typ t_name tdef rem types =
+      let rem, acc = decl_typ t_name tdef rem acc in
+      decl_types rem acc
+  and decl_typ t_name tdef rem ((types, typ_symbs) as acc) =
     let rem = QualEnv.remove t_name rem in
-    if tdef = Tabstract || t_name.qual = Names.Pervasives then
-      rem, types
+    if t_name.qual <> modul_name then
+      rem, acc
     else
-      let t_desc, rem, types = match tdef with
+      let t_desc, rem, (types, typ_symbs) = match tdef with
         | Tenum cl ->
             (* Compiler_utils.info "declaring enum type %s" (shortname t_name); *)
             let name = Symb.of_string (String.capitalize (shortname t_name)) in
-            gd.tdefs <- SMap.add name t_name gd.tdefs;
-            (Type_enum cl, rem, types)
+            (Type_enum cl, rem, (types, SMap.add name t_name typ_symbs))
         | Talias (Tid tn) when tn.qual = t_name.qual ->    (* declare deps 1st *)
             (* Compiler_utils.info "declaring alias type %s" (shortname t_name); *)
             let tdef = QualEnv.find tn rem in
-            let rem, types = decl_typ tn tdef (QualEnv.remove tn rem) types in
-            (Type_alias (Tid tn), rem, types)
+            let rem, acc = decl_typ tn tdef (QualEnv.remove tn rem) acc in
+            (Type_alias (Tid tn), rem, acc)
         | Talias t ->
             (* Compiler_utils.info "declaring alias type %s" (shortname t_name); *)
-            (Type_alias t, rem, types)
+            (Type_alias t, rem, acc)
         | Tstruct _ ->
             failwith (asprintf "Unexpected struct type `%s' in module interface"
                         (shortname t_name))
         | Tabstract -> assert false
       in
-      rem, Ptype { t_name; t_desc; t_loc = Location.no_location; } :: types
+      rem, (Ptype { t_name; t_desc; t_loc = Location.no_location } :: types,
+            typ_symbs)
   in
-  decl_types Modules.g_env.Modules.types []
+  Modules.open_module modul_name;
+  decl_types Modules.g_env.Modules.types ([], no_typ_symbs)
 
 (* --- *)
 
@@ -391,19 +394,20 @@ let node_of_func gd ?node_sig n_name func =
 
 (* --- *)
 
-let gen_func ?node_sig ~node_name func =
+let gen_func ?typ_symbs ?node_sig ~node_name func =
   let { fn_typs; fn_decls } = func_desc func in
-  let modul = modul node_name in
-  let gd = mk_gen_data modul (fn_decls:> ('f, 'f var_spec) decls) fn_typs in
-  (* let typs = decl_typs fn_typs gd in *)
-  let typs = decl_typs_from_module_itf gd in
+  let fn_decls = (fn_decls :> ('f, 'f var_spec) decls) in
+  let typs, typ_symbs = match typ_symbs with
+    | None -> decl_typs node_name fn_typs
+    | Some typ_symbs -> [], typ_symbs
+  in
+  let gd = mk_gen_data node_name typ_symbs fn_decls fn_typs in
   let node = node_of_func gd ?node_sig node_name func in
-  node, typs
+  node :: typs
 
 (* --- *)
 
 let create_prog ?(open_modul = []) modul =
-  Modules.open_module modul;
   {
     p_modname = modul;
     p_opened = open_modul;
