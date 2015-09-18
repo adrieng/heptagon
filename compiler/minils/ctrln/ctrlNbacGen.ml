@@ -119,6 +119,14 @@ let rec translate_typ typ = match Modules.unalias_type typ with
   | Tarray _ -> raise & Untranslatable ("array type")
   | Tinvalid -> failwith "Encountered an invalid type!"
 
+let rec fintypp typ = match Modules.unalias_type typ with
+  | Tid ({ qual = Pervasives; name = "bool" }) -> true
+  | Tid t -> (match Modules.find_type t with
+      | Tenum _ -> true
+      | Talias t -> fintypp t                                          (* XXX? *)
+      | _ -> false)
+  | _ -> false
+
 let ref_of_ty ty = match translate_typ ty with
   | `Bool -> mk_bref
   | `Enum _ -> mk_eref
@@ -326,18 +334,25 @@ let translate_abstract_app ~pref gd pat _f args =
     if SSet.is_empty depc then gd else close_uc_group gd depc
   in
   (* declare extra inputs. *)
-  (List.fold_left (declare_additional_input ~pref) gd results, [])
+  List.fold_left (declare_additional_input ~pref) gd results
 
 (* --- *)
+
 
 let translate_eq ~pref (gd, equs)
     ({ eq_lhs = pat;
        eq_rhs = { e_desc = exp; e_ty = ty } as rhs;
        eq_base_ck = clk } as eq)
     =
+  let abstract_infinite_state = !Compiler_options.abstract_infinite in
   match pat with
     | Evarpat id ->
         begin match exp with
+          | Efby _ when (abstract_infinite_state && not (fintypp ty)) ->
+              warn ~cond:(!Compiler_options.warn_abstractions)
+                "Abstracting@ %a@ state@ variable@ %s@ as@ non-controllable@ \
+                 input." Global_printer.print_type ty (name id);
+              (declare_additional_input ~pref gd id, eq :: equs)
           | Efby (init, ev) ->
               let v = pref & mk_symb & name id in
               let ev = translate_ext ~pref ev in
@@ -345,21 +360,19 @@ let translate_eq ~pref (gd, equs)
               (add_state_var ~pref gd id ty ev init, eq :: equs)
           | Eapp ({ a_op = (Enode f | Efun f) }, args, None)
                 when f.qual <> Pervasives ->
-              let gd, equs' = translate_abstract_app ~pref gd pat f args in
-              (gd, eq :: equs' @ equs)
+              (translate_abstract_app ~pref gd pat f args, eq :: equs)
           | _ when IdentSet.mem id gd.output ->
-              (add_output_var ~pref gd id ty (translate_exp ~pref rhs),
-               eq :: equs)
+              let exp = translate_exp ~pref rhs in
+              (add_output_var ~pref gd id ty exp, eq :: equs)
           | _ ->
-              (add_local_var ~pref gd id ty (translate_exp ~pref rhs),
-               eq :: equs)
+              let exp = translate_exp ~pref rhs in
+              (add_local_var ~pref gd id ty exp, eq :: equs)
         end
     | Etuplepat _ ->
         begin match exp with
           | Eapp ({ a_op = (Enode f | Efun f) }, args, None)
                 when f.qual <> Pervasives ->
-              let gd, equs' = translate_abstract_app ~pref gd pat f args in
-              (gd, eq :: equs' @ equs)
+              (translate_abstract_app ~pref gd pat f args, eq :: equs)
           | _ -> failwith "TODO: Minils.Etuplepat construct!"
         end
 

@@ -163,6 +163,8 @@ let do_optim () =
   deadcode := true
 
 let warn_untranslatable = ref true                             (* z3z | ctrln *)
+let abstract_infinite = ref false                                    (* ctrln *)
+let warn_abstractions = ref true                                     (* ctrln *)
 
 let check_options () =
   let err m = raise (Arg.Bad m) in
@@ -189,7 +191,7 @@ and doc_no_pervasives = "\tDo not load the pervasives module"
 and doc_flatten = "\t\tInline everything."
 and doc_target =
   "<lang>\tGenerate code in language <lang>\n\t\t\t(with <lang>=c,"
-  ^ " java or z3z)"
+  ^ " java, z3z or ctrln)"
 and doc_full_type_info = "\t\t\tPrint full type information"
 and doc_stateful_info = "\t\tPrint stateful information"
 and doc_full_name = "\t\tPrint full variable name information"
@@ -215,4 +217,6 @@ and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
 and doc_interf_all = "\t\tPerform memory allocation on all types"
 and doc_unroll = "\t\tUnroll all loops"
 and doc_time_passes = "\t\tTime compilation passes"
+and doc_abstract_infinite = "\tAbstract infinite state (implied for z3z target)"
 and doc_no_warn_untranslat = "\tSuppress warnings about untranslatable constructs"
+and doc_no_warn_abstractions = "\tSuppress abstraction warnings"

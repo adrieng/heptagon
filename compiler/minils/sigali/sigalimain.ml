@@ -280,7 +280,8 @@ let translate_eq f
       | _ ->
           untranslatable_warn e;
           (* Mark n as input: unusable as local variable *)
-	  Format.printf "Adding non-bool variable %s in current_inputs@\n" (name n);
+	  warn ~cond:(!Compiler_options.warn_abstractions)
+            "Adding non-bool variable %s in current_inputs@\n" (name n);
           current_inputs := IdentSet.add n !current_inputs;
           acc_states,acc_init,acc_inputs,acc_eqs
       end

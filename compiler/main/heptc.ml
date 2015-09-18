@@ -157,8 +157,11 @@ let main () =
         "-O", Arg.Unit do_optim, doc_optim;
         "-mall", Arg.Set interf_all, doc_interf_all;
         "-time", Arg.Set time_passes, doc_time_passes;
+        "-abstract-infinite", Arg.Set abstract_infinite, doc_abstract_infinite;
         ("-Wno-untranslatable", Arg.Clear warn_untranslatable,
          doc_no_warn_untranslat);
+        ("-Wno-abstract", Arg.Clear warn_abstractions,
+         doc_no_warn_abstractions);
       ]
         compile errmsg;
   with
