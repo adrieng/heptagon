@@ -44,12 +44,10 @@ type mtype = Tint | Tbool | Tother
 exception Untranslatable
 
 let untranslatable_warn e =
-  if e.Minils.e_loc <> no_location then
-    Format.eprintf "Warning: abstracted expression:@.%a"
-      Location.print_location e.Minils.e_loc
-  else
-    Format.eprintf "Warning: abstracted expression: @[<hov 2>%a@]@."
-      Mls_printer.print_exp e
+  let warn msg = warn ~cond:(!Compiler_options.warn_untranslatable) msg in
+  if e.Minils.e_loc <> no_location
+  then warn "abstracted expression:@.%a" print_location e.Minils.e_loc
+  else warn "abstracted expression: @[<hov 2>%a@]@." Mls_printer.print_exp e
 
 let actual_ty ty =
   match (Modules.unalias_type ty) with
@@ -539,8 +537,9 @@ let program p =
         | Minils.Pnode(node) as p when node.Minils.n_contract = None ->
             (acc_proc,p::acc_p_desc)
         | Minils.Pnode(node) as p when node.Minils.n_params <> [] ->
-            warn "Unsupported@ translation@ of@ parametric@ node@ `%s'@ with@ \
-                  contract@ into@ Z/3Z!" (Names.fullname node.Minils.n_name);
+            warn ~cond:(!Compiler_options.warn_untranslatable)
+              "Unsupported@ translation@ of@ parametric@ node@ `%s'@ with@ \
+               contract@ into@ Z/3Z!" (Names.fullname node.Minils.n_name);
             (acc_proc,p::acc_p_desc)
         | Minils.Pnode(node) ->
             let (node,proc) = translate_node node in

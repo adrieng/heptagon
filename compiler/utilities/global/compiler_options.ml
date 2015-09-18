@@ -162,6 +162,7 @@ let do_optim () =
   tomato := true;
   deadcode := true
 
+let warn_untranslatable = ref true                             (* z3z | ctrln *)
 
 let check_options () =
   let err m = raise (Arg.Bad m) in
@@ -214,3 +215,4 @@ and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
 and doc_interf_all = "\t\tPerform memory allocation on all types"
 and doc_unroll = "\t\tUnroll all loops"
 and doc_time_passes = "\t\tTime compilation passes"
+and doc_no_warn_untranslat = "\tSuppress warnings about untranslatable constructs"

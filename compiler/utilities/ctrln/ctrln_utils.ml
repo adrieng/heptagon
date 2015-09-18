@@ -61,6 +61,7 @@ let save_controller_modul_for modul =
   let cm = controller_modul modul in
   let epci = String.uncapitalize (Names.modul_to_string cm) ^ ".epci" in
   Modules.select cm;
+  (* XXX check for empty modules? *)
   let oc = open_out_bin epci in
   output_value oc (Modules.current_module ());
   close_out oc;

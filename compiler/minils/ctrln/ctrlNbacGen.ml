@@ -413,7 +413,7 @@ let translate_contract ~pref gd
           mk_var_dec sink Initial.tbool Linearity.Ltop Clocks.Cbase :: locals)
   in
 
-  let gd = { gd with 
+  let gd = { gd with
 	     assertion = mk_and' gd.assertion ak;
 	     invariant = mk_and' gd.invariant ok; } in
 
@@ -548,8 +548,9 @@ let gen_ctrlf_calls ~requal_types gd node_name equs =
 let translate_node ~requal_types typdefs = function
   | ({ n_contract = None } as node) -> node, None
   | ({ n_name; n_params } as node) when n_params <> [] ->
-      warn "Unsupported@ translation@ of@ parametric@ node@ `%s'@ with@ \
-            contract@ into@ Controllable-Nbac!" (Names.fullname n_name);
+      warn ~cond:(!Compiler_options.warn_untranslatable)
+        "Unsupported@ translation@ of@ parametric@ node@ `%s'@ with@ \
+         contract@ into@ Controllable-Nbac!" (Names.fullname n_name);
       node, None
   | ({ n_name; n_input; n_output; n_local; n_equs;
        n_contract = Some contr } as node) ->
