@@ -107,7 +107,6 @@ let mk_std_oc =
 (** Parses the given input file. *)
 let parse_input ?filename (parse: ?filename:string -> _) =
   try
-    CtrlNbac.Symb.reset ();
     let s, n, msgs = parse ?filename () in
     report_msgs ?filename msgs;
     s, n
@@ -252,6 +251,7 @@ let main () =
 (* -------------------------------------------------------------------------- *)
 (** Launch the [main] *)
 let _ =
+  (* CtrlNbac.Symb.reset (); <- not needed as we have only one input file. *)
   try
     main ()
   with
