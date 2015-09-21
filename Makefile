@@ -1,6 +1,6 @@
 include config
 
-.PHONY: all install
+.PHONY: all install uninstall clean
 
 all:
 	(cd compiler/; $(MAKE))
@@ -9,12 +9,10 @@ all:
 install:
 	(cd compiler; $(MAKE) install)
 	(cd lib; $(MAKE) install)
-	$(INSTALL) tools/$(BZREAX) $(INSTALL_BINDIR)
 
 uninstall:
 	(cd compiler; $(MAKE) uninstall)
 	(cd lib; $(MAKE) uninstall)
-	$(RM) $(INSTALL_BINDIR)/$(BZREAX)
 
 clean:
 	(cd compiler; $(MAKE) clean)

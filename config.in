@@ -21,6 +21,6 @@ STDLIB_DIR=@stdlib_dir@
 
 OCAMLBUILD=STDLIB=$(STDLIB_DIR) @OCAMLBUILD@ -use-ocamlfind
 
-TARGET=byte
+TARGET=@targets@
 ENABLE_SIMULATOR=@enable_simulator@
 ENABLE_CTRL2EPT_TRANSLATOR=@enable_ctrl2ept@

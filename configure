@@ -585,6 +585,7 @@ ac_subst_vars='ctrln_pp
 package_reatk_ctrlNbac
 LTLIBOBJS
 LIBOBJS
+targets
 enable_ctrl2ept
 enable_simulator
 stdlib_dir
@@ -666,6 +667,8 @@ enable_option_checking
 enable_simulator
 enable_local_stdlib
 enable_ctrl2ept
+enable_native
+enable_byte
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1282,6 +1285,8 @@ Optional Features:
   --enable-simulator      enable the graphical simulator
   --enable-local-stdlib   use the in-sources standard library
   --enable-ctrl2ept       enable the Controllable-Nbac entity translator
+  --enable-native         build native executables
+  --enable-byte           build bytecode executables
 
 Report bugs to the package provider.
 _ACEOF
@@ -1888,6 +1893,22 @@ if test "${enable_ctrl2ept+set}" = set; then :
   enableval=$enable_ctrl2ept;
 else
   enable_ctrl2ept=yes
+fi
+
+
+# Check whether --enable-native was given.
+if test "${enable_native+set}" = set; then :
+  enableval=$enable_native;
+else
+  enable_native=no
+fi
+
+
+# Check whether --enable-byte was given.
+if test "${enable_byte+set}" = set; then :
+  enableval=$enable_byte;
+else
+  enable_byte=no
 fi
 
 
@@ -4026,6 +4047,10 @@ if test "$enable_local_stdlib" = "yes"; then
 else
     stdlib_dir=$libdir/heptagon
 fi
+
+if test "$enable_byte" = "yes"; then targets="byte"; fi;
+if test "$enable_native" = "yes"; then targets="$targets native"; fi;
+if test "x$targets" = "x"; then targets="byte"; fi;
 
 
 
