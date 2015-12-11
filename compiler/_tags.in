@@ -3,7 +3,7 @@
 <preproc.ml>: camlp4of, package(camlp4)
 true: use_menhir
 
-<**/*.{byte,native}>: package(unix), package(str), debug, custom
+<**/*.{byte,native}>: package(unix), package(str)
 <**/heptc.{byte,native}>: package(menhirLib), package(ocamlgraph)
 <main/hepts.{ml,byte,native}>: package(lablgtk2), thread
 "heptagon/parsing/hept_parser.mli": package(menhirLib)
