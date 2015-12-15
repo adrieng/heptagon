@@ -7,6 +7,7 @@
 (* Adrien Guatto, Parkas, ENS                                          *)
 (* Cedric Pasteur, Parkas, ENS                                         *)
 (* Marc Pouzet, Parkas, ENS                                            *)
+(* Nicolas Berthier, SUMO, INRIA                                       *)
 (*                                                                     *)
 (* Copyright 2012 ENS, INRIA, UJF                                      *)
 (*                                                                     *)
@@ -26,12 +27,46 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Misc
-open Location
 open Compiler_utils
 open Compiler_options
 
 let pp p = if !verbose then Mls_printer.print stdout p
+
+;; IFDEF ENABLE_CTRLN THEN
+
+(* NB: I localize file name determination logics for CtrlNbac output into this
+   module, because its place is not in CtrlNbacGen... *)
+(** [gen_n_output_ctrln p] translates the Minils program [p] into
+    Controllable-Nbac format, and then output its nodes separately in files
+    under a specific directory; typically, a node ["n"] in file ["f.ept"] is
+    output into a file called "f_ctrln/n.nbac" *)
+let gen_n_output_ctrln p =
+
+  (* Main generation procedure. *)
+  let nodes, p = CtrlNbacGen.gen p in
+
+  (* Save the controller module. *)
+  Ctrln_utils.save_controller_modul_for p.Minils.p_modname;
+
+  (* Output Controllable-Nbac contoller. *)
+  ignore (clean_dir (Ctrln_utils.dirname_for_modul p.Minils.p_modname));
+  List.iter begin fun (node_name, node) ->
+    let oc = open_out (Ctrln_utils.ctrln_for_node node_name) in
+    let fmt = Format.formatter_of_out_channel oc in
+    CtrlNbac.AST.print_node ~print_header:print_header_info fmt node;
+    close_out oc
+  end nodes;
+  p
+
+let maybe_ctrln_pass p =
+  let ctrln = List.mem "ctrln" !target_languages in
+  pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp
+
+;; ELSE
+
+let maybe_ctrln_pass p = p
+
+;; END
 
 let compile_program p =
   (* Clocking *)
@@ -52,7 +87,7 @@ let compile_program p =
 
   (* Dataglow minimization *)
   let p =
-    let call_tomato = !tomato or (List.length !tomato_nodes > 0) in
+    let call_tomato = !tomato || (List.length !tomato_nodes > 0) in
     let p = pass "Extended value inlining" call_tomato Inline_extvalues.program p pp in
     pass "Data-flow minimization" call_tomato Tomato.program p pp in
 
@@ -73,15 +108,21 @@ let compile_program p =
   in
 
   let z3z = List.mem "z3z" !target_languages in
+  let ctrln = List.mem "ctrln" !target_languages in
+  let ctrl = z3z || ctrln in
+  if z3z && ctrln then
+    warn "ignoring target `ctrln' (incompatible with target `z3z').";
+
+  let p = maybe_ctrln_pass p in
   let p = pass "Sigali generation" z3z Sigalimain.program p pp in
-  (* Re-scheduling after sigali generation *)
+
+  (* Re-scheduling after generation *)
   let p =
     if not !Compiler_options.use_old_scheduler then
-      pass "Scheduling (with minimization of interferences)" z3z Schedule_interf.program p pp
+      pass "Scheduling (with minimization of interferences)" ctrl Schedule_interf.program p pp
     else
-      pass "Scheduling" z3z Schedule.program p pp
+      pass "Scheduling" ctrl Schedule.program p pp
   in
-
 
   (* Memory allocation *)
   let p = pass "Memory allocation" !do_mem_alloc Interference.program p pp in

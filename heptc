@@ -33,7 +33,7 @@ then
     HEPTC=$HEPTC_DEBUG
   else
     pushd "$COMPILER_DIR" > /dev/null
-    ocamlbuild -j 0 "$COMPILER"
+    ocamlbuild -use-ocamlfind -j 0 "$COMPILER"
     popd > /dev/null
   fi
 fi
@@ -42,7 +42,7 @@ fi
 if [ ! -e "$LIB_DIR/pervasives.epci" ] || [ "$HEPTC" -nt "$LIB_DIR/pervasives.epci" ]
 then
   pushd "$LIB_DIR" > /dev/null
-  echo "Recompile pervasives.epci"
+  echo "Recompile pervasives.epci" > /dev/stderr
   "$HEPTC" -nopervasives pervasives.epi
   popd > /dev/null
 fi

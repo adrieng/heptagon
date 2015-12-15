@@ -96,7 +96,7 @@ let rec modul_of_string_list = function
 let qualname_of_string s =
   let q_l_n = Misc.split_string s "." in
   match List.rev q_l_n with
-    | [] -> Misc.internal_error "Names"
+    | [] -> (* Misc.internal_error "Names" *)raise Exit
     | n::q_l -> { qual = modul_of_string_list q_l; name = n }
 
 let modul_of_string s =

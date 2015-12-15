@@ -1,3 +1,14 @@
+Heptagon 1.02.00 (13/12/2015)
+-----------------------------
+
+ - syntax for attractivity and reachability in contracts
+ - option to force abstraction of infinite-domain state variables (ctrl-n)
+
+Heptagon 1.01.00 (17/09/2015)
+-----------------------------
+
+ - back-end towards controller synthesis tool ReaX
+
 Heptagon 1.00.06 (21/02/2014)
 -----------------------------
 

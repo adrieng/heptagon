@@ -33,10 +33,8 @@ open Location
 open Names
 open Idents
 open Signature
-open Static
 open Types
 open Clocks
-open Misc
 
 (** Error Kind *)
 type err_kind = | Enot_static_exp
@@ -48,7 +46,7 @@ let err_message exp ?(loc=exp.e_loc) = function
         print_exp exp;
       raise Errors.Error
 
-let rec static_exp_of_exp e =
+let static_exp_of_exp e =
   match e.e_desc with
     | Eextvalue w -> (match w.w_desc with
       | Wconst se -> se
@@ -79,7 +77,7 @@ let rec vd_find n = function
     a list of [var_dec]. *)
 let rec vd_mem n = function
   | [] -> false
-  | vd::l -> vd.v_ident = n or (vd_mem n l)
+  | vd::l -> vd.v_ident = n || (vd_mem n l)
 
 
 (** @return whether [ty] corresponds to a record type. *)
@@ -104,8 +102,8 @@ struct
   let def acc { eq_lhs = pat } = vars_pat acc pat
 
   let rec vars_ck acc = function
-    | Con(ck, _, n) -> vars_ck (add n acc) ck
-    | Cbase | Cvar { contents = Cindex _ } -> acc
+    | Clocks.Con(ck, _, n) -> vars_ck (add n acc) ck
+    | Clocks.Cbase | Cvar { contents = Cindex _ } -> acc
     | Cvar { contents = Clink ck } -> vars_ck acc ck
 
   let rec vars_ct acc = function
@@ -180,9 +178,9 @@ struct
   let head ck =
     let rec headrec ck l =
       match ck with
-        | Cbase
+        | Clocks.Cbase
         | Cvar { contents = Cindex _ } -> l
-        | Con(ck, _, n) -> headrec ck (n :: l)
+        | Clocks.Con(ck, _, n) -> headrec ck (n :: l)
         | Cvar { contents = Clink ck } -> headrec ck l
     in
     headrec ck []
@@ -215,7 +213,7 @@ end
 let node_memory_vars n =
   let rec eq funs acc ({ eq_lhs = pat; eq_rhs = e } as equ) =
     match pat, e.e_desc with
-    | Evarpat x, Ewhen(e,_,_) -> eq funs acc {equ with eq_rhs = e}
+    | Evarpat _, Ewhen(e,_,_) -> eq funs acc {equ with eq_rhs = e}
     | Evarpat x, Efby(_, _) ->
         let acc = (x, e.e_ty) :: acc in
         equ, acc
@@ -264,7 +262,7 @@ let remove_eqs_from_node nd ids =
   let walk_vd vd vd_list = if IdentSet.mem vd.v_ident ids then vd_list else vd :: vd_list in
   let walk_eq eq eq_list =
     let defs = ident_list_of_pat eq.eq_lhs in
-    if (not eq.eq_unsafe) & List.for_all (fun v -> IdentSet.mem v ids) defs
+    if (not eq.eq_unsafe) && List.for_all (fun v -> IdentSet.mem v ids) defs
     then eq_list
     else eq :: eq_list
   in

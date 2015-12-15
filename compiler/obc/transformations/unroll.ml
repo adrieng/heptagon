@@ -29,7 +29,6 @@
 
 (** Temporary hack to unroll for loops *)
 
-open Misc
 open Obc
 open Types
 open Obc_utils
@@ -72,5 +71,3 @@ let act funs () a =
 let program p =
   let p, _ = program_it { defaults with act = act } () p in
   p
-
-

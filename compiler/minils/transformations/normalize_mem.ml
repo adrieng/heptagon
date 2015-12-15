@@ -27,26 +27,20 @@
 (*                                                                     *)
 (***********************************************************************)
 open Idents
-open Signature
 open Minils
 open Mls_mapfold
 open Mls_utils
 
-(**  Adds an extra equation for outputs that are also memories.
-     For instance, if o is an output, then:
-       o = v fby e
-     becomes
-       mem_o = v fby e;
-       o = mem_o
+(** Adds an extra equation for outputs that are also memories.  For instance, if
+    o is an output, then:
 
-     We also need to add one copy if two (or more) registers are defined by each other, eg:
-       x = v fby y;
-       y = v fby x;
-     becomes
-       mem_x = v fby y;
-       x = mem_x;
-       y = v fby x
-*)
+    [ o = v fby e ] becomes [ mem_o = v fby e; o = mem_o; ]
+
+    We also need to add one copy if two (or more) registers are defined by each
+    other, eg:
+
+    [ x = v fby y; y = v fby x; ] becomes [ mem_x = v fby y; x = mem_x; y = v
+    fby x; ] *)
 
 let normalize_outputs = ref true
 

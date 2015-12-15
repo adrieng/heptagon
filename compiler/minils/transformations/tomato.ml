@@ -28,12 +28,10 @@
 (***********************************************************************)
 
 open Misc
-open Names
 open Idents
 open Signature
 open Minils
 open Mls_utils
-open Mls_printer
 open Global_printer
 open Types
 open Clocks
@@ -83,7 +81,7 @@ struct
       {
         mutable er_class : int;
         er_clock_type : ct;
-        er_base_ck : ck;
+        er_base_ck : Clocks.ck;
         er_pattern : pat;
         er_head : exp;
         er_children : class_ref list;
@@ -98,7 +96,7 @@ struct
   open Mls_printer
 
   let print_class_ref fmt cr = match cr with
-    | Cr_plain id -> print_ident fmt id
+    | Cr_plain id -> Global_printer.print_ident fmt id
     | Cr_input w -> Format.fprintf fmt "%a (input)" print_extvalue w
 
   let debug_tenv fmt tenv =
@@ -151,19 +149,19 @@ struct
   let rec clock_compare ck1 ck2 = match ck1, ck2 with
     | Cvar { contents = Clink ck1; }, _ -> clock_compare ck1 ck2
     | _, Cvar { contents = Clink ck2; } -> clock_compare ck1 ck2
-    | Cbase, Cbase -> 0
+    | Clocks.Cbase, Clocks.Cbase -> 0
     | Cvar lr1, Cvar lr2 -> link_compare_modulo !lr1 !lr2
-    | Con (ck1, cn1, vi1), Con (ck2, cn2, vi2) ->
+    | Clocks.Con (ck1, cn1, vi1), Clocks.Con (ck2, cn2, vi2) ->
       let cr1 = compare cn1 cn2 in
       if cr1 <> 0 then cr1 else
         let cr2 = ident_compare_modulo vi1 vi2 in
         if cr2 <> 0 then cr2 else clock_compare ck1 ck2
-    | Cbase , _ -> 1
+    | Clocks.Cbase , _ -> 1
 
-    | Cvar _, Cbase -> -1
+    | Cvar _, Clocks.Cbase -> -1
     | Cvar _, _ -> 1
 
-    | Con _, _ -> -1
+    | Clocks.Con _, _ -> -1
 
   and link_compare_modulo li1 li2 = match li1, li2 with
     | Cindex _, Cindex _ -> 0
@@ -312,8 +310,8 @@ and extvalue is_input w class_id_list =
 (* Regroup classes from a minimization environment                 *)
 (*******************************************************************)
 
-let rec compute_classes tenv =
-  let rec add_eq_repr _ repr cenv =
+let compute_classes tenv =
+  let add_eq_repr _ repr cenv =
     let repr_list = try IntMap.find repr.er_class cenv with Not_found -> [] in
     IntMap.add repr.er_class (repr :: repr_list) cenv in
   PatMap.fold add_eq_repr tenv IntMap.empty
@@ -375,15 +373,15 @@ let construct_mapping (_, cenv) =
 
   IntMap.fold construct_mapping_eq_repr cenv Env.empty
 
-let rec reconstruct ((tenv, cenv) as env) mapping =
+let rec reconstruct ((_tenv, cenv) as _env) mapping =
 
-  let reconstruct_class id eq_repr_list eq_list =
+  let reconstruct_class _id eq_repr_list eq_list =
     assert (List.length eq_repr_list > 0);
 
     let repr = List.hd eq_repr_list in
 
     let e =
-      let children =
+      let _children =
         Misc.take (List.length repr.er_children - repr.er_when_count) repr.er_children in
 
       let ed = reconstruct_exp_desc mapping repr.er_head.e_desc repr.er_children in
@@ -433,7 +431,7 @@ and reconstruct_exp_desc mapping headd children =
 
   | Ewhen _ -> assert false (* no Ewhen in exprs *)
 
-  | Emerge (x_ref, clause_list) ->
+  | Emerge (_x_ref, clause_list) ->
     let x_ref, children = List.hd children, List.tl children in
     Emerge (reconstruct_class_ref mapping x_ref,
             reconstruct_clauses clause_list children)
@@ -492,7 +490,7 @@ and reconstruct_class_ref mapping cr = match cr with
     x
 
 and reconstruct_clock mapping ck = match ck_repr ck with
-  | Con (ck, c, x) -> Con (reconstruct_clock mapping ck, c, new_name mapping x)
+  | Clocks.Con (ck, c, x) -> Clocks.Con (reconstruct_clock mapping ck, c, new_name mapping x)
   | _ -> ck
 
 and reconstruct_clock_type mapping ct = match ct with
@@ -534,7 +532,7 @@ module EqClasses = Map.Make(
              (if unsafe e2 then -1 else list_compare compare_children cr_list1 cr_list2))
   end)
 
-let rec path_environment tenv =
+let path_environment tenv =
   let enrich_env pat { er_class = id } env =
     let rec enrich pat path env = match pat with
       | Evarpat x -> Env.add x (id, path) env
@@ -564,7 +562,8 @@ let compute_new_class (tenv : tom_env) =
       | Cr_input _ -> None
       | Cr_plain x ->
         try Some (Env.find x mapping)
-        with Not_found -> Format.eprintf "Unknown class %a@." print_ident x; assert false
+        with Not_found -> Format.eprintf "Unknown class %a@."
+          Global_printer.print_ident x; assert false
     in
     let children = List.map map_class_ref eqr.er_children in
 
@@ -576,11 +575,11 @@ let compute_new_class (tenv : tom_env) =
 
   in
 
-  let classes = PatMap.fold add_eq_repr tenv EqClasses.empty in
+  let _classes = PatMap.fold add_eq_repr tenv EqClasses.empty in
 
   (get_id (), tenv)
 
-let rec separate_classes tenv =
+let separate_classes tenv =
   let rec fix (id, tenv) =
     let new_id, tenv = compute_new_class tenv in
     debug_do (fun () -> Format.printf "New tenv %d:\n%a@." id debug_tenv tenv) ();
@@ -639,7 +638,7 @@ let update_node nd =
   ignore (Modules.replace_value nd.n_name sign)
 
 let node nd =
-  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name);
+  debug_do (fun () -> Format.eprintf "Minimizing %a@." print_qualname nd.n_name) ();
   Idents.enter_node nd.n_name;
 
   (* Initial environment *)
@@ -649,7 +648,7 @@ let node nd =
       | None -> []
       | Some c -> c.c_controllables in
     let inputs = nd.n_input @ controllables in
-    let is_input id = 
+    let is_input id =
       List.exists (fun vd -> ident_compare vd.v_ident id = 0) inputs in
     List.fold_left (add_equation is_input) PatMap.empty nd.n_equs in
 

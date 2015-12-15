@@ -30,11 +30,8 @@
 (* causality check *)
 
 open Misc
-open Names
 open Idents
 open Heptagon
-open Location
-open Sgraph
 open Linearity
 open Causal
 
@@ -227,7 +224,7 @@ and typing_automaton state_handlers =
     cseq t2 (cseq tb t1) in
   corlist (List.map handler state_handlers)
 
-and typing_block { b_local = dec; b_equs = eq_list; b_loc = loc } =
+and typing_block { b_local = _dec; b_equs = eq_list; b_loc = _loc } =
   (*let teq = typing_eqs eq_list in
     Causal.check loc teq;
     clear (build dec) teq *)
@@ -236,10 +233,10 @@ and typing_block { b_local = dec; b_equs = eq_list; b_loc = loc } =
 let typing_contract loc contract =
   match contract with
     | None -> cempty
-    | Some { c_block = b; 
+    | Some { c_block = b;
              c_assume = e_a;
              c_assume_loc = e_a_loc;
-             c_enforce = e_g;
+             c_objectives = objs;
              c_enforce_loc = e_g_loc;
            } ->
         let teq = typing_eqs b.b_equs in
@@ -247,10 +244,11 @@ let typing_contract loc contract =
           cseq
             teq
             (ctuplelist
-               [(typing e_a);
-                (typing e_g);
-                (typing e_a_loc);
-                (typing e_g_loc)]) in
+               ((typing e_a) ::
+                (typing e_a_loc) ::
+                (typing e_g_loc) ::
+		(List.map (fun o -> typing o.o_exp) objs)
+	       )) in
         Causal.check loc t_contract;
         let t_contract = clear (build b.b_local) t_contract in
         t_contract
@@ -264,4 +262,3 @@ let typing_node { n_contract = contract;
 let program ({ p_desc = pd } as p) =
   List.iter (function Pnode n -> typing_node n | _ -> ()) pd;
   p
-

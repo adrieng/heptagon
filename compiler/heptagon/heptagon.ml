@@ -28,15 +28,12 @@
 (***********************************************************************)
 (* the internal representation *)
 open Location
-open Misc
 open Names
 open Idents
-open Static
 open Signature
 open Types
 open Linearity
 open Clocks
-open Initial
 
 type state_name = name
 
@@ -51,7 +48,7 @@ type exp = {
   e_desc      : desc;
   e_ty        : ty;
   mutable e_ct_annot  : ct option; (* exists when a source annotation exists *)
-  e_level_ck  : ck; (* set by the switch pass, represents the activation base of the expression *)
+  e_level_ck  : Clocks.ck; (* set by the switch pass, represents the activation base of the expression *)
   mutable e_linearity : linearity;
   e_loc       : location }
 
@@ -144,7 +141,7 @@ and var_dec = {
   v_ident : var_ident;
   v_type  : ty;
   v_linearity : linearity;
-  v_clock : ck;
+  v_clock : Clocks.ck;
   v_last  : last;
   v_loc   : location }
 
@@ -161,9 +158,18 @@ and type_dec_desc =
   | Type_enum of constructor_name list
   | Type_struct of structure
 
+type objective_kind =
+  | Obj_enforce
+  | Obj_reachable
+  | Obj_attractive
+
+type objective =
+    { o_kind : objective_kind;
+      o_exp : exp }
+
 type contract = {
   c_assume  : exp;
-  c_enforce : exp;
+  c_objectives : objective list;
   c_assume_loc : exp;
   c_enforce_loc : exp;
   c_controllables : var_dec list;
@@ -217,4 +223,3 @@ and interface_desc =
   | Itypedef of type_dec
   | Iconstdef of const_dec
   | Isignature of signature
-

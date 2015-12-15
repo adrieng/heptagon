@@ -39,12 +39,10 @@
 (* Requis : typage *)
 
 open Misc
-open Names
 open Idents
 open Heptagon
 open Types
 open Location
-open Format
 
 type typ =
   | Iproduct of typ list
@@ -190,7 +188,6 @@ let rec less left_ty right_ty =
 module Printer = struct
   open Format
   open Pp_tools
-  open Global_printer
 
   let rec print_init ff i = match !i with
     | Izero -> fprintf ff "initialized"
@@ -214,8 +211,6 @@ module Printer = struct
 end
 
 module Error = struct
-  open Location
-
   type error = | Eclash of root * typ * typ
 
   exception Error of location * error
@@ -349,7 +344,7 @@ and typing_automaton h state_handlers =
   let initialized h { s_block = { b_defnames = l } } =
     let env_update x h =
       try
-        let xl = IEnv.find_last x h in (* it's a last in the env, good. *)
+        let _xl = IEnv.find_last x h in (* it's a last in the env, good. *)
         IEnv.add_last x (IEnv.find_var x h) h
       with Not_found -> h (* nothing to do *)
     in
@@ -392,14 +387,14 @@ let typing_contract h contract =
     | None -> h
     | Some { c_block = b;
              c_assume = e_a;
-             c_enforce = e_g;
+             c_objectives = objs;
              c_controllables = c } ->
         let h' = build h b.b_local in
         typing_eqs h' b.b_equs;
         (* assumption *)
         expect h' e_a (skeleton izero e_a.e_ty);
         (* property *)
-        expect h' e_g (skeleton izero e_g.e_ty);
+        List.iter (fun o -> expect h' o.o_exp (skeleton izero o.o_exp.e_ty)) objs;
         build_initialized h c
 
 let typing_node { n_input = i_list; n_output = o_list;
@@ -412,5 +407,3 @@ let typing_node { n_input = i_list; n_output = o_list;
 let program ({ p_desc = pd } as p) =
   List.iter (function Pnode n -> typing_node n | _ -> ()) pd;
   p
-
-

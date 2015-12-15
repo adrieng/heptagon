@@ -29,7 +29,6 @@
 
 open Format
 open List
-open Modules
 open Names
 
 let print_list ff print sep l = Pp_tools.print_list_r print "" sep "" ff l
@@ -38,7 +37,7 @@ let print_list ff print sep l = Pp_tools.print_list_r print "" sep "" ff l
     Copied verbatim from the old C backend. *)
 let cname_of_name name =
   let buf = Buffer.create (String.length name) in
-  let rec convert c =
+  let convert c =
     match c with
       | 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' ->
           Buffer.add_char buf c
@@ -91,7 +90,7 @@ and cexpr =
   | Cbop of string * cexpr * cexpr (** Binary operator. *)
   | Cfun_call of string * cexpr list (** Function call with its parameters. *)
   | Caddrof of cexpr (** Take the address of an expression. *)
-  | Cstructlit of string * cexpr list (** Structure literal "{ f1, f2, ... }".*)
+  | Cstructlit of string * cexpr list (** Structure literal [{ f1, f2, ... }].*)
   | Carraylit of cexpr list (** Array literal [\[e1, e2, ...\]]. *)
   | Cconst of cconst (** Constants. *)
   | Cvar of string (** A local variable. *)
@@ -382,3 +381,12 @@ let rec array_base_ctype ty idx_list =
     | Cty_arr (_, ty), _::idx_list -> array_base_ctype ty idx_list
     | _ ->
       assert false
+
+(** Convert C expression to left-hand side *)
+let rec clhs_of_cexpr cexpr =
+  match cexpr with
+  | Cvar v -> CLvar v
+  | Cderef e -> CLderef (clhs_of_cexpr e) 
+  | Cfield (e,qn) -> CLfield (clhs_of_cexpr e, qn)
+  | Carray (e1,e2) -> CLarray (clhs_of_cexpr e1, e2)
+  | _ -> failwith("C expression not translatable to LHS")

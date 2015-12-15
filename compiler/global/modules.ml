@@ -30,7 +30,6 @@
 (* Module objects and global environnement management *)
 
 
-open Misc
 open Compiler_options
 open Signature
 open Types
@@ -161,7 +160,11 @@ let initialize modul =
   List.iter open_module !default_used_modules
 
 
-(** { 3 Add functions prevent redefinitions } *)
+let current () = g_env.current_mod
+let select modul = g_env.current_mod <- modul
+
+
+(** {3 Add functions prevent redefinitions} *)
 
 let _check_not_defined env f =
   if QualEnv.mem f env then raise Already_defined
@@ -190,7 +193,7 @@ let replace_type f v =
 let replace_const f v =
   g_env.consts <- QualEnv.add f v g_env.consts
 
-(** { 3 Find functions look in the global environement, nothing more } *)
+(** {3 Find functions look in the global environement, nothing more} *)
 
 let find_value x = QualEnv.find x g_env.values
 let find_type x = QualEnv.find x g_env.types
@@ -204,7 +207,7 @@ let find_struct n =
     | Tstruct fields -> fields
     | _ -> raise Not_found
 
-(** { 3 Check functions }
+(** {3 Check functions}
     Try to load the needed module and then to find it,
     return true if in the table, return false if it can't find it. *)
 
@@ -226,9 +229,12 @@ let check_const q =
   try let _ = QualEnv.find q g_env.consts in true with Not_found -> false
 
 
-(** { 3 Qualify functions [qualify_* name] return the qualified name
-    matching [name] in the global env scope (current module :: opened modules).
-    @raise [Not_found] if not in scope } *)
+(** {3 Qualify functions}
+
+    [qualify_* name] return the qualified name matching [name] in the global env
+    scope (current module :: opened modules).
+
+    @raise Not_found if not in scope *)
 
 let _qualify env name =
   let tries m =
@@ -247,11 +253,11 @@ let qualify_const name = _qualify g_env.consts name
 
 
 (** @return the name as qualified with the current module
-  (should not be used..)*)
+    (should not be used..)*)
 let current_qual n = { qual = g_env.current_mod; name = n }
 
 
-(** { 3 Fresh functions return a fresh qualname for the current module } *)
+(** {3 Fresh functions return a fresh qualname for the current module} *)
 
 let rec fresh_value pass_name name =
   let fname =
@@ -306,7 +312,9 @@ let rec fresh_constr pass_name name =
 
 exception Undefined_type of qualname
 
-(** @return the unaliased version of a type. @raise Undefined_type *)
+(** @return the unaliased version of a type.
+
+    @raise Undefined_type . *)
 let rec unalias_type t = match t with
   | Tid ({ qual = q } as ty_name) ->
     _load_module q;
@@ -320,7 +328,7 @@ let rec unalias_type t = match t with
   | Tinvalid -> Tinvalid
 
 
-(** Return the current module as a [module_object] *)
+(** Return the current module as a {!module_object} *)
 let current_module () =
   (* Filter and transform a qualified env into the current module object env *)
   let unqualify env = (* unqualify and filter env keys *)
@@ -342,4 +350,3 @@ let current_module () =
       m_constrs = unqualify_all g_env.constrs;
       m_fields = unqualify_all g_env.fields;
       m_format_version = g_env.format_version }
-

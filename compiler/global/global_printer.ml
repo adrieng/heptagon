@@ -27,7 +27,6 @@
 (*                                                                     *)
 (***********************************************************************)
 open Names
-open Idents
 open Signature
 open Types
 open Clocks
@@ -71,8 +70,8 @@ let print_shortname ff {name = n} = print_name ff n
 let print_ident = Idents.print_ident
 
  let rec print_ck ff = function
-  | Cbase -> fprintf ff "."
-  | Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
+  | Clocks.Cbase -> fprintf ff "."
+  | Clocks.Con (ck, c, n) -> fprintf ff "%a on %a(%a)" print_ck ck print_qualname c print_ident n
   | Cvar { contents = Cindex i } -> fprintf ff "'a%i" i
   | Cvar { contents = Clink ck } ->
       if !Compiler_options.full_type_info then
@@ -195,5 +194,3 @@ let print_interface ff =
   NamesEnv.iter
     (fun key sigtype -> Format.fprintf ff "%a@," print_interface_value (key,sigtype)) m.m_values;
   Format.fprintf ff "@]@."
-
-

@@ -47,7 +47,6 @@
 *)
 
 
-open Misc
 open Obc
 open Obc_utils
 open Obc_mapfold
@@ -95,5 +94,3 @@ let act funs () a = match a with
 let program p =
   let p, _ = program_it { defaults with act = act } () p in
   p
-
-

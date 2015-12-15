@@ -1,0 +1,15 @@
+type mode = Idle | Active
+
+node f(x:bool) returns (y:bool)
+
+contract
+  enforce (not y)
+  with (c:mode)
+
+let
+  switch c
+  | Idle do y = false
+  | Active do y = true
+  end
+tel
+  

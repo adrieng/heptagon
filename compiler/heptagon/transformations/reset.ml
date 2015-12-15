@@ -31,7 +31,6 @@
 (* REQUIRES automaton stateful present *)
 
 open Misc
-open Idents
 open Heptagon
 open Hept_utils
 open Types
@@ -77,7 +76,16 @@ let default e =
     | _ -> None
 
 
-let edesc funs ((res,_) as acc) ed = match ed with
+let edesc funs ((res,_) as acc) ed =
+  match ed with
+    | Epre (Some c, e) ->
+       let e,_ = Hept_mapfold.exp_it funs acc e in
+       (match res with
+	| None -> Epre(Some c, e)
+	| Some _ ->
+	   ifres res
+		 (mk_exp (Econst c) (e.e_ty) ~linearity:Linearity.Ltop)
+		 { e with e_desc = Epre(Some c,e) }), acc
     | Efby (e1, e2) ->
         let e1,_ = Hept_mapfold.exp_it funs acc e1 in
         let e2,_ = Hept_mapfold.exp_it funs acc e2 in
@@ -117,7 +125,7 @@ let block funs (res,_) b =
 (* Transform reset blocks in blocks with reseted exps,
    create a var to store the reset condition evaluation if not already a var. *)
 let eqdesc funs (res,stateful) = function
-  | Ereset(b, ({ e_desc = Evar x } as e)) ->
+  | Ereset(b, ({ e_desc = Evar _ } as e)) ->
         let r = if stateful then merge_resets res (Some e) else res in
         let b, _ = Hept_mapfold.block_it funs (r,stateful) b in
         Eblock(b), (res,stateful)

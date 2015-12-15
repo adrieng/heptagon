@@ -26,7 +26,6 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Types
 
 exception Bad_format
 

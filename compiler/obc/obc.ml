@@ -31,7 +31,6 @@
 (** See the manual for the semantics of the language *)
 
 
-open Misc
 open Names
 open Idents
 open Types

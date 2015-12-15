@@ -1,0 +1,190 @@
+#!/bin/bash
+# 
+# Copyright (C) 2014 Nicolas Berthier <nicolas.berthier@inria.fr>
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see
+# <http://www.gnu.org/licenses/>.
+#
+
+verbose="no";
+dry_run="no";
+
+# ---
+
+# readlink should be available on any "recent" system:
+. "$(dirname "$(readlink -f "$0")")/libvthighlight";
+cmd_beg="${term_color_cyan}";
+info_beg="${term_color_lightgreen}";
+warn_beg="${term_color_lightred}";
+err_beg="${term_color_red}${term_bold}";
+msg_end="${term_normal}${term_restore}";
+
+# ---
+
+info () { echo -e "Info: ${info_beg}$@${msg_end}" >/dev/stderr; }
+warn () { echo -e "Warn: ${warn_beg}$@${msg_end}" >/dev/stderr; }
+error () { echo -e "Error: ${err_beg}$@${msg_end}" >/dev/stderr; usage; exit 1; }
+execcmd () {
+    if test "x${verbose}" = "xyes"; then
+	echo -e "\$ ${cmd_beg}$@${msg_end}" >/dev/stderr;
+    fi;
+    if test "x${dry_run}" != "xyes"; then
+	eval "$@" || exit 1;
+    fi
+}
+
+# ---
+
+file="";
+node="";
+reax_algo="sB";
+reax_opti=();
+reach_var="";
+
+heptc_opts=();
+reax_opts=();
+gcc_opts=();
+
+# chk_reach="no";
+sim="no";
+
+simexec="sim";
+reax="reax";
+
+usage () {
+    cat >/dev/stderr <<EOF
+usage: $(basename $0) [options] <file> [ <node> ] [ -- <heptc options> ]
+where available options are:
+
+  -a  | --algo <algo>      Synthesis algorithm specification for ReaX (default
+                           is "sB")
+  -O  | --optim <opt>      Optimization specification for ReaX
+  -r  | --reach <var>      State variable for reachability enforcement
+  -s  | --sim              Generate hepts-compatible simulation code
+        --reax-opts <str>  Pass space-separated options to ReaX
+        --heptc-opts <str> Pass space-separated options to the Heptagon compiler
+        --gcc-opts <str>   Pass space-separated options to the Gcc compiler
+        --sim-exec <exec>  Name of the simulation executable (default is "sim")
+  -v  | --verbose          Display executed commands
+  -n  | --dry              Run in dry mode (implies \`--verbose')
+  -h  | --help             Display this help and exit
+        --                 Pass all remaining args to the Heptagon compiler
+
+Report bugs to Nicolas Berthier <nicolas.berthier@inria.fr>
+EOF
+    exit 0
+#  -cr | --chk-reach        Check reachabiltiy again after optimization
+}
+
+# ---
+
+while test $# \> 0 -a "x$1" != "x--"; do
+    case "$1" in
+	-a | --algo)  shift; reax_algo="'$1'";;
+	-O | --optim) shift; reax_opti=( -O "'$1'" );;
+	-r | --reach) shift; reach_var="$1";;
+	-s | --sim)          sim="yes";;
+	--sim-exec)   shift; simexec="$1";;
+	# -cr | --chk-reach)   chk_reach="yes";;
+	--reax-opts)  shift; reax_opts=( "${reax_opts[@]}" $1 );;
+	--heptc-opts) shift; heptc_opts=( "${heptc_opts[@]}" $1 );;
+	--gcc-opts)   shift; gcc_opts=( "${gcc_opts[@]}" $1 );;
+	-v | --verbose)      verbose="yes";;
+	-n | --dry)          dry_run="yes"; verbose="yes";;
+	-h | --help)  usage;;
+	*)  if test "x${file}" = "x"; then file="$1";
+	    elif test "x${node}" = "x"; then node="$1";
+	    else warn "Ignoring argument \`$1'!"; 
+	    fi;;
+    esac;
+    shift;
+done;
+test $# \> 1 -a "x$1" = "x--" && shift;
+test "x${file}" = "x" && error "Missing input file";
+test \! -r "${file}" && error "Input file not found";
+
+# ---
+
+module="$(basename "${file}" .ept)";
+if test "x${node}" = "x"; then
+    node="${module}";
+    info "Selecting node \`${node}'.";
+fi;
+
+if test "x${reach_var}" != "x" -a "x${reax_algo}" = "xsB"; then
+    reax_algo="${reax_algo}:r";
+    info "Enabling reachability enforcement (algo = \`${reax_algo}')";
+fi;
+
+reaxargs=();
+simargs=();
+gccargs=( -c );
+
+if test "x${sim}" = "xyes"; then
+    simargs=( -hepts -s ${node} );
+    gccargs=( -o "${simexec}" );
+fi;
+
+# if test "x${chk_reach}" = "xyes"; then
+#     chk_reach="no";		# for simpler tests.
+#     # if test ${#reax_opti[@]} -eq 0; then
+#     # 	warn "Disabling final check of reachability property: "\
+#     #          "missing optimization goals.";
+#     # el
+#     if test "x${reach_var}" = "x"; then
+# 	warn "Disabling final check of reachability property: "\
+#              "no reachabiliy property specified.";
+#     else
+# 	chk_reach="yes";	# for simpler tests.
+# 	reaxargs=( -m );
+#     fi;
+# fi;
+
+# ---
+
+Module="${module^}";		# uppercase first letter.
+
+# ---
+
+#export HEPTLIB="$HEPT_HOME/lib";
+
+# execcmd heptc "$@" -nosink "${simargs[@]}" -target c -target ctrln "${file}";
+execcmd heptc "${heptc_opts[@]}" "$@" "${simargs[@]}" -target c -target ctrln "${file}";
+cn="${module}_ctrln/${node}.ctrln";
+
+test "x${reach_var}" != "x" && \
+    execcmd echo "'!reachable (not __init__ and ${reach_var});'" ">>" "${cn}";
+
+execcmd "${reax}" "${reax_opts[@]}" -a "${reax_algo}" "${reax_opti[@]}" \
+    "${reaxargs[@]}" -s "${cn}";
+
+# if test "x${chk_reach}" = "xyes"; then
+#     cd="${module}_ctrln/${node}.ctrld";
+#     execcmd "${reax}" "${reax_opts[@]}" -a "${reax_algo}" "${cd}";
+# fi;
+
+execcmd ctrl2ept -n "${Module}.${node}" -v;
+
+execcmd heptc "${heptc_opts[@]}" "$@" -target c "${module}_controller.ept";
+
+execcmd gcc "${gcc_opts[@]}" "${gccargs[@]}" \
+    -I"$HEPTLIB/c" -I"${module}_c" -I"${module}_controller_c" \
+    "${module}_c/"*.c "${module}_controller_c"/*.c;
+
+if test -x "${simexec}" -a "x${sim}" = "xyes"; then
+    info "To launch the simulator, run: \`hepts -mod ${Module} -node ${node}" \
+	"-exec $(dirname ${simexec})/$(basename ${simexec})'";
+fi;
+
+# ---

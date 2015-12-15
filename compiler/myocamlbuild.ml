@@ -31,7 +31,6 @@ open Ocamlbuild_plugin.Options
 open Myocamlbuild_config
 
 let df = function
-  | Before_options ->  ocamlfind_before_options ()
   | After_rules ->
       ocamlfind_after_rules ();
 
@@ -50,7 +49,8 @@ let df = function
       flag ["ocaml"; "parser" ; "menhir" ; "use_menhir"] (S[A"--explain";
                                                             A"--table"]);
 
-      flag ["ocaml"; "compile" ] (S[A"-w"; A"Ae"; A"-warn-error"; A"PU"; A"-w"; A"-9"]);
+      flag ["ocaml"; "compile" ] (S[A"-w"; A"Ae"; A"-warn-error"; A"PU";
+                                    A"-w"; A"-9-48"]);
 
   | _ -> ()
 

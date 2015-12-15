@@ -9,7 +9,7 @@
 
 open Format
 
-let rec print_list print lp sep rp ff = function
+let print_list print lp sep rp ff = function
   | [] -> ()
   | x::l ->
       fprintf ff "%s%a" lp print x;
@@ -17,7 +17,7 @@ let rec print_list print lp sep rp ff = function
       fprintf ff "%s" rp
 
 
-let rec print_list_r print lp sep rp ff = function
+let print_list_r print lp sep rp ff = function
   | [] -> ()
   | x :: l ->
       fprintf ff "%s%a" lp print x;
@@ -25,7 +25,7 @@ let rec print_list_r print lp sep rp ff = function
       fprintf ff "%s" rp
 
 
-let rec print_list_l print lp sep rp ff = function
+let print_list_l print lp sep rp ff = function
   | [] -> ()
   | x :: l ->
       fprintf ff "%s%a" lp print x;
@@ -54,16 +54,3 @@ let print_record print_field ff record =
 let print_type_params ff pl =
   fprintf ff "@[%a@]"
     (print_list_r (fun ff s -> fprintf ff "'%s" s) "("","") ") pl
-
-
-let print_set iter print_element ff set =
-  fprintf ff "@[{@ ";
-  iter (fun e -> fprintf ff "%a@ " print_element e) set;
-  fprintf ff "}@]"
-
-let print_map iter print_key print_element ff map =
-  fprintf ff "@[<hv 2>[@ ";
-  iter (fun k x -> fprintf ff "| %a -> %a@ " print_key k print_element x) map;
-  fprintf ff "]@]"
-
-

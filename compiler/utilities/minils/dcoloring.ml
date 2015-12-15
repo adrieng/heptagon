@@ -64,7 +64,7 @@ module Dsatur = struct
       G.fold_succ_e color g v ColorSet.empty
 
   (** Returns the smallest value not in the list of colors. *)
-  let rec find_min_available_color interf_colors =
+  let find_min_available_color interf_colors =
     let rec aux i =
       if not (ColorSet.mem i interf_colors) then i else aux (i+1)
     in

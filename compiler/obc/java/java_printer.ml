@@ -32,7 +32,6 @@
 open Java
 open Pp_tools
 open Format
-open Misc
 
 
 let print_ident ff id =  Format.fprintf ff "%s" (jname_of_name (Idents.name id))
@@ -96,7 +95,7 @@ and new_init_ty ff t = _ty true true ff t
 and ty ff t = _ty false false ff t
 
 and var_dec init ff vd =
-  if init & not vd.vd_alias then
+  if init && not vd.vd_alias then
     fprintf ff "%a %a = %a" ty vd.vd_type var_ident vd.vd_ident exp (Java.default_value vd.vd_type)
   else
     fprintf ff "%a %a" ty vd.vd_type var_ident vd.vd_ident
@@ -295,4 +294,3 @@ let output_classe base_dir c =
 
 let output_program dir (p:Java.program) =
   List.iter (output_classe dir) p
-

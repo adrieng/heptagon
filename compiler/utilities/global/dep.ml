@@ -44,7 +44,7 @@ module Make (Read:READ) =
 struct
   let build eqs =
     (* associate a graph node for each name declaration *)
-    let rec nametograph g var_list is_antidep n_to_graph =
+    let nametograph g var_list is_antidep n_to_graph =
       let add_node env x =
         if Env.mem x env then
           let l = Env.find x env in
@@ -54,7 +54,7 @@ struct
       in
       List.fold_left add_node n_to_graph var_list in
 
-    let rec nametograph_env g var_list node_env =
+    let nametograph_env g var_list node_env =
       List.fold_left (fun env x -> Env.add x g env) node_env var_list in
 
     let rec init_graph eqs g_list n_to_graph lin_map node_env =
@@ -99,4 +99,3 @@ struct
     make_graph g_list names_to_graph lin_map;
     g_list, node_env
 end
-

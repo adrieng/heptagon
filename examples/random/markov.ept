@@ -1,0 +1,20 @@
+open Random
+
+const p : float = 0.3
+
+unsafe node process() = (o:bool)
+let
+  automaton
+    state A
+      var c : bool;
+      do o = false; c = random() <. p; 
+      until c then B
+          | not c then C
+    state B
+      var c : bool;
+      do o = true; c = random() <. p
+      until c then A
+    state C
+      do o = false
+  end
+tel

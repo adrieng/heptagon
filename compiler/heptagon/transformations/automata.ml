@@ -30,7 +30,6 @@
 
 (* TODO deal correctly with [stateful] and [unsafe] *)
 
-open Misc
 open Types
 open Names
 open Idents
@@ -38,7 +37,6 @@ open Heptagon
 open Hept_utils
 open Hept_mapfold
 open Initial
-open Modules
 
 type var = S | NS | R | NR | PNR
 let fresh = Idents.gen_fresh "automata"
@@ -92,7 +90,7 @@ let intro_type type_name state_env =
     Moore automatons doesn't have strong transitions,
     Mealy automatons may have some. *)
 let no_strong_transition state_handlers =
-  let handler no_strong { s_unless = l } = no_strong & (l = []) in
+  let handler no_strong { s_unless = l } = no_strong && (l = []) in
   List.fold_left handler true state_handlers
 
 
@@ -130,9 +128,9 @@ let translate_automaton v eq_list handlers =
   in
 
   let strong { s_state = n; s_unless = su } =
-    let rst_vd = mk_var_dec resetname (Tid Initial.pbool) Linearity.Ltop in
+    let rst_vd = mk_var_dec resetname (Tid Initial.pbool) ~linearity:Linearity.Ltop in
     let defnames = Env.add resetname rst_vd Env.empty in
-    let state_vd = mk_var_dec statename tstatetype Linearity.Ltop in
+    let state_vd = mk_var_dec statename tstatetype ~linearity:Linearity.Ltop in
     let defnames = Env.add statename state_vd defnames in
     let st_eq = mk_simple_equation
       (Etuplepat[Evarpat(statename); Evarpat(resetname)])
@@ -142,9 +140,9 @@ let translate_automaton v eq_list handlers =
   in
 
   let weak { s_state = n; s_block = b; s_until = su } =
-    let nextrst_vd = mk_var_dec next_resetname (Tid Initial.pbool) Linearity.Ltop in
+    let nextrst_vd = mk_var_dec next_resetname (Tid Initial.pbool) ~linearity:Linearity.Ltop in
     let defnames = Env.add next_resetname nextrst_vd b.b_defnames in
-    let nextstate_vd = mk_var_dec next_statename tstatetype Linearity.Ltop in
+    let nextstate_vd = mk_var_dec next_statename tstatetype ~linearity:Linearity.Ltop in
     let defnames = Env.add next_statename nextstate_vd defnames in
     let ns_eq = mk_simple_equation
       (Etuplepat[Evarpat(next_statename); Evarpat(next_resetname)])
@@ -195,7 +193,7 @@ let translate_automaton v eq_list handlers =
                          (mk_exp_fby_false (boolvar (next_resetname))) in
     v, ns_switch_eq :: switch_eq :: pnr_eq :: eq_list
 
-let rec eq funs (v, eq_list) eq =
+let eq funs (v, eq_list) eq =
   let eq, (v, eq_list) = Hept_mapfold.eq funs (v, eq_list) eq in
     match eq.eq_desc with
       | Eautomaton state_handlers ->

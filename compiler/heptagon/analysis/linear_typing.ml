@@ -32,7 +32,6 @@ open Names
 open Location
 open Misc
 open Signature
-open Modules
 open Heptagon
 
 type error =
@@ -203,7 +202,7 @@ let check_fresh_lin_var (env, used_vars, init_vars) loc lin =
 
 (** Substitutes linearity variables (Lvar r) with their value
     given by the map. *)
-let rec subst_lin m lin_list =
+let subst_lin m lin_list =
   let subst_one = function
     | Lvar r ->
       (try
@@ -253,7 +252,7 @@ let subst_from_lin (s,m) expect_lin lin =
       )
     | _, _ -> s,m
 
-let rec not_linear_for_exp e =
+let not_linear_for_exp e =
   lin_skeleton Ltop e.e_ty
 
 let check_init env loc init lin =
@@ -399,7 +398,7 @@ let rec fuse_args_lin args_lin collect_lins =
 
 (** [extract_not_lin_var_exp args_lin e_list] returns the linearities
     and expressions from e_list that are not yet set to Lvar r.*)
-let rec extract_not_lin_var_exp args_lin e_list =
+let extract_not_lin_var_exp args_lin e_list =
   match args_lin, e_list with
     | [], [] -> [], []
     | arg_lin::args_lin, e::e_list ->
@@ -791,7 +790,7 @@ and typing_eq env eq =
     | Eeq(Evarpat y, { e_desc = Efby(e_1, e_2) }) ->
         let lin = lin_of_ident y env in
         let _, env = check_init env eq.eq_loc eq.eq_inits lin in
-        safe_expect env Ltop e_1;
+        ignore (safe_expect env Ltop e_1);
         safe_expect env lin e_2
     | Eeq(pat, e) ->
         let lin_pat = typing_pat env pat in
@@ -917,4 +916,3 @@ let node f =
 let program ({ p_desc = pd } as p) =
   List.iter (function Pnode n -> node n | _ -> ()) pd;
   p
-

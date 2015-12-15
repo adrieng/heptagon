@@ -44,12 +44,10 @@ type mtype = Tint | Tbool | Tother
 exception Untranslatable
 
 let untranslatable_warn e =
-  if e.Minils.e_loc <> no_location then
-    Format.eprintf "Warning: abstracted expression:@.%a"
-      Location.print_location e.Minils.e_loc
-  else
-    Format.eprintf "Warning: abstracted expression: @[<hov 2>%a@]@."
-      Mls_printer.print_exp e
+  let warn msg = warn ~cond:(!Compiler_options.warn_untranslatable) msg in
+  if e.Minils.e_loc <> no_location
+  then warn "abstracted expression:@.%a" print_location e.Minils.e_loc
+  else warn "abstracted expression: @[<hov 2>%a@]@." Mls_printer.print_exp e
 
 let actual_ty ty =
   match (Modules.unalias_type ty) with
@@ -88,8 +86,8 @@ let rec translate_ck pref e = function
       let e = translate_ck pref e ck in
       Swhen(e,
             match (shortname c) with
-              "true" -> Svar(pref ^ (name var))
-            | "false" -> Snot(Svar(pref ^ (name var)))
+              "true" -> Sigali.Svar(pref ^ (name var))
+            | "false" -> Snot(Sigali.Svar(pref ^ (name var)))
             | _ -> assert false)
 
 
@@ -105,9 +103,9 @@ let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty }) =
       (* get variable iff it is Boolean or local *)
       begin match (actual_ty ty) with
       | Tbool ->
-	  Svar(prefix ^ (name n))
+	  Sigali.Svar(prefix ^ (name n))
       | Tint when (IdentSet.mem n !current_locals) ->
-	  Svar(prefix ^ (name n))
+	  Sigali.Svar(prefix ^ (name n))
       | _ ->
 	  raise Untranslatable
       end
@@ -210,7 +208,7 @@ let rec translate prefix ({ Minils.e_desc = desc } as e) =
           | "false" -> e2,e1
           | _ -> assert false
         end in
-      let var_ck = Svar(prefix ^ (name ck)) in
+      let var_ck = Sigali.Svar(prefix ^ (name ck)) in
       begin match (actual_ty e.Minils.e_ty) with
       | Tbool -> Sdefault(Swhen(e1,var_ck),e2)
       | Tint -> a_part var_ck (a_const (Sconst(Cint(0)))) e1 e2
@@ -258,7 +256,7 @@ let translate_eq f
                   let c = translate_static_exp c in
                   (extend
                      initialisations
-                     (Slist[Sequal(Svar(sn),Sconst(c))]))::acc_eqs,
+                     (Slist[Sequal(Sigali.Svar(sn),Sconst(c))]))::acc_eqs,
                   c::acc_init
             in
             let e_next = translate_ext prefix e' in
@@ -268,7 +266,7 @@ let translate_eq f
             acc_init,acc_inputs,
             (extend
                evolutions
-               (Slist[Sdefault(e_next,Svar(sn))]))
+               (Slist[Sdefault(e_next,Sigali.Svar(sn))]))
             ::acc_eqs
           with Untranslatable ->
             untranslatable_warn e;
@@ -282,7 +280,8 @@ let translate_eq f
       | _ ->
           untranslatable_warn e;
           (* Mark n as input: unusable as local variable *)
-	  Format.printf "Adding non-bool variable %s in current_inputs@\n" (name n);
+	  warn ~cond:(!Compiler_options.warn_abstractions)
+            "Adding non-bool variable %s in current_inputs@\n" (name n);
           current_inputs := IdentSet.add n !current_inputs;
           acc_states,acc_init,acc_inputs,acc_eqs
       end
@@ -346,27 +345,41 @@ let translate_contract f contract =
       let body =
         [{ stmt_name = var_g; stmt_def = Sconst(Ctrue) };
          { stmt_name = var_a; stmt_def = Sconst(Ctrue) }] in
-      [],[],[],body,(Svar(var_a),Svar(var_g)),[],[],[]
+      [],[],[],body,(Sigali.Svar(var_a),Sigali.Svar(var_g)),[],[],[],[]
   | Some {Minils.c_local = locals;
           Minils.c_eq = l_eqs;
           Minils.c_assume = e_a;
-          Minils.c_enforce = e_g;
+          Minils.c_objectives = objs;
           Minils.c_assume_loc = e_a_loc;
           Minils.c_enforce_loc = e_g_loc;
           Minils.c_controllables = cl} ->
       let states,init,inputs,body = translate_eq_list f l_eqs in
       let e_a = translate_ext prefix e_a in
-      let e_g = translate_ext prefix e_g in
       let e_a_loc = translate_ext prefix e_a_loc in
       let e_g_loc = translate_ext prefix e_g_loc in
+
+      (* separate reachability and attractivity and build one security objective [e_g] *)
+      let e_g,sig_objs =
+	List.fold_left
+	  (fun (e_g,sig_objs) o ->
+	     let e_obj = translate_ext prefix o.Minils.o_exp in
+	     match o.Minils.o_kind with
+	     | Minils.Obj_enforce -> (e_g &~ e_obj), sig_objs
+	     | Minils.Obj_reachable -> e_g, (Reachability e_obj) :: sig_objs
+	     | Minils.Obj_attractive -> e_g, (Attractivity e_obj) :: sig_objs)
+	  (e_g_loc,[])
+	  objs in
+      let sig_objs = List.rev sig_objs in
+
       let body =
-        {stmt_name = var_g; stmt_def = e_g &~ e_g_loc } ::
+        {stmt_name = var_g; stmt_def = e_g } ::
         {stmt_name = var_a; stmt_def = e_a &~ e_a_loc } ::
         body in
       let controllables =
         List.map
           (fun ({ Minils.v_ident = id } as v) -> v,(prefix ^ (name id))) cl in
-      states,init,inputs,body,(Svar(var_a),Svar(var_g)),controllables,(locals@cl),l_eqs
+      states,init,inputs,body,(Sigali.Svar(var_a),Sigali.Svar(var_g)),
+      controllables,(locals@cl),l_eqs,sig_objs
 
 
 
@@ -394,7 +407,7 @@ let translate_node
       (fun { Minils.v_ident = v } -> f ^ "_" ^ (name v)) o_list in
   let states,init,add_inputs,body =
     translate_eq_list f eq_list in
-  let states_c,init_c,inputs_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c =
+  let states_c,init_c,inputs_c,body_c,(a_c,g_c),controllables,locals_c,eqs_c,objs =
     translate_contract f contract in
   let inputs = inputs @ add_inputs @ inputs_c in
   let body = List.rev body in
@@ -406,7 +419,7 @@ let translate_node
   let mls_ctrl,sig_ctrl = List.split controllables in
   let constraints =
     List.map
-      (fun v -> Sequal(Ssquare(Svar(v)),Sconst(Ctrue)))
+      (fun v -> Sequal(Ssquare(Sigali.Svar(v)),Sconst(Ctrue)))
       (sig_inputs@sig_ctrl) in
   let constraints = constraints @ [Sequal (a_c,Sconst(Ctrue))] in
   let body_sink, sig_states_full, obj_exp =
@@ -422,13 +435,13 @@ let translate_node
 	let body_sink =
 	  [(extend
               initialisations
-              (Slist[Sequal(Svar(error_state_name),Sconst(Ctrue))]));
+              (Slist[Sequal(Sigali.Svar(error_state_name),Sconst(Ctrue))]));
 	   (extend
               evolutions
               (Slist[g_c]))] in
-	(body_sink, sig_states_full, Svar(error_state_name))
+	(body_sink, sig_states_full, Sigali.Svar(error_state_name))
       end in
-  let obj = Security(obj_exp) in
+  let objs = Security(obj_exp) :: objs in
   let p = { proc_dep = [];
             proc_name = f;
             proc_inputs = sig_inputs@sig_ctrl;
@@ -439,7 +452,7 @@ let translate_node
             proc_init = init@init_c;
             proc_constraints = constraints;
             proc_body = body@body_c@body_sink;
-            proc_objectives = [obj] } in
+            proc_objectives = objs } in
   if !Compiler_options.nbvars then
     begin
       (* Print out nb of vars *)
@@ -521,12 +534,18 @@ let translate_node
 let program p =
   let acc_proc, acc_p_desc =
     List.fold_left
-      (fun (acc_proc,acc_p_desc) p_desc ->
-         match p_desc with
-         | Minils.Pnode(node) ->
-             let (node,proc) = translate_node node in
-             (proc::acc_proc),((Minils.Pnode(node))::acc_p_desc)
-         | p -> (acc_proc,p::acc_p_desc))
+      (fun (acc_proc,acc_p_desc) -> function
+        | Minils.Pnode(node) as p when node.Minils.n_contract = None ->
+            (acc_proc,p::acc_p_desc)
+        | Minils.Pnode(node) as p when node.Minils.n_params <> [] ->
+            warn ~cond:(!Compiler_options.warn_untranslatable)
+              "Unsupported@ translation@ of@ parametric@ node@ `%s'@ with@ \
+               contract@ into@ Z/3Z!" (Names.fullname node.Minils.n_name);
+            (acc_proc,p::acc_p_desc)
+        | Minils.Pnode(node) ->
+            let (node,proc) = translate_node node in
+            (proc::acc_proc),((Minils.Pnode(node))::acc_p_desc)
+        | p -> (acc_proc,p::acc_p_desc))
       ([],[])
       p.Minils.p_desc in
   let procs = List.rev acc_proc in

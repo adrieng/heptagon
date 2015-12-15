@@ -1,0 +1,18 @@
+Examples of uses of Heptagon with the synthesis tool ReaX.
+
+- Verification (modes.ept, contract without controllable variable) :
+
+heptc -target ctrln modes.ept
+reax -a 'sS:d={P:D}' modes_ctrln/twomodes.ctrln
+
+- Controller synthesis (twomodes.ept, contract with controllable variable) :
+
+heptc -hepts -s twomodes -target c -target ctrln modes.ept
+reax -a 'sS:d={P:D}' --triang modes_ctrln/twomodes.ctrln
+ctrl2ept -n Modes.twomodes
+heptc -target c modes_controller.ept
+gcc -o sim -I/usr/local/lib/heptagon/c -Imodes_c -Imodes_controller_c
+             modes_c/_main.c modes_c/modes.c modes_c/modes_types.c
+             modes_controller_c/modes_controller.c
+             modes_controller_c/modes_controller_types.c
+

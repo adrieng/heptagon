@@ -37,21 +37,21 @@
 
  *)
 
-open Misc
 open Names
 open Idents
 open Heptagon
 open Hept_utils
 open Global_printer
-open Hept_printer
 open Signature
-open Types
 open Clocks
 open Location
 open Format
 
 (** Error Kind *)
-type error_kind = | Etypeclash of ct * ct | Eclockclash of ck * ck | Edefclock
+type error_kind =
+  | Etypeclash of ct * ct
+  | Eclockclash of Clocks.ck * Clocks.ck
+  | Edefclock
 
 let error_message loc = function
   | Etypeclash (actual_ct, expected_ct) ->
@@ -113,11 +113,11 @@ let rec typing h pat e =
         typing h pat e
     | Ewhen (e,c,n) ->
         let ck_n = ck_of_name h n in
-        let base = expect h pat (skeleton ck_n e.e_ty) e in
-        skeleton (Con (ck_n, c, n)) e.e_ty, Con (ck_n, c, n)
+        let _base = expect h pat (skeleton ck_n e.e_ty) e in
+        skeleton (Clocks.Con (ck_n, c, n)) e.e_ty, Clocks.Con (ck_n, c, n)
     | Emerge (x, c_e_list) ->
         let ck = ck_of_name h x in
-        List.iter (fun (c,e) -> expect h pat (Ck(Con (ck,c,x))) e) c_e_list;
+        List.iter (fun (c,e) -> expect h pat (Ck(Clocks.Con (ck,c,x))) e) c_e_list;
         Ck ck, ck
     | Estruct l ->
         let ck = fresh_clock () in
@@ -134,7 +134,7 @@ let rec typing h pat e =
               typing_app h base_ck pat op (pargs@args)
           | Imapi -> (* clocking the node with the extra i input on [ck_r] *)
               let il (* stubs i as 0 *) =
-                List.map (fun x -> mk_exp
+                List.map (fun _ -> mk_exp
                             (Econst (Initial.mk_static_int 0))
                             ~ct_annot:(Some(Ck(base_ck)))
                             Initial.tint
@@ -145,12 +145,12 @@ let rec typing h pat e =
           | Ifold | Imapfold ->
               (* clocking node with equality constaint on last input and last output *)
               let ct = typing_app h base_ck pat op (pargs@args) in
-              Misc.optional (unify (Ck(Clocks.last_clock ct)))
-                (Misc.last_element args).e_ct_annot;
+              ignore (Misc.optional (unify (Ck(Clocks.last_clock ct)))
+                        (Misc.last_element args).e_ct_annot);
               ct
           | Ifoldi -> (* clocking the node with the extra i and last in/out constraints *)
               let il (* stubs i as 0 *) =
-                List.map (fun x -> mk_exp
+                List.map (fun _ -> mk_exp
                             (Econst (Initial.mk_static_int 0))
                             ~ct_annot:(Some(Ck(base_ck)))
                             Initial.tint
@@ -163,8 +163,8 @@ let rec typing h pat e =
                 | h::l -> h::(insert_i l)
               in
               let ct = typing_app h base_ck pat op (pargs@(insert_i args)) in
-              Misc.optional (unify (Ck (Clocks.last_clock ct)))
-                (Misc.last_element args).e_ct_annot;
+              ignore (Misc.optional (unify (Ck (Clocks.last_clock ct)))
+                        (Misc.last_element args).e_ct_annot);
               ct
         in
         ct, base_ck
@@ -183,7 +183,7 @@ let rec typing h pat e =
   ct, base
 
 and expect h pat expected_ct e =
-  let actual_ct,base = typing h pat e in
+  let actual_ct,_base = typing h pat e in
   (try unify actual_ct expected_ct
    with Unify -> error_message e.e_loc (Etypeclash (actual_ct, expected_ct)))
 
@@ -207,8 +207,8 @@ and typing_app h base pat op e_list = match op with
           | None -> build_env a_l v_l env
           | Some n -> build_env a_l v_l ((n,v)::env))
         | _ ->
-            Printf.printf "Fun/node : %s\n" (Names.fullname f);
-            Misc.internal_error "Clocking, non matching signature"
+            Misc.internal_error ("Clocking, non matching signature in call of "^
+                                    Names.fullname f);
       in
       let env_pat = build_env node.node_outputs pat_id_list [] in
       let env_args = build_env node.node_inputs e_list [] in
@@ -237,7 +237,7 @@ and typing_app h base pat op e_list = match op with
 let append_env h vds =
   List.fold_left (fun h { v_ident = n; v_clock = ck } -> Env.add n ck h) h vds
 
-let rec typing_eq h ({ eq_desc = desc; eq_loc = loc } as eq) =
+let rec typing_eq h ({ eq_desc = desc; eq_loc = loc } as _eq) =
   match desc with
   | Eeq(pat,e) ->
       let ct,_ = typing h pat e in
@@ -253,7 +253,7 @@ let rec typing_eq h ({ eq_desc = desc; eq_loc = loc } as eq) =
 and typing_eqs h eq_list = List.iter (typing_eq h) eq_list
 
 and typing_block h
-    ({ b_local = l; b_equs = eq_list; b_loc = loc } as b) =
+    ({ b_local = l; b_equs = eq_list } as _b) =
   let h' = append_env h l in
   typing_eqs h' eq_list;
   h'
@@ -263,14 +263,14 @@ let typing_contract h contract =
     | None -> h
     | Some { c_block = b;
              c_assume = e_a;
-             c_enforce = e_g;
+             c_objectives = objs;
              c_controllables = c_list } ->
         let h' = typing_block h b in
         (* assumption *)
-        expect h' (Etuplepat []) (Ck Cbase) e_a;
+        expect h' (Etuplepat []) (Ck Clocks.Cbase) e_a;
         (* property *)
-        expect h' (Etuplepat []) (Ck Cbase) e_g;
-        
+        List.iter (fun o -> expect h' (Etuplepat []) (Ck Clocks.Cbase) o.o_exp) objs;
+
         append_env h c_list
 
 let typing_local_contract h contract =
@@ -279,9 +279,9 @@ let typing_local_contract h contract =
     | Some { c_assume_loc = e_a_loc;
              c_enforce_loc = e_g_loc } ->
         (* assumption *)
-        expect h (Etuplepat []) (Ck Cbase) e_a_loc;
+        expect h (Etuplepat []) (Ck Clocks.Cbase) e_a_loc;
         (* property *)
-        expect h (Etuplepat []) (Ck Cbase) e_g_loc
+        expect h (Etuplepat []) (Ck Clocks.Cbase) e_g_loc
 
 (* check signature causality and update it in the global env *)
 let update_signature h node =
@@ -302,7 +302,7 @@ let typing_node node =
   let h = typing_block h node.n_block in
   typing_local_contract h node.n_contract;
   (* synchronize input and output on base : find the free vars and set them to base *)
-  Env.iter (fun _ ck -> unify_ck Cbase (root_ck_of ck)) h0;
+  Env.iter (fun _ ck -> unify_ck Clocks.Cbase (root_ck_of ck)) h0;
   (*update clock info in variables descriptions *)
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
   let node = { node with n_input = List.map set_clock node.n_input;
@@ -318,4 +318,3 @@ let program p =
     | _ -> pd
   in
     { p with p_desc = List.map program_desc p.p_desc; }
-

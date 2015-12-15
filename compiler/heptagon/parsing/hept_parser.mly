@@ -28,10 +28,8 @@
 (*                                                                     *)
 (***********************************************************************)
 
-open Signature
 open Location
 open Names
-open Types
 open Linearity
 open Hept_parsetree
 
@@ -68,6 +66,8 @@ open Hept_parsetree
 %token CONTRACT
 %token ASSUME
 %token ENFORCE
+%token REACHABLE
+%token ATTRACTIVE
 %token WITH
 %token WHEN WHENOT MERGE ON ONOT
 %token INLINED
@@ -263,13 +263,13 @@ node_params:
 
 contract:
   | /* empty */ {None}
-  | CONTRACT b=opt_block a=opt_assume e=opt_enforce w=opt_with
+  | CONTRACT b=opt_block a=opt_assume ol=objectives w=opt_with
       { Some{ c_block = b;
               c_assume = a;
-              c_enforce = e;
+              c_objectives = ol;
               c_assume_loc = mk_constructor_exp ptrue (Loc($startpos,$endpos));
               c_enforce_loc = mk_constructor_exp ptrue (Loc($startpos,$endpos));
-        c_controllables = w } }
+              c_controllables = w } }
 ;
 
 opt_block:
@@ -282,9 +282,19 @@ opt_assume:
   | ASSUME exp { $2 }
 ;
 
-opt_enforce:
-  | /* empty */ { mk_constructor_exp ptrue (Loc($startpos,$endpos)) }
-  | ENFORCE exp { $2 }
+objectives:
+  | /* empty */ { [] }
+  | o=objective ol=objectives { o :: ol }
+;
+
+objective:
+  | objective_kind exp    { mk_objective $1 $2 }
+;
+
+objective_kind:
+  | ENFORCE { Obj_enforce }
+  | REACHABLE { Obj_reachable }
+  | ATTRACTIVE { Obj_attractive }
 ;
 
 opt_with:

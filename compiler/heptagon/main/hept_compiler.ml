@@ -29,8 +29,6 @@
 
 open Compiler_options
 open Compiler_utils
-open Location
-open Global_printer
 
 let pp p = if !verbose then Hept_printer.print stdout p
 

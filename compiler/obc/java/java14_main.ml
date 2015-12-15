@@ -1,4 +1,3 @@
-open Misc
 open Names
 open Modules
 open Signature
@@ -37,7 +36,7 @@ let program p =
     Idents.enter_node class_name;
     let field_step_dnb, id_step_dnb =
       let id = Idents.gen_var "java_main" "default_step_nb" in
-      mk_field ~static:true ~final:true ~value:(Some (Sint 30000)) Tint id, id
+      Java.mk_field ~static:true ~final:true ~value:(Some (Sint 30000)) Tint id, id
     in
     let main_methode =
 
@@ -56,14 +55,14 @@ let program p =
       let exp_current_arg = Earray_elem(exp_args, exp_argnb) in
     *)
       let body =
-        let vd_main, e_main, q_main, ty_main =
+        let vd_main, e_main, q_main, _ty_main =
           let q_main = Obc2java14.qualname_to_package_classe q_main in (*java qual*)
           let id = Idents.gen_var "java_main" "main" in
           mk_var_dec id false (Tclass q_main), Evar id, q_main, ty_main
         in
         let acts =
           let out = Eclass(Names.qualname_of_string "java.lang.System.out") in
-          let jarrays = Eclass(Names.qualname_of_string "java.util.Arrays") in
+          let _jarrays = Eclass(Names.qualname_of_string "java.util.Arrays") in
           let jint = Eclass(Names.qualname_of_string "Integer") in
           let jfloat = Eclass(Names.qualname_of_string "Float") in
           let jbool = Eclass(Names.qualname_of_string "Boolean") in
@@ -98,15 +97,7 @@ let program p =
 		    mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
           in
           let ret = Emethod_call(e_main, "step", []) in
-          let print_ret = match ty_main with
-            | Types.Tarray (Types.Tarray _, _) -> Emethod_call(jarrays, "deepToString", [ret])
-            | Types.Tarray _ -> Emethod_call(jarrays, "toString", [ret])
-            | t when t = Initial.tint -> Emethod_call(jint, "toString", [ret])
-            | t when t = Initial.tfloat -> Emethod_call(jfloat, "toString", [ret])
-            | t when t = Initial.tbool -> Emethod_call(jbool, "toString", [ret])
-            | _ -> Emethod_call(ret, "toString", [])
-          in
-          let main_for_loop i =
+          let main_for_loop _ =
 (*             [Aexp (Emethod_call(out, "printf", *)
 (* 				[Sstring "%d => %s\\n"; Evar i; print_ret]))] *)
 	    [Aexp ret]

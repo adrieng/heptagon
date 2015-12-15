@@ -56,7 +56,7 @@ let qualify_pervasive q =
       begin
         try
           match (Modules.qualify_value name) with
-          | { Names.qual = Names.Pervasives } as qn -> 
+          | { Names.qual = Names.Pervasives } as qn ->
               Q qn
           | _ -> raise Not_static
         with Not_found -> raise Not_static
@@ -80,7 +80,7 @@ let exp funs local_const e =
       let sed =
         match e.e_desc with
           | Evar n ->
-              (try Svar (Q (qualify_const local_const (ToQ n)))
+              (try Svar (Q (Hept_scoping.qualify_const local_const (ToQ n)))
               with Error.ScopingError _ -> raise Not_static)
           | Eapp({ a_op = Earray_fill; a_params = n_list }, [e]) ->
               Sarray_power (assert_se e, List.map assert_se n_list)
@@ -124,4 +124,3 @@ let interface i =
   List.iter open_module i.i_opened;
   let i, _ = Hept_parsetree_mapfold.interface_it funs Names.NamesSet.empty i in
   i
-

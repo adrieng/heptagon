@@ -28,12 +28,7 @@
 (***********************************************************************)
 open Misc
 open Names
-open Signature
-open Idents
-open Types
 open Linearity
-open Clocks
-open Static
 open Format
 open Global_printer
 open Pp_tools
@@ -58,7 +53,7 @@ let rec print_pat ff = function
       fprintf ff "@[<2>(%a)@]" (print_list_r print_pat """,""") pat_list
 
 let print_vd ?(show_ck=false) ff { v_ident = n; v_type = ty; v_linearity = lin; v_clock = ck } =
- if show_ck or !Compiler_options.full_type_info then
+ if show_ck || !Compiler_options.full_type_info then
     fprintf ff "%a : %a%a :: %a" print_ident n print_type ty print_linearity lin print_ck ck
   else fprintf ff "%a : %a%a" print_ident n print_type ty print_linearity lin
 
@@ -225,7 +220,7 @@ and print_eqs ff = function
 
 let print_open_module ff name = fprintf ff "open %s@." (modul_to_string name)
 
-let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
+let print_type_dec ff { t_name = name; t_desc = tdesc } =
   let print_type_desc ff = function
     | Type_abs -> ()
     | Type_alias ty -> fprintf ff  " =@ %a" print_type ty
@@ -236,14 +231,25 @@ let rec print_type_dec ff { t_name = name; t_desc = tdesc } =
   fprintf ff "@[<2>type %a%a@]@." print_qualname name print_type_desc tdesc
 
 
+let print_objective_kind ff = function
+  | Obj_enforce -> fprintf ff "enforce"
+  | Obj_reachable -> fprintf ff "reachable"
+  | Obj_attractive -> fprintf ff "attractive"
+
+let print_objective ff o =
+  fprintf ff "@[<2>%a@ %a]"
+	  print_objective_kind o.o_kind
+	  print_extvalue o.o_exp
+
 let print_contract ff { c_local = l; c_eq = eqs;
-                        c_assume = e_a; c_enforce = e_g;
-      c_controllables = c;} =
-  fprintf ff "@[<v2>contract@\n%a%a@ assume %a@ enforce %a@ with %a@\n@]"
+                        c_assume = e_a;
+			c_objectives = objs;
+			c_controllables = c;} =
+  fprintf ff "@[<v2>contract@\n%a%a@ assume %a%a@ with %a@\n@]"
     print_local_vars l
     print_eqs eqs
     print_extvalue e_a
-    print_extvalue e_g
+    (print_list print_objective "@ " "@ " "") objs 
     print_vd_tuple c
 
 

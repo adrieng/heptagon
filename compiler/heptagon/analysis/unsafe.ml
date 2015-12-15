@@ -27,7 +27,6 @@
 (*                                                                     *)
 (***********************************************************************)
 (* Checks that a node not declared unsafe is safe, and set app unsafe flag. *)
-open Names
 open Location
 open Signature
 open Modules
@@ -58,17 +57,17 @@ let exp funs unsafe e =
   let e, unsafe = Hept_mapfold.exp funs unsafe e in
     match e.e_desc with
       | Eapp({ a_op = op } as app, e_l, r) ->
-          let u = (unsafe_op op) or app.a_unsafe in
-          if u & (not unsafe)
+          let u = (unsafe_op op) || app.a_unsafe in
+          if u && (not unsafe)
           then message e.e_loc Eshould_be_unsafe
-          else {e with e_desc = Eapp({ app with a_unsafe = u }, e_l, r)}, (unsafe or u)
+          else {e with e_desc = Eapp({ app with a_unsafe = u }, e_l, r)}, (unsafe || u)
       | Eiterator(it, ({ a_op = op } as app), n, pe_list, e_list, r) ->
-          let u = (unsafe_op op) or app.a_unsafe in
-          if u & (not unsafe)
+          let u = (unsafe_op op) || app.a_unsafe in
+          if u && (not unsafe)
           then message e.e_loc Eshould_be_unsafe
           else
             {e with e_desc = Eiterator(it, { app with a_unsafe = u }, n, pe_list, e_list, r)}
-            , (unsafe or u)
+            , (unsafe || u)
       | _ -> e, unsafe
 
 (* unsafe nodes are rejected if they are not declared unsafe *)

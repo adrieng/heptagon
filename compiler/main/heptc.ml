@@ -28,9 +28,6 @@
 (***********************************************************************)
 
 
-open Misc
-open Modules
-open Location
 open Compiler_utils
 open Compiler_options
 
@@ -117,7 +114,9 @@ let compile source_f =
 
 (** [main] function to be launched *)
 let main () =
-  let read_qualname f = Arg.String (fun s -> f (Names.qualname_of_string s)) in
+  let read_qualname f =
+    Arg.String (fun s -> f (try Names.qualname_of_string s with
+      | Exit -> raise (Arg.Bad ("Invalid name: "^ s)))) in
   try
     Arg.parse
       [
@@ -158,6 +157,11 @@ let main () =
         "-O", Arg.Unit do_optim, doc_optim;
         "-mall", Arg.Set interf_all, doc_interf_all;
         "-time", Arg.Set time_passes, doc_time_passes;
+        "-abstract-infinite", Arg.Set abstract_infinite, doc_abstract_infinite;
+        ("-Wno-untranslatable", Arg.Clear warn_untranslatable,
+         doc_no_warn_untranslat);
+        ("-Wno-abstract", Arg.Clear warn_abstractions,
+         doc_no_warn_abstractions);
       ]
         compile errmsg;
   with

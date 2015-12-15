@@ -56,7 +56,7 @@ let anon_nodes = ref QualEnv.empty
 let add_anon_node inputs outputs locals eqs =
   let n = mk_fresh_node_name () in
   let b = mk_block ~locals:locals eqs in
-  let nd = mk_node ~input:inputs ~output:outputs n b in
+  let nd = Hept_utils.mk_node ~input:inputs ~output:outputs n b in
   anon_nodes := QualEnv.add n nd !anon_nodes;
   n
 
@@ -95,7 +95,7 @@ let tuple_of_vd_list l =
     mk_exp (Eapp (mk_app Etuple, el, None)) ty ~linearity:lin
 
 let vd_of_arg ad =
-    mk_var_dec (fresh_vd_of_arg ad) ad.a_type ad.a_linearity
+    mk_var_dec (fresh_vd_of_arg ad) ad.a_type ~linearity:ad.a_linearity
 
 (** @return the lists of inputs and outputs (as var_dec) of
     an app object. *)
@@ -150,7 +150,7 @@ let edesc funs acc ed =
               let new_inp, e, acc_eq_list = mk_call g acc_eq_list in
               new_inp @ inp, acc_eq_list, e::largs, local_args @ args, true
           | _ ->
-              let vd = mk_var_dec (fresh_var ()) e.e_ty e.e_linearity in
+              let vd = mk_var_dec (fresh_var ()) e.e_ty ~linearity:e.e_linearity in
               vd::inp, acc_eq_list, (exp_of_vd vd)::largs, e::args, b
         in
 
@@ -162,7 +162,7 @@ let edesc funs acc ed =
           let _, outp = get_node_inp_outp f in
           let f_out_type = type_of_vd_list outp in
           let f_out_lin = linearity_of_vd_list outp in
-          let call = mk_exp (Eapp(f, largs, None)) f_out_type f_out_lin in
+          let call = mk_exp (Eapp(f, largs, None)) f_out_type ~linearity:f_out_lin in
           let eq = mk_equation (Eeq(pat_of_vd_list outp, call)) in
           (* create the lambda *)
           let anon = mk_app

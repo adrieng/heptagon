@@ -28,7 +28,6 @@
 (***********************************************************************)
 
 open Names
-open Misc
 open Location
 
 
@@ -43,9 +42,9 @@ and static_exp_desc =
   | Sconstructor of constructor_name
   | Sfield of field_name
   | Stuple of static_exp list
-  | Sarray_power of static_exp * (static_exp list) (** power : 0^n^m : [[0,0,..],[0,0,..],..] *)
-  | Sarray of static_exp list (** [ e1, e2, e3 ] *)
-  | Srecord of (field_name * static_exp) list (** { f1 = e1; f2 = e2; ... } *)
+  | Sarray_power of static_exp * (static_exp list) (** power : [0^n^m : [[0,0,..],[0,0,..],..]] *)
+  | Sarray of static_exp list (** [[ e1, e2, e3 ]] *)
+  | Srecord of (field_name * static_exp) list (** [{ f1 = e1; f2 = e2; ... }] *)
   | Sop of fun_name * static_exp list (** defined ops for now in pervasives *)
 
 and ty =
@@ -66,5 +65,3 @@ let unprod = function
 
 let mk_static_exp ?(loc = no_location) ty desc = (*note ~ty: replace as first arg*)
   { se_desc = desc; se_ty = ty; se_loc = loc }
-
-

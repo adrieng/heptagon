@@ -59,6 +59,9 @@ let mk_static_int_op op args =
 let mk_static_int i =
   mk_static_exp tint (Sint i)
 
+let mk_static_float f =
+  mk_static_exp tint (Sfloat f)
+
 let mk_static_bool b =
   mk_static_exp tbool (Sbool b)
 

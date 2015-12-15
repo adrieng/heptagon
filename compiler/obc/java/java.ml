@@ -130,7 +130,7 @@ type program = classe list
 (** [jname_of_name name] translates the string [name] to a valid Java identifier. *)
 let jname_of_name name =
   let buf = Buffer.create (String.length name) in
-  let rec convert c =
+  let convert c =
     match c with
       | 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' ->
           Buffer.add_char buf c
@@ -142,7 +142,7 @@ let jname_of_name name =
   Buffer.contents buf
 
 
-let rec default_value ty = match ty with
+let default_value ty = match ty with
   | Tclass _ -> Snull
   | Tgeneric _ -> Snull
   | Tbool -> Sbool true

@@ -59,11 +59,27 @@ let separateur = "\n*********************************************\
 let comment ?(sep=separateur) s =
   if !verbose then Format.printf "%s%s@." sep s
 
+let info: ('a, formatter, unit, unit) format4 -> 'a = fun f ->
+  if !verbose then
+    kfprintf (kfprintf (fun fmt -> fprintf fmt "@]@.")) err_formatter
+      "Info: @[" f
+  else ifprintf err_formatter f
+
+let warn ?(cond = true): ('a, formatter, unit, unit) format4 -> 'a = fun f ->
+  if cond then
+    kfprintf (kfprintf (fun fmt -> fprintf fmt "@]@.")) err_formatter
+      "Warning: @[" f
+  else ifprintf err_formatter f
+
+let error: ('a, formatter, unit, unit) format4 -> 'a = fun f ->
+  kfprintf (kfprintf (fun fmt -> fprintf fmt "@]@.")) err_formatter
+    "Error: @[" f
+
 let do_pass d f p pp =
   comment (d ^ " ...\n");
-  let start = Unix.gettimeofday () in
+  let _start = Unix.gettimeofday () in
   let r = Compiler_timings.time_pass d f p in
-  let stop = Unix.gettimeofday () in
+  let _stop = Unix.gettimeofday () in
   pp r;
   comment ~sep:"*** " (d ^ " done.");
   r
@@ -138,4 +154,3 @@ let print_header_info ff cbeg cend =
     cend
 
 let errmsg = "Options are:"
-

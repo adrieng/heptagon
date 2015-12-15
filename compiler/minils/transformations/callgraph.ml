@@ -27,7 +27,6 @@
 (*                                                                     *)
 (***********************************************************************)
 open Names
-open Idents
 open Types
 open Misc
 open Location

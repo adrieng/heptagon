@@ -29,9 +29,6 @@
 
 open Compiler_utils
 open Compiler_options
-open Obc
-open Minils
-open Misc
 
 (** Definition of a target. A target starts either from
     dataflow code (ie Minils) or sequential code (ie Obc),
@@ -41,6 +38,7 @@ type program_target =
   | Obc_no_params of (Obc.program -> unit)
   | Minils of (Minils.program -> unit)
   | Minils_no_params of (Minils.program -> unit)
+  | Disabled_target
 
 type interface_target =
   | IObc of (Obc.interface -> unit)
@@ -79,6 +77,14 @@ let java_conf () =
   Compiler_options.do_scalarize := true;
   ()
 
+;; IFDEF ENABLE_CTRLN THEN
+let ctrln_targets =
+  [ mk_target "ctrln" (Minils_no_params ignore) ]
+;; ELSE
+let ctrln_targets =
+  [ mk_target "ctrln" Disabled_target ]
+;; ENDIF
+
 let targets =
   [ mk_target ~interface:(IObc Cmain.interface) "c" (Obc_no_params Cmain.program);
     mk_target ~load_conf:java_conf "java" (Obc Java_main.program);
@@ -87,6 +93,7 @@ let targets =
     mk_target "obc" (Obc write_obc_file);
     mk_target "obc_np" (Obc_no_params write_obc_file);
     mk_target "epo" (Minils write_object_file) ]
+  @ ctrln_targets
 
 let find_target s =
   try
@@ -100,11 +107,11 @@ let generate_target p s =
     comment "Unfolding";
     if !Compiler_options.verbose
     then List.iter (Mls_printer.print stderr) p_list in*)
-  let target = (find_target s).t_program in
+  let { t_program = program; t_name = name } = find_target s in
   let callgraph p = do_silent_pass "Callgraph" Callgraph.program p in
-  let mls2obc p = do_silent_pass "Translation into MiniLS" Mls2obc.program p in
-  let mls2obc_list p_l = do_silent_pass "Translation into MiniLS" (List.map Mls2obc.program) p_l in
-  match target with
+  let mls2obc p = do_silent_pass "Translation from MiniLS" Mls2obc.program p in
+  let mls2obc_list p_l = do_silent_pass "Translation from MiniLS" (List.map Mls2obc.program) p_l in
+  match program with
     | Minils convert_fun ->
         do_silent_pass "Code generation from MiniLS" convert_fun p
     | Obc convert_fun ->
@@ -113,12 +120,14 @@ let generate_target p s =
         do_silent_pass "Code generation from Obc" convert_fun o
     | Minils_no_params convert_fun ->
         let p_list = callgraph p in
-        do_silent_pass "Code generation from Obc (w/o params)" (List.iter convert_fun) p_list
+        do_silent_pass "Code generation from Minils (w/o params)" (List.iter convert_fun) p_list
     | Obc_no_params convert_fun ->
         let p_list = callgraph p in
         let o_list = mls2obc_list p_list in
         let o_list = List.map Obc_compiler.compile_program o_list in
         do_silent_pass "Code generation from Obc (w/o params)"         List.iter convert_fun o_list
+    | Disabled_target ->
+        warn "ignoring unavailable target `%s'." name
 
 let generate_interface i s =
   let target = (find_target s).t_interface  in

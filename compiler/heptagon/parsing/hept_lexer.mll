@@ -79,6 +79,8 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "contract", CONTRACT;
  "assume", ASSUME;
  "enforce", ENFORCE;
+ "reachable", REACHABLE;
+ "attractive", ATTRACTIVE;
  "with", WITH;
  "inlined",INLINED;
  "when", WHEN;

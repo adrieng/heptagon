@@ -1,6 +1,0 @@
-- Ne plus forcer l'ordre constantes puis types puis definitions de noeud. Il
-faudra mettre à jour les phases du compilateur et modifier l'ast.
-- Ajouter des constantes locales
-
-- supprimer pinst dans minils
-- heptcheck

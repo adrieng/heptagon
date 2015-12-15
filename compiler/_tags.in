@@ -1,0 +1,12 @@
+<global> or <utilities> or <minils> or <heptagon> or <main> or <obc>:include
+<**/*.ml*>: debug, dtypes, package(ocamlgraph)
+<preproc.ml>: camlp4of, package(camlp4)
+true: use_menhir
+
+<**/*.{byte,native}>: package(unix), package(str)
+<**/heptc.{byte,native}>: package(menhirLib), package(ocamlgraph)
+<main/hepts.{ml,byte,native}>: package(lablgtk2), thread
+"heptagon/parsing/hept_parser.mli": package(menhirLib)
+
+<**/*.ml*> or <**/{heptc,ctrl2ept}.{byte,native}>: @package_reatk_ctrlNbac@
+"minils/main/mls_compiler.ml" or "main/mls2seq.ml": pp(camlp4o pa_macro.cmo @ctrln_pp@)

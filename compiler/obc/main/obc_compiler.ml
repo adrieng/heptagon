@@ -26,8 +26,6 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Misc
-open Location
 open Compiler_utils
 open Compiler_options
 
@@ -37,7 +35,7 @@ let compile_program p =
 
   (* Memory allocation application *)
   let p = pass "Application of Memory Allocation"
-    (!do_mem_alloc or !do_linear_typing) Memalloc_apply.program p pp in
+    (!do_mem_alloc || !do_linear_typing) Memalloc_apply.program p pp in
 
   (*Scalarize for wanting backends*)
   let p = pass "Scalarize" (!do_scalarize) Scalarize.program p pp in
@@ -47,7 +45,7 @@ let compile_program p =
 
   (*Dead code removal*)
   let p = pass "Dead code removal"
-    (!do_mem_alloc or !do_linear_typing) Deadcode.program p pp in
+    (!do_mem_alloc || !do_linear_typing) Deadcode.program p pp in
 
   (*Control optimization*)
   let p = pass "Control optimization" true Control.program p pp in

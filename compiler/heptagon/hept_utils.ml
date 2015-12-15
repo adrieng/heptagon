@@ -28,10 +28,7 @@
 (***********************************************************************)
 (* the internal representation *)
 open Location
-open Misc
-open Names
 open Idents
-open Static
 open Signature
 open Types
 open Linearity
@@ -41,7 +38,7 @@ open Heptagon
 
 (* Helper functions to create AST. *)
 (* TODO : After switch, all mk_exp should take care of level_ck *)
-let mk_exp desc ?(level_ck = Cbase) ?(ct_annot = None) ?(loc = no_location) ty ~linearity =
+let mk_exp desc ?(level_ck = Clocks.Cbase) ?(ct_annot = None) ?(loc = no_location) ty ~linearity =
   { e_desc = desc; e_ty = ty; e_ct_annot = ct_annot; e_linearity = linearity;
     e_level_ck = level_ck; e_loc = loc; }
 
@@ -112,7 +109,7 @@ let mk_node
 let vars_pat pat =
   let rec _vars_pat locals acc = function
     | Evarpat x ->
-        if (IdentSet.mem x locals) or (IdentSet.mem x acc)
+        if (IdentSet.mem x locals) || (IdentSet.mem x acc)
         then acc
         else IdentSet.add x acc
     | Etuplepat pat_list -> List.fold_left (_vars_pat locals) acc pat_list
@@ -122,7 +119,7 @@ let vars_pat pat =
     a list of [var_dec]. *)
 let rec vd_mem n = function
   | [] -> false
-  | vd::l -> vd.v_ident = n or (vd_mem n l)
+  | vd::l -> vd.v_ident = n || (vd_mem n l)
 
 let args_of_var_decs =
   (* before the clocking the clock is wrong in the signature *)
@@ -139,4 +136,3 @@ let signature_of_node n =
       node_param_constraints = n.n_param_constraints;
       node_external = false;
       node_loc = n.n_loc }
-

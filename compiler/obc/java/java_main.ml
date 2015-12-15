@@ -26,7 +26,6 @@
 (* along with Heptagon.  If not, see <http://www.gnu.org/licenses/>    *)
 (*                                                                     *)
 (***********************************************************************)
-open Misc
 open Names
 open Modules
 open Signature
@@ -67,7 +66,7 @@ let program p =
     Idents.enter_node class_name;
     let field_step_dnb, id_step_dnb =
       let id = Idents.gen_var "java_main" "default_step_nb" in
-      mk_field ~static:true ~final:true ~value:(Some (Sint 30000)) Tint id, id
+      Java.mk_field ~static:true ~final:true ~value:(Some (Sint 30000)) Tint id, id
     in
     let main_methode =
 
@@ -100,7 +99,7 @@ let program p =
           let jminus = pervasives_qn "-" in
 
           (* num args to give to the main *)
-          let rec num_args = List.length ty_main_args in
+          let num_args = List.length ty_main_args in
 
           (* parse arguments to give to the main *)
           let rec parse_args t_l i = match t_l with
@@ -140,7 +139,7 @@ let program p =
                 else [Aexp (Emethod_call(out, "printf", [Sstring "%d => \n"; Evar i]))]
             | _ ->
                 if !Compiler_options.hepts_simulation
-                then 
+                then
                   [Aexp (Emethod_call(out, "printf",
                                       [Sstring "%s\n";
                                        Emethod_call(java_pervasives,

@@ -29,10 +29,7 @@
 
 (* causality check of scheduling constraints *)
 
-open Misc
-open Names
 open Idents
-open Heptagon
 open Location
 open Sgraph
 open Format
@@ -148,7 +145,7 @@ let rec ctuple l =
       norm_tuple l before (ac::newl)
     | ((Aac _) as ac)::l ->
       norm_tuple l (cand before ac) newl
-    | (Aor _)::l -> assert false
+    | (Aor _)::_ -> assert false
   in
   norm_tuple l Aempty []
 
@@ -217,7 +214,7 @@ let build ac =
       with
         | Not_found -> () in
 
-    let rec add_dependence g = function
+    let add_dependence g = function
       | Aread(n) -> attach g n; attach_lin g n
       | Alinread(n) -> attach g n
       | _ -> ()

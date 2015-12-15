@@ -1,8 +1,0 @@
-<global> or <utilities> or <minils> or <heptagon> or <main> or <obc>:include
-<**/*.ml>: debug, dtypes, pkg_ocamlgraph
-<preproc.ml>: camlp4of, use_camlp4
-true:use_menhir
-<**/*.{byte,native}>: use_unix, use_str, debug, custom, pkg_menhirLib, pkg_ocamlgraph
-
-<main/hepts.ml>: pkg_lablgtk2, thread
-<main/hepts.{byte,native}>: pkg_lablgtk2, thread

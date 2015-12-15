@@ -1,0 +1,20 @@
+node twomodes (v:int) = (o:int)
+
+contract
+  assume (v <= 1) & (v >= 0)
+  enforce (o <= 10) & (o >= 0)
+  with (c:bool)
+  
+var last y : int = 0;
+let
+  o = y;
+  automaton
+    state Up
+      do y = last y + v
+      until not c then Down
+    state Down
+      do y = last y - v
+      until not c then Up
+  end
+tel
+

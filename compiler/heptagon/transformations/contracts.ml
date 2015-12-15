@@ -47,6 +47,17 @@ open Linearity
 
 let fresh = Idents.gen_var "contracts"
 
+let not_exp e = mk_exp (mk_op_app (Efun pnot) [e]) tbool ~linearity:Ltop
+
+let (&&&) e1 e2 = mk_exp (mk_op_app (Efun pand) [e1;e2]) tbool ~linearity:Ltop
+let (|||) e1 e2 = mk_exp (mk_op_app (Efun por) [e1;e2]) tbool ~linearity:Ltop
+
+let (=>) e1 e2 = (not_exp e1) ||| e2
+
+let var_exp v = mk_exp (Evar v) tbool ~linearity:Ltop
+
+let true_exp = mk_exp (Econst (mk_static_bool true)) tbool ~linearity:Ltop
+
 let mk_unique_node nd =
   let mk_bind vd =
     let id = fresh (Idents.name vd.v_ident) in
@@ -93,7 +104,7 @@ let mk_unique_node nd =
   let subst_contract funs subst c =
     let c_block, subst' = subst_contract_block funs subst c.c_block in
     let c_assume, subst' = exp_it funs subst' c.c_assume in
-    let c_enforce, subst' = exp_it funs subst' c.c_enforce in
+    let c_objectives, _subst' = mapfold (objective_it funs) subst' c.c_objectives in
     let subst =
     List.fold_left
       (fun subst vd ->
@@ -104,7 +115,7 @@ let mk_unique_node nd =
     let c_assume_loc = c.c_assume_loc in
     let c_enforce_loc = c.c_enforce_loc in
     { c_assume = c_assume;
-      c_enforce = c_enforce;
+      c_objectives = c_objectives;
       c_assume_loc = c_assume_loc;
       c_enforce_loc = c_enforce_loc;
       c_block = c_block;
@@ -224,9 +235,22 @@ let exp funs (env, newvars, newequs, cont_vars, contracts) exp =
       (* variable declarations for assume/guarantee *)
       let vd_a = mk_vd_bool v_a in
       let vd_g = mk_vd_bool v_g in
+
+      (* Build an expression composed of every "enforce" objective of the contract *)
+      let rec build_enforce o_list =
+	match o_list with
+	  [] -> true_exp
+	| [o] -> o.o_exp
+	| o :: l -> o.o_exp &&& (build_enforce l) in
+
+      (* Currently, only the enforce part is used for modularity *)
+      let enforce_exp =
+	build_enforce
+	  (List.filter (fun o -> o.o_kind = Obj_enforce) ci.c_objectives) in
+
       (* equations for assume/guarantee *)
       let eq_a = mk_equation (Eeq (Evarpat v_a, ci.c_assume)) in
-      let eq_g = mk_equation (Eeq (Evarpat v_g, ci.c_enforce)) in
+      let eq_g = mk_equation (Eeq (Evarpat v_g, enforce_exp)) in
 
 
       let newvars = ni.n_input @ ci.c_block.b_local @ ni.n_output @ newvars
@@ -261,26 +285,15 @@ let block funs (env, newvars, newequs, cont_vars, contracts) blk =
   let defnames = List.fold_left
     (fun env v -> Env.add v.v_ident v env)
     blk.b_defnames cont_vars' in
-  ({ blk with 
+  ({ blk with
     b_local = newvars' @ blk.b_local;
     b_equs = newequs' @ blk.b_equs;
     b_defnames = defnames;
    },
    (env, newvars, newequs, (cont_vars @ cont_vars'), contracts'))
 
-let not_exp e = mk_exp (mk_op_app (Efun pnot) [e]) tbool ~linearity:Ltop
-
-let (&&&) e1 e2 = mk_exp (mk_op_app (Efun pand) [e1;e2]) tbool ~linearity:Ltop
-let (|||) e1 e2 = mk_exp (mk_op_app (Efun por) [e1;e2]) tbool ~linearity:Ltop
-
-let (=>) e1 e2 = (not_exp e1) ||| e2
-
-let var_exp v = mk_exp (Evar v) tbool ~linearity:Ltop
-
-let true_exp = mk_exp (Econst (mk_static_bool true)) tbool ~linearity:Ltop
-
 let node_dec funs (env, newvars, newequs, cont_vars, contracts) nd =
-  let nd, (env, newvars, newequs, cont_vars, contracts) =
+  let nd, (env, newvars, newequs, _cont_vars, contracts) =
     Hept_mapfold.node_dec funs (env, newvars, newequs, cont_vars, contracts) nd in
 
   (* Build assume and guarantee parts from contract list (list of
@@ -308,7 +321,7 @@ let node_dec funs (env, newvars, newequs, cont_vars, contracts) nd =
       c,[] -> c
     | None,_::_ ->
         Some { c_assume = true_exp;
-               c_enforce = true_exp;
+               c_objectives = [];
                c_assume_loc = assume_loc;
                c_enforce_loc = enforce_loc;
                c_controllables = [];
@@ -330,10 +343,9 @@ let node_dec funs (env, newvars, newequs, cont_vars, contracts) nd =
 let program p =
   let funs =
     { defaults with exp = exp; block = block; node_dec = node_dec; eq = eq; } in
-  let (p, (_, newvars, newequs, cont_vars, contracts)) =
+  let (p, (_, newvars, newequs, _cont_vars, contracts)) =
     Hept_mapfold.program funs (QualEnv.empty, [], [], [], []) p in
   assert (newvars = []);
   assert (newequs = []);
   assert (contracts = []);
   p
-

@@ -27,20 +27,15 @@
 (*                                                                     *)
 (***********************************************************************)
 
-open Format
 open List
-open Misc
 open Names
 open Idents
 open Obc
 open Obc_utils
 open Types
-open Modules
 open Signature
 open C
 open Cgen
-open Location
-open Format
 open Compiler_utils
 
 (** {1 Main C function generation} *)
@@ -102,7 +97,7 @@ let assert_node_res cd =
             Cif (Cuop ("!", Cfield (Cvar (fst out), local_qn outn)),
                  [Csexpr (Cfun_call ("fprintf",
                                      [Cvar "stderr";
-                                      Cconst (Cstrlit ("Node \"" 
+                                      Cconst (Cstrlit ("Node \""
 						       ^ (Names.fullname cd.cd_name)
                                                             ^ "\" failed at step" ^
                                                               " %d.\n"));
@@ -132,7 +127,7 @@ let main_def_of_class_def cd =
     | Types.Tid id when id = Initial.pfloat -> None
     | Types.Tid id when id = Initial.pint -> None
     | Types.Tid id when id = Initial.pbool -> None
-    | Tid { name = n } -> Some n
+    | Tid tn -> Some (cname_of_qn tn)
   in
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
 
@@ -167,12 +162,10 @@ let main_def_of_class_def cd =
                   (vn ^ "." ^ (shortname fn), args)
               | _ -> assert false in
             let (prompt, args_format_s) = mk_prompt lhs in
-            let scan_exp =
+            let scan_exp e =
               let printf_s = Format.sprintf "%s ? " prompt in
               let format_s = format_for_type ty in
-              let exp_scanf = Cfun_call ("scanf",
-                                         [Cconst (Cstrlit format_s);
-                                          Caddrof lhs]) in
+              let exp_scanf = Cfun_call ("scanf", [Cconst (Cstrlit format_s); e]) in
               let body =
                 if !Compiler_options.hepts_simulation
                 then (* hepts: systematically test and quit when EOF *)
@@ -191,12 +184,14 @@ let main_def_of_class_def cd =
               Csblock { var_decls = [];
                         block_body = body; } in
             match need_buf_for_ty ty with
-            | None -> ([scan_exp], [])
+            | None -> ([scan_exp (Caddrof lhs)], [])
             | Some tyn ->
                 let varn = fresh "buf" in
-                ([scan_exp;
-                  Csexpr (Cfun_call (tyn ^ "_of_string",
-                                     [Cvar varn]))],
+		let lhs = clhs_of_cexpr lhs in
+                ([scan_exp (Cvar varn);
+                  Caffect (lhs,
+			   (Cfun_call (tyn ^ "_of_string",
+                                     [Cvar varn])))],
                  [(varn, Cty_arr (20, Cty_char))])
         end
     | Tprod _ | Tinvalid -> failwith("read_lhs_of_ty: untranslatable type")
@@ -248,17 +243,17 @@ let main_def_of_class_def cd =
                                  :: ep))],
              match nbuf_opt with
              | None -> []
-             | Some _ -> [(varn, Cty_arr (20, Cty_char))]) 
+             | Some _ -> [(varn, Cty_arr (20, Cty_char))])
         end
     | Tprod _ | Tinvalid -> failwith("write_lhs_of_ty: untranslatable type")
   in
-        
+
   let stepm = find_step_method cd in
   let (scanf_calls, scanf_decls) =
     let read_lhs_of_ty_for_vd vd =
       read_lhs_of_ty (Cvar (Idents.name vd.v_ident)) vd.v_type in
     split (map read_lhs_of_ty_for_vd stepm.m_inputs) in
-  
+
   let (printf_calls, printf_decls) =
     let write_lhs_of_ty_for_vd vd =
       let (stm, vars) =
@@ -318,7 +313,7 @@ let main_def_of_class_def cd =
     variable list [var_list], prologue [prologue] and loop body [body]. *)
 let main_skel var_list prologue body =
   Cfundef {
-    f_name = "main";
+    C.f_name = "main";
     f_retty = Cty_int;
     f_args = [("argc", Cty_int); ("argv", Cty_ptr (Cty_ptr Cty_char))];
     f_body = {
