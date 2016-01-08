@@ -132,8 +132,7 @@ let totrel t : totrel -> fun_name =
     | `Le -> Initial.mk_pervasives "<=."
     | `Gt -> Initial.mk_pervasives ">."
     | `Ge -> Initial.mk_pervasives ">=."
-    | `Eq -> Initial.mk_pervasives "=."                    (* XXX: error case? *)
-    | `Ne -> Initial.mk_pervasives "<>."                   (* ibid *)
+    | #eqrel as r -> eqrel r
   else function
     | `Lt -> Initial.mk_pervasives "<"
     | `Le -> Initial.mk_pervasives "<="
@@ -169,6 +168,31 @@ let bnop: bnop -> fun_name = function
   | `Disj -> Initial.por
   | `Excl -> failwith "TODO: translation of exclusion operator"
 
+(* --- *)
+
+let rec flttyp_exp ({ e_desc; e_ty } as e) =
+  if e_ty = Initial.tfloat then e
+  else { e with e_ty = Initial.tfloat; e_desc = flttyp_desc e_desc }
+and flttyp_desc = function
+  | Econst s -> Econst (flttyp_sexp s)
+  | Eapp ({ a_op = Efun { qual = Pervasives; name } } as op, el, None) ->
+      (* NB: very hackish stuff *)
+      begin match name with
+        | "+" | "-" | "*" | "/" | "~-" ->
+            let a_op = Efun (Initial.mk_pervasives (name^".")) in
+            Eapp ({ op with a_op }, List.map flttyp_exp el, None)
+        | _ -> assert false
+      end
+  | _ -> assert false
+and flttyp_sexp ({ se_desc; se_ty } as e) =
+  if se_ty = Initial.tfloat then e
+  else { e with se_ty = Initial.tfloat; se_desc = flttyp_sdesc se_desc }
+and flttyp_sdesc = function
+  | Sint i -> Sfloat (float_of_int i)
+  | _ -> assert false
+
+(* --- *)
+
 let translate_expr gd e =
   let mkb_bapp_eq ?flag tr e f l =
     let e = tr ?flag e in
@@ -198,7 +222,7 @@ let translate_expr gd e =
     | `BIin _ -> raise (Untranslatable ("bounded Integer membership", flag))
     | #cond as c -> trcond ?flag tb tb c
     | #flag as e -> apply' tb e
-  and te ?flag = ignore flag; function
+  and te ?flag = function
     | `Ref v -> mkp (symb_typ' gd v) (Evar (ts gd v))
     | `Enum l -> let s = label_symb l in
                 let t = symb_typ' gd s in
@@ -218,15 +242,25 @@ let translate_expr gd e =
     | #cond as c -> trcond ?flag tb tn c
     | #flag as e -> apply' tn e
   and mkb_ncmp ?flag re e f =
-    let { e_ty } as e = tn ?flag e and f = tn f in
-    mkb (mk_bapp (Efun (totrel e_ty re)) e f)
+    let { e_ty = et } as e = tn ?flag e
+    and { e_ty = ft } as f = tn ?flag f in
+    (* NB: these coercions may not be needed, but let's keep it in case *)
+    if et = Initial.tfloat && ft = Initial.tint
+    then mkb (mk_bapp (Efun (totrel et re)) e (flttyp_exp f))
+    else if et = Initial.tint && ft = Initial.tfloat
+    then mkb (mk_bapp (Efun (totrel ft re)) (flttyp_exp e) f)
+    else mkb (mk_bapp (Efun (totrel et re)) e f)
   and mk_nuapp ?flag op e =
     let { e_ty } as e = tn ?flag e in
     mkp e_ty (mk_uapp (Efun (nuop e_ty op)) e)
   and mk_nnapp ?flag op e f l =
-    let { e_ty } as e = tn ?flag e in
-    let op = mk_bapp (Efun (nnop e_ty op)) in
-    List.fold_left (fun acc e -> mkp e_ty (op acc (tn ?flag e))) e (f::l)
+    let el = List.rev_map (tn ?flag) (e :: f :: l) in
+    (* NB: manual coercion from ints to floats *)
+    let flt = List.exists (fun { e_ty } -> e_ty = Initial.tfloat) el in
+    let typ = if flt then Initial.tfloat else Initial.tint in
+    let el = List.rev_map flttyp_exp el in
+    let op = mk_bapp (Efun (nnop typ op)) in
+    List.fold_left (fun acc e -> mkp typ (op acc e)) (List.hd el) (List.tl el)
   and tp ?flag : 'f AST.exp -> _ = function
     | `Bexp e -> tb ?flag e
     | `Eexp e -> te ?flag e
