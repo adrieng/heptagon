@@ -269,15 +269,20 @@ let create_input v_name v_ty n (table:GPack.table) =
   | Tid{ qual = Pervasives; name = "bool" } ->
       new boolean_input table n
   | Tid(name) ->
-      begin try
-              let ty = find_type name in
-              begin match ty with
-              | Tenum(clist) -> new enum_input name.qual clist table n
-              | _ -> new entry_input "" table n
-              end
-        with Not_found ->
-          new entry_input "" table n
-      end
+     let rec input name =
+       let _ = check_type name in
+       begin try
+	   let ty = find_type name in
+           begin
+	     match ty with
+	     | Tenum(clist) -> new enum_input name.qual clist table n
+	     | Talias(Tid name) -> input name
+	     | _ -> new entry_input "" table n
+           end
+         with Not_found ->
+           new entry_input "" table n
+       end in
+     input name
   | _ -> failwith("Arrays and tuples not yet implemented")
 
 let create_output v_name _v_ty n (table:GPack.table) =
