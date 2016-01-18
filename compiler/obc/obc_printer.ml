@@ -177,8 +177,20 @@ let print_method ff md =
     print_block md.m_body
 
 let print_class_def ff
-    { cd_name = id; cd_mems = mem; cd_objs = objs; cd_methods = m_list } =
-  fprintf ff "@[<v 2>machine "; print_qualname ff id; fprintf ff " =@,";
+		    { cd_name = id;
+		      cd_mems = mem;
+		      cd_objs = objs;
+		      cd_params = params;
+		      cd_methods = m_list;
+		    } =
+  fprintf ff "@[<v 2>machine "; print_qualname ff id;
+  if params <> [] then
+    begin
+      fprintf ff "@[<hov 2>";
+      print_list_r print_param "<<" "," ">>" ff params;
+      fprintf ff "@]";
+    end;
+  fprintf ff " =@,";
   if mem <> [] then begin
     fprintf ff "@[<hov 4>var ";
     print_list_r print_vd "" ";" "" ff mem;
