@@ -29,6 +29,7 @@
 
 (* Misc. functions *)
 val optional : ('a -> 'b) -> 'a option -> 'b option
+
 (** Optional with accumulator *)
 val optional_wacc : ('a -> 'b -> 'c*'a) -> 'a -> 'b option -> ('c option * 'a)
 val optunit : ('a -> unit) -> 'a option -> unit
@@ -66,6 +67,7 @@ val split_last : 'a list -> ('a list * 'a)
 val split_nlast : int -> 'a list -> ('a list * 'a list)
 
 exception List_too_short
+
 (** [split_at n l] splits [l] in two after the [n]th value (starting at 0).
     Raises List_too_short exception if the list is too short. *)
 val split_at : int -> 'a list -> 'a list * 'a list
@@ -137,8 +139,10 @@ val fold_righti : (int -> 'a -> 'b -> 'b) -> 'a list -> 'b -> 'b
 
 (** [iter_couple f l] calls f for all x and y distinct in [l].  *)
 val iter_couple : ('a -> 'a -> unit) -> 'a list -> unit
+
 (** [iter_couple_2 f l1 l2] calls f for all x in [l1] and y in [l2].  *)
 val iter_couple_2 : ('a -> 'a -> unit) -> 'a list -> 'a list -> unit
+
 (** [index p l] returns the idx of the first element in l
     that satisfies predicate p.*)
 val index : ('a -> bool) -> 'a list -> int
