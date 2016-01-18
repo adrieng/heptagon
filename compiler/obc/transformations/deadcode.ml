@@ -28,23 +28,52 @@
 (***********************************************************************)
 open Obc
 open Obc_mapfold
-
-let is_deadcode = function
-    | Aassgn (lhs, e) -> (* remove x=x equations *)
-        (match e.e_desc with
-           | Eextvalue w -> Obc_compare.compare_lhs_extvalue lhs w = 0
-           | _ -> false
-        )
-    | Acase (_, []) -> true
-    | Afor(_, _, _, { b_body = [] }) -> true
-    | _ -> false
+open Types
+open Initial
 
 let act funs act_list a =
   let a, _ = Obc_mapfold.act funs [] a in
-    if is_deadcode a then
-      a, act_list
-    else
-      a, a::act_list
+  match a with
+  | Aassgn (lhs, e) -> (* remove x=x equations *)
+     (match e.e_desc with
+      | Eextvalue w when (Obc_compare.compare_lhs_extvalue lhs w = 0)
+	-> a, act_list	(* removal of action *)
+      | _ -> a, a :: act_list
+     )
+  | Acase (_, []) -> a, act_list (* removal *)
+  | Acase ({e_desc =
+	      Eextvalue(
+		  {w_desc = Wconst ({se_desc = Sbool b})}
+		)
+	   },
+	   c_b_l) ->
+     let pb = if b then ptrue else pfalse in
+     let c_b_l = List.filter (fun (c,b) -> c = pb) c_b_l in
+     begin
+       match c_b_l with
+	 [c,b] ->
+	 let a = Ablock b in
+	 a, a :: act_list
+       | [] -> a, act_list
+       | _ -> assert false (* More than one case after filter *)
+     end
+  | Acase ({e_desc =
+	      Eextvalue(
+		  {w_desc = Wconst ({se_desc = Sconstructor ce})}
+		)
+	   },
+	   c_b_l) ->
+     let c_b_l = List.filter (fun (c,b) -> c = ce) c_b_l in
+     begin
+       match c_b_l with
+	 [c,b] ->
+	 let a = Ablock b in
+	 a, a :: act_list
+       | [] -> a, act_list
+       | _ -> assert false (* More than one case after filter *)
+     end
+  | Afor(_, _, _, { b_body = [] }) -> a, act_list (* removal *)
+  | _ -> a, a :: act_list
 
 let block funs acc b =
   let _, act_list = Obc_mapfold.block funs [] b in
