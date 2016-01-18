@@ -32,7 +32,7 @@
 open Names
 
 (* version of the compiler *)
-let version = "1.02.00"
+let version = "1.03.00"
 let date = "DATE"
 
 (* standard module *)
