@@ -416,19 +416,21 @@ A declaration $D$ can be either :
 \item a node application $(\tonp{y}{,}) = f(\ton{e}{,})$, defining variables
   $\tonp{y}{,}$ by application of the node $f$ with values $\ton{e}{,}$ at each
   activation instants ;
-\item parallel declarations of $D_1$ and $D_2$, denoted $D_1\Pv D_2$.
+\item \emph{parallel declarations} of $D_1$ and $D_2$, denoted $D_1\Pv D_2$.
  Variables defined in $D_1$ and $D_2$ must be
   exclusive. The activation of this parallel declaration activate both $D_1$ and
   $D_2$, which are both computed and both progress ;
-\item a switch control structure ;
-\item an automaton.
+\item a \emph{switch} control structure ;
+\item a \emph{present} control structure ;
+\item a \emph{reset} control structure ;
+\item an \emph{automaton}.
 \end{itemize}
 
 \subsubsection{Switch control structures}
 \label{sec:switch-contr-struct}
 
-The \texttt{switch} control structure allows to controls which equations are
-evaluated:
+The \lstinline{switch} control structure allows to controls which equations are
+evaluated, on the basis of the value of one conditional expression:
 
 \begin{lstlisting}
 type modes = Up | Down
@@ -444,9 +446,84 @@ let
 tel
 \end{lstlisting}
 
+The conditional expression has to be of type Boolean or
+enumerated. For Boolean conditions, an alternative syntax is
+available:
+
+\begin{lstlisting}
+type modes = Up | Down
+
+node two(v:int) returns (o:int)
+  var last x:int = 0;
+let
+  o = x;
+  if v >= 0
+  then x = last x + v
+  else x = last x - v
+  end
+tel
+\end{lstlisting}
+
 The \texttt{last} keyword defines a memory which is shared by the different
 modes. Thus, \lstinline|last x| is the value of the variable \texttt{x} in the
 previous instant, whichever was the activated mode.
+
+\subsubsection{Present control structure}
+\label{sec:present}
+
+The \lstinline{present} control structure allows to control the
+activation of equations, based on several conditional expressions:
+
+\begin{lstlisting}
+node modes(v:int) returns (o:int)
+  var last x:int = 0;
+let
+  o = x;
+  present
+  | v > 1 do x = last x + v
+  | v = 1 do x = last x * 2
+  | v <= 0 do x = last x - v
+  end
+tel
+\end{lstlisting}
+
+To determine which block is activated, the conditional expressions are
+evaluated sequentially. The block activated at each instant is the one
+associated to the first expression evaluated to true.
+
+A \lstinline{default} block can also be defined, and will be activated
+if no conditional expression is true:
+
+\begin{lstlisting}
+node modes(v:int) returns (o:int)
+  var last x:int = 0;
+let
+  o = x;
+  present
+  | v > 1 do x = last x + v
+  | v = 1 do x = last x * 2
+  | default do x = last x - v
+  end
+tel
+\end{lstlisting}
+
+\subsubsection{Reset control structure}
+\label{sec:reset}
+
+The \lstinline{reset}/\lstinline{every} structure allows to reset a
+block of declarations to its initial state, when a condition is
+reached.
+
+\begin{lstlisting}
+node example_reset(v:int) returns (o:int)
+  var t : int;
+let
+  reset
+    t = 0 fby t + v;
+    o = 0 fby o + t;
+  every o > 42
+tel
+\end{lstlisting}
 
 \subsubsection{Automata}
 \label{sec:automata}
