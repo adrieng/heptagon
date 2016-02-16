@@ -611,7 +611,7 @@ let translate_node ~requal_types typdefs = function
     types of expressions to avoid some errors in code generation later on. *)
 let requal_declared_types prog =
 
-  let cmodul = controller_modul prog.p_modname in
+  let cmodul = types_modul prog.p_modname in
   let requal m = m = prog.p_modname in
 
   let requal_constr ({ qual; name } as cstr) =

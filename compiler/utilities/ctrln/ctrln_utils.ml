@@ -32,6 +32,8 @@ open Names
 
 let ctrlr_mod_suffix = "_controller"
 
+let types_mod_suffix = "_types"
+
 let dirname_for_modul modul =
   build_path (filename_of_name (modul_to_string modul) ^ "_ctrln")
 
@@ -48,6 +50,12 @@ let controller_modul = function
   | Module n -> Module (n ^ ctrlr_mod_suffix)
   | QualModule ({ name = n } as q) ->
       QualModule { q with name = n ^ ctrlr_mod_suffix }
+  | _ -> failwith "Unexpected module"
+
+let types_modul = function
+  | Module n -> Module (n ^ types_mod_suffix)
+  | QualModule ({ name = n } as q) ->
+      QualModule { q with name = n ^ types_mod_suffix }
   | _ -> failwith "Unexpected module"
 
 let controller_node ?num { qual; name } = match num with

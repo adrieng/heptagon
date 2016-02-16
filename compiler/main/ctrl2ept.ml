@@ -117,6 +117,24 @@ let parse_input ?filename (parse: ?filename:string -> _) =
 
 exception Error of string
 
+let suppress_typedecl ?mo prog =
+  let open Heptagon in
+  let p_desc =
+    List.fold_left
+      (fun acc d -> match d with
+		      Ptype _ -> acc
+		    | _ -> d::acc)
+      []
+      prog.p_desc in
+  let p_opened =
+    match mo with
+      None -> prog.p_opened
+    | Some m -> m :: prog.p_opened in
+  { prog with
+    p_opened;
+    p_desc = List.rev p_desc;
+  }
+
 let parse_n_gen_ept_node ?filename ?node_name ?node_sig ?typ_symbs () =
   let name, func = parse_input ?filename CtrlNbac.Parser.Unsafe.parse_func in
   let node_name = match node_name with Some n -> n
@@ -129,6 +147,7 @@ let handle_ctrlf ?filename mk_oc =
   let _, decls = parse_n_gen_ept_node ?filename () in
   let prog = CtrlNbacAsEpt.create_prog Names.LocalModule in    (* don't care? *)
   let prog = List.fold_right CtrlNbacAsEpt.add_to_prog decls prog in
+  let prog = suppress_typedecl prog in
   let oc, close = mk_oc.out_exec "ept" in
   Hept_printer.print oc prog;
   close ()
@@ -193,7 +212,9 @@ let handle_node arg =
   let prog = CtrlNbacAsEpt.create_prog ~open_modul:[ ] om in
   let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
   let prog = try try_ctrls typ_symbs nn prog with
-    | Exit -> try_ctrlf typ_symbs nn prog in
+	     | Exit -> try_ctrlf typ_symbs nn prog in
+  (* Suppress type declarations in controller *)
+  let prog = suppress_typedecl ~mo prog in
   output_prog prog om
 
 (* -------------------------------------------------------------------------- *)
