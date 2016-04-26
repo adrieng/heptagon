@@ -57,6 +57,7 @@ type error =
   | Enon_exaustive
   | Epartial_switch of name
   | Etoo_many_outputs
+  | Ebad_pervasives
   | Esome_fields_are_missing
   | Esubscripted_value_not_an_array of ty
   | Earray_subscript_should_be_const
@@ -149,7 +150,10 @@ let message loc kind =
           print_location loc
           s
     | Etoo_many_outputs ->
-        eprintf "%aA function may only returns a basic value.@."
+        eprintf "%aA function may only return a basic value.@."
+          print_location loc
+    | Ebad_pervasives ->
+        eprintf "%aNo nodes or multiple return values allowed in Pervasives.@."
           print_location loc
     | Esome_fields_are_missing ->
         eprintf "%aSome fields are missing.@."
@@ -1287,6 +1291,9 @@ let typing_typedec td =
 
 let typing_signature s =
   let typed_params, cenv = build_node_params QualEnv.empty s.sig_params in
+  if Modules.current () = Pervasives
+       && (s.sig_stateful || List.length s.sig_outputs > 1)
+    then message s.sig_loc Ebad_pervasives;
   { s with sig_params = typed_params;
     sig_inputs = List.map (typing_arg cenv) s.sig_inputs;
     sig_outputs = List.map (typing_arg cenv) s.sig_outputs; }
