@@ -120,9 +120,7 @@ let translate_constructor_name_2 q q_ty =
   { qual = QualModule classe; name = String.uppercase q.name }
 
 let translate_constructor_name q =
-  Format.eprintf "lala %a@." Global_printer.print_qualname q;
   let x = Modules.find_constrs q in
-  Format.eprintf "ok@.";
   match Modules.unalias_type (Types.Tid x) with
     | Types.Tid q_ty when q_ty = Initial.pbool -> q |> shortname |> local_qn
     | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
@@ -196,9 +194,9 @@ let rec static_exp param_env se = match se.Types.se_desc with
         | _ -> Misc.internal_error "Obc2java"
       in
       let f_e_l =
-	List.sort
-	  (fun (f1,_) (f2,_) -> compare f1.name f2.name)
-	  f_e_l in
+        List.sort
+          (fun (f1,_) (f2,_) -> compare f1.name f2.name)
+          f_e_l in
       let e_l = List.map (fun (_f,e) -> e) f_e_l in
       Enew (Tclass ty_name, List.map (static_exp param_env) e_l)
   | Types.Sop (f, se_l) -> Efun (f, List.map (static_exp param_env) se_l)
@@ -257,9 +255,9 @@ and exp param_env e = match e.e_desc with
   | Obc.Estruct (ty_name,f_e_l) ->
       let ty_name = qualname_to_package_classe ty_name in
       let f_e_l =
-	List.sort
-	  (fun (f1,_) (f2,_) -> compare f1.name f2.name)
-	  f_e_l in
+        List.sort
+          (fun (f1,_) (f2,_) -> compare f1.name f2.name)
+          f_e_l in
       let e_l = List.map (fun (_f,e) -> e) f_e_l in
       Enew (Tclass ty_name, exp_list param_env e_l)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
@@ -375,8 +373,8 @@ let rec act_list param_env act_l acts =
               (Aifelse (exp param_env e, block param_env _then, block param_env _else)) :: acts)
     | Obc.Acase (e, c_b_l) ->
         let _c_b (c,b) =
-	  Senum (translate_constructor_name c),
-	  block param_env b in
+          Senum (translate_constructor_name c),
+          block param_env b in
         let acase = Aswitch (exp param_env e, List.map _c_b c_b_l) in
         acase::acts
     | Obc.Afor (v, se, se', b) ->
@@ -470,7 +468,8 @@ let class_def_list classes cd_l =
                 let size_l = List.rev (List.map (static_exp param_env) size_l) in
                 let t = Idents.Env.find od.o_ident obj_env in
                 let assgn_elem i_l =
-                  [ Java.Aassgn (Parray_elem (Pthis od.o_ident, List.map mk_var i_l), Enew (t, params)) ]
+                  [ Java.Aassgn (Parray_elem (Pthis od.o_ident, List.map mk_var i_l),
+                                 Enew (t, params)) ]
                 in
                 (Java.Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size_l), [])))
                  :: (fresh_nfor size_l assgn_elem)
@@ -553,22 +552,23 @@ let type_dec_list classes td_l =
             see [Idents.enter_node classe_name] *)
             Java.mk_field jty field
           in
-	  let f_l =
-	    List.sort
-	      (fun f1 f2 ->
-		 compare (f1.Signature.f_name.name) (f2.Signature.f_name.name))
-	      f_l in
-	  let fields = List.map mk_field_jfield f_l in
-	  let cons_params = List.map (fun f -> Java.mk_var_dec f.f_ident false f.Java.f_type) fields in
-	  let cons_body =
-	    List.map
-	      (fun f -> Java.Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
-	      fields in
-	  let cons =
-	    mk_methode
-	      ~args:cons_params
-	      (Java.mk_block cons_body)
-	      classe_name.name in
+          let f_l =
+            List.sort
+              (fun f1 f2 ->
+                 compare (f1.Signature.f_name.name) (f2.Signature.f_name.name))
+              f_l in
+          let fields = List.map mk_field_jfield f_l in
+          let cons_params =
+            List.map (fun f -> Java.mk_var_dec f.f_ident false f.Java.f_type) fields in
+          let cons_body =
+            List.map
+              (fun f -> Java.Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
+              fields in
+          let cons =
+            mk_methode
+              ~args:cons_params
+              (Java.mk_block cons_body)
+              classe_name.name in
           (mk_classe ~fields:fields ~constrs:[cons] classe_name) :: classes
   in
   List.fold_left _td classes td_l
