@@ -8,7 +8,7 @@
 
   <ul>
     <li><a href="http://heptagon.gforge.inria.fr">Main page</a></li>
-    <li><a href="https://gforge.inria.fr/projects/heptagon">Download</a></li>
+    <li><a href="https://gforge.inria.fr/frs/?group_id=2773">Download</a></li>
     <li><a href="pub/heptagon-manual.pdf">Manual</a></li>
     <li><a href="bib.php">Publications</a></li>
   </ul>
