@@ -852,6 +852,13 @@ let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
   let dependencies = List.map header_of_module dependencies in
 
+  let dependencies_types =
+    List.map
+      (function
+          "stdio" as s -> s
+        | s -> s ^ "_types")
+      dependencies in
+
   let classes = program_classes prog in
   let (decls, defs) =
     List.split (List.map cdefs_and_cdecls_of_class_def classes) in
@@ -863,7 +870,7 @@ let global_file_header name prog =
 
   let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
   let types_h = (filename_types ^ ".h",
-                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies,
+                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies_types,
                           List.concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 

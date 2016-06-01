@@ -39,6 +39,7 @@ let inputs = ref []
 let output = ref ""
 let input_type = ref None
 let node = ref ""
+let modul = ref ""
 
 exception Help
 let usage = "Usage: ctrl2ept [options] { [-i] <filename> | -n <node> } \
@@ -56,6 +57,7 @@ let options = Arg.align
     "-o", Arg.Set_string output, "<file> Select output file (`-' means \
                                   standard output)";
     "-n", Arg.Set_string node, "<node> Select base input node";
+    "-m", Arg.Set_string modul, "<Module> Select base input module";
     "--", Arg.Rest anon, " Treat all remaining arguments as input files";
     "-where", Arg.Unit locate_stdlib, doc_locate_stdlib;
     "-stdlib", Arg.String set_stdlib, doc_stdlib;
@@ -122,8 +124,8 @@ let suppress_typedecl ?mo prog =
   let p_desc =
     List.fold_left
       (fun acc d -> match d with
-		      Ptype _ -> acc
-		    | _ -> d::acc)
+                      Ptype _ -> acc
+                    | _ -> d::acc)
       []
       prog.p_desc in
   let p_opened =
@@ -180,7 +182,7 @@ let try_ctrlf typ_symbs nn prog =
     let node_sig = Modules.find_value node_name in
     input_function prog typ_symbs filename node_name node_sig
   else
-    raise (Error "Unable to load any controller function.")
+    raise Exit
 
 let try_ctrls typ_symbs nn prog =
   let rec try_ctrls num prog =
@@ -208,13 +210,40 @@ let handle_node arg =
   info "Loading module of controllers for node %s…" (Names.fullname nn);
   let om = Ctrln_utils.controller_modul mo in
   info "Translating type declarations of module %s…" (Names.modul_to_string om);
-  let typs, typ_symbs = CtrlNbacAsEpt.decl_typs_from_module_itf om in
-  let prog = CtrlNbacAsEpt.create_prog ~open_modul:[ ] om in
-  let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in
+  let _typs, typ_symbs = CtrlNbacAsEpt.decl_typs_from_module_itf mo in
+  let prog = CtrlNbacAsEpt.create_prog ~open_modul:[mo] om in
+  (* let prog = List.fold_right CtrlNbacAsEpt.add_to_prog typs prog in *)
   let prog = try try_ctrls typ_symbs nn prog with
-	     | Exit -> try_ctrlf typ_symbs nn prog in
-  (* Suppress type declarations in controller *)
-  let prog = suppress_typedecl ~mo prog in
+             | Exit ->
+                try try_ctrlf typ_symbs nn prog with
+                  Exit ->
+                  raise (Error "Unable to load any controller function.")
+  in
+  output_prog prog om
+
+let handle_module modname =
+  let mo = Names.modul_of_string modname in
+  if mo = Names.Pervasives || mo = Names.LocalModule then
+    raise (Error (sprintf "Invalid module specification: `%s'." modname));
+  Modules.open_module Names.Pervasives;
+  Modules.open_module mo;
+  Modules.select mo;
+  let curmod = Modules.current_module () in
+  info "Loading module of controllers for module %s…" (Names.modul_to_string mo);
+  let om = Ctrln_utils.controller_modul mo in
+  info "Translating type declarations of module %s…" (Names.modul_to_string om);
+  let _typs, typ_symbs = CtrlNbacAsEpt.decl_typs_from_module_itf mo in
+  let prog = CtrlNbacAsEpt.create_prog ~open_modul:[mo] om in
+  let prog =
+    Names.NamesEnv.fold
+      (fun nodename _node prog ->
+       info "Handling function %s…" nodename;
+       let nn = Names.{ qual = mo; name = nodename } in
+       try try_ctrls typ_symbs nn prog with
+       | Exit ->
+          try try_ctrlf typ_symbs nn prog with
+            Exit -> prog)
+      curmod.Modules.m_values prog in
   output_prog prog om
 
 (* -------------------------------------------------------------------------- *)
@@ -263,14 +292,14 @@ let handle_input_stream = function
 (** [main] function to be launched *)
 let main () =
   Arg.parse options anon usage;
-  match List.rev !inputs with
-    | [] when !node <> "" -> handle_node !node
-    | [] -> handle_input_stream !input_type
-    | lst -> (if !node <> "" then handle_node !node;
-             List.iter handle_input_file lst)
+  match (!modul,!node,List.rev !inputs) with
+    | "","",[] -> handle_input_stream !input_type
+    | "",n,lst -> (handle_node n; List.iter handle_input_file lst)
+    | m,_,lst -> (handle_module m; List.iter handle_input_file lst)
 
 (* -------------------------------------------------------------------------- *)
-(** Launch the [main] *)
+
+(* Launch the [main] *)
 let _ =
   (* CtrlNbac.Symb.reset (); <- not needed as we have only one input file. *)
   try

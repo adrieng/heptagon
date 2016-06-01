@@ -268,6 +268,8 @@ let add_state_var ~pref gd id ty exp init =
   let gd, v = add_state_var' ~pref gd id ty exp init in
   { gd with base = SMap.add v (id, ty) gd.base; }
 
+
+(* TODO : add_local_var instead ? (NB : state var used for simulation) *)
 let add_output_var ~pref gd id ty exp =
   add_state_var' ~pref gd id ty exp None |> fst
 
@@ -358,7 +360,7 @@ let translate_eq ~pref (gd, equs)
               let ev = translate_ext ~pref ev in
               let ev = translate_clk ~pref ev (ref_of_ty ty v) clk in
               (add_state_var ~pref gd id ty ev init, eq :: equs)
-          | Eapp ({ a_op = (Enode f | Efun f) }, args, None)
+          | Eapp ({ a_op = (Enode f | Efun f) }, args, None) (* TODO : handle resets *)
                 when f.qual <> Pervasives ->
               (translate_abstract_app ~pref gd pat f args, eq :: equs)
           | _ when IdentSet.mem id gd.output ->
@@ -370,7 +372,7 @@ let translate_eq ~pref (gd, equs)
         end
     | Etuplepat _ ->
         begin match exp with
-          | Eapp ({ a_op = (Enode f | Efun f) }, args, None)
+          | Eapp ({ a_op = (Enode f | Efun f) }, args, None) (* TODO : handle resets *)
                 when f.qual <> Pervasives ->
               (translate_abstract_app ~pref gd pat f args, eq :: equs)
           | _ -> failwith "TODO: Minils.Etuplepat construct!"
@@ -427,8 +429,8 @@ let translate_contract ~pref gd
   in
 
   let gd = { gd with
-	     assertion = mk_and' gd.assertion ak;
-	     invariant = mk_and' gd.invariant ok; } in
+             assertion = mk_and' gd.assertion ak;
+             invariant = mk_and' gd.invariant ok; } in
 
   let opt_and opt_e e' =
     match opt_e with
@@ -695,7 +697,7 @@ let requal_declared_types prog =
     dependencies between modules due to type declarations. Yet, a better idea
     might be to integrate the generated controllers into the original program
     later on.  *)
-let gen ?(requalify_declared_types = true) ({ p_desc } as p) =
+let gen ?(requalify_declared_types = false) ({ p_desc } as p) =
 
   let requal_types = requalify_declared_types in
 
@@ -714,9 +716,10 @@ let gen ?(requalify_declared_types = true) ({ p_desc } as p) =
     end (empty_typdefs, [], []) p_desc
   in
 
-  let cnp_nodes = List.rev nodes and p_desc = List.rev descs in
+  let cnp_nodes = List.rev nodes
+  and p_desc = List.rev descs in
   let prog = { p with p_desc } in
-  let prog =                            (* moving types to controller module? *)
+  let prog =
     if requalify_declared_types
     then requal_declared_types prog
     else prog
