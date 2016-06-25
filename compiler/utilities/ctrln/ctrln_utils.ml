@@ -76,3 +76,5 @@ let save_controller_modul_for modul =
   Modules.select om
 
 let init_cond_str = "__init__"                             (* XXX uniqueness? *)
+let sink_state_str = "__sink__"
+

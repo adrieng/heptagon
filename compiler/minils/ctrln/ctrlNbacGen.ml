@@ -193,6 +193,7 @@ let translate_app ~pref op el =
     | "or",           e::l  -> mk_disj e l
     | "&",            e::l  -> mk_conj e l
     | "xor",         [e;f]  -> mk_xor e f
+    | "=>",          [e;f]  -> mk_disj (mk_neg e) [f]
     | "=",           [e;f]  -> mk_eq e f
     | "<>",          [e;f]  -> mk_ne e f
     |("<"  | "<."),  [e;f]  -> mk_lt e f
@@ -273,7 +274,6 @@ let add_state_var ~pref gd id ty exp init =
 let add_output_var ~pref gd id ty exp =
   add_state_var' ~pref gd id ty exp None |> fst
 
-
 let add_local_var ~pref gd id ty exp =
   let v = pref & mk_symb & name id in
   let typ = translate_typ ty in
@@ -288,6 +288,10 @@ let add_local_var ~pref gd id ty exp =
   { gd with
     decls = SMap.add v (typ, `Local (exp, None), None) gd.decls;
     local_contr_deps; }
+
+(* TODO : merge with definition above ? *)
+let add_output_var ~pref gd id ty exp =
+  add_local_var ~pref gd id ty exp
 
 let declare_additional_input ~pref gd id =
   let l = mk_symb & name id in
@@ -417,16 +421,6 @@ let translate_contract ~pref gd
   let gd, equs' = translate_eqs ~pref (gd, []) equs in
   let ak = as_bexp & mk_and (translate_ext ~pref a) (translate_ext ~pref a')
   and ok = as_bexp & translate_ext ~pref g' in
-
-  let gd, ok, locals =                  (* Generate error variable if needed: *)
-    if !Compiler_options.nosink
-    then (gd, ok, locals)
-    else let sink = gen_var "cn" "ok" in
-         let sink_expr = mk_bref' & pref & mk_symb & name sink in
-         let ok = `Bexp (mk_bcond' gd.init_cond tt ok) in
-         (add_state_var ~pref gd sink Initial.tbool ok None, sink_expr,
-          mk_var_dec sink Initial.tbool Linearity.Ltop Clocks.Cbase :: locals)
-  in
 
   let gd = { gd with
              assertion = mk_and' gd.assertion ak;
@@ -589,12 +583,18 @@ let translate_node ~requal_types typdefs = function
       let gd = assign_uc_groups gd in
       let equs' = gen_ctrlf_calls ~requal_types gd n_name equs' in
 
+      (* Sink state *)
+      let sink_state_var = mk_symb sink_state_str in
+      let sink_state = mk_bref' sink_state_var in
+      let sink_state_spec = (`Bool, `State (`Bexp gd.invariant, None), None) in
+      let gd = {gd with decls = SMap.add sink_state_var sink_state_spec gd.decls } in
+
       let ctrln_node_desc =
         { cn_typs = typdefs;
           cn_decls = gd.decls;
-          cn_init = mk_and' gd.init_state init_cond;
+          cn_init = mk_and' (mk_and' gd.init_state init_cond) sink_state;
           cn_assertion = (* mk_or' init_cond  *)gd.assertion;
-          cn_invariant = Some (mk_or' init_cond gd.invariant);
+          cn_invariant = Some (mk_or' init_cond sink_state);
           cn_reachable = gd.reachable;
           cn_attractive = gd.attractive; }
       and node =
