@@ -168,6 +168,9 @@ and op ff (f, e_l) =
         | "~-" | "~-." ->
             let e = Misc.assert_1 e_l in
             fprintf ff "-%a" exp e
+        | "=>" ->
+           let e1,e2 = Misc.assert_2 e_l in
+           fprintf ff "(@[!%a or %a@])" exp e1 exp e2
         | "assert" ->
             let e = Misc.assert_1 e_l in
             fprintf ff "assert(%a)" exp e

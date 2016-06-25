@@ -310,7 +310,9 @@ and cop_of_op_aux op_name cexps = match op_name with
             | "+" | "-" | "*" | "/"
             | "*." | "/." | "+." | "-." | "%" | "<<<" | ">>>" | "&&&" | "|||"
             | "<" | ">" | "<=" | ">=" | "<=." | "<." | ">=." | ">."), [el;er] ->
-              Cbop (copname op, el, er)
+             Cbop (copname op, el, er)
+          | "=>", [el;er] ->
+             Cbop ("||", (Cuop("!",el)), er)
           | _ -> Cfun_call(op, cexps)
         end
     | { qual = Module "Iostream"; name = "printf" } ->
