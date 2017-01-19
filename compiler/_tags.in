@@ -2,6 +2,7 @@
 <**/*.ml*>: debug, dtypes, package(ocamlgraph)
 <preproc.ml>: camlp4of, package(camlp4)
 true: use_menhir
+true: annot, bin_annot
 
 <**/*.{byte,native,[dp].byte,[dp].native}>: package(unix), package(str)
 <**/heptc.{byte,native,[dp].byte,[dp].native}>: package(menhirLib), package(ocamlgraph)
