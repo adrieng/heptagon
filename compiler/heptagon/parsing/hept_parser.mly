@@ -550,6 +550,8 @@ _exp:
       { Ewhen (e, Q Initial.ptrue, ce) }
   | e=exp WHENOT ce=IDENT
       { Ewhen (e, Q Initial.pfalse, ce) }
+  | e=exp WHEN NOT ce=IDENT
+      { Ewhen (e, Q Initial.pfalse, ce) }
   | MERGE n=IDENT hs=merge_handlers
       { Emerge (n, hs) }
   | exp INFIX1 exp
