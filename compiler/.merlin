@@ -16,6 +16,10 @@ B _build/obc/c
 B _build/obc/java
 B _build/obc/main
 B _build/obc/transformations
+B _build/utilities
+B _build/utilities/ctrln
+B _build/utilities/global
+B _build/utilities/minils
 S global
 S heptagon
 S heptagon/analysis
