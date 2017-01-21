@@ -57,6 +57,7 @@ List.iter (fun (str,tok) -> Hashtbl.add keyword_table str tok) [
  "true", BOOL(true);
  "false", BOOL(false);
  "pre", PRE;
+ "and", AND;
  "or", OR;
  "not", NOT;
  "open", OPEN;

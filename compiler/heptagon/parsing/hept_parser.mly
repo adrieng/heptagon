@@ -47,7 +47,7 @@ open Hept_parsetree
 %token <string * string> PRAGMA
 %token TYPE FUN NODE RETURNS VAR VAL OPEN END CONST UNSAFE EXTERNAL
 %token FBY PRE SWITCH EVERY
-%token OR STAR NOT
+%token AND OR STAR NOT
 %token AMPERSAND
 %token AMPERAMPER
 %token AUTOMATON
@@ -95,7 +95,7 @@ open Hept_parsetree
 %left ELSE
 %right ARROW
 %left OR
-%left AMPERSAND
+%left AND AMPERSAND
 %left INFIX0 EQUAL LESS_GREATER
 %right INFIX1
 %right WHEN WHENOT
@@ -567,6 +567,8 @@ _exp:
       { mk_op_call "or" [$1; $3] }
   | exp STAR exp
       { mk_op_call "*" [$1; $3] }
+  | exp AND exp
+      { mk_op_call "&" [$1; $3] }
   | exp AMPERSAND exp
       { mk_op_call "&" [$1; $3] }
   | exp SUBTRACTIVE exp
