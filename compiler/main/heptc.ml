@@ -117,7 +117,7 @@ let compile source_f =
   source_f |> Filename.dirname |> add_include;
   check_options ();
   match Misc.file_extension source_f with
-    | "ept" -> compile_program modname source_f
+    | "ept" | "lus" -> compile_program modname source_f
     | "epi" -> compile_interface modname source_f
     | ext -> raise (Arg.Bad ("Unknow file type: " ^ ext ^ " for file: " ^ source_f))
 
