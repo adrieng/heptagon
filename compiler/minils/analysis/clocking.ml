@@ -276,11 +276,23 @@ let typing_contract h0 h contract =
         let h = append_env h c_list in
         Some { contract with c_eq = eq_list }, h
 
+let rec constrain_on loc h = function
+  | Clocks.Cbase | Clocks.Cvar _ -> ()
+  | Clocks.Con (ck', c, n) ->
+      (try unify_ck (ck_of_name h n) ck'
+       with Unify -> error_message loc (Eclockclash (ck_of_name h n, ck')));
+      constrain_on loc h ck'
+
+let constrain_on_over h xs =
+  List.iter (fun vd -> constrain_on vd.v_loc h (ck_of_name h vd.v_ident)) xs
 
 let typing_node node =
   let h0 = append_env Env.empty node.n_input in
   let h0 = append_env h0 node.n_output in
   let h = append_env h0 node.n_local in
+  constrain_on_over h node.n_input;
+  constrain_on_over h node.n_output;
+  constrain_on_over h node.n_local;
   let contract, h = typing_contract h0 h node.n_contract in
   (*   let h = append_env h node.n_local in *)
   let equs = typing_eqs h node.n_equs in
