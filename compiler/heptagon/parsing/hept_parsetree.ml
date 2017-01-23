@@ -84,6 +84,7 @@ type ty =
 and ck =
   | Cbase
   | Con of ck * constructor_name * var_name
+  | Cwhen of constructor_name * var_name
 
 and ct =
   | Ck of ck

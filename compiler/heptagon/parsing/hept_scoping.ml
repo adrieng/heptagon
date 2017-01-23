@@ -285,6 +285,7 @@ let rec translate_some_clock loc env ck = match ck with
 and translate_clock loc env ck = match ck with
   | Cbase -> Clocks.Cbase
   | Con(ck,c,x) -> Clocks.Con(translate_clock loc env ck, qualify_constrs c, Rename.var loc env x)
+  | Cwhen(c, x) -> Clocks.Con(Clocks.fresh_clock(), qualify_constrs c, Rename.var loc env x)
 
 let rec translate_ct loc env ct = match ct with
   | Ck ck -> Clocks.Ck (translate_clock loc env ck)
@@ -585,6 +586,7 @@ let translate_signature s =
   and translate_clock ck = match ck with
     | Cbase -> Signature.Cbase
     | Con(ck,c,x) -> Signature.Con(translate_clock ck, qualify_constrs c, x)
+    | Cwhen _ -> assert false (* not permitted by sig_ck_annot parser rule *)
   and translate_arg a =
     Signature.mk_arg a.a_name (translate_type s.sig_loc a.a_type)
       a.a_linearity (translate_some_clock a.a_clock)

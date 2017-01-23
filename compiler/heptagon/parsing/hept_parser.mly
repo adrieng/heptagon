@@ -350,6 +350,12 @@ ck_annot:
   | /*empty */        { None }
   | COLONCOLON ck=ck
   | ON ck=on_ck       { Some ck }
+  | WHEN ck=when_ck   { Some ck }
+
+sig_ck_annot:
+  | /*empty */        { None }
+  | COLONCOLON ck=ck
+  | ON ck=on_ck       { Some ck }
 
 ck:
   | DOT                  { Cbase }
@@ -363,6 +369,11 @@ on_ck:
   | b=ck ONOT x=IDENT                                      { Con(b,Q Initial.pfalse,x) }
   | b=ck ON c=constructor_or_bool LPAREN x=IDENT RPAREN    { Con(b,c,x) }
 
+when_ck:
+  | x=IDENT                                                { Cwhen(Q Initial.ptrue,x) }
+  | c=constructor_or_bool LPAREN x=IDENT RPAREN            { Cwhen(c,x) }
+  | b=ck x=IDENT                                           { Cwhen(Q Initial.ptrue,x) }
+  | b=ck NOT x=IDENT                                       { Cwhen(Q Initial.pfalse,x) }
 
 equs:
   | /* empty */                      { [] }
@@ -750,9 +761,9 @@ nonmt_params_signature:
 ;
 
 param_signature:
-  | IDENT COLON located_ty_ident ck=ck_annot { mk_arg (Some $1) $3 ck }
-  | located_ty_ident ck=ck_annot { mk_arg None $1 ck }
-  | THREE_DOTS ck=ck_annot { mk_arg None (Tinvalid, Linearity.Ltop) ck }
+  | IDENT COLON located_ty_ident ck=sig_ck_annot { mk_arg (Some $1) $3 ck }
+  | located_ty_ident ck=sig_ck_annot { mk_arg None $1 ck }
+  | THREE_DOTS ck=sig_ck_annot { mk_arg None (Tinvalid, Linearity.Ltop) ck }
 ;
 
 %%
