@@ -26,6 +26,7 @@ JAVAC="javac -classpath ../../../lib/java:."
 JAVA="java -classpath ../../../lib/java:."
 REAX="reax"
 BZREAX="bzreax"
+CTRL2EPT="../$COMPILER_DIR/ctrl2ept.byte"
 NBSTEP=100
 
 if [ ! -x $checkdir ];
