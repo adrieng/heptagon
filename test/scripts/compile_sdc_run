@@ -1,0 +1,55 @@
+#!/bin/bash
+
+source scripts/config
+
+progpath=$1
+shift
+bzreaxoption="$*"
+
+# run the program: no by default
+run=0
+
+cp $progpath $checkdir
+
+
+pushd $checkdir > /dev/null
+
+heptprog=`basename $progpath`
+heptroot=`basename $heptprog .ept`
+
+assert_node=$(eval grep CHECK $heptprog | awk '{ print $3 }')
+
+if [ -n "$assert_node" ]; then
+    bzreaxoption="$bzreaxoption --heptc-opts \"-assert $assert_node\""
+    run=1
+fi
+
+if grep "node main()" $heptprog >/dev/null; then
+    bzreaxoption="$bzreaxoption main -s"
+    run=1
+fi
+
+
+echo $BZREAX $heptprog $bzreaxoption
+if $BZREAX $heptprog $bzreaxoption; then
+    if [[ $run == 1 ]]; then
+	echo ./sim $NBSTEP
+	if ./sim $NBSTEP; then
+	    echo "Test successful."
+	    res=0
+	else
+	    echo "Run failed."
+	    res=1
+	fi
+    else
+	echo "Test successful (compilation and sdc only; no run)."
+	res=0
+    fi
+else
+    echo "Compilation or sdc of $heptprog failed"
+    res=1
+fi
+
+popd > /dev/null
+
+exit $res
