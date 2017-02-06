@@ -1,0 +1,39 @@
+type t = Haut | Bas
+
+node f(x:bool;r:t) = (y:bool)
+contract
+  enforce (y)
+  with (c:bool)
+
+let
+    
+    automaton
+    state Haut
+    do
+      y = true;
+    unless (r=Bas) & c then Bas
+    |
+    state Bas
+    do
+      y = false
+    unless (r=Haut) or c then Haut
+    end;
+  y =
+  tel
+
+node g(u,v:bool;m :t) = (z:bool)
+    contract
+    enforce  z
+with (c,d:bool)
+let
+    z = f(u & c, m)
+tel
+
+node main() = (ok:bool)
+var u : bool;
+    m : t;
+let
+  u = false fby true fby true fby u;
+  m = Haut fby Bas fby m;
+  ok = g(u,u,m);
+tel

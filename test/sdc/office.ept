@@ -1,0 +1,358 @@
+(*-----------------TYPES DECLARATION ------------------*)
+
+type command = Open|Close|SwitchOn|SwitchOff|Cool|Heat|SwitchMode1|SwitchMode2|Nothing
+type deviceState = On|Off|Closed|Opened|HalfOpened|Cooling|Heating|Mode1|Mode2
+
+
+
+(*-----------------SHUTTER AUTOMATON ------------------*)
+
+
+node shutter(copen:bool;outdoorlum:int) returns (cmd:command;shutterlum:int;air:bool;shutterstate:deviceState)
+
+let
+
+ automaton
+
+  state Closed
+   do
+   cmd = Close -> Nothing;
+   shutterlum = 0;
+   air = false;
+   shutterstate = Closed;
+  unless not copen then Opened
+       
+
+  state Opened
+   do
+     cmd = Open -> Nothing;
+     shutterlum = outdoorlum;
+     air = true;
+     shutterstate = Opened;
+  unless not copen then Closed
+ 
+ end
+
+tel
+
+
+
+(*-----------------LAMP AUTOMATON ---------------------*)
+
+
+node lamp(coff:bool) returns (cmd:command;lumlamp:int;lampstate:deviceState)
+
+let
+
+ automaton
+
+   state Off
+  
+   do
+    cmd = SwitchOff -> Nothing;
+    lumlamp = 0;
+    lampstate = Off;
+   unless not coff then On   
+
+  state On
+
+   do
+    cmd = SwitchOn -> Nothing;
+    lumlamp = 500;
+    lampstate = On;
+   unless coff then Off
+ 
+ end
+
+tel
+
+
+(*-----------------WINDOW AUTOMATON ------------------*)
+
+
+node window(copen:bool;iCO2,itemp,oCO2,otemp,onoise,opollen:int;air:bool) returns (cmd:command;ventil,heat,cool,poll:bool;winoise:int;wistate:deviceState)
+
+let
+
+ automaton
+
+  state Closed
+   do
+    cmd = Close -> Nothing;
+    ventil = false;
+    heat = false;
+    cool = false;
+    poll = false;
+    winoise = 0;
+    wistate = Closed;
+   unless not copen then Opened
+
+ state Opened
+   do
+    cmd = Open -> Nothing;
+    if air & itemp > otemp & not poll then ventil = true else ventil = false end;
+    if air & otemp > itemp then heat = true else heat = false end;
+    if air & otemp < itemp then cool = true else cool = false end;
+    if air & oCO2 > iCO2 or opollen > 80 then poll = true else poll = false end; 
+    winoise = onoise;
+    wistate = Opened;
+   unless not copen then Closed
+
+ end
+
+tel
+
+
+(*-----------------RAC AUTOMATON ------------------*)
+
+
+node rac(coff,cheat,ccool:bool) returns (cmd:command;cool,heat:bool;racstate:deviceState)
+
+let
+
+ automaton
+  
+  state Off
+  
+  do
+   cmd = SwitchOff -> Nothing;
+   cool = false;
+   heat = false;
+   racstate = Off;
+
+  unless not ccool then Cooling 
+        |not cheat then Heating
+
+  state Cooling
+  
+  do
+   cmd = Cool -> Nothing;
+   cool = true;
+   heat = false;
+   racstate = Cooling;
+
+  unless coff then Off
+        |not cheat then Heating
+
+
+  state Heating
+  
+  do
+   cmd = Heat -> Nothing;
+   cool = false;
+   heat = true;
+   racstate = Heating;
+
+  unless coff then Off
+        |not ccool then Cooling
+  
+ end
+tel
+
+(*-----------------VMC AUTOMATON ------------------*)
+
+
+node vmc(coff,cmode1,cmode2:bool) returns (cmd:command;ventil,quick:bool;vmcstate:deviceState)
+
+let
+
+ automaton
+
+   state Off
+  
+   do
+    cmd = SwitchOff -> Nothing;
+    ventil = false;
+    quick = false;
+    vmcstate = Off;
+   unless not cmode1 then Mode1
+         |not cmode2 then Mode2
+ 
+   state Mode1
+
+   do
+    cmd = SwitchMode1 -> Nothing;
+    ventil = true;
+    quick = false;
+    vmcstate = Mode1;
+   unless coff then Off
+          |not cmode2 then Mode2
+
+   state Mode2
+
+   do
+    cmd = SwitchMode2 -> Nothing;
+    ventil = true;
+    quick = true;
+    vmcstate = Mode2;
+   unless coff then Off
+          |not cmode1 then Mode1
+
+ end
+tel
+
+
+
+(*-----------------DOOR AUTOMATON ------------------*)
+
+
+node door(cclose:bool;cnoise:int) returns (cmd:command;noise:int;doorstate:deviceState)
+
+let
+
+ automaton
+
+  state Closed
+   do
+    cmd = Close -> Nothing;
+    noise = 0;
+    doorstate = Closed;
+   unless not cclose then Opened
+
+ state Opened
+   do
+    cmd = Open -> Nothing;
+    noise = cnoise;
+    doorstate = Opened;
+   unless cclose then Closed
+
+ end
+
+tel
+
+
+(*-----------------Agenda AUTOMATON ------------------*)
+
+
+
+node agenda(begin:bool;nextmeetingtime:int) returns (between2meetings:bool)
+
+let
+
+ automaton
+  state NoMeeting
+  do
+   between2meetings = false;
+  unless begin then Meeting
+  
+ state Meeting
+ do
+  between2meetings = false;
+ unless not begin & nextmeetingtime > 30 then NoMeeting
+        | not begin & nextmeetingtime <= 30 then Between2Meetings
+
+ state Between2Meetings
+ do
+  between2meetings = true;
+ unless begin then Meeting
+
+ end
+
+tel
+
+(*-----------------LUMINOSITY NODE ---------------------*)
+
+
+node luminosity(presence:bool;olum:int;cconfidential:bool) returns (shutterCmd,lampCmd:command;shutterair,shutterclosed,proplumin:bool)
+
+contract
+  var propconf:bool;
+  let
+      propconf = (false fby not cconfidential) or shutterclosed;
+  tel
+assume true
+enforce proplumin & propconf
+with (copen_shutter,coff_lamp:bool)
+
+var   shutterlum,lamplum,lum:int;
+      shutterst,lampst:deviceState;
+      proplum,propconfmeeting:bool;
+      
+let
+     lum = shutterlum + lamplum;
+     shutterclosed = (shutterst = Closed);
+
+     (shutterCmd,shutterlum,shutterair,shutterst) = inlined shutter(copen_shutter,olum);
+     (lampCmd,lamplum,lampst) = inlined lamp(coff_lamp); 
+     proplum = not presence or (lum  >= 500 & lum <= 600);
+     propconfmeeting = not cconfidential or (shutterst = Closed);
+     proplumin = proplum & propconfmeeting;
+
+tel
+
+
+
+(*----------------- TEMPERATURE AIR QUALITY AND NOISE NODE-------------------*)
+
+
+node tempairnoise(presence:bool;itemp,iCO2,otemp,oCO2,onoise,opollen,cnoise:int;shutterair,startmeeting:bool;nextmeetingtime:int;cconfidential:bool) returns (windowCmd,doorCmd,vmcCmd,racCmd:command;windoorclosed,prop:bool)
+
+contract
+  var propconfmeeting:bool;
+  let
+      propconfmeeting = (false fby not cconfidential) or windoorclosed;
+  tel
+assume true
+enforce prop & propconfmeeting
+with (copen_window,coff_rac, ccool, cheat, coff_vmc, cmode1, cmode2, cclose_door:bool)
+
+var   windownoise,doornoise:int;
+      wincool,winheat,winventil,pollution:bool;
+      raccool,racheat,vmcventil,quickventil:bool;
+      heat,cool,ventilation:bool;
+      between2meetings:bool;
+      windowst,vmcst,racst,doorst:deviceState;
+      propCO2,propnoise,proppoll,proptemp:bool;
+      proptemp1,proptemp2:bool;
+      propbetween2meetings,propconf,propmeeting:bool;
+
+let
+
+     heat = winheat or racheat;
+     cool = wincool or raccool;
+     ventilation = winventil or vmcventil;
+     windoorclosed = (windowst = Closed & doorst = Closed);
+
+     (windowCmd,winventil,winheat,wincool,pollution,windownoise,windowst) = inlined window(copen_window,iCO2,itemp,oCO2,otemp,onoise,opollen,shutterair);
+
+     (racCmd,raccool,racheat,racst) = inlined rac(coff_rac,cheat,ccool);
+
+     (vmcCmd,vmcventil,quickventil,vmcst) = inlined vmc(coff_vmc,cmode1,cmode2);
+
+     (doorCmd,doornoise,doorst) = inlined door(cclose_door,cnoise);
+    
+     between2meetings = inlined agenda(startmeeting,nextmeetingtime);
+
+     prop = propCO2 & propnoise & proppoll & proptemp & propmeeting;
+
+     propCO2 = not (presence & iCO2 >= 800) or ventilation = true; 
+     propnoise = not presence or (not (windownoise >=80 or doornoise >=80));
+     proppoll = pollution = false;
+     proptemp = proptemp1 & proptemp2;
+     proptemp1 = not (presence & itemp >= 24) or cool = true; 
+     proptemp2 = not (presence & itemp <= 21) or heat = true;
+     propbetween2meetings = not between2meetings or quickventil = true;
+     propconf = not cconfidential or (windowst = Closed & doorst = Closed);
+     propmeeting = propbetween2meetings & propconf;
+   
+tel
+
+
+(*-------------------OFFICE NODE------------------------------------*)
+
+
+node office(presence:bool;itemp,iCO2,otemp,oCO2,olum,onoise,opollen,cnoise:int;begin,confidential:bool;nextmtime:int) returns(shutterCmd,windowCmd,doorCmd,lampCmd,vmcCmd,racCmd:command;prop:bool)
+
+contract
+   assume true
+   enforce prop
+   with (cconfwd,cconfs:bool)
+
+var wdclosed,sclosed,sh_air:bool;
+    proplumi, proptan:bool;
+
+let
+     (shutterCmd,lampCmd,sh_air,sclosed,proplumi) = luminosity(presence,olum,cconfs);  
+     (windowCmd,doorCmd,vmcCmd,racCmd,wdclosed,proptan) = tempairnoise(presence,itemp,iCO2,otemp,oCO2,onoise,opollen,cnoise,sh_air,begin,nextmtime,cconfwd); 
+  prop = not (begin & confidential) or (wdclosed & sclosed);
+tel

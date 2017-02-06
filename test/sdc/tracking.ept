@@ -1,0 +1,140 @@
+
+
+type level = None | Low | Normal | High | Bad 
+type elevel = Zero| Un | Deux | Trois | Quatre | Cinq 
+type wSize = NonW | Norm | Larg
+
+
+
+node metrics(input :level) returns (st :level)
+let
+	automaton	
+         state Normal
+	   do st = Normal;
+	   unless (input = Low)  then Low
+	   |     (input = High) then High
+	   |     (input = Bad) then Bad
+
+	 state High
+	   do st = High;
+	   unless (input = Low)  then Low
+	   |     (input = Normal) then Normal
+	   |     (input = Bad) then Bad
+
+
+	 state Low
+	   do st = Low;
+	   unless (input = Normal)  then Normal
+	   |     (input = High) then High
+	   |     (input = Bad) then Bad
+
+
+	 state Bad
+	   do st = Bad;
+	   unless (input = Low)  then Low
+	   |     (input = High) then High
+	   |     (input = Normal) then Normal
+
+	end
+tel 
+
+
+
+node trackeur (s, c1, c2, e : bool) returns (res: int; wEx: elevel; win : wSize; running : bool)
+let
+	automaton		
+         state Off
+	   do res = 0; 
+	      wEx = Zero;
+	      win = NonW;
+	      running = false;
+	   unless (s & c1) then Untrackeur_nf
+	   |      (s & c2) then Untrackeur_lf
+
+         state Untrackeur_nf
+	   do res = 1; 
+	      wEx = Cinq;
+	      win = Norm;
+	      running = true;
+	   unless (e)  then Off
+	   |      (not c1 & c2) then Untrackeur_lf
+
+	 state Untrackeur_lf
+	   do res = 2; 
+	      wEx = Quatre;
+	      win = Larg;
+	      running = true;
+	   unless (e)  then Off
+	   |      (c1 & not c2) then Untrackeur_nf
+
+	end
+tel 
+
+
+
+
+node tracking(i_objvt, i_deadline, i_indice :level; s, e : bool) 
+      returns (objectives:bool; st_objvt, st_deadline, st_indice :level; res: int; wEx: elevel; win : wSize; running : bool)
+
+contract	
+	assume true
+	enforce objectives
+	with ( c3, c1, c2 :bool) 	
+
+var increase_window_size, speed_up:bool;  
+sst_objvt, sst_deadline : level;
+winbis : wSize;
+wExbis : elevel;
+    st_objvtbis, st_deadlinebis : level;
+let
+    st_objvt = st_objvtbis;
+  st_deadline = st_deadlinebis;
+    
+	sst_objvt = (None fby st_objvtbis) ;
+	sst_deadline = (None fby st_deadlinebis);
+	
+	increase_window_size =  (not (st_objvtbis = High & not ((NonW fby winbis) = NonW)) or not (winbis = Norm));  
+	speed_up 	     =  (not (st_deadlinebis = Low & ((Zero fby wExbis) = Cinq)) or not (wExbis = Cinq)) &
+				(not (st_deadlinebis = Low & ((Zero fby wExbis) = Quatre)) or not (wExbis = Cinq));
+	objectives           =  (speed_up) & increase_window_size;
+
+	
+	st_objvtbis  = inlined metrics(i_objvt); 
+	st_deadlinebis  = inlined metrics(i_deadline);
+	st_indice  = inlined metrics(i_indice);
+	(res, wExbis, winbis, running) = inlined trackeur (s, c1, c2, e);
+
+  win = winbis;
+  wEx = wExbis;
+
+   
+tel 
+
+
+
+
+(*
+
+
+reax -s -a 'sB:d={P:D}' --triang tracking_ctrln/tracking.ctrln 
+
+
+./clean 
+clear && heptc -hepts -s tracking -target c -target ctrln tracking.ept 
+reax -a 'sS:d={I:D}' --triang tracking_ctrln/tracking.ctrln  && ctrl2ept -n Tracking.tracking
+heptc -target c tracking_controller.ept
+
+
+
+PDW=$(pwd)
+gcc -o sim -I/home/ctrl-a/.opam/4.02.3/lib/heptagon/c/ -I$PDW/tracking_c -I$PDW/tracking_controller_c -I$PDW/tracking_c tracking_c/_main.c tracking_c/tracking.c tracking_c/tracking_types.c  tracking_controller_c/tracking_controller.c tracking_controller_c/tracking_controller_types.c
+hepts -mod Tracking -node tracking -exec ./sim
+
+
+PDW=$(pwd)
+gcc -o sim -I/home/ctrl-a/.opam/4.02.3/lib/heptagon/c/ -I$PDW/tracking_c -I$PDW/tracking_c tracking_c/_main.c tracking_c/tracking.c tracking_c/tracking_types.c  
+hepts -mod tracking -node tracking -exec ./sim
+
+*)
+
+
