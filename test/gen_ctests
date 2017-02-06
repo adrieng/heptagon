@@ -33,5 +33,11 @@ compile_diff "unroll"
 compile_diff "O"
 
 for i in good/*.ept; do
-    echo 'ADD_TEST(compile_javac_run_'`basename $i .ept` '"scripts/compile_javac_run"' '"'$i'")'
+    name=`basename $i .ept`
+    echo "ADD_TEST(compile_javac_run_${name} \"scripts/compile_javac_run\" \"${i}\")"
+done
+
+for i in sdc/*.ept; do
+    name=`basename $i .ept`
+    echo "ADD_TEST(compile_sdc_run_${name} \"scripts/compile_sdc_run\" \"${i}\")"
 done
