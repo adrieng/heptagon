@@ -12,14 +12,12 @@ let
     do
       y = true;
     unless (r=Bas) & c then Bas
-    |
     state Bas
     do
       y = false
     unless (r=Haut) or c then Haut
     end;
-  y =
-  tel
+tel
 
 node g(u,v:bool;m :t) = (z:bool)
     contract
