@@ -2,7 +2,7 @@
 include config
 
 #version = $(shell date +"%d%m%y")
-version = 1.03.01
+version = 1.03.02
 osname=$(shell uname -s)
 hardware=$(shell uname -m)
 heptdir = heptagon-$(version)
@@ -23,7 +23,7 @@ binary-distrib:
 	cp -r examples export/$(heptbindir)
 # tests
 	mkdir -p export/$(heptbindir)/test
-	cp -r test/bad test/good test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptbindir)/test
+	cp -r test/bad test/good test/sdc test/image_filters test/scripts test/CTestTestfile.cmake export/$(heptbindir)/test
 # manual
 	mkdir -p export/$(heptbindir)/manual
 	cp manual/heptagon-manual.pdf manual/heptreax-manual.pdf export/$(heptbindir)/manual
