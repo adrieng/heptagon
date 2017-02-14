@@ -371,9 +371,8 @@ on_ck:
 
 when_ck:
   | x=IDENT                                                { Cwhen(Q Initial.ptrue,x) }
+  | NOT x=IDENT                                            { Cwhen(Q Initial.pfalse,x) }
   | c=constructor_or_bool LPAREN x=IDENT RPAREN            { Cwhen(c,x) }
-  | b=ck x=IDENT                                           { Cwhen(Q Initial.ptrue,x) }
-  | b=ck NOT x=IDENT                                       { Cwhen(Q Initial.pfalse,x) }
 
 equs:
   | /* empty */                      { [] }
