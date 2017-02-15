@@ -223,7 +223,7 @@ rule token = parse
                               Loc (comment_start, comment_end)))
         end;
         token lexbuf }
-   | "--"
+   | "--" | "--%"
       { single_line_comment lexbuf }
    | ['!' '?' '~']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':'
@@ -308,7 +308,7 @@ and comment = parse
       { comment lexbuf }
 
 and single_line_comment = parse
-  | newline      { token lexbuf }
+  | newline      { new_line lexbuf; token lexbuf }
   | _            { single_line_comment lexbuf }
 
 and string = parse
