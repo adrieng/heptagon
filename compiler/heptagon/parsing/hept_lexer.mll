@@ -223,6 +223,8 @@ rule token = parse
                               Loc (comment_start, comment_end)))
         end;
         token lexbuf }
+   | "--"
+      { single_line_comment lexbuf }
    | ['!' '?' '~']
       ['!' '$' '%' '&' '*' '+' '-' '.' '/' ':'
     '<' '=' '>' '?' '@' '^' '|' '~'] *
@@ -304,6 +306,10 @@ and comment = parse
                             Lexing.lexeme_start_p lexbuf))) }
   | _
       { comment lexbuf }
+
+and single_line_comment = parse
+  | newline      { token lexbuf }
+  | _            { single_line_comment lexbuf }
 
 and string = parse
   | newline         { new_line lexbuf; string lexbuf }
