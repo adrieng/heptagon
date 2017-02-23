@@ -391,7 +391,7 @@ let translate_eqs ~pref acc equs =
 let prefix_vars ~pref vars : symb -> symb =
   let vars = List.fold_left begin fun acc { v_ident = id } ->
     let v = mk_symb & name id in
-    SMap.add v (mk_symb ("c_" ^ Symb.to_string v)) acc
+    SMap.add v (mk_symb (Symb.to_string v)) acc
   end (SMap.empty) vars in
   fun p -> pref (try SMap.find p vars with Not_found -> p)
 
