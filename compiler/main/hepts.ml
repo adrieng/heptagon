@@ -32,7 +32,6 @@
 (* Graphical simulator *)
 
 open Compiler_utils
-open Errors
 open Modules
 open Signature
 open Names
@@ -272,12 +271,12 @@ let create_input v_name v_ty n (table:GPack.table) =
      let rec input name =
        let _ = check_type name in
        begin try
-	   let ty = find_type name in
+           let ty = find_type name in
            begin
-	     match ty with
-	     | Tenum(clist) -> new enum_input name.qual clist table n
-	     | Talias(Tid name) -> input name
-	     | _ -> new entry_input "" table n
+             match ty with
+             | Tenum(clist) -> new enum_input name.qual clist table n
+             | Talias(Tid name) -> input name
+             | _ -> new entry_input "" table n
            end
          with Not_found ->
            new entry_input "" table n
@@ -367,7 +366,7 @@ let main () =
   if (!mod_name = "") || (!node_name = "") || (!exec_name = "") then
     begin
       Arg.usage arg_list usage_msg;
-      raise Error
+      raise Errors.Error
     end;
 
   open_module (Module !mod_name);
@@ -827,4 +826,4 @@ let main () =
   win#show ();
   GtkThread.main () ;;
 
-try main () with Error -> exit 2;;
+try main () with Errors.Error -> exit 2;;

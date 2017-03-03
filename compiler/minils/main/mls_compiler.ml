@@ -29,7 +29,6 @@
 (***********************************************************************)
 open Compiler_utils
 open Compiler_options
-open Names
 
 let pp p = if !verbose then Mls_printer.print stdout p
 

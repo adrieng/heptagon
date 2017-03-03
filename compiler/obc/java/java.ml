@@ -27,8 +27,11 @@
 (*                                                                     *)
 (***********************************************************************)
 
-type class_name = Names.qualname (** [qual] is the package name, [Name] is the class name *)
+(** [qual] is the package name, [Name] is the class name *)
+type class_name = Names.qualname
+
 type obj_ident = Idents.var_ident
+
 (** [Qual] is the enum class name (type), [NAME] is the constructor name *)
 type constructor_name = Names.qualname
 type const_name = Names.qualname

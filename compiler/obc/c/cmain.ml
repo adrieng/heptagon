@@ -98,7 +98,7 @@ let assert_node_res cd =
                  [Csexpr (Cfun_call ("fprintf",
                                      [Cvar "stderr";
                                       Cconst (Cstrlit ("Node \""
-						       ^ (Names.fullname cd.cd_name)
+                                                       ^ (Names.fullname cd.cd_name)
                                                             ^ "\" failed at step" ^
                                                               " %d.\n"));
                                       Cvar step_counter]));
@@ -120,8 +120,8 @@ let main_def_of_class_def cd =
     | Tid _ -> "%s"
   in
 
-  (** Does reading type [ty] need a buffer? When it is the case,
-      [need_buf_for_ty] also returns the type's name. *)
+  (* Does reading type [ty] need a buffer? When it is the case,
+     [need_buf_for_ty] also returns the type's name. *)
   let need_buf_for_ty ty = match ty with
     | Tarray _ | Tprod _ | Tinvalid -> assert false
     | Types.Tid id when id = Initial.pfloat -> None
@@ -131,7 +131,7 @@ let main_def_of_class_def cd =
   in
   let cprint_string s = Csexpr (Cfun_call ("printf", [Cconst (Cstrlit s)])) in
 
-  (** Generates scanf statements. *)
+  (* Generates scanf statements. *)
   let rec read_lhs_of_ty lhs ty =
     match ty with
     | Tarray (ty, n) ->
@@ -187,18 +187,18 @@ let main_def_of_class_def cd =
             | None -> ([scan_exp (Caddrof lhs)], [])
             | Some tyn ->
                 let varn = fresh "buf" in
-		let lhs = clhs_of_cexpr lhs in
+                let lhs = clhs_of_cexpr lhs in
                 ([scan_exp (Cvar varn);
                   Caffect (lhs,
-			   (Cfun_call (tyn ^ "_of_string",
+                           (Cfun_call (tyn ^ "_of_string",
                                      [Cvar varn])))],
                  [(varn, Cty_arr (20, Cty_char))])
         end
     | Tprod _ | Tinvalid -> failwith("read_lhs_of_ty: untranslatable type")
   in
 
-  (** Generates printf statements and buffer declarations needed for printing
-      resulting values of enum types. *)
+  (* Generates printf statements and buffer declarations needed for printing
+     resulting values of enum types. *)
   let rec write_lhs_of_ty lhs ty =
     match ty with
     | Tarray (ty, n) ->
@@ -282,8 +282,8 @@ let main_def_of_class_def cd =
     @ concat scanf_decls
     @ concat printf_decls in
 
-  (** The main function loops (while (1) { ... }) reading arguments for our node
-      and prints the results. *)
+  (* The main function loops (while (1) { ... }) reading arguments for our node
+     and prints the results. *)
   let step_l =
     let funcall =
       let args =
@@ -300,7 +300,7 @@ let main_def_of_class_def cd =
        else [Csexpr (Cfun_call ("puts", [Cconst (Cstrlit "")]))])
     @ [Csexpr (Cfun_call ("fflush", [Cvar "stdout"]))] in
 
-  (** Do not forget to initialize memory via reset if needed. *)
+  (* Do not forget to initialize memory via reset if needed. *)
   let rst_i =
     if cd.cd_stateful
     then [Csexpr (Cfun_call ((cname_of_qn cd.cd_name) ^ "_reset",

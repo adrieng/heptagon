@@ -73,11 +73,11 @@ type cty =
     variable declarations before a list of semicolon-separated statements, the
     whole thing being enclosed in curly braces. *)
 type cblock = {
+  var_decls : (string * cty) list;
   (** Variable declarations, where each declaration consists of a variable
       name and the associated C type. *)
-  var_decls : (string * cty) list;
-  (** The actual statement forming our block. *)
   block_body : cstm list;
+  (** The actual statement forming our block. *)
 }
 
 (* TODO: The following types for C expressions would be better using polymorphic
@@ -97,17 +97,20 @@ and cexpr =
   | Cderef of cexpr (** Pointer dereference, *ptr. *)
   | Cfield of cexpr * qualname (** Field access to left-hand-side. *)
   | Carray of cexpr * cexpr (** Array access cexpr[cexpr] *)
+
 and cconst =
   | Ccint of int (** Integer constant. *)
   | Ccfloat of float (** Floating-point number constant. *)
   | Ctag of string (** Tag, member of a previously declared enumeration. *)
   | Cstrlit of string (** String literal, enclosed in double-quotes. *)
+
 (** C left-hand-side (ie. affectable) expressions. *)
 and clhs =
   | CLvar of string (** A local variable. *)
   | CLderef of clhs (** Pointer dereference, *ptr. *)
   | CLfield of clhs * qualname (** Field access to left-hand-side. *)
   | CLarray of clhs * cexpr (** Array access clhs[cexpr] *)
+
 (** C statements. *)
 and cstm =
   | Csexpr of cexpr (** Expression evaluation, may cause side-effects! *)
@@ -123,16 +126,16 @@ and cstm =
 (** C type declarations ; will {b always} correspond to a typedef in emitted
     source code. *)
 type cdecl =
-  (** C typedef declaration (alias, name)*)
   | Cdecl_typedef of cty * string
-    (** C enum declaration, with associated value tags. *)
+  (** C typedef declaration (alias, name)*)
   | Cdecl_enum of string * string list
-    (** C structure declaration, with each field's name and type. *)
+  (** C enum declaration, with associated value tags. *)
   | Cdecl_struct of string * (string * cty) list
-    (** C function declaration. *)
+  (** C structure declaration, with each field's name and type. *)
   | Cdecl_function of string * cty * (string * cty) list
-    (** C constant declaration (alias, name)*)
+  (** C function declaration. *)
   | Cdecl_constant of string * cty * cexpr
+  (** C constant declaration (alias, name)*)
 
 (** C function definitions *)
 type cfundef = {
@@ -330,7 +333,7 @@ let pp_cdef fmt cdef = match cdef with
   | Cvardef (s, cty) -> fprintf fmt "%a %a;@\n" pp_cty cty  pp_string s
 
 let pp_cfile_desc fmt filen cfile =
-  (** [filen_wo_ext] is the file's name without the extension. *)
+  (* [filen_wo_ext] is the file's name without the extension. *)
   let filen_wo_ext = String.sub filen 0 (String.length filen - 2) in
   match cfile with
     | Cheader (deps, cdecls) ->
@@ -386,7 +389,7 @@ let rec array_base_ctype ty idx_list =
 let rec clhs_of_cexpr cexpr =
   match cexpr with
   | Cvar v -> CLvar v
-  | Cderef e -> CLderef (clhs_of_cexpr e) 
+  | Cderef e -> CLderef (clhs_of_cexpr e)
   | Cfield (e,qn) -> CLfield (clhs_of_cexpr e, qn)
   | Carray (e1,e2) -> CLarray (clhs_of_cexpr e1, e2)
   | _ -> failwith("C expression not translatable to LHS")

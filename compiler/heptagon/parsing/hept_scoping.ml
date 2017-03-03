@@ -157,35 +157,42 @@ module Rename =
 struct
   include
     (Map.Make (struct type t = string let compare = String.compare end))
+
   (** Rename a var *)
   let var loc env n =
     try fst (find n env)
     with Not_found -> Error.message loc (Evar_unbound n)
+
   (** Rename a last *)
   let last loc env n =
     try
       let id, last = find n env in
       if not last then Error.message loc (Enot_last n) else id
     with Not_found -> Error.message loc (Evar_unbound n)
+
   (** Adds a name to the list of used names and idents. *)
   let add_used_name env n =
     add n (ident_of_name n, false) env
+
   (** Add a var *)
   let add_var loc env n =
     if mem n env then Error.message loc (Evariable_already_defined n)
     else
         add n (ident_of_name n, false) env
+
   (** Add a last *)
   let add_last loc env n =
     if mem n env then Error.message loc (Evariable_already_defined n)
     else
         add n (ident_of_name n, true) env
+
   (** Add a var dec *)
   let add env vd =
     let add = match vd.v_last with
       | Var -> add_var
       | Last _ -> add_last in
     add vd.v_loc env vd.v_name
+
   (** Append a list of var dec *)
   let append env vd_list = List.fold_left add env vd_list
 end

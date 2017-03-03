@@ -278,9 +278,9 @@ let rec cexpr_of_static_exp se =
 and cexpr_of_exp out_env var_env exp =
   match exp.e_desc with
     | Eextvalue w  -> cexpr_of_ext_value out_env var_env w
-    (** Operators *)
+    (* Operators *)
     | Eop(op, exps) -> cop_of_op out_env var_env op exps
-    (** Structure literals. *)
+    (* Structure literals. *)
     | Estruct (tyn, fl) ->
         let cexpr = cexpr_of_exp out_env var_env in
         let cexps_assoc = List.rev_map (fun (f, e) -> f, cexpr e) fl in
@@ -330,7 +330,7 @@ and cop_of_op out_env var_env op_name exps =
   cop_of_op_aux op_name cexps
 
 and clhs_of_pattern out_env var_env l = match l.pat_desc with
-  (** Each Obc variable corresponds to a real local C variable. *)
+  (* Each Obc variable corresponds to a real local C variable. *)
   | Lvar v ->
       let n = name v in
       let n_lhs =
@@ -347,9 +347,9 @@ and clhs_of_pattern out_env var_env l = match l.pat_desc with
         )
       else
         n_lhs
-  (** Dereference our [self] struct holding the node's memory. *)
+  (* Dereference our [self] struct holding the node's memory. *)
   | Lmem v -> CLfield (CLderef (CLvar "self"), local_qn (name v))
-  (** Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
+  (* Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
   | Lfield (l, fn) -> CLfield(clhs_of_pattern out_env var_env l, fn)
   | Larray (l, idx) ->
       CLarray(clhs_of_pattern out_env var_env l,
@@ -359,7 +359,7 @@ and clhs_list_of_pattern_list out_env var_env lhss =
   List.map (clhs_of_pattern out_env var_env) lhss
 
 and cexpr_of_pattern out_env var_env l = match l.pat_desc with
-  (** Each Obc variable corresponds to a real local C variable. *)
+  (* Each Obc variable corresponds to a real local C variable. *)
   | Lvar v ->
       let n = name v in
       let n_lhs =
@@ -376,9 +376,9 @@ and cexpr_of_pattern out_env var_env l = match l.pat_desc with
         )
       else
         n_lhs
-  (** Dereference our [self] struct holding the node's memory. *)
+  (* Dereference our [self] struct holding the node's memory. *)
   | Lmem v -> Cfield (Cderef (Cvar "self"), local_qn (name v))
-  (** Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
+  (* Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
   | Lfield (l, fn) -> Cfield(cexpr_of_pattern out_env var_env l, fn)
   | Larray (l, idx) ->
       Carray(cexpr_of_pattern out_env var_env l,
@@ -386,7 +386,7 @@ and cexpr_of_pattern out_env var_env l = match l.pat_desc with
 
 and cexpr_of_ext_value out_env var_env w = match w.w_desc with
   | Wconst c -> cexpr_of_static_exp c
-  (** Each Obc variable corresponds to a plain local C variable. *)
+  (* Each Obc variable corresponds to a plain local C variable. *)
   | Wvar v ->
     let n = name v in
     let n_lhs =
@@ -402,9 +402,9 @@ and cexpr_of_ext_value out_env var_env w = match w.w_desc with
       | _ -> n_lhs)
     else
       n_lhs
-  (** Dereference our [self] struct holding the node's memory. *)
+  (* Dereference our [self] struct holding the node's memory. *)
   | Wmem v -> Cfield (Cderef (Cvar "self"), local_qn (name v))
-  (** Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
+  (* Field access. /!\ Indexed Obj expression should be a valid lhs!  *)
   | Wfield (l, fn) -> Cfield(cexpr_of_ext_value out_env var_env l, fn)
   | Warray (l, idx) ->
     Carray(cexpr_of_ext_value out_env var_env l,
@@ -462,7 +462,7 @@ let step_fun_call out_env var_env sig_info objn out args =
     [args] is the list of expressions to use as arguments.
     [mem] is the lhs where is stored the node's context.*)
 let generate_function_call out_env var_env obj_env outvl objn args =
-  (** Class name for the object to step. *)
+  (* Class name for the object to step. *)
   let classln = assoc_cn objn obj_env in
   let classn = cname_of_qn classln in
   let sig_info = find_value classln in
@@ -472,16 +472,16 @@ let generate_function_call out_env var_env obj_env outvl objn args =
     if is_op classln then
       cop_of_op_aux classln args
     else
-      (** The step function takes scalar arguments and its own internal memory
+      (* The step function takes scalar arguments and its own internal memory
           holding structure. *)
       let args = step_fun_call out_env var_env sig_info objn out args in
-      (** Our C expression for the function call. *)
+      (* Our C expression for the function call. *)
       Cfun_call (classn ^ "_step", args)
   in
 
-  (** Act according to the length of our list. Step functions with
-      multiple return values will return a structure, and we care of
-      assigning each field to the corresponding local variable. *)
+  (* Act according to the length of our list. Step functions with
+     multiple return values will return a structure, and we care of
+     assigning each field to the corresponding local variable. *)
   match outvl with
     | [] -> [Csexpr fun_call]
     | [outv] when is_op classln ->
@@ -534,7 +534,7 @@ let rec create_affect_const var_env (dest : clhs) c =
     class names.  *)
 let rec cstm_of_act out_env var_env obj_env act =
   match act with
-      (** Cosmetic : cases on boolean values are converted to if statements. *)
+      (* Cosmetic : cases on boolean values are converted to if statements. *)
     | Acase (c, [({name = "true"}, te); ({ name = "false" }, fe)])
     | Acase (c, [({name = "false"}, fe); ({ name = "true"}, te)]) ->
         let cc = cexpr_of_exp out_env var_env c in
@@ -553,12 +553,12 @@ let rec cstm_of_act out_env var_env obj_env act =
         [Cif (cc, cte, cfe)]
 
 
-    (** Translation of case into a C switch statement is simple enough: we
-        just recursively translate obj expressions and statements to
-        corresponding C constructs, and cautiously "shortnamize"
-        constructor names. *)
+    (* Translation of case into a C switch statement is simple enough: we
+       just recursively translate obj expressions and statements to
+       corresponding C constructs, and cautiously "shortnamize"
+       constructor names. *)
     | Acase (e, cl) ->
-        (** [ccl_of_obccl] translates an Obc clause to a C clause. *)
+        (* [ccl_of_obccl] translates an Obc clause to a C clause. *)
         let ccl =
           List.map
             (fun (c,act) -> cname_of_qn c,
@@ -568,33 +568,33 @@ let rec cstm_of_act out_env var_env obj_env act =
     | Ablock b ->
         cstm_of_act_list out_env var_env obj_env b
 
-    (** For composition of statements, just recursively apply our
-        translation function on sub-statements. *)
+    (* For composition of statements, just recursively apply our
+       translation function on sub-statements. *)
     | Afor ({ v_ident = x }, i1, i2, act) ->
         [Cfor(name x, cexpr_of_exp out_env var_env i1,
               cexpr_of_exp out_env var_env i2,
               cstm_of_act_list out_env var_env obj_env act)]
 
-    (** Translate constant assignment *)
+    (* Translate constant assignment *)
     | Aassgn (vn, { e_desc = Eextvalue { w_desc = Wconst c }; }) ->
         let vn = clhs_of_pattern out_env var_env vn in
         create_affect_const var_env vn c
 
-    (** Purely syntactic translation from an Obc local variable to a C
-        local one, with recursive translation of the rhs expression. *)
+    (* Purely syntactic translation from an Obc local variable to a C
+       local one, with recursive translation of the rhs expression. *)
     | Aassgn (vn, e) ->
         let vn = clhs_of_pattern out_env var_env vn in
         let ty = assoc_type_lhs vn var_env in
         let ce = cexpr_of_exp out_env var_env e in
         create_affect_stm vn ce ty
 
-    (** Our Aop marks an operator invocation that will perform side effects. Just
-        translate to a simple C statement. *)
+    (* Our Aop marks an operator invocation that will perform side effects. Just
+       translate to a simple C statement. *)
     | Aop (op_name, args) ->
         [Csexpr (cop_of_op out_env var_env op_name args)]
 
-    (** Reinitialization of an object variable, extracting the reset
-        function's name from our environment [obj_env]. *)
+    (* Reinitialization of an object variable, extracting the reset
+       function's name from our environment [obj_env]. *)
     | Acall (name_list, o, Mreset, args) ->
         assert_empty name_list;
         assert_empty args;
@@ -615,9 +615,9 @@ let rec cstm_of_act out_env var_env obj_env act =
                  mk_loop pl field
         )
 
-    (** Step functions applications can return multiple values, so we use a
-        local structure to hold the results, before allocating to our
-        variables. *)
+    (* Step functions applications can return multiple values, so we use a
+       local structure to hold the results, before allocating to our
+       variables. *)
     | Acall (outvl, objn, Mstep, el) ->
         let args = cexprs_of_exps out_env var_env el in
         let outvl = clhs_list_of_pattern_list out_env var_env outvl in
@@ -664,18 +664,18 @@ let step_fun_args n md =
     field by return value. *)
 let fun_def_of_step_fun n obj_env mem objs md =
   let fun_name = (cname_of_qn n) ^ "_step" in
-  (** Its arguments, translating Obc types to C types and adding our internal
+  (* Its arguments, translating Obc types to C types and adding our internal
       memory structure. *)
   let args = step_fun_args n md in
 
-  (** Out vars for function calls *)
+  (* Out vars for function calls *)
   let out_vars =
     unique
       (List.map (fun obj -> out_var_name_of_objn (cname_of_qn obj.o_class),
                    Cty_id (qn_append obj.o_class "_out"))
          (List.filter (fun obj -> not (is_op obj.o_class)) objs)) in
 
-  (** The body *)
+  (* The body *)
   let mems = List.map cvar_of_vd (mem@md.m_outputs) in
   let var_env = args @ mems @ out_vars in
   let out_env =
@@ -699,8 +699,8 @@ let fun_def_of_step_fun n obj_env mem objs md =
 (** [mem_decl_of_class_def cd] returns a declaration for a C structure holding
     internal variables and objects of the Obc class definition [cd]. *)
 let mem_decl_of_class_def cd =
-  (** This one just translates the class name to a struct name following the
-      convention we described above. *)
+  (* This one just translates the class name to a struct name following the
+     convention we described above. *)
   let struct_field_of_obj_dec l od =
     if is_stateful od.o_class then
       let ty = Cty_id (qn_append od.o_class "_mem") in
@@ -717,9 +717,9 @@ let mem_decl_of_class_def cd =
       l
   in
     if is_stateful cd.cd_name then (
-      (** Fields corresponding to normal memory variables. *)
+      (* Fields corresponding to normal memory variables. *)
       let mem_fields = List.map cvar_of_vd cd.cd_mems in
-      (** Fields corresponding to object variables. *)
+      (* Fields corresponding to object variables. *)
       let obj_fields = List.fold_left struct_field_of_obj_dec [] cd.cd_objs in
         [Cdecl_struct ((cname_of_qn cd.cd_name) ^ "_mem",
                        mem_fields @ obj_fields)]
@@ -727,7 +727,7 @@ let mem_decl_of_class_def cd =
       []
 
 let out_decl_of_class_def cd =
-  (** Fields corresponding to output variables. *)
+  (* Fields corresponding to output variables. *)
   let step_m = find_step_method cd in
   let out_fields = List.map cvar_of_vd step_m.m_outputs in
     [Cdecl_struct ((cname_of_qn cd.cd_name) ^ "_out", out_fields)]
@@ -757,16 +757,16 @@ let reset_fun_def_of_class_def cd =
 (** [cdecl_and_cfun_of_class_def cd] translates the class definition [cd] to
     a C program. *)
 let cdefs_and_cdecls_of_class_def cd =
-  (** We keep the state of our class in a structure, holding both internal
-      variables and the state of other nodes. For a class named ["cname"], the
-      structure will be called ["cname_mem"]. *)
+  (* We keep the state of our class in a structure, holding both internal
+     variables and the state of other nodes. For a class named ["cname"], the
+     structure will be called ["cname_mem"]. *)
   Idents.enter_node cd.cd_name;
   let step_m = find_step_method cd in
   let memory_struct_decl = mem_decl_of_class_def cd in
   let out_struct_decl = out_decl_of_class_def cd in
   let step_fun_def = fun_def_of_step_fun cd.cd_name
     cd.cd_objs cd.cd_mems cd.cd_objs step_m in
-  (** C function for resetting our memory structure. *)
+  (* C function for resetting our memory structure. *)
   let reset_fun_def = reset_fun_def_of_class_def cd in
   let res_fun_decl = cdecl_of_cfundef reset_fun_def in
   let step_fun_decl = cdecl_of_cfundef step_fun_def in

@@ -38,8 +38,8 @@ open Names
 exception Already_defined
 
 
-(** Warning: Whenever this type is modified,
-    interface_format_version in signature.ml should be incremented. *)
+(* Warning: Whenever this type is modified,
+   interface_format_version in signature.ml should be incremented. *)
 (** Object serialized in compiled interfaces. *)
 type module_object =
   { m_name    : Names.modul;
@@ -51,24 +51,16 @@ type module_object =
     m_format_version : string; }
 
 type env = {
-  (** Current module name *)
-  mutable current_mod : modul;
-  (** Modules opened and loaded into the env *)
-  mutable opened_mod  : modul list;
-  (** Modules loaded into the env *)
-  mutable loaded_mod  : modul list;
-  (** Node definitions *)
-  mutable values  : node QualEnv.t;
-  (** Type definitions *)
-  mutable types   : type_def QualEnv.t;
-  (** Constants definitions *)
-  mutable consts  : const_def QualEnv.t;
-  (** Constructors mapped to their corresponding type *)
-  mutable constrs  : qualname QualEnv.t;
-  (** Fields mapped to their corresponding type *)
-  mutable fields  : qualname QualEnv.t;
-  (** Accepted compiled interface version *)
-  format_version  : string }
+    mutable current_mod : modul;           (** Current module name *)
+    mutable opened_mod  : modul list;      (** Modules opened and loaded into the env *)
+    mutable loaded_mod  : modul list;      (** Modules loaded into the env *)
+    mutable values  : node QualEnv.t;      (** Node definitions *)
+    mutable types   : type_def QualEnv.t;  (** Type definitions *)
+    mutable consts  : const_def QualEnv.t; (** Constants definitions *)
+    mutable constrs  : qualname QualEnv.t; (** Constructors mapped to their corresponding type *)
+    mutable fields  : qualname QualEnv.t;  (** Fields mapped to their corresponding type *)
+    format_version  : string               (** Accepted compiled interface version *)
+  }
 
 (** The global environnement *)
 let g_env =

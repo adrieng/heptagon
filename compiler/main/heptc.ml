@@ -148,7 +148,7 @@ let main () =
         "-nbvars", Arg.Set nbvars, doc_nbvars;
         "-itfusion", Arg.Set do_iterator_fusion, doc_itfusion;
         "-strict_ssa", Arg.Unit set_strict_ssa, doc_strict_ssa;
-	"-nosink", Arg.Set nosink, doc_nosink;
+        "-nosink", Arg.Set nosink, doc_nosink;
         "-memalloc", Arg.Unit do_mem_alloc_and_typing, doc_memalloc;
         "-only-memalloc", Arg.Set do_mem_alloc, doc_memalloc_only;
         "-only-linear", Arg.Set do_linear_typing, doc_linear_only;
@@ -168,5 +168,5 @@ let main () =
     | Errors.Error -> exit 2;;
 
 
-(** Launch the [main] *)
+(* Launch the [main] *)
 main ()

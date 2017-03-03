@@ -134,7 +134,7 @@ let edesc funs acc ed =
   let ed, acc = Hept_mapfold.edesc funs acc ed in
   match ed with
     | Eiterator(Imap, f, n, [], e_list, r) ->
-        (** @return the list of inputs of the anonymous function,
+        (* @return the list of inputs of the anonymous function,
             a list of created equations (the body of the function),
             the args for the call of f in the lambda,
             the args for the iterator (ie the arrays).

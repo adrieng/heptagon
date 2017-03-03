@@ -60,7 +60,8 @@ end
 
 module Param_instances :
 sig
-  type key = private static_exp (** Fully instantiated param *)
+  (** Fully instantiated param *)
+  type key = private static_exp
   type env = key QualEnv.t
   val instantiate: env -> static_exp list -> key list
   val get_node_instances : QualEnv.key -> key list list
@@ -77,19 +78,22 @@ struct
 
   (** An instance is a list of instantiated params *)
   type instance = key list
+
   (** two instances are equal if the desc of keys are equal *)
   let compare_instances =
     let compare se1 se2 = compare se1.se_desc se2.se_desc in
     Misc.list_compare compare
 
-  module S = (** Instances set *)
+  (** Instances set *)
+  module S =
     Set.Make(
       struct
         type t = instance
         let compare = compare_instances
       end)
 
-  module M = (** Map instance to its instantiated node *)
+  (** Map instance to its instantiated node *)
+  module M =
     Map.Make(
       struct
         type t = qualname * instance
@@ -235,15 +239,17 @@ end
 
 open Param_instances
 
-type info =
-  { mutable opened : program ModulEnv.t;
-    mutable called_nodes : ((qualname * static_exp list) list) QualEnv.t; }
+type info = {
+    mutable opened : program ModulEnv.t; (** Opened programs *)
+    mutable called_nodes : ((qualname * static_exp list) list) QualEnv.t;
+    (** Maps a node to the list of (node name, params) it calls *)
+  }
 
 let info =
-  { (** opened programs*)
+  {
     opened = ModulEnv.empty;
-    (** Maps a node to the list of (node name, params) it calls *)
-    called_nodes = QualEnv.empty }
+    called_nodes = QualEnv.empty
+  }
 
 (** Loads the modname.epo file. *)
 let load_object_file modul =
@@ -297,7 +303,7 @@ let node_by_longname node =
 (** @return the list of nodes called by the node named [ln], with the
     corresponding params (static parameters appear as free variables). *)
 let collect_node_calls ln =
-  (** only add nodes when not external and with params *)
+  (* only add nodes when not external and with params *)
   let add_called_node ln params acc =
     match params with
       | [] -> acc

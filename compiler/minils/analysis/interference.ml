@@ -355,7 +355,9 @@ let compute_live_vars eqs =
     let alive_vars = List.fold_left VarEnv.add_ivar alive_vars read_ivars in
     (* remove vars defined in this equation *)
     let alive_vars =
-      List.fold_left (fun alive_vars id -> VarEnv.remove_except_mem id alive_vars) alive_vars def_ivars
+      List.fold_left (fun alive_vars id -> VarEnv.remove_except_mem id alive_vars)
+                     alive_vars
+                     def_ivars
     in
     print_debug "%a@," Mls_printer.print_eq eq;
     print_debug_var_env "alive" alive_vars;
@@ -419,7 +421,7 @@ let init_interference_graph () =
     let ty = Static.simplify_type Names.QualEnv.empty (World.ivar_type iv) in
     TyEnv.add_element ty (Interference_graph.mk_node iv) env
   in
-  (** Adds a node for the variable and all fields of a variable. *)
+  (* Adds a node for the variable and all fields of a variable. *)
   let add_ivar env iv ty =
     let ivars = all_ivars [] iv None ty in
       List.fold_left add_tyenv env ivars
@@ -536,7 +538,7 @@ let find_targeting f =
     corresponding to live vars sets are already added by build_interf_graph.
 *)
 let process_eq ({ eq_lhs = pat; eq_rhs = e } as eq) =
-  (** Other cases*)
+  (* Other cases*)
   match pat, e.e_desc with
     | _, Eiterator((Imap|Imapi), { a_op = Enode _ | Efun _ }, _, pw_list, w_list, _) ->
       let invars = InterfRead.ivars_of_extvalues w_list in
@@ -626,10 +628,15 @@ let add_init_return_eq f =
     Eapp(mk_app Earray, decs@mems, None)
   in
 
-   (** a_1,..,a_p = __init__  *)
-  let eq_init = mk_equation false (pat_from_dec_list f.n_input)
-    (mk_extvalue_exp Clocks.Cbase Initial.tint ~linearity:Ltop (Wconst (Initial.mk_static_int 0))) in
-    (** __return__ = o_1,..,o_q, mem_1, ..., mem_k *)
+  (* a_1,..,a_p = __init__  *)
+  let eq_init =
+    mk_equation false
+                (pat_from_dec_list f.n_input)
+                (mk_extvalue_exp Clocks.Cbase
+                                 Initial.tint
+                                 ~linearity:Ltop
+                                 (Wconst (Initial.mk_static_int 0))) in
+  (* __return__ = o_1,..,o_q, mem_1, ..., mem_k *)
   let eq_return = mk_equation false (Etuplepat [])
     (mk_exp Clocks.Cbase Tinvalid ~linearity:Ltop (tuple_from_dec_and_mem_list f.n_output)) in
     (eq_init::f.n_equs)@[eq_return]
@@ -643,15 +650,15 @@ let coalesce_mems () =
 
 let build_interf_graph f =
   World.init f;
-  (** Init interference graph *)
+  (* Init interference graph *)
   init_interference_graph ();
 
   let eqs = add_init_return_eq f in
-  (** Build live vars sets for each equation *)
+  (* Build live vars sets for each equation *)
   let live_vars = compute_live_vars eqs in
     (* Coalesce linear variables *)
     coalesce_linear_vars ();
-    (** Other cases*)
+    (* Other cases *)
     List.iter process_eq f.n_equs;
     (* Add interferences from live vars set*)
     add_interferences live_vars;
@@ -713,13 +720,13 @@ let create_subst_lists igs =
     List.flatten (List.map create_one_ig igs)
 
 let node _ acc f =
-  (** Build the interference graphs *)
+  (* Build the interference graphs *)
   let igs = build_interf_graph f in
-    (** Color the graph *)
+    (* Color the graph *)
     color_interf_graphs igs;
     if print_interference_graphs then
       print_graphs f igs;
-    (** Remember the choice we made for code generation *)
+    (* Remember the choice we made for code generation *)
       { f with n_mem_alloc = create_subst_lists igs }, acc
 
 let program p =

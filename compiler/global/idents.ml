@@ -116,8 +116,12 @@ module S = Set.Make (struct type t = string
 module UniqueNames =
 struct
   open Names
-  let used_names = ref (ref NamesSet.empty) (** Used strings in the current node *)
-  let env = ref Env.empty (** Map idents to their string *)
+
+  (** Used strings in the current node *)
+  let used_names = ref (ref NamesSet.empty)
+
+  (** Map idents to their string *)
+  let env = ref Env.empty
   let (node_env : NamesSet.t ref QualEnv.t ref) = ref QualEnv.empty
   let name_counters = Hashtbl.create 500
 

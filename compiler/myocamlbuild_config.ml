@@ -51,7 +51,6 @@ let ocamlfind_after_rules () =
   (* Use both ml and mli files to build documentation: *)
   rule "ocaml: ml & mli -> odoc"
     ~insert:`top
-    ~tags:["ocaml"; "doc"; "doc_use_interf_n_implem"]
     ~prod:"%.odoc"
     (* "%.cmo" so that cmis of ml dependencies are already built: *)
     ~deps:["%.ml"; "%.mli"; "%.cmo"]
