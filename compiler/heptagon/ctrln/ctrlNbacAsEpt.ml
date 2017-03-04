@@ -183,6 +183,7 @@ and flttyp_desc = function
             Eapp ({ op with a_op }, List.map flttyp_exp el, None)
         | _ -> assert false
       end
+  | Evar v -> Evar v
   | _ -> assert false
 and flttyp_sexp ({ se_desc; se_ty } as e) =
   if se_ty = Initial.tfloat then e
@@ -258,7 +259,9 @@ let translate_expr gd e =
     (* NB: manual coercion from ints to floats *)
     let flt = List.exists (fun { e_ty } -> e_ty = Initial.tfloat) el in
     let typ = if flt then Initial.tfloat else Initial.tint in
-    let el = List.rev_map flttyp_exp el in
+    let el = if flt
+             then List.rev_map flttyp_exp el
+             else List.rev el in
     let op = mk_bapp (Efun (nnop typ op)) in
     List.fold_left (fun acc e -> mkp typ (op acc e)) (List.hd el) (List.tl el)
   and tp ?flag : 'f AST.exp -> _ = function
