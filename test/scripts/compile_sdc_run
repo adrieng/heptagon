@@ -4,7 +4,8 @@ source scripts/config
 
 progpath=$1
 shift
-bzreaxoption="$* --heptc ../${COMPILER_DIR}/${COMPILER} --ctrl2ept ${CTRL2EPT}"
+bzreaxoption="$*"
+hept_comp_opts="--heptc ../${COMPILER_DIR}/${COMPILER} --ctrl2ept ${CTRL2EPT}"
 
 # run the program: no by default
 run=0
@@ -17,18 +18,24 @@ pushd $checkdir > /dev/null
 heptprog=`basename $progpath`
 heptroot=`basename $heptprog .ept`
 
-assert_node=$(eval grep CHECK $heptprog | awk '{ print $3 }')
-
-if [ -n "$assert_node" ]; then
-    bzreaxoption="$bzreaxoption --heptc-opts \"-assert $assert_node\""
-    run=1
-fi
-
 if grep "node main()" $heptprog >/dev/null; then
     bzreaxoption="$bzreaxoption main -s"
     run=1
 fi
 
+# assert_node=$(eval grep CHECK $heptprog | awk '{ print $3 }')
+
+# if [ -n "$assert_node" ]; then
+#     bzreaxoption="$bzreaxoption --heptc-opts '-assert $assert_node'"
+#     run=1
+# fi
+
+algo_sdc=$(eval grep SDC $heptprog | awk '{ print $3 }')
+if [ -n "$algo_sdc" ]; then
+    bzreaxoption="$bzreaxoption -a '$algo_sdc'"
+fi
+
+bzreaxoption="$bzreaxoption $hept_comp_opts"
 
 echo $BZREAX $heptprog $bzreaxoption
 if $BZREAX $heptprog $bzreaxoption; then
