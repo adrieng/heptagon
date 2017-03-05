@@ -111,7 +111,21 @@ let
 tel 
 
 
-
+(* CHECK main *)
+node main() = (ok:bool)
+var i_objvt, i_deadline, i_indice :level; s, e : bool;
+  objectives:bool; st_objvt, st_deadline, st_indice :level; res: int; wEx: elevel; win : wSize; running : bool;
+  l : int;
+let
+  (objectives,st_objvt,st_deadline,st_indice,res,wEx,win,running) = tracking(i_objvt,i_deadline,i_indice,s,e);
+  i_objvt = None fby None fby High fby None fby Bad fby None fby None fby Low fby None fby Low fby None fby Normal fby None fby i_objvt;
+  i_deadline = None fby Normal fby None fby None fby Normal fby None fby High fby None fby Low fby None fby None fby Bad fby None fby None fby None fby High fby None fby i_deadline;
+  i_indice = None fby None fby None fby Normal fby High fby Low fby None fby None fby Bad fby Bad fby None fby i_indice;
+  l = 0 fby (if l = 17 then 0 else l + 1);
+  s = (l = 7);
+  e = (l = 17);
+  ok = objectives;
+tel
 
 (*
 

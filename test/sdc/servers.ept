@@ -1,0 +1,43 @@
+type mode = H | M | L
+
+node server(max:int) = (load:int)
+  contract
+  assume (max >= 5)
+  enforce (load <= max)
+  with (c:mode)
+let
+  switch c
+  | H do load = 20
+  | M do load = 10
+  | L do load = 0
+  end
+tel
+
+type degmode = Normal | Degraded
+  
+node degraded_server(max:int) = (load:int)
+  contract
+  assume (max >= 10)
+  enforce (load <= max)
+with (cm:mode;cd:degmode)
+let
+    switch cd
+    | Normal do
+        switch cm
+        | H do load = 20
+        | M do load = 10
+        | L do load = 0
+        end
+    | Degraded do load = 2
+    end
+tel
+
+(* CHECK main *)
+node main() = (ok:bool)
+  var max, load1, load2 : int;
+let
+    load1 = 0;
+  load2 = degraded_server(max);
+  max = 10;
+  ok = (load1 <= max) & (load2 <= max);
+tel

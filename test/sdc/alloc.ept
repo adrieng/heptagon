@@ -1,0 +1,51 @@
+node alloc(r,e : bool) returns (g : bool)
+let
+  automaton
+    state Idle
+      do g = false until r then Alloc
+    state Alloc
+      do g = true until e then Idle
+  end
+tel
+
+node main_alloc(r1,r2,e1,e2 : bool) returns (g1,g2 : bool)
+    contract
+    assume not (r1 & r2)
+    enforce not (g1 & g2)
+    with (c1,c2:bool)
+let
+  g1 = inlined alloc(r1 & c1, e1);
+  g2 = inlined alloc(r2 & c2, e2);
+tel
+
+node task<<pr,pe:int>>() returns (r,e:bool)
+let
+    automaton
+    state I
+      var c : int;
+    do
+      r = c = pr;
+      e = false;
+      c = 1 fby c + 1
+    until r then A
+    state A
+        var c : int;
+    do
+      r = false;
+      e = c = pe;
+      c = 1 fby c + 1;
+    until e then I
+    end
+tel
+    
+(* CHECK main *)
+
+node main() returns (ok:bool)
+var r1,r2,e1,e2,g1,g2:bool;
+let
+  (g1,g2) = main_alloc(r1,r2 & not r1,e1,e2);
+  (* task 1 *)
+  (r1,e1) = task<<5,15>>();
+  (r2,e2) = task<<11,27>>();
+  ok = not (g1 & g2);
+tel

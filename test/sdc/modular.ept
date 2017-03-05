@@ -27,6 +27,7 @@ let
     z = f(u & c, m)
 tel
 
+(* CHECK main *)
 node main() = (ok:bool)
 var u : bool;
     m : t;

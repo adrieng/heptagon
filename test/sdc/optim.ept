@@ -1,0 +1,24 @@
+node f(x:bool) = (last y:int)
+  contract
+  enforce y > 0 with (c:bool)
+let
+    automaton
+    state A
+    do y = 1;
+    until  c then B
+    | not c then C
+    state B
+    do y = 2;
+    until true then A
+    state C
+    do y = 3;
+    until true then A
+    end
+tel
+
+
+node main() = (y:int)
+let
+    y = f(true)
+tel
+    

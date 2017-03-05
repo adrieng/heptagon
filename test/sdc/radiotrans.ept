@@ -1,0 +1,141 @@
+  (* Example from Nicolas Berthier *)
+
+node transceiver(enter_tx,
+		 enter_rx,
+		 exit_rx,
+		 calibrate,
+		 sleep,
+		 wake_up,
+		 irq_tx_done,
+		 irq_on_packet,
+		 irq_end_of_packet,
+		 irq_end_of_calibration,
+		 irq_fifo_threshold,
+		 ok:bool) returns (red:bool)
+let
+  automaton
+    state Idle
+      do
+	red = false;
+      until enter_tx & ok then Tx
+          | calibrate & ok then Calibrate
+          | sleep & ok then Sleep
+          | enter_rx & ok then Rx
+    state Tx
+      do
+	red = true;
+      until irq_tx_done then Idle
+    state Calibrate
+      do
+	red = false;
+      until irq_end_of_calibration then Idle
+    state Sleep
+      do
+	red = false;
+      until wake_up & ok then Idle
+    state Rx
+      do
+	red = true;
+      until irq_on_packet then Rx_Packet
+          | exit_rx & ok then Idle
+    state Rx_Packet
+      do
+	red = true;
+      until irq_end_of_packet then Idle
+  end
+tel
+
+node adc(adc_on,adc_off,ok:bool) returns (o:bool)
+let
+  automaton
+    state Off
+      do
+	o = false;
+      until adc_on & ok then On
+    state On
+      do
+	o = true;
+      until adc_off & ok then Off
+  end
+tel
+
+node main_rt(enter_tx,
+	     enter_rx,
+	     exit_rx,
+	     calibrate,
+	     sleep,
+	     wake_up,
+	     irq_tx_done,
+	     irq_on_packet,
+	     irq_end_of_packet,
+	     irq_end_of_calibration,
+	     irq_fifo_threshold,adc_on,adc_off:bool)
+    returns (a_on,red:bool)
+
+contract
+    enforce (not (a_on & red)) with (ok_r,ok_a:bool)
+
+let
+  a_on = inlined adc(adc_on,adc_off,ok_a);
+  red = inlined transceiver(enter_tx,
+			    enter_rx,
+			    exit_rx,
+			    calibrate,
+			    sleep,
+			    wake_up,
+			    irq_tx_done,
+			    irq_on_packet,
+			    irq_end_of_packet,
+			    irq_end_of_calibration,
+			    irq_fifo_threshold,ok_r);
+tel
+
+node period<<n,ini:int>>() = (s:bool)
+var c:int;
+let
+  c = ini fby (if s then 1 else c + 1);
+  s = c = n;
+tel
+
+    
+(* CHECK main *)
+node main() returns (ok:bool)
+var enter_tx,
+  enter_rx,
+  exit_rx,
+  calibrate,
+  sleep,
+  wake_up,
+  irq_tx_done,
+  irq_on_packet,
+  irq_end_of_packet,
+  irq_end_of_calibration,
+  irq_fifo_threshold,adc_on,adc_off:bool;
+  a_on,red:bool;
+let
+  (a_on,red) = main_rt(enter_tx,
+	                 enter_rx,
+	                 exit_rx,
+	                 calibrate,
+	                 sleep,
+	                 wake_up,
+	                 irq_tx_done,
+	                 irq_on_packet,
+	                 irq_end_of_packet,
+	                 irq_end_of_calibration,
+	                 irq_fifo_threshold,adc_on,adc_off);
+  ok = not (a_on & red);
+  enter_tx = period<<27,25>>();
+  enter_rx = period<<27,9>>();
+  exit_rx = period<<27,1>>();
+  calibrate = period<<27,19>>();
+  sleep = period<<27,14>>();
+  wake_up = period<<27,11>>();
+  irq_tx_done = period<<27,21>>();
+  irq_on_packet = period<<27,8>>();
+  irq_end_of_packet = period<<27,4>>();
+  irq_end_of_calibration = period<<27,16>>();
+  irq_fifo_threshold = period<<27,3>>();
+  adc_on = period<<17,13>>();
+  adc_off = period<<17,4>>();
+tel

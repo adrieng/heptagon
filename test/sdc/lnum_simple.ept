@@ -1,0 +1,47 @@
+(* SDC sS:d={P:D} *)
+
+node f(x:int) = (y:int)
+  contract
+  assume x >= 10
+  enforce y <= x
+  with (c:bool)
+let
+  y = 0 -> if c then pre y + 1 else 0;
+tel
+
+
+node tasks(nb_req, ended : int) = (waiting, active : int)
+      contract
+      assume (nb_req >= 0) & (ended <= (0 fby active)) & (ended >= 0)
+      enforce (active <= 10)
+      with (act : bool)
+var activated : int;
+let
+  waiting = (0 -> pre waiting) + nb_req - activated;
+  activated = 0 -> if (pre waiting > 0) & act then 1 else 0;
+  active = (0 -> pre active) + activated - ended;
+tel  
+
+node period<<n:int>>() = (s:bool)
+var c:int;
+let
+  c = 1 fby (if s then 1 else c + 1);
+  s = c = n;
+tel
+
+fun min(x,y:int) = (z:int)
+let
+    z = if x < y then x else y;
+tel
+
+node main() = (ok:bool;active,ended:int)
+contract assume (active >= 0) & (ended <= (0 fby active)) & (ended >= 0)
+var x,y,nb_req,waiting:int;
+let
+  y = f(x);
+  x = 20;
+  nb_req = 0 -> if (pre waiting < 100) & period<<17>>() then 23 else 0;
+  ended = 0;
+  (waiting,active) = tasks(nb_req,ended);
+  ok = (y <= x) & (active <= 9)
+tel
