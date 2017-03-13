@@ -163,6 +163,9 @@ let nnop t : nnop -> fun_name =
 let buop: buop -> fun_name = function
   | `Neg -> Initial.pnot
 
+let bbop: bbop -> fun_name = function
+  | `Imp -> Initial.pimp
+
 let bnop: bnop -> fun_name = function
   | `Conj -> Initial.pand
   | `Disj -> Initial.por
@@ -212,6 +215,7 @@ let translate_expr gd e =
     | `Ref v -> mkb (Evar (ts gd v))
     | `Bool b -> mkb (Econst (Initial.mk_static_bool b))
     | `Buop (op, e) -> mkb (mk_uapp (Efun (buop op)) (tb e))
+    | `Bbop (op, e, f) -> mkb (mk_bapp (Efun (bbop op)) (tb e) (tb f))
     | `Bnop (op, e, f, l) -> mkb_bapp ?flag (Efun (bnop op)) tb e f l
     | `Bcmp (re, e, f) -> mkb (mk_bapp (Efun (eqrel re)) (tb e) (tb f))
     | `Ecmp (re, e, f) -> mkb (mk_bapp (Efun (eqrel re)) (te e) (te f))

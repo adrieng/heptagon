@@ -41,6 +41,7 @@ let pfalse = { qual = Pervasives; name = "false" }
 let por = { qual = Pervasives; name = "or" }
 let pand = { qual = Pervasives; name = "&" }
 let pnot = { qual = Pervasives; name = "not" }
+let pimp = { qual = Pervasives; name = "=>" }
 let pint = { qual = Pervasives; name = "int" }
 let tint = Types.Tid pint
 let pfloat = { qual = Pervasives; name = "float" }
