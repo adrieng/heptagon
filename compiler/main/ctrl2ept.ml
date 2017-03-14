@@ -161,7 +161,7 @@ let parse_nodename nn = try Names.qualname_of_string nn with
 
 let output_prog prog modul =
   Modules.select modul;
-  let filename = String.uncapitalize (Names.modul_to_string modul) ^ ".ept" in
+  let filename = String.uncapitalize_ascii (Names.modul_to_string modul) ^ ".ept" in
   let oc = open_out filename in
   info "Outputting into `%s'…" filename;
   Hept_printer.print oc prog;

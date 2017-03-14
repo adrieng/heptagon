@@ -2,7 +2,7 @@
 include config
 
 #version = $(shell date +"%d%m%y")
-version = 1.03.02
+version = 1.03.03
 osname=$(shell uname -s)
 hardware=$(shell uname -m)
 heptdir = heptagon-$(version)

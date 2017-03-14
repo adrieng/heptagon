@@ -67,7 +67,7 @@ let controller_node ?num { qual; name } = match num with
 let save_controller_modul_for modul =
   let om = Modules.current () in
   let cm = controller_modul modul in
-  let epci = String.uncapitalize (Names.modul_to_string cm) ^ ".epci" in
+  let epci = String.uncapitalize_ascii (Names.modul_to_string cm) ^ ".epci" in
   Modules.select cm;
   (* XXX check for empty modules? *)
   let oc = open_out_bin epci in

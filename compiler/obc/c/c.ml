@@ -337,7 +337,7 @@ let pp_cfile_desc fmt filen cfile =
   let filen_wo_ext = String.sub filen 0 (String.length filen - 2) in
   match cfile with
     | Cheader (deps, cdecls) ->
-        let headern_macro = String.uppercase filen_wo_ext in
+        let headern_macro = String.uppercase_ascii filen_wo_ext in
         Compiler_utils.print_header_info fmt "/*" "*/";
         fprintf fmt "#ifndef %s_H@\n" headern_macro;
         fprintf fmt "#define %s_H@\n@\n" headern_macro;

@@ -58,7 +58,7 @@ let mk_target ?(interface=IMinils ignore) ?(load_conf = no_conf) name pt =
 
 (** Writes a .epo file for program [p]. *)
 let write_object_file p =
-  let filename = (String.uncapitalize (Names.modul_to_string p.Minils.p_modname)) ^".epo" in
+  let filename = (String.uncapitalize_ascii (Names.modul_to_string p.Minils.p_modname)) ^".epo" in
   let epoc = open_out_bin filename in
     output_value epoc p;
     close_out epoc;

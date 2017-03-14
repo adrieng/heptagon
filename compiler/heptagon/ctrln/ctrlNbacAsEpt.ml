@@ -285,7 +285,7 @@ let translate_expr gd e =
 let decl_typs modul_name typdefs =
   let qualify name = { qual = modul modul_name; name } in
   fold_typdefs begin fun tname tdef (types, typ_symbs) ->
-    let name = qualify (Symb.to_string tname |> String.uncapitalize) in
+    let name = qualify (Symb.to_string tname |> String.uncapitalize_ascii) in
     match tdef with
       | EnumDef labels, _ ->
           let constrs = List.map (fun (l, _) ->
@@ -315,7 +315,7 @@ let decl_typs_from_module_itf modul_name =
       let t_desc, rem, (types, typ_symbs) = match tdef with
         | Tenum cl ->
             (* Compiler_utils.info "declaring enum type %s" (shortname t_name); *)
-            let name = Symb.of_string (String.capitalize (shortname t_name)) in
+            let name = Symb.of_string (String.capitalize_ascii (shortname t_name)) in
             (Type_enum cl, rem, (types, SMap.add name t_name typ_symbs))
         | Talias (Tid tn) when tn.qual = t_name.qual ->    (* declare deps 1st *)
             (* Compiler_utils.info "declaring alias type %s" (shortname t_name); *)

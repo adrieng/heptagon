@@ -260,7 +260,7 @@ let load_object_file modul =
       | Names.LocalModule -> Misc.internal_error "modules"
       | Names.QualModule _ -> Misc.unsupported "modules"
   in
-  let name = String.uncapitalize modname in
+  let name = String.uncapitalize_ascii modname in
     try
       let filename = Compiler_utils.findfile (name ^ ".epo") in
       let ic = open_in_bin filename in

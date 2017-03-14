@@ -342,7 +342,7 @@ let main () =
     if Filename.check_suffix epci_name ".epci" then
       begin
         let filename = Filename.chop_suffix epci_name ".epci" in
-        mod_name := String.capitalize(Filename.basename filename)
+        mod_name := String.capitalize_ascii(Filename.basename filename)
       end
     else
       raise (Arg.Bad("Invalid compiled interface: " ^ epci_name)) in

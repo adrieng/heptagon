@@ -97,7 +97,7 @@ let silent_pass d enabled f p =
   else p
 
 let filename_of_name n =
-  String.uncapitalize n
+  String.uncapitalize_ascii n
 
 let build_path suf =
   match !target_path with

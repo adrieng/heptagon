@@ -95,7 +95,8 @@ let translate_modul m = m (*match m with
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
 let translate_const_name { qual = m; name = n } =
-  { qual = QualModule { qual = translate_modul m; name = "CONSTANTES"}; name = String.uppercase n }
+  { qual = QualModule { qual = translate_modul m; name = "CONSTANTES"};
+    name = String.uppercase_ascii n }
 
 (** a [Module.fun] becomes a [module.FUNS.fun] *)
 let translate_fun_name { qual = m; name = n } =
@@ -104,11 +105,11 @@ let translate_fun_name { qual = m; name = n } =
 (** a [Module.name] becomes a [module.Name]
     used for type_names, class_names, fun_names *)
 let qualname_to_class_name q =
-  { qual = translate_modul q.qual; name = String.capitalize q.name }
+  { qual = translate_modul q.qual; name = String.capitalize_ascii q.name }
 
 (** a [Module.name] becomes a [module.Name] even on current_mod *)
 let qualname_to_package_classe q =
-  { qual = translate_modul q.qual; name = String.capitalize q.name }
+  { qual = translate_modul q.qual; name = String.capitalize_ascii q.name }
 
 (** Create a fresh class qual from a name *)
 let fresh_classe n = Modules.fresh_value "obc2java" n |> qualname_to_package_classe
@@ -117,7 +118,7 @@ let fresh_classe n = Modules.fresh_value "obc2java" n |> qualname_to_package_cla
     becomes a [module.Enum.CONSTR] of the [module.Enum] class *)
 let translate_constructor_name_2 q q_ty =
   let classe = qualname_to_class_name q_ty in
-  { qual = QualModule classe; name = String.uppercase q.name }
+  { qual = QualModule classe; name = String.uppercase_ascii q.name }
 
 let translate_constructor_name q =
   let x = Modules.find_constrs q in
@@ -126,7 +127,7 @@ let translate_constructor_name q =
     | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
     | _ -> assert false
 
-let translate_field_name f = f |> Names.shortname |> String.lowercase
+let translate_field_name f = f |> Names.shortname |> String.lowercase_ascii
 
 (** a [name] becomes a [package.Name] *)
 let name_to_classe_name n = n |> Modules.current_qual |> qualname_to_package_classe
@@ -402,7 +403,7 @@ and block param_env ?(locals=[]) ?(end_acts=[]) ob =
    @return [vds, param_env] *)
 let sig_params_to_vds p_l =
   let param_to_arg param_env p =
-    let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
+    let p_ident = Idents.gen_var "obc2java" (String.uppercase_ascii p.Signature.p_name) in
     let p_vd = Java.mk_var_dec p_ident false (ty param_env p.Signature.p_type) in
     let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
     p_vd, param_env

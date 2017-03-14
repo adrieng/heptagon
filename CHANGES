@@ -1,3 +1,10 @@
+Heptagon 1.03.03 (14/03/2017)
+-----------------------------
+
+ - Correction in Ctrl-n backend: suppression of erroneous "c_" prefixes
+ - Correction in Ctrl2ept: no systematic conversion from int to float
+ - Correction in Ctrl-n backend: handling of implication and "xor" operators
+
 Heptagon 1.03.02 (08/02/2017)
 -----------------------------
 

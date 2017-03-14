@@ -147,7 +147,8 @@ let rec print_type_to_file java_dir headers { t_name = tn; t_desc = td} =
         List.iter (fprintf ff "%s") headers;
         (* fprintf ff "@[<v>package %s;@\n@\n" headers; *)
         print_struct_type ff tn
-          (List.map (fun {f_name = n;f_type = t} -> (shortname n,t)) fields); (* TODO java deal with modules *)
+                          (List.map (fun {f_name = n;f_type = t} -> (shortname n,t)) fields);
+        (* TODO java deal with modules *)
         fprintf ff "@.";
         close_out out_ch
     | Type_alias t -> assert false (* TODO java *)
@@ -494,7 +495,7 @@ let print_class ff headers ts single opened_mod cl =
   (* import opened modules *)
   List.iter
     (fun m ->
-       fprintf ff "import %s.*;@\n" (String.uncapitalize m))
+       fprintf ff "import %s.*;@\n" (String.uncapitalize_ascii m))
     opened_mod;
 
   fprintf ff "@\n@[<v 2>public class %s {@ " clid;
@@ -526,7 +527,7 @@ let print_class_and_answer_to_file java_dir headers ts opened_mod cl =
         (*         fprintf ff "@[<v>package %s;@\n@\n" headers; *)
         List.iter
           (fun m ->
-             fprintf ff "import %s.*;@\n" (String.uncapitalize m))
+             fprintf ff "import %s.*;@\n" (String.uncapitalize_ascii m))
           opened_mod;
         print_ans_struct ff (clid ^ "Answer") cl.step.out;
         fprintf ff "@.";

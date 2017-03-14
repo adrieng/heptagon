@@ -35,7 +35,7 @@ open Compiler_options
 let compile_interface modname source_f =
 
   (* output file names *)
-  let output = String.uncapitalize modname in
+  let output = String.uncapitalize_ascii modname in
   let epci_f = output ^ ".epci" in
 
   (* input/output channels *)
@@ -64,7 +64,7 @@ let compile_interface modname source_f =
 let compile_program modname source_f =
 
   (* output file names *)
-  let output = String.uncapitalize modname in
+  let output = String.uncapitalize_ascii modname in
   let epci_f = output ^ ".epci" in
   let mls_f = output ^ ".mls" in
 
@@ -100,7 +100,10 @@ let compile_program modname source_f =
 
 
 let compile source_f =
-  let modname = source_f |> Filename.basename |> Filename.chop_extension |> String.capitalize in
+  let modname = source_f
+                |> Filename.basename
+                |> Filename.chop_extension
+                |> String.capitalize_ascii in
   let modul = Names.modul_of_string modname in
   Initial.initialize modul;
   source_f |> Filename.dirname |> add_include;

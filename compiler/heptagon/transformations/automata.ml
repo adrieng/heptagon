@@ -72,7 +72,7 @@ let state_type_dec_list = ref []
 
 (* create and add to the env the constructors corresponding to a name state *)
 let intro_state_constr type_name state state_env =
-  let n = String.capitalize (Names.shortname type_name) ^ "_" ^ state in
+  let n = String.capitalize_ascii (Names.shortname type_name) ^ "_" ^ state in
   let c = Modules.fresh_constr "automata" n in
   Modules.add_constrs c type_name; NamesEnv.add state c state_env
 

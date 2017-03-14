@@ -96,7 +96,8 @@ let translate_modul m = m (*match m with
 
 (** a [Module.const] becomes a [module.CONSTANTES.CONST] *)
 let translate_const_name { qual = m; name = n } =
-  { qual = QualModule { qual = translate_modul m; name = "CONSTANTES"}; name = String.uppercase n }
+  { qual = QualModule { qual = translate_modul m; name = "CONSTANTES"};
+    name = String.uppercase_ascii n }
 
 (** a [Module.fun] becomes a [module.FUNS.fun] *)
 let translate_fun_name { qual = m; name = n } =
@@ -105,11 +106,11 @@ let translate_fun_name { qual = m; name = n } =
 (** a [Module.name] becomes a [module.Name]
     used for type_names, class_names, fun_names *)
 let qualname_to_class_name q =
-  { qual = translate_modul q.qual; name = String.capitalize q.name }
+  { qual = translate_modul q.qual; name = String.capitalize_ascii q.name }
 
 (** a [Module.name] becomes a [module.Name] even on current_mod *)
 let qualname_to_package_classe q =
-  { qual = translate_modul q.qual; name = String.capitalize q.name }
+  { qual = translate_modul q.qual; name = String.capitalize_ascii q.name }
 
 (** Create a fresh class qual from a name *)
 let fresh_classe n = Modules.fresh_value "obc2java" n |> qualname_to_package_classe
@@ -118,7 +119,7 @@ let fresh_classe n = Modules.fresh_value "obc2java" n |> qualname_to_package_cla
     becomes a [module.Enum.CONSTR] of the [module.Enum] class *)
 let translate_constructor_name_2 q q_ty =
   let classe = qualname_to_class_name q_ty in
-  { qual = QualModule classe; name = String.uppercase q.name }
+  { qual = QualModule classe; name = String.uppercase_ascii q.name }
 
 let translate_constructor_name q =
   match Modules.unalias_type (Types.Tid (Modules.find_constrs q)) with
@@ -126,7 +127,7 @@ let translate_constructor_name q =
     | Types.Tid q_ty -> translate_constructor_name_2 q q_ty
     | _ -> assert false
 
-let translate_field_name f = f |> Names.shortname |> String.lowercase
+let translate_field_name f = f |> Names.shortname |> String.lowercase_ascii
 
 (** a [name] becomes a [package.Name] *)
 let name_to_classe_name n = n |> Modules.current_qual |> qualname_to_package_classe
@@ -194,9 +195,9 @@ let rec static_exp param_env se = match se.Types.se_desc with
         | _ -> Misc.internal_error "Obc2java14"
       in
       let f_e_l =
-	List.sort
-	  (fun (f1,_) (f2,_) -> compare f1.name f2.name)
-	  f_e_l in
+        List.sort
+          (fun (f1,_) (f2,_) -> compare f1.name f2.name)
+          f_e_l in
       let e_l = List.map (fun (_f,e) -> e) f_e_l in
       Enew (Tclass ty_name, List.map (static_exp param_env) e_l)
   | Types.Sop (f, se_l) -> Efun (f, List.map (static_exp param_env) se_l)
@@ -271,9 +272,9 @@ and exp param_env e = match e.e_desc with
   | Obc.Estruct (ty_name,f_e_l) ->
       let ty_name = qualname_to_package_classe ty_name in
       let f_e_l =
-	List.sort
-	  (fun (f1,_) (f2,_) -> compare f1.name f2.name)
-	  f_e_l in
+        List.sort
+          (fun (f1,_) (f2,_) -> compare f1.name f2.name)
+          f_e_l in
       let e_l = List.map (fun (_f,e) -> e) f_e_l in
       Enew (Tclass ty_name, exp_list param_env e_l)
   | Obc.Earray e_l -> Enew_array (ty param_env e.e_ty, exp_list param_env e_l)
@@ -372,13 +373,13 @@ let rec act_list param_env act_l acts =
               (Aifelse (exp param_env e, block param_env _then, block param_env _else)) :: acts)
     | Obc.Acase (e, c_b_l) ->
         let _c_b (c,b) =
-	  let type_name =
-	    match e.e_ty with
-	      Types.Tid n -> qualname_to_package_classe n
-	    | _ -> failwith("act_list: translating case") in
-	  let c = translate_constructor_name_2 c type_name in
-	  Sexp(Sconstructor c),
-	  block param_env b in
+          let type_name =
+            match e.e_ty with
+              Types.Tid n -> qualname_to_package_classe n
+            | _ -> failwith("act_list: translating case") in
+          let c = translate_constructor_name_2 c type_name in
+          Sexp(Sconstructor c),
+          block param_env b in
         let acase = Aswitch (exp param_env e, List.map _c_b c_b_l) in
         acase::acts
     | Obc.Afor (v, se, se', b) ->
@@ -405,7 +406,7 @@ and block param_env ?(locals=[]) ?(end_acts=[]) ob =
    @return [vds, param_env] *)
 let sig_params_to_vds p_l =
   let param_to_arg param_env p =
-    let p_ident = Idents.gen_var "obc2java" (String.uppercase p.Signature.p_name) in
+    let p_ident = Idents.gen_var "obc2java" (String.uppercase_ascii p.Signature.p_name) in
     let p_vd = Java.mk_var_dec p_ident false (ty param_env p.Signature.p_type) in
     let param_env = NamesEnv.add p.Signature.p_name p_ident param_env in
     p_vd, param_env
@@ -471,7 +472,8 @@ let class_def_list classes cd_l =
                 let size_l = List.rev (List.map (static_exp param_env) size_l) in
                 let t = Idents.Env.find od.o_ident obj_env in
                 let assgn_elem i_l =
-                  [ Java.Aassgn (Parray_elem (Pthis od.o_ident, List.map mk_var i_l), Enew (t, params)) ]
+                  [ Java.Aassgn (Parray_elem (Pthis od.o_ident, List.map mk_var i_l),
+                                 Enew (t, params)) ]
                 in
                 (Java.Aassgn (Pthis od.o_ident, Enew_array (Tarray (t,size_l), [])))
                  :: (fresh_nfor size_l assgn_elem)
@@ -565,23 +567,23 @@ let type_dec_list classes td_l =
             see [Idents.enter_node classe_name] *)
             Java.mk_field jty field
           in
-	  let f_l =
-	    List.sort
-	      (fun f1 f2 ->
-		 compare (f1.Signature.f_name.name) (f2.Signature.f_name.name))
-	      f_l in
-	  let fields = List.map mk_field_jfield f_l in
-	  let cons_params = List.map
+          let f_l =
+            List.sort
+              (fun f1 f2 ->
+                 compare (f1.Signature.f_name.name) (f2.Signature.f_name.name))
+              f_l in
+          let fields = List.map mk_field_jfield f_l in
+          let cons_params = List.map
             (fun f -> Java.mk_var_dec f.f_ident false f.Java.f_type) fields in
-	  let cons_body =
-	    List.map
-	      (fun f -> Java.Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
-	      fields in
-	  let cons =
-	    mk_methode
-	      ~args:cons_params
-	      (Java.mk_block cons_body)
-	      classe_name.name in
+          let cons_body =
+            List.map
+              (fun f -> Java.Aassgn ((Pthis f.f_ident),(Evar f.f_ident)))
+              fields in
+          let cons =
+            mk_methode
+              ~args:cons_params
+              (Java.mk_block cons_body)
+              classe_name.name in
           (mk_classe ~fields:fields ~constrs:[cons] classe_name) :: classes
   in
   List.fold_left _td classes td_l

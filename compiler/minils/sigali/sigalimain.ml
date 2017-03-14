@@ -103,11 +103,11 @@ let rec translate_ext prefix ({ Minils.w_desc = desc; Minils.w_ty = ty }) =
       (* get variable iff it is Boolean or local *)
       begin match (actual_ty ty) with
       | Tbool ->
-	  Sigali.Svar(prefix ^ (name n))
+          Sigali.Svar(prefix ^ (name n))
       | Tint when (IdentSet.mem n !current_locals) ->
-	  Sigali.Svar(prefix ^ (name n))
+          Sigali.Svar(prefix ^ (name n))
       | _ ->
-	  raise Untranslatable
+          raise Untranslatable
       end
   (* TODO remove if this works without *)
   (* | Minils.Wwhen(e, c, var) when ((actual_ty e.Minils.w_ty) = Tbool) -> *)
@@ -154,7 +154,7 @@ let rec translate prefix ({ Minils.e_desc = desc } as e) =
               | "<"  -> a_inf,-1
               | ">=" -> a_sup,0
               | ">"  -> a_sup,1
-	      | _    -> a_iminv,0  (* p(x)=k <> p = inverse image of k *)
+              | _    -> a_iminv,0  (* p(x)=k <> p = inverse image of k *)
               end in
             let e1 = translate_ext prefix e1 in
             let sig_e =
@@ -168,8 +168,8 @@ let rec translate prefix ({ Minils.e_desc = desc } as e) =
             (* a_inf, a_sup and a_iminv : +1 to translate ideals to boolean
                polynomials *)
             Splus(sig_e,Sconst(Ctrue))
-	| "<>", [e1;e2] ->
-	    (* e1 <> e2 --> not(a_iminv((e1+(e2*(-1))),0)) *)
+        | "<>", [e1;e2] ->
+            (* e1 <> e2 --> not(a_iminv((e1+(e2*(-1))),0)) *)
             let e1 = translate_ext prefix e1 in
             let sig_e =
               begin match e2.Minils.w_desc with
@@ -280,7 +280,7 @@ let translate_eq f
       | _ ->
           untranslatable_warn e;
           (* Mark n as input: unusable as local variable *)
-	  warn ~cond:(!Compiler_options.warn_abstractions)
+          warn ~cond:(!Compiler_options.warn_abstractions)
             "Adding non-bool variable %s in current_inputs@\n" (name n);
           current_inputs := IdentSet.add n !current_inputs;
           acc_states,acc_init,acc_inputs,acc_eqs
@@ -320,11 +320,11 @@ let translate_eq f
         with Untranslatable ->
           untranslatable_warn e;
           current_inputs := IdentSet.add n !current_inputs;
-	  let acc_inputs =
-	    match actual_ty e.Minils.e_ty with
-	      | Tbool -> acc_inputs @ [(n,(prefixed (name n)))]
-	      | _ -> acc_inputs
-	  in
+          let acc_inputs =
+            match actual_ty e.Minils.e_ty with
+              | Tbool -> acc_inputs @ [(n,(prefixed (name n)))]
+              | _ -> acc_inputs
+          in
           acc_states,acc_init,acc_inputs,acc_eqs
       end
   | _ -> assert false
@@ -360,15 +360,15 @@ let translate_contract f contract =
 
       (* separate reachability and attractivity and build one security objective [e_g] *)
       let e_g,sig_objs =
-	List.fold_left
-	  (fun (e_g,sig_objs) o ->
-	     let e_obj = translate_ext prefix o.Minils.o_exp in
-	     match o.Minils.o_kind with
-	     | Minils.Obj_enforce -> (e_g &~ e_obj), sig_objs
-	     | Minils.Obj_reachable -> e_g, (Reachability e_obj) :: sig_objs
-	     | Minils.Obj_attractive -> e_g, (Attractivity e_obj) :: sig_objs)
-	  (e_g_loc,[])
-	  objs in
+        List.fold_left
+          (fun (e_g,sig_objs) o ->
+             let e_obj = translate_ext prefix o.Minils.o_exp in
+             match o.Minils.o_kind with
+             | Minils.Obj_enforce -> (e_g &~ e_obj), sig_objs
+             | Minils.Obj_reachable -> e_g, (Reachability e_obj) :: sig_objs
+             | Minils.Obj_attractive -> e_g, (Attractivity e_obj) :: sig_objs)
+          (e_g_loc,[])
+          objs in
       let sig_objs = List.rev sig_objs in
 
       let body =
@@ -427,19 +427,19 @@ let translate_node
       ([], sig_states, g_c)
     else
       begin
-	(* Sink state when the guarantee part of the contract becomes false *)
-	(* f_error_state state variable initialized to true; become false
-	   the instant after the guarantee part is false *)
-	let error_state_name = f ^ "_error_state" in
-	let sig_states_full = sig_states @ [error_state_name] in
-	let body_sink =
-	  [(extend
+        (* Sink state when the guarantee part of the contract becomes false *)
+        (* f_error_state state variable initialized to true; become false
+           the instant after the guarantee part is false *)
+        let error_state_name = f ^ "_error_state" in
+        let sig_states_full = sig_states @ [error_state_name] in
+        let body_sink =
+          [(extend
               initialisations
               (Slist[Sequal(Sigali.Svar(error_state_name),Sconst(Ctrue))]));
-	   (extend
+           (extend
               evolutions
               (Slist[g_c]))] in
-	(body_sink, sig_states_full, Sigali.Svar(error_state_name))
+        (body_sink, sig_states_full, Sigali.Svar(error_state_name))
       end in
   let objs = Security(obj_exp) :: objs in
   let p = { proc_dep = [];
@@ -465,62 +465,62 @@ let translate_node
   let ctrlr_call =
     begin
       match controllables with
-	[] -> [] (* no controllable => no controller call *)
+        [] -> [] (* no controllable => no controller call *)
       | _ :: _ ->
-	  let ctrlr_pat = Minils.Etuplepat(List.map (fun { Minils.v_ident = v } ->
-						       Minils.Evarpat(v))
-					     mls_ctrl) in
-	  let ctrlr_name = f ^ "_controller" in
-	  let ctrlr_fun_name = { qual = Module (String.capitalize ctrlr_name);
-				 name = ctrlr_name } in
-	  let ctrlr_exp =
-	    Minils.mk_exp
-	      Cbase
-	      (Tprod (List.map (fun _ -> Initial.tbool) mls_ctrl))
-	      ~linearity:Linearity.Ltop
-	      (Minils.Eapp(Minils.mk_app (Minils.Efun ctrlr_fun_name),
-			   (List.map
-			      (fun v ->
-				 Minils.mk_extvalue
-				   ~ty:Initial.tbool
-				   ~linearity:Linearity.Ltop
-				   ~clock:Cbase
-				   (Minils.Wvar v))
-			      (mls_inputs@mls_states))
-			   @ (List.map
-				(fun _ ->
-				   Minils.mk_extvalue
-				     ~ty:Initial.tbool
-				     ~linearity:Linearity.Ltop
-				     ~clock:Cbase
-				     (Minils.Wconst(Initial.mk_static_bool true)))
-				mls_ctrl),
-			   None))
-	  in
-	  let ctrlr_call =
-	    Minils.mk_equation ~base_ck:Cbase false ctrlr_pat ctrlr_exp in
+          let ctrlr_pat = Minils.Etuplepat(List.map (fun { Minils.v_ident = v } ->
+                                                       Minils.Evarpat(v))
+                                             mls_ctrl) in
+          let ctrlr_name = f ^ "_controller" in
+          let ctrlr_fun_name = { qual = Module (String.capitalize_ascii ctrlr_name);
+                                 name = ctrlr_name } in
+          let ctrlr_exp =
+            Minils.mk_exp
+              Cbase
+              (Tprod (List.map (fun _ -> Initial.tbool) mls_ctrl))
+              ~linearity:Linearity.Ltop
+              (Minils.Eapp(Minils.mk_app (Minils.Efun ctrlr_fun_name),
+                           (List.map
+                              (fun v ->
+                                 Minils.mk_extvalue
+                                   ~ty:Initial.tbool
+                                   ~linearity:Linearity.Ltop
+                                   ~clock:Cbase
+                                   (Minils.Wvar v))
+                              (mls_inputs@mls_states))
+                           @ (List.map
+                                (fun _ ->
+                                   Minils.mk_extvalue
+                                     ~ty:Initial.tbool
+                                     ~linearity:Linearity.Ltop
+                                     ~clock:Cbase
+                                     (Minils.Wconst(Initial.mk_static_bool true)))
+                                mls_ctrl),
+                           None))
+          in
+          let ctrlr_call =
+            Minils.mk_equation ~base_ck:Cbase false ctrlr_pat ctrlr_exp in
 
-	  let ctrlr_inputs =
-	    (List.map
-	       (fun v ->
-		  Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
-	       (sig_inputs@sig_states))
-	    @ (List.map
-		 (fun v ->
-		    Signature.mk_arg
-		      (Some ("p_" ^ v)) Initial.tbool Linearity.Ltop Signature.Cbase)
-		 sig_ctrl) in
-	  let ctrlr_outputs =
-	    List.map
-	      (fun v ->
-		 Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
-	      sig_ctrl in
-	  let ctrlr_signature =
-	    Signature.mk_node Location.no_location ~extern:false
-	      ctrlr_inputs ctrlr_outputs false false [] in
-	  (* Add controller into modules *)
-	  Modules.add_value ctrlr_fun_name ctrlr_signature;
-	  [ctrlr_call]
+          let ctrlr_inputs =
+            (List.map
+               (fun v ->
+                  Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
+               (sig_inputs@sig_states))
+            @ (List.map
+                 (fun v ->
+                    Signature.mk_arg
+                      (Some ("p_" ^ v)) Initial.tbool Linearity.Ltop Signature.Cbase)
+                 sig_ctrl) in
+          let ctrlr_outputs =
+            List.map
+              (fun v ->
+                 Signature.mk_arg (Some v) Initial.tbool Linearity.Ltop Signature.Cbase)
+              sig_ctrl in
+          let ctrlr_signature =
+            Signature.mk_node Location.no_location ~extern:false
+              ctrlr_inputs ctrlr_outputs false false [] in
+          (* Add controller into modules *)
+          Modules.add_value ctrlr_fun_name ctrlr_signature;
+          [ctrlr_call]
     end in
 
   let node =

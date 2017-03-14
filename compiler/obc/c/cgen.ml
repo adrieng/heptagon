@@ -848,7 +848,7 @@ let cdefs_and_cdecls_of_program_decl id = match id with
 
 let header_of_module m = match m with
   | Module "Iostream" -> "stdio"
-  | _ -> String.uncapitalize (modul_to_string m)
+  | _ -> String.uncapitalize_ascii (modul_to_string m)
 
 let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
