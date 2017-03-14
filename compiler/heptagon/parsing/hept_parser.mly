@@ -263,7 +263,7 @@ node_params:
 
 contract:
   | /* empty */ {None}
-  | CONTRACT b=opt_block a=opt_assume ol=objectives w=opt_with
+  | CONTRACT b=opt_block a=opt_assume ol=nonempty_list(objective) w=opt_with
       { Some{ c_block = b;
               c_assume = a;
               c_objectives = ol;
@@ -280,11 +280,6 @@ opt_block:
 opt_assume:
   | /* empty */ { mk_constructor_exp ptrue (Loc($startpos,$endpos)) }
   | ASSUME exp { $2 }
-;
-
-objectives:
-  | /* empty */ { [] }
-  | o=objective ol=objectives { o :: ol }
 ;
 
 objective:
