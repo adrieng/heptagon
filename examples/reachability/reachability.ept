@@ -1,0 +1,25 @@
+node reach_verif(day_event,night_event,noon_event:bool) = (day_state,evening_state:bool)
+
+  contract
+  reachable evening_state
+
+let
+    automaton
+    state Night do day_state = false; evening_state = false
+    until day_event then Day
+    state Day do
+      day_state = true;
+      automaton
+      state Morning do
+        evening_state = false;
+      until noon_event then Afternoon
+      state Afternoon do
+        evening_state = false;
+      until night_event then Evening
+      state Evening do
+        evening_state = true;
+      until day_event then Morning
+      end
+    until night_event then Night
+    end
+tel
