@@ -1,0 +1,24 @@
+(* SDC sS:d={P:D} *)
+
+node f(x:int) = (y:int)
+  contract
+  assume x >= 10
+  enforce y <= x
+  with (c:bool)
+let
+  y = 0 -> if c then pre y + 1 else 0;
+tel
+
+
+node tasks(nb_req, ended : int) = (waiting, active : int)
+      contract
+      assume (nb_req >= 0) & (ended <= (0 fby active)) & (ended >= 0)
+      enforce (active <= 10)
+      with (act : bool)
+var activated : int;
+let
+  waiting = (0 -> pre waiting) + nb_req - activated;
+  activated = 0 -> if (pre waiting > 0) & act then 1 else 0;
+  active = (0 -> pre active) + activated - ended;
+tel  
+
