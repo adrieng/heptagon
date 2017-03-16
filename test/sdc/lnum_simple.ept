@@ -35,7 +35,7 @@ let
 tel
 
 node main() = (ok:bool;active,ended:int)
-contract assume (active >= 0) & (ended <= (0 fby active)) & (ended >= 0)
+contract assume (active >= 0) & (ended <= (0 fby active)) & (ended >= 0) enforce true
 var x,y,nb_req,waiting:int;
 let
   y = f(x);

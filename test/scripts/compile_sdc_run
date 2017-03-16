@@ -5,7 +5,7 @@ source scripts/config
 progpath=$1
 shift
 bzreaxoption="$*"
-hept_comp_opts="--heptc ../${COMPILER_DIR}/${COMPILER} --ctrl2ept ${CTRL2EPT}"
+hept_comp_opts="--heptc ../${COMPILER_DIR}/${COMPILER} --heptc-opts -stdlib --heptc-opts ../../lib --ctrl2ept ${CTRL2EPT}"
 
 # run the program: no by default
 run=0
