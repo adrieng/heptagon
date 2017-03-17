@@ -287,12 +287,14 @@ and apply h app e_list =
         let ty1 = typing h e1 in
         let _ = typing h e2 in
         itype ty1
+    | Enode _ ->
+       begin
+         (* for nodes, force all inputs to be initialized *)
+         List.iter (fun e -> initialized_exp h e) e_list;
+         izero
+       end
     | _ ->
-      if app.a_unsafe
-      then ( (* when unsafe force all inputs to be initialized *)
-        List.iter (fun e -> initialized_exp h e) e_list; izero )
-      else (
-        List.fold_left (fun acc e -> max acc (itype (typing h e))) izero e_list)
+       List.fold_left (fun acc e -> imax acc (itype (typing h e))) izero e_list
 
 
 and expect h e expected_ty =
