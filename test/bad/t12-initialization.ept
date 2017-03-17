@@ -1,0 +1,6 @@
+node sum(x:int) returns (y:int) let y = x + (0 fby y); tel
+node main(x : int) returns (y : int)
+let
+y = 0 -> sum(pre x);
+tel
+    
