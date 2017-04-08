@@ -32,6 +32,8 @@
 #ifndef DECADES_PERVASIVES_H
 #define DECADES_PERVASIVES_H
 
+typedef float real;
+
 /* between(i, n) returns idx between 0 and n-1. */
 static inline int between(int idx, int n)
 {
