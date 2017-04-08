@@ -203,7 +203,7 @@ opt_semicolon: | /* empty */ | SEMICOL {}
 node_dec:
   | u=unsafe n=node_or_fun f=ident pc=node_params LPAREN i=in_params RPAREN
     returns LPAREN o=out_params RPAREN opt_semicolon
-    c=contract b=block(LET) TEL
+    c=contract b=block(LET) TEL opt_semicolon
       {{ n_name = f;
          n_stateful = n;
          n_unsafe = u;
