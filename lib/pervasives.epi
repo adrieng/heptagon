@@ -32,6 +32,7 @@
 type bool = true | false
 type int
 type float
+type real = float
 type string
 external val fun (&)(bool;bool) returns (bool)
 external val fun ( * )(int;int) returns (int)
