@@ -1,0 +1,8 @@
+type record = { a : int; b : int }
+const a : record = { a = 0; b = 1 }
+const b : record^2 = [a, a]
+
+node main() = (o:int)
+let
+  o = (b[0]).a
+tel

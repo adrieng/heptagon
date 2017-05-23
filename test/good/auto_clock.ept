@@ -1,0 +1,10 @@
+node when2(x :int; c :bool) returns (y :int)
+let
+    automaton
+    state FirstPeriod do
+      y = x when c;
+    until true then Cruise
+    state Cruise do
+      y = x when c;
+    end
+tel

@@ -1,0 +1,5 @@
+node main() = (o,p:int)
+let
+  o = ~-1 -> pre o + 1;
+  p = -1 fby p + 1
+tel
