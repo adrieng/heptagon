@@ -62,20 +62,21 @@ let edesc _ env ed = match ed with
 
 let block funs env b =
   let eq_list, env, vd_list = extend_env env b.b_equs b.b_local b.b_local in
+  let b = { b with b_local = vd_list;
+                   b_equs = eq_list } in
   let b, _ = Hept_mapfold.block funs env b in
-    { b with b_local = vd_list;
-             b_equs = eq_list },
-    env
+  b, env
 
 let node_dec funs _ n =
   Idents.enter_node n.n_name;
   let { n_block } = n in
   let _, env, _ = extend_env Env.empty [] [] n.n_input in
   let eq_list, env, vd_list = extend_env env n_block.b_equs n_block.b_local n.n_output in
+  let n = { n with n_block =
+                     { n_block with b_local = vd_list;
+                                    b_equs = eq_list } } in
   let n, _  = Hept_mapfold.node_dec funs env n in
-    { n with n_block =
-        { n_block with b_local = vd_list;
-                       b_equs = eq_list } }, env
+  n, env
 
 let program p =
   let funs = { Hept_mapfold.defaults with
