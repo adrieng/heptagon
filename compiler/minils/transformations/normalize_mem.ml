@@ -107,10 +107,10 @@ let contract _ acc c = c, acc
 let node funs acc nd =
   let env = build_env nd in
   let nd, (_, _, v, eqs) =
-    Mls_mapfold.node_dec funs (env, nd.n_local @ nd.n_output, [], []) nd
+    Mls_mapfold.node_dec funs (env, nd.n_output @ nd.n_local, nd.n_local, []) nd
   in
   (* return updated node *)
-  { nd with n_local = v @ nd.n_local; n_equs = List.rev eqs }, acc
+  { nd with n_local = v; n_equs = List.rev eqs }, acc
 
 let program p =
   let funs = { Mls_mapfold.defaults with

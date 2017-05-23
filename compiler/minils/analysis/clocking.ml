@@ -249,7 +249,7 @@ let typing_eq h ({ eq_lhs = pat; eq_rhs = e; eq_loc = loc } as eq) =
       error_message loc (Etypeclash (ct, pat_ct)));
   { eq with eq_base_ck = base_ck }
 
-let typing_eqs h eq_list = List.map (typing_eq h) eq_list
+let typing_eqs h eq_list = List.rev_map (typing_eq h) eq_list
 
 let append_env h vds =
   List.fold_left (fun h { v_ident = n; v_clock = ck } -> Env.add n ck h) h vds
@@ -290,7 +290,7 @@ let typing_node node =
   let set_clock vd = { vd with v_clock = ck_repr (Env.find vd.v_ident h) } in
   let node = { node with n_input = List.map set_clock node.n_input;
                          n_output = List.map set_clock node.n_output;
-                         n_local = List.map set_clock node.n_local;
+                         n_local = List.rev_map set_clock node.n_local;
                          n_equs = equs;
                          n_contract = contract; }
   in

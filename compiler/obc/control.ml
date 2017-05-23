@@ -113,31 +113,31 @@ let is_deadcode = function (* TODO Etrange puisque c'est apres la passe de deadc
     | _ -> false
 
 let rec joinlist j l =
-  let rec join_next l =
+  let rec join_next acc l =
     match l with
-      | [] -> []
-      | [s1] -> [s1]
+      | [] -> acc
+      | [s1] -> s1::acc
       | s1::s2::l ->
           match s1, s2 with
             | Acase(e1, h1),
               Acase(e2, h2) when Obc_compare.exp_compare e1 e2 = 0 ->
                 let fused_switch = Acase(e1, joinhandlers j h1 h2) in
                 if is_modified_handlers j e2 h1 then
-                  fused_switch::(join_first l)
+                  join_first (fused_switch::acc) l
                 else
-                  join_next (fused_switch::l)
-            | s1, s2 -> s1::(join_first (s2::l))
-  and join_first l =
+                  join_next acc (fused_switch::l)
+            | s1, s2 -> join_first (s1::acc) (s2::l)
+  and join_first acc l =
     match l with
-      | [] -> []
+      | [] -> acc
       | (Acase(e1, h1))::l ->
           if is_modified_handlers j e1 h1 then
-            (Acase(e1, h1))::(join_next l)
+            join_next ((Acase(e1, h1))::acc) l
           else
-            join_next ((Acase(e1, h1))::l)
-      | _ -> join_next l
+            join_next acc ((Acase(e1, h1))::l)
+      | _ -> join_next acc l
   in
-    join_first l
+  List.rev (join_first [] l)
 
 
 and join_block j b =

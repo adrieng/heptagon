@@ -52,7 +52,8 @@ let last (eq_list, env, v) { v_ident = n; v_type = t; v_linearity = lin; v_last 
         Env.add n lastn env,
         (mk_var_dec lastn t ~linearity:lin) :: v
 
-let extend_env env v = List.fold_left last ([], env, []) v
+let extend_env env eq_list acc_vd vd_list =
+  List.fold_left last (eq_list, env, acc_vd) vd_list
 
 let edesc _ env ed = match ed with
   | Elast x ->
@@ -60,19 +61,21 @@ let edesc _ env ed = match ed with
   | _ -> raise Errors.Fallback
 
 let block funs env b =
-  let eq_lastn_n_list, env, last_v = extend_env env b.b_local in
+  let eq_list, env, vd_list = extend_env env b.b_equs b.b_local b.b_local in
   let b, _ = Hept_mapfold.block funs env b in
-    { b with b_local = b.b_local @ last_v;
-        b_equs = eq_lastn_n_list @ b.b_equs }, env
+    { b with b_local = vd_list;
+             b_equs = eq_list },
+    env
 
 let node_dec funs _ n =
   Idents.enter_node n.n_name;
-  let _, env, _ = extend_env Env.empty n.n_input in
-  let eq_lasto_list, env, last_o = extend_env env n.n_output in
+  let { n_block } = n in
+  let _, env, _ = extend_env Env.empty [] [] n.n_input in
+  let eq_list, env, vd_list = extend_env env n_block.b_equs n_block.b_local n.n_output in
   let n, _  = Hept_mapfold.node_dec funs env n in
     { n with n_block =
-        { n.n_block with b_local = n.n_block.b_local @ last_o;
-            b_equs = eq_lasto_list @ n.n_block.b_equs } }, env
+        { n_block with b_local = vd_list;
+                       b_equs = eq_list } }, env
 
 let program p =
   let funs = { Hept_mapfold.defaults with

@@ -234,7 +234,7 @@ let translate_var_dec l =
   let one_var { Minils.v_ident = x; Minils.v_type = t; Minils.v_linearity = lin; v_loc = loc } =
     mk_var_dec ~loc:loc ~linearity:lin x t
   in
-  List.map one_var l
+  List.rev (List.rev_map one_var l)
 
 let rec translate_extvalue map w = match w.Minils.w_desc with
   | Minils.Wvar x -> ext_value_of_pattern (var_from_name map x)
@@ -452,12 +452,12 @@ let empty_call_context = None
     [s] the actions used in the step method.
     [v] var decs *)
 let rec translate_eq map call_context
-    ({ Minils.eq_lhs = pat; Minils.eq_base_ck = ck; Minils.eq_rhs = e } as eq)
-    (v, si, j, s) =
+    (v, si, j, s)
+    ({ Minils.eq_lhs = pat; Minils.eq_base_ck = ck; Minils.eq_rhs = e } as eq) =
   let { Minils.e_desc = desc; Minils.e_loc = loc } = e in
   match (pat, desc) with
     | _pat, Minils.Ewhen (e,_,_) ->
-        translate_eq map call_context {eq with Minils.eq_rhs = e} (v, si, j, s)
+        translate_eq map call_context (v, si, j, s) {eq with Minils.eq_rhs = e}
     (* TODO Efby and Eifthenelse should be dealt with in translate_act, no ? *)
     | Minils.Evarpat n, Minils.Efby (opt_c, e) ->
         let x = var_from_name map n in
@@ -529,7 +529,8 @@ let rec translate_eq map call_context
           v, si, j, action @ s
 
 and translate_eq_list map call_context act_list =
-  List.fold_right (translate_eq map call_context) act_list ([], [], [], [])
+  let rev_act = List.rev act_list in
+  List.fold_left (translate_eq map call_context) ([], [], [], []) rev_act
 
 and mk_node_call map call_context app loc (name_list : Obc.pattern list) args ty =
   match app.Minils.a_op with
@@ -734,17 +735,17 @@ let translate_node
   let (m_c, si', j', s_list', d_list') = translate_contract subst_map mem_var_tys contract in
   let i_list = translate_var_dec i_list in
   let o_list = translate_var_dec o_list in
-  let d_list = translate_var_dec (v @ d_list) in
+  let d_list = translate_var_dec (List.rev_append v d_list) in
   let m, d_list = List.partition
     (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) d_list in
   let m', o_list =
     List.partition
       (fun vd -> List.exists (fun (i,_) -> i = vd.v_ident) mem_var_tys) o_list in
-  let s = s_list @ s_list' in
+  let s = List.rev_append (List.rev s_list) s_list' in
   let j = j' @ j in
   let si = si @ si' in
   let stepm = { m_name = Mstep; m_inputs = i_list; m_outputs = o_list;
-                m_body = mk_block ~locals:(d_list' @ d_list) s }
+                m_body = mk_block ~locals:(List.rev_append d_list' d_list) s }
   in
   let resetm = { m_name = Mreset; m_inputs = []; m_outputs = []; m_body = mk_block si } in
   if stateful

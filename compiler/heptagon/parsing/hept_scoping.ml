@@ -403,7 +403,7 @@ and translate_eq_desc loc env = function
 and translate_block env b =
   let env = Rename.append env b.b_local in
   { Heptagon.b_local = translate_vd_list env b.b_local;
-    Heptagon.b_equs = List.map (translate_eq env) b.b_equs;
+    Heptagon.b_equs = List.rev_map (translate_eq env) b.b_equs;
     Heptagon.b_defnames = Env.empty;
     Heptagon.b_stateful = false;
     Heptagon.b_loc = b.b_loc; }, env
@@ -442,8 +442,8 @@ and translate_var_dec env vd =
       Heptagon.v_loc = vd.v_loc }
 
 (** [env] should contain the declared variables prior to this translation *)
-and translate_vd_list env =
-  List.map (translate_var_dec env)
+and translate_vd_list env v_list =
+  List.rev (List.rev_map (translate_var_dec env) v_list)
 
 and translate_last = function
   | Var -> Heptagon.Var

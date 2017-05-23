@@ -74,8 +74,8 @@ let complete_with_last defined_names local_defined_names eq_list =
 
 let block funs defnames b =
   let b, _ = Hept_mapfold.block funs Env.empty b in (*recursive call*)
-  let added_eq = complete_with_last defnames b.b_defnames [] in
-  { b with b_equs = b.b_equs @ added_eq; b_defnames = defnames }
+  let eqs = complete_with_last defnames b.b_defnames b.b_equs in
+  { b with b_equs = eqs; b_defnames = defnames }
   , defnames
 
 let eqdesc funs _ ed = match ed with

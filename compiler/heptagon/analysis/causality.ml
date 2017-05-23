@@ -42,11 +42,15 @@ let cand c1 c2 =
   match c1, c2 with
     | Cempty, _ -> c2 | _, Cempty -> c1
     | c1, c2 -> Cand(c1, c2)
-let rec candlist l =
+let candlist l =
+  let rec candlist_aux acc l =
+    match l with
+    | [] -> acc
+    | [c] -> cand acc c
+    | c1 :: l -> candlist_aux (cand c1 acc) l in
   match l with
-    | [] -> Cempty
-    | [c] -> c
-    | c1 :: l -> cand c1 (candlist l)
+  | [] -> Cempty
+  | c :: l -> candlist_aux c l
 
 let ctuplelist l = match l with
   | [c] -> c
@@ -185,7 +189,7 @@ let rec typing_pat = function
       candlist (List.map typing_pat pat_list)
 
 (** Typing equations *)
-let rec typing_eqs eq_list = candlist (List.map typing_eq eq_list)
+let rec typing_eqs eq_list = candlist (List.rev_map typing_eq eq_list)
 
 and typing_eq eq =
   match eq.eq_desc with
