@@ -103,11 +103,10 @@ open Hept_parsetree
 %left STAR INFIX3
 %left INFIX4
 %right NOT
-%right prec_uminus
 %right FBY
 %right PRE
 %left POWER
-%right PREFIX
+%nonassoc PREFIX
 
 
 
@@ -570,7 +569,7 @@ _exp:
       { mk_op_call $2 [$1; $3] }
   | PREFIX exp
       { mk_op_call $1 [$2] }
-  | SUBTRACTIVE exp %prec prec_uminus
+  | SUBTRACTIVE exp %prec PREFIX
       { mk_op_call ("~"^$1) [$2] }
   | IF exp THEN exp ELSE exp
       { mk_call Eifthenelse [$2; $4; $6] }
