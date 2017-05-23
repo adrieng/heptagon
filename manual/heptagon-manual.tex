@@ -227,17 +227,20 @@ simulated node's inputs, and prints its outputs on the standard output. Such
 executable, for the simulation of the node \texttt{f}, can be obtained by the
 \texttt{-s <node>} option:
 \begin{alltt}
-> heptc -target c -s f example.ept
+> heptc -target c -s f -hepts example.ept
 \end{alltt}
 
 We can then directly compile the generated C program (whose main function stand
 in the \texttt{\_main.c} file):
 \begin{alltt}
 > cd example_c
-> gcc -Wall -c example.c
-> gcc -Wall -c _main.c
+> gcc -Wall -c -I <path_to_lib>/c example.c
+> gcc -Wall -c -I <path_to_lib>/c _main.c
 > gcc -o f_sim _main.o example.o       # \text{executable creation}
 \end{alltt}
+Where \verb+<path_to_lib>+ is the path to the Heptagon library (e.g.,
+\texttt{/usr/local/lib/heptagon}), and can be obtained with the command
+\texttt{heptc -where}.
 
 This executable \texttt{f\_sim} can then be used with the graphical simulator
 \texttt{hepts}, which takes as argument:
