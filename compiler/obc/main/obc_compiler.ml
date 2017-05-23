@@ -29,9 +29,9 @@
 open Compiler_utils
 open Compiler_options
 
-let pp p = if !verbose then Obc_printer.print stdout p
+let compile_program out p =
 
-let compile_program p =
+  let pp p = if !verbose then Obc_printer.print out p in
 
   (* Memory allocation application *)
   let p = pass "Application of Memory Allocation"
@@ -45,8 +45,8 @@ let compile_program p =
 
   (*Dead code removal*)
   let p = pass "Dead code removal"
-	       (!do_mem_alloc || !do_linear_typing || !deadcode)
-	       Deadcode.program p pp in
+               (!do_mem_alloc || !do_linear_typing || !deadcode)
+               Deadcode.program p pp in
 
   (*Control optimization*)
   let p = pass "Control optimization" true Control.program p pp in

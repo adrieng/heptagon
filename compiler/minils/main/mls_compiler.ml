@@ -30,7 +30,7 @@
 open Compiler_utils
 open Compiler_options
 
-let pp p = if !verbose then Mls_printer.print stdout p
+let pp out p = if !verbose then Mls_printer.print out p
 
 ;; IFDEF ENABLE_CTRLN THEN
 
@@ -58,17 +58,20 @@ let gen_n_output_ctrln p =
   end nodes;
   p
 
-let maybe_ctrln_pass p =
+let maybe_ctrln_pass p pp =
   let ctrln = List.mem "ctrln" !target_languages in
   pass "Controllable Nbac generation" ctrln gen_n_output_ctrln p pp
 
 ;; ELSE
 
-let maybe_ctrln_pass p = p
+let maybe_ctrln_pass p pp = p
 
 ;; END
 
-let compile_program p =
+let compile_program p log_c =
+
+  let pp p = pp log_c p in
+
   (* Clocking *)
   let p =
     try pass "Clocking" true Clocking.program p pp
@@ -113,7 +116,7 @@ let compile_program p =
   if z3z && ctrln then
     warn "ignoring target `ctrln' (incompatible with target `z3z').";
 
-  let p = maybe_ctrln_pass p in
+  let p = maybe_ctrln_pass p pp in
   let p = pass "Sigali generation" z3z Sigalimain.program p pp in
 
   (* Re-scheduling after generation *)

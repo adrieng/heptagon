@@ -67,12 +67,19 @@ let compile_program modname source_f =
   let output = String.uncapitalize_ascii modname in
   let epci_f = output ^ ".epci" in
   let mls_f = output ^ ".mls" in
+  let log_f = output ^ ".log" in
 
   (* input/output channels *)
   let source_c, lexbuf = lexbuf_from_file source_f in
   let epci_c = open_out_bin epci_f in
   let mls_c = open_out mls_f in
-  let close_all_files () = close_in source_c; close_out epci_c; close_out mls_c in
+  let log_c = open_out log_f in
+  let close_all_files () =
+    close_in source_c;
+    close_out epci_c;
+    close_out mls_c;
+    close_out log_c
+  in
 
   try
   (* Activates passes according to the backend used *)
@@ -80,19 +87,20 @@ let compile_program modname source_f =
   (* Record timing information *)
     Compiler_timings.start_compiling modname;
   (* Process the [lexbuf] to an Heptagon AST *)
-    let p = Hept_parser_scoper.parse_program modname lexbuf in
+    let p = Hept_parser_scoper.parse_program modname lexbuf log_c in
   (* Process the Heptagon AST *)
-    let p = Hept_compiler.compile_program p in
+    let p = Hept_compiler.compile_program p log_c in
   (* Compile Heptagon to MiniLS *)
-    let p = do_pass "Translation into MiniLS" Hept2mls.program p Mls_compiler.pp in
+    let p = do_pass "Translation into MiniLS"
+                    Hept2mls.program p (Mls_compiler.pp log_c) in
   (* Output the .mls *)
     do_silent_pass "MiniLS serialization" (fun () -> Mls_printer.print mls_c p) ();
   (* Process the MiniLS AST *)
-    let p = Mls_compiler.compile_program p in
+    let p = Mls_compiler.compile_program p log_c in
   (* Output the .epci *)
     output_value epci_c (Modules.current_module ());
   (* Generate the sequential code *)
-    Mls2seq.program p;
+    Mls2seq.program p log_c;
     close_all_files ();
     Compiler_timings.report_statistics ()
   with x -> close_all_files (); raise x

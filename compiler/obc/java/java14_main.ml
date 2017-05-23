@@ -11,8 +11,6 @@ let mk_var ty name =
 
 
 let program p =
-  (*Scalarize*)
-  let p = Compiler_utils.pass "Scalarize" true Scalarize.program p Obc_compiler.pp in
   let p_java = Obc2java14.program p in
   let dir = Compiler_utils.build_path "java" in
   Compiler_utils.ensure_dir dir;
@@ -68,7 +66,7 @@ let program p =
           let jbool = Eclass(Names.qualname_of_string "Boolean") in
           let jsys = Eclass(Names.qualname_of_string "java.lang.System") in
           let jminus = pervasives_qn "-" in
-	  let jplus = pervasives_qn "+" in
+          let jplus = pervasives_qn "+" in
 
           (* parse arguments to give to the main *)
           let rec parse_args t_l i = match t_l with
@@ -91,16 +89,16 @@ let program p =
             (* no more arg to give to main, the last one if it exists is the iteration nb *)
             Aifelse(Efun(Names.pervasives_qn ">", [ Efield (exp_args, "length"); Sint t_size ]),
                     (* given max number of iterations *)
-		    mk_block [Aassgn(pat_step,
-				     Emethod_call(jint, "parseInt", [get_arg t_size]))],
+                    mk_block [Aassgn(pat_step,
+                                     Emethod_call(jint, "parseInt", [get_arg t_size]))],
                     (* default max number of iterations *)
-		    mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
+                    mk_block [Aassgn(pat_step, Evar id_step_dnb)]);
           in
           let ret = Emethod_call(e_main, "step", []) in
           let main_for_loop _ =
 (*             [Aexp (Emethod_call(out, "printf", *)
-(* 				[Sstring "%d => %s\\n"; Evar i; print_ret]))] *)
-	    [Aexp ret]
+(*                                 [Sstring "%d => %s\\n"; Evar i; print_ret]))] *)
+            [Aexp ret]
           in
           let vd_t1, e_t1 =
             let id = Idents.gen_var "java_main" "t" in
@@ -111,11 +109,11 @@ let program p =
             Anewvar(vd_t1, Emethod_call(jsys, "currentTimeMillis", []));
             Obc2java14.fresh_for exp_step main_for_loop;
             Aexp (Emethod_call(out, "print",
-			       [ Efun(jplus,
-				      [Sstring "time : %d\\n";
-				       Efun(jminus,
-					    [Emethod_call(jsys, "currentTimeMillis", []);
-					     e_t1])])]))
+                               [ Efun(jplus,
+                                      [Sstring "time : %d\\n";
+                                       Efun(jminus,
+                                            [Emethod_call(jsys, "currentTimeMillis", []);
+                                             e_t1])])]))
           ]
         in
         mk_block ~locals:[vd_step] acts

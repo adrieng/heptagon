@@ -102,7 +102,7 @@ let find_target s =
       Not_found -> language_error s; raise Errors.Error
 
 
-let generate_target p s =
+let generate_target p out s =
 (*  let print_unfolded p_list =
     comment "Unfolding";
     if !Compiler_options.verbose
@@ -116,7 +116,7 @@ let generate_target p s =
         do_silent_pass "Code generation from MiniLS" convert_fun p
     | Obc convert_fun ->
         let o = mls2obc p in
-        let o = Obc_compiler.compile_program o in
+        let o = Obc_compiler.compile_program out o in
         do_silent_pass "Code generation from Obc" convert_fun o
     | Minils_no_params convert_fun ->
         let p_list = callgraph p in
@@ -124,7 +124,7 @@ let generate_target p s =
     | Obc_no_params convert_fun ->
         let p_list = callgraph p in
         let o_list = mls2obc_list p_list in
-        let o_list = List.map Obc_compiler.compile_program o_list in
+        let o_list = List.map (Obc_compiler.compile_program out) o_list in
         do_silent_pass "Code generation from Obc (w/o params)"         List.iter convert_fun o_list
     | Disabled_target ->
         warn "ignoring unavailable target `%s'." name
@@ -144,12 +144,12 @@ let load_conf () =
   with Arg.Bad m -> raise (Arg.Bad ("After loading target configurations: "^m))
 
 (** Translation into dataflow and sequential languages, defaults to obc. *)
-let program p =
+let program p out =
   let targets = match !target_languages with
     | [] -> ["obc"] (* by default, generate obc file *)
     | l -> l in
   let targets = if !create_object_file then "epo"::targets else targets in
-  List.iter (generate_target p) targets
+  List.iter (generate_target p out) targets
 
 let interface i =
   let targets = match !target_languages with

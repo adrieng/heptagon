@@ -31,8 +31,6 @@ open Compiler_options
 open Compiler_utils
 open Location
 
-let pp p = if !verbose then Hept_printer.print stdout p
-
 let parse parsing_fun lexbuf =
   try
     parsing_fun Hept_lexer.token lexbuf
@@ -46,7 +44,10 @@ let parse parsing_fun lexbuf =
         syntax_error l
 
 (** Parse an implementation [lexbuf] *)
-let parse_program modname lexbuf =
+let parse_program modname lexbuf out_log =
+
+  let pp p = if !verbose then Hept_printer.print out_log p in
+
   (* Parsing of the file *)
   let p = do_silent_pass "Parsing" (parse Hept_parser.program) lexbuf in
   let p = { p with Hept_parsetree.p_modname = modname } in
