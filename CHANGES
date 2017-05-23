@@ -1,3 +1,13 @@
+Heptagon 1.03.04 (24/05/2017)
+-----------------------------
+
+ - Bug correction in init analysis (bug #14076)
+ - Bug correction in causality analysis: contradictory dependencies
+   in states of automata were accepted, non schedulable equations generated
+ - optimization on several passes
+ - added -simple-scheduler option, triggering very simple, time-efficient
+   scheduling
+
 Heptagon 1.03.03 (14/03/2017)
 -----------------------------
 
