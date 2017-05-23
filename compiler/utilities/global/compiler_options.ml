@@ -142,6 +142,7 @@ let do_mem_alloc_and_typing () =
   do_linear_typing := true
 
 let use_old_scheduler = ref false
+let use_simple_scheduler = ref false
 
 let strict_ssa = ref false
 (* if this option is on, generate code that first copies the whole
@@ -213,6 +214,7 @@ and doc_memalloc = "\t\tEnable memory allocation and linear annotations"
 and doc_memalloc_only = "\tEnable memory allocation"
 and doc_linear_only = "\t\tEnable linear annotations"
 and doc_interf_scheduler = "\tUse the old scheduler"
+and doc_simple_scheduler = "\tUse a very simple, time-efficient scheduler"
 and doc_optim = "\t\t\tOptimize with deadcode, tomato, itfusion and memalloc"
 and doc_interf_all = "\t\tPerform memory allocation on all types"
 and doc_unroll = "\t\tUnroll all loops"
