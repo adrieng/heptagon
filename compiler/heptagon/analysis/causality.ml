@@ -203,12 +203,12 @@ and typing_eq eq =
 
 and typing_switch handlers =
   let handler { w_block = b } = typing_block b in
-  corlist (List.map handler handlers)
+  candlist (List.map handler handlers)
 
 and typing_present handlers b =
   let handler { p_cond = e; p_block = b } =
     cseq (typing e) (typing_block b) in
-  corlist ((typing_block b) :: (List.map handler handlers))
+  candlist ((typing_block b) :: (List.map handler handlers))
 
 and typing_automaton state_handlers =
   (* typing the body of the automaton *)
@@ -222,7 +222,7 @@ and typing_automaton state_handlers =
     let t2 = candlist (List.map escape sunless) in
 
     cseq t2 (cseq tb t1) in
-  corlist (List.map handler state_handlers)
+  candlist (List.map handler state_handlers)
 
 and typing_block { b_local = _dec; b_equs = eq_list; b_loc = _loc } =
   (*let teq = typing_eqs eq_list in
@@ -247,8 +247,8 @@ let typing_contract loc contract =
                ((typing e_a) ::
                 (typing e_a_loc) ::
                 (typing e_g_loc) ::
-		(List.map (fun o -> typing o.o_exp) objs)
-	       )) in
+                  (List.map (fun o -> typing o.o_exp) objs)
+            )) in
         Causal.check loc t_contract;
         let t_contract = clear (build b.b_local) t_contract in
         t_contract
