@@ -244,6 +244,9 @@ let translate_expr gd e =
                                  %a" print_typ (`Bint (s, w)), flag))
     | `Nuop (op, e) -> mk_nuapp ?flag op e
     | `Nnop (op, e, f, l) -> mk_nnapp ?flag op e f l
+    | `Luop _
+    | `Lbop _
+    | `Lsop _ -> raise (Untranslatable ("Bitwise operation", flag))
     | #cond as c -> trcond ?flag tb tn c
     | #flag as e -> apply' tn e
   and mkb_ncmp ?flag re e f =
@@ -264,8 +267,8 @@ let translate_expr gd e =
     let flt = List.exists (fun { e_ty } -> e_ty = Initial.tfloat) el in
     let typ = if flt then Initial.tfloat else Initial.tint in
     let el = if flt
-             then List.rev_map flttyp_exp el
-             else List.rev el in
+      then List.rev_map flttyp_exp el
+      else List.rev el in
     let op = mk_bapp (Efun (nnop typ op)) in
     List.fold_left (fun acc e -> mkp typ (op acc e)) (List.hd el) (List.tl el)
   and tp ?flag : 'f AST.exp -> _ = function

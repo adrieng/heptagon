@@ -398,7 +398,7 @@ let prefix_vars ~pref vars : symb -> symb =
 let declare_contr (decls, contrs, vds)
     ({ v_ident = id; v_type = ty } as vd) rank =
   let v = mk_symb & name id in
-  SMap.add v (translate_typ ty, `Contr (one, rank, None), None) decls,
+  SMap.add v (translate_typ ty, `Contr (one, rank, `None), None) decls,
   SMap.add v (id, ty) contrs,
   vd :: vds
 
