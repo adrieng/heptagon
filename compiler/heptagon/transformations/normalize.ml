@@ -278,8 +278,6 @@ and merge context e x c_e_list =
         (tag, e), context
     in
     let mk_merge x c_list e_lists =
-      let ty = (List.hd (List.hd e_lists)).e_ty in
-      let lin = (List.hd (List.hd e_lists)).e_linearity in
       let rec build_c_e_list c_list e_lists =
         match c_list, e_lists with
         | [], [] -> [], []
@@ -293,7 +291,9 @@ and merge context e x c_e_list =
         | []::_ -> []
         | _ ::_ ->
             let c_e_list, e_lists = build_c_e_list c_list e_lists in
-            let e_merge = mk_exp ~loc:e.e_loc (Emerge(x, c_e_list)) ty ~linearity:lin in
+            let c_e1 = List.hd c_e_list in
+            let { e_loc = loc; e_ty; e_linearity = linearity } = snd c_e1 in
+            let e_merge = mk_exp ~loc (Emerge(x, c_e_list)) e_ty ~linearity in
             let e_merge_list = build_merge_list c_list e_lists in
             e_merge::e_merge_list in
       build_merge_list c_list e_lists
