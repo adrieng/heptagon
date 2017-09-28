@@ -33,3 +33,7 @@ compiler/doc.docdir
 compiler/_tags
 config
 config.status
+*.blg
+*.bbl
+auto
+autom4te.cache
