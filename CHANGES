@@ -1,3 +1,10 @@
+Heptagon 1.04.00 (29/09/2017)
+-----------------------------
+
+ - Lustre front-end (experimental) : syntax adaptations to parse Lustre programs
+ - Bug fix in normalization of merge
+ - Compatibility with reatk >= 0.11
+
 Heptagon 1.03.04 (24/05/2017)
 -----------------------------
 
