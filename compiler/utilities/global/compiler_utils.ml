@@ -107,7 +107,10 @@ let build_path suf =
 let clean_dir dir =
   if Sys.file_exists dir && Sys.is_directory dir
   then begin
-    let rm_file_in_dir fn = Sys.remove (Filename.concat dir fn) in
+    let rm_file_in_dir fn =
+      let f = Filename.concat dir fn in
+      if not (Sys.is_directory f) then Sys.remove f
+    in
     Array.iter rm_file_in_dir (Sys.readdir dir);
   end else Unix.mkdir dir 0o740;
   dir
