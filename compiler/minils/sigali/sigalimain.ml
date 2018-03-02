@@ -135,6 +135,8 @@ let rec translate prefix ({ Minils.e_desc = desc } as e) =
         | "not", [e] -> Snot(translate_ext prefix e)
         | "or", [e1;e2] -> Sor((translate_ext prefix e1),
                                (translate_ext prefix e2))
+        | "=>", [e1;e2] -> Sor(Snot (translate_ext prefix e1),
+                              (translate_ext prefix e2))
         | "&", [e1;e2] -> Sand((translate_ext prefix e1),
                                (translate_ext prefix e2))
         | "=", [e1;e2] when (actual_ty e1.Minils.w_ty) = Tbool ->
