@@ -71,7 +71,7 @@ AC_CHECK_OCAML_PKG([lablgtk2])
     AC_MSG_WARN([Could not find 'lablgtk2'. The simulator will not be built])
  fi
 
-dnl version should be >= 0.11
+dnl version should be >= 0.14
 AC_CHECK_OCAML_PKG([reatk.ctrlNbac])
  if test "${OCAML_PKG_reatk_ctrlNbac}" = "no"; then
    package_reatk_ctrlNbac="ocaml"; #dummy flag

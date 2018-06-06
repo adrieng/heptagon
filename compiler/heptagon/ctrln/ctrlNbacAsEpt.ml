@@ -244,6 +244,7 @@ let translate_expr gd e =
                                  %a" print_typ (`Bint (s, w)), flag))
     | `Nuop (op, e) -> mk_nuapp ?flag op e
     | `Nnop (op, e, f, l) -> mk_nnapp ?flag op e f l
+    | `Ncst _ -> raise (Untranslatable ("Cast operation", flag))
     | `Luop _
     | `Lbop _
     | `Lsop _ -> raise (Untranslatable ("Bitwise operation", flag))
