@@ -126,10 +126,14 @@ let compile_program p log_c =
 
   (* Re-scheduling after generation *)
   let p =
-    if not !Compiler_options.use_old_scheduler then
+    match !Compiler_options.use_old_scheduler,
+          !Compiler_options.use_simple_scheduler with
+    | false, false ->
       pass "Scheduling (with minimization of interferences)" ctrl Schedule_interf.program p pp
-    else
+    | true, false ->
       pass "Scheduling" ctrl Schedule.program p pp
+    | _, true ->
+       pass "Scheduling (simple)" ctrl Schedule_simple.program p pp
   in
 
   (* Memory allocation *)
