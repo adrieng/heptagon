@@ -240,8 +240,6 @@ let translate_expr gd e =
     | `Int i -> mkp Initial.tint (Econst (Initial.mk_static_int i))
     | `Real r -> mkp Initial.tfloat (Econst (Initial.mk_static_float r))
     | `Mpq r -> tn ?flag (`Real (Mpqf.to_float r))
-    | `Bint (s, w, _) -> raise (Untranslatable (asprintf "constant of type \
-                                 %a" print_typ (`Bint (s, w)), flag))
     | `Nuop (op, e) -> mk_nuapp ?flag op e
     | `Nnop (op, e, f, l) -> mk_nnapp ?flag op e f l
     | `Ncst _ -> raise (Untranslatable ("Cast operation", flag))
