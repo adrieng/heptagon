@@ -1,11 +1,12 @@
 #!/bin/bash
-#Small wrapper to deal with compilation of the compiler and the stdlib.
+#
+# Small wrapper to deal with compilation of the compiler and the stdlib.
 
 STATUS=0
 
 RUN_DIR="`pwd`"
 
-SCRIPT_DIR=`dirname $(python -c "import os, sys; print os.path.realpath(\"$0\")")`
+SCRIPT_DIR=`dirname $(realpath $0)`
 
 COMPILER_DIR="$SCRIPT_DIR/compiler"
 if [ -x $COMPILER_DIR/heptc.native ];
