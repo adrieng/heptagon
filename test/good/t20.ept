@@ -1,0 +1,9 @@
+fun test(x, y : bool) returns (o : bool)
+let
+  o = x xor y;
+tel
+
+node main() returns (ok : bool)
+let
+  ok = test(true, true) = test(true, false) = test(false, true);
+tel
