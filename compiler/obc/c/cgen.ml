@@ -122,15 +122,39 @@ let rec ctype_of_otype oty =
     | Tprod _ -> assert false
     | Tinvalid -> assert false
 
-let copname = function
-  | "="  -> "==" | "<>" -> "!=" | "&"  -> "&&" | "or" -> "||" | "+" -> "+"
-  | "-" -> "-" | "*" -> "*" | "/" -> "/" | "*." -> "*" | "/." -> "/"
-  | "+." -> "+" | "-." -> "-" | "<"  -> "<" | ">"  -> ">" | "<=" -> "<="
-  | ">=" -> ">=" | "<=." -> "<=" | "<." -> "<" | ">=." -> ">=" | ">." -> ">"
-  | "~-" -> "-" | "not" -> "!" | "%" -> "%"
-  | ">>>" -> ">>" | "<<<" -> "<<" | "&&&" -> "&" | "|||" -> "|"
-  | op   -> op
+let (has_native_c_op, native_c_op_of) =
+  let assl =
+    [
+      (["~-"; "~-."], "-");
+      (["~~"], "~");
+      (["not"], "!");
 
+      (["="], "==");
+      (["<>"], "!=");
+      (["&"], "&&");
+      (["or"], "||");
+      (["xor"], "^");
+
+      (["+"; "+."], "+");
+      (["-"; "-."], "-");
+      (["*"; "*."], "*");
+      (["/"; "/."], "/");
+      (["%"], "%");
+
+      (["<"; "<."], "<");
+      (["<="; "<="], "<=");
+      ([">"; ">."], ">");
+      ([">="; ">=."], ">=");
+
+      ([">>>"], ">>");
+      (["<<<"], "<<");
+      (["&&&"], "&");
+      (["|||"], "|");
+    ]
+  in
+  let ht = Hashtbl.create (List.length assl) in
+  List.iter (fun (xl, y) -> List.iter (fun x -> Hashtbl.add ht x y) xl) assl;
+  Hashtbl.mem ht, Hashtbl.find ht
 
 let cformat_of_format s =
   let aux m = match m with
@@ -301,19 +325,14 @@ and cexprs_of_exps out_env var_env exps =
 and cop_of_op_aux op_name cexps = match op_name with
     | { qual = Pervasives; name = op } ->
         begin match op,cexps with
-          | ("~-" | "~-."), [e] -> Cuop ("-", e)
-          | ("~~"), [e] -> Cuop ("~", e)
-          | "not", [e] -> Cuop ("!", e)
-          | (
-              "=" | "<>"
-            | "&" | "or"
-            | "+" | "-" | "*" | "/"
-            | "*." | "/." | "+." | "-." | "%" | "<<<" | ">>>" | "&&&" | "|||"
-            | "<" | ">" | "<=" | ">=" | "<=." | "<." | ">=." | ">."), [el;er] ->
-             Cbop (copname op, el, er)
           | "=>", [el;er] ->
              Cbop ("||", (Cuop("!",el)), er)
-          | _ -> Cfun_call(op, cexps)
+          | uop, [e] when has_native_c_op op ->
+             Cuop (native_c_op_of uop, e)
+          | bop, [el;er] when has_native_c_op op ->
+             Cbop (native_c_op_of bop, el, er)
+          | _ ->
+             Cfun_call (op, cexps)
         end
     | { qual = Module "Iostream"; name = "printf" } ->
       let s, args = assert_1min cexps in
