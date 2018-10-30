@@ -1,0 +1,14 @@
+node f_xor(a,b:bool) = (c:bool)
+let
+   c = (a and not b) or (not a and b);
+tel
+
+(* CHECK main *)
+node main() returns (ok:bool)
+  var x, y, z : bool;
+let
+    z = x xor y;
+  x = false fby false fby true;
+  y = false fby true fby false fby true;
+  ok = (z = f_xor(x,y));
+tel
