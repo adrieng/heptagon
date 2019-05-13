@@ -1,0 +1,307 @@
+type version_type = H1 | H2 | H3 | S
+
+type tile_number = T1 | T2 | T3
+
+(*
+------------------------------------
+APP / id_version 
+------------------------------------
+1) Contrast_Img (SW/HW)
+2) Motion_Estim_Imu (SW)
+3) Motion_Estim _Img (SW/HW)
+4) Search_Landing (SW/HW)
+5) Obstacle_Avoidance (SW / HW)
+6) T_Landing (SW/HW)
+7) Rotoz_s(SW/HW)
+8) Rotoz_b (HW)
+9) Replanning (SW/HW)
+10) Detection (SW/HW)
+11) Tracking (SW/HW)
+----------------------
+14) Contrast_Img&ME_img (HW)
+15) Contrast_Img&T_Landing (HW)
+16) Contrast_Img&Rotz_s (HW)
+17) Contrast_Img&Search_Landing (HW)
+18) ME_Img&T_Landing (HW)
+19) ME_Img&Rotz_s (HW)
+20) ME_Img&Search_Landing (HW)
+21) Rotz_s (HW) & T_Landing (HW)
+22)T_Landing&Search_Landing (HW)
+23) Rotz_s&Search_Landing (HW) 
+-----------------------------------
+
+c_img
+me_imu
+me_img
+sl
+oa
+tl
+rs
+rb
+dt
+rpl
+trk
+*)
+
+node tile<<size:int>>(f : bool; rp : bool)
+ returns (err : bool; max_occ:int) 
+let 
+	 automaton 
+		 state Free do 
+		   err = false;
+                   max_occ = size;
+		 unless f then Fail 
+
+		 state Fail do 
+		   err = true;
+                   max_occ = 0;
+		 unless rp then Free 
+
+	 end 
+tel
+
+node pref_ver_task(task_ver : version_type; current_texec, tmin, tmax : int)
+    returns (pref_ver:version_type;obj:bool)
+    contract
+    enforce obj
+    (* c_best : conditional objective : take expected exec time strictly between bounds *)
+    (* c_2ndbest : conditional objective : try to adapt expected exec time *)
+    with (c_best, c_2ndbest : bool; c_pref_ver:version_type)
+  var
+  (* Initial values of t_exec: should be parametric (currently not allowed by the heptagon compiler...) *)
+  last texec_sw : int = 200;
+  last texec_h1 : int = 10;
+  last texec_h2 : int = 10;
+  last texec_h3 : int = 10;
+  expected_texec : int;
+  obj_up, obj_down : bool;
+let
+    switch task_ver
+    | S do texec_sw = current_texec
+    | H1 do texec_h1 = current_texec
+    | H2 do texec_h2 = current_texec
+    | H3 do texec_h3 = current_texec
+    end;
+    switch pref_ver
+    | S do expected_texec = texec_sw
+    | H1 do expected_texec = texec_h1
+    | H2 do expected_texec = texec_h2
+    | H3 do expected_texec = texec_h3
+    end;
+    obj = (c_best => ((expected_texec >= tmin) and (expected_texec <= tmax)))
+        & (c_2ndbest => (obj_up & obj_down));
+    obj_up = (current_texec > tmax) => (expected_texec < current_texec);
+    obj_down = (current_texec < tmin) => (expected_texec > current_texec);
+    pref_ver = c_pref_ver;
+tel
+
+node task<<size:int;init_sw,init_h1,init_h2,init_h3:int>>(req_task, end_task : bool; task_ver : version_type; texe, tmin, tmax : int) returns (act, wt : bool; t1, t2, t3: int; pref_ver:version_type)
+var obj:bool;
+let
+    (pref_ver, obj) = pref_ver_task(task_ver, texe, tmin, tmax);
+    automaton
+      state Idle
+        do act = false;
+           (t1, t2, t3) = (0, 0, 0);
+      unless req_task then Active
+      state Active
+        do act = true;
+          switch task_ver
+          | S do (t1, t2, t3) = (0, 0, 0);
+          | H1 do (t1, t2, t3) = (size, 0, 0);
+          | H2 do (t1, t2, t3) = (0, size, 0);
+          | H3 do (t1, t2, t3) = (0, 0, size);
+          end
+      unless end_task then Idle
+    end;
+    wt = false;
+tel
+
+node reqend_task(act:bool) = (r,e:bool)
+let
+    automaton
+    state Idle
+    do (r,e) = (act,false)
+    until act then Active
+    state Active
+    do r = false;
+       e = not act;
+    until not act then Idle
+    end
+tel
+        
+                   
+      
+  
+node detection_tracking(dt_r,dt_e:bool;ncc:int) = (det_r,det_e,track_r,track_e:bool;dummy:int)
+var act_d,act_t:bool;
+  let
+    dummy = 0;
+    (det_r,det_e) = reqend_task(act_d);
+    (track_r,track_e) = reqend_task(act_t);
+    automaton
+    state Idle
+    do
+      act_d = false;
+      act_t = false;
+    unless dt_r then Active
+    state Active
+    do
+      automaton
+      state D
+      do
+        act_d = true;
+        act_t = false;
+      unless ncc = 100 then T
+      state T
+      do
+        act_d = false;
+        act_t = true
+      unless ncc = 0 then D
+           | ncc < 80 then DT
+      state DT
+      do 
+        act_d = true;
+        act_t = true;
+      unless ncc = 0 then D
+      | ncc > 80 then T
+      end
+    unless dt_e then Idle
+    end
+tel
+
+node main (
+           (* prio_t1, prio_t2, prio_t3, prio_t4, prio_t5, prio_t6, prio_t7, prio_t8, prio_t9, prio_t10, prio_t11 : int; *)
+           texe1, texe2, texe3, texe4, texe5, texe6, texe7, texe8, texe9, texe10, texe11 : int;
+    	   min1, min2, min3, min4, min5, min6 , min7, min8, min9, min10, min11 : int;
+    	   max1, max2, max3, max4, max5, max6 , max7, max8, max9, max10, max11 : int;
+    	   c_img_r,  c_img_e : bool ; me_imu_r,  me_imu_e : bool ; me_img_r, me_img_e : bool;
+    	   sl_r,  sl_e : bool; oa_r, oa_e : bool; tl_r, tl_e : bool; rs_r, rs_e : bool;
+           rb_r, rb_e : bool; rpl_r, rpl_e : bool; dt_r, dt_e : bool; trk_r, trk_e : bool;
+           ncc : int;
+    	   f_1, rp_1, f_2, rp_2, f_3, rp_3 : bool )
+		   
+	returns (c_img_act, c_img_wt : bool; c_img_ver : version_type ;
+    		 me_imu_act, me_imu_wt : bool; me_imu_ver : version_type ;
+    		 me_img_act, me_img_wt : bool; me_img_ver : version_type;
+    		 sl_act, sl_wt : bool; sl_ver : version_type;
+    		 oa_act, oa_wt : bool; oa_ver : version_type;
+    		 tl_act, tl_wt : bool; tl_ver : version_type;
+    		 rs_act, rs_wt : bool; rs_ver : version_type;
+    		 rb_act, rb_wt : bool; rb_ver : version_type;
+    		 rpl_act, rpl_wt : bool; rpl_ver : version_type;
+    		 dt_act, dt_wt : bool; dt_ver : version_type;
+    		 trk_act, trk_wt : bool; trk_ver : version_type;          
+                 obj_occ, obj_pref, obj_tasks : bool;
+                 err_1, err_2, err_3 : bool;
+                )
+  contract
+  assume not ((err_1 & err_2) or (err_1 & err_3) or (err_2 & err_3))
+  enforce obj_occ & obj_tasks & obj_pref
+with (
+c_c_img_pref,
+c_me_imu_pref,
+c_me_img_pref,
+c_sl_pref,
+c_oa_pref,
+c_tl_pref,
+c_rs_pref,
+c_rb_pref,
+c_dt_pref,
+c_rpl_pref,
+c_trk_pref : bool;
+c_c_img_ver,
+c_me_imu_ver,
+c_me_img_ver,
+c_sl_ver,
+c_oa_ver,
+c_tl_ver,
+c_rs_ver,
+c_rb_ver,
+c_dt_ver,
+c_rpl_ver,
+c_trk_ver : version_type;
+)
+var (* err_1, err_2, err_3 : bool; *)
+c_img_t1, c_img_t2, c_img_t3 : int;
+me_imu_t1, me_imu_t2, me_imu_t3 : int;
+me_img_t1, me_img_t2, me_img_t3 : int;
+sl_t1, sl_t2, sl_t3 : int;
+oa_t1, oa_t2, oa_t3 : int;
+tl_t1, tl_t2, tl_t3 : int;
+rs_t1, rs_t2, rs_t3 : int;
+rb_t1, rb_t2, rb_t3 : int;
+dt_t1, dt_t2, dt_t3 : int;
+rpl_t1, rpl_t2, rpl_t3 : int;
+trk_t1, trk_t2, trk_t3 : int;
+occ_t1, occ_t2, occ_t3 : int;
+max_occ_t1, max_occ_t2, max_occ_t3 : int;
+c_img_pref,
+me_imu_pref,
+me_img_pref,
+sl_pref,
+oa_pref,
+tl_pref,
+rs_pref,
+rb_pref,
+dt_pref,
+rpl_pref,
+trk_pref:version_type;
+detection_r,detection_e,tracking_r,tracking_e:bool;dummy:int;
+let
+    (*  ----------------------------------   *)
+  (err_1, max_occ_t1) = inlined tile<<2>>(f_1, rp_1); (* TILE #1 *)
+  (err_2, max_occ_t2) = inlined tile<<2>>(f_2, rp_2); (* TILE #2 *)
+  (err_3, max_occ_t3) = inlined tile<<1>>(f_3, rp_3); (* TILE #3 *)
+  (*  ----------------------------------   *)
+
+  (detection_r,detection_e,tracking_r,tracking_e,dummy) = detection_tracking(dt_r, dt_e, ncc);
+  
+  (c_img_act, c_img_wt, c_img_t1, c_img_t2, c_img_t3, c_img_pref) = inlined task<<1,6,6,6,6>>(c_img_r, c_img_e, c_img_ver, texe1 + dummy, min1, max1);
+  (me_imu_act, me_imu_wt, me_imu_t1, me_imu_t2, me_imu_t3, me_imu_pref) = inlined task<<0,1,0,0,0>>(me_imu_r, me_imu_e, me_imu_ver, texe2, min2, max2);
+  (me_img_act, me_img_wt, me_img_t1, me_img_t2, me_img_t3, me_img_pref) = inlined task<<1,1000,25,25,25>>(me_img_r, me_img_e, me_img_ver, texe3, min3, max3);
+  (sl_act, sl_wt, sl_t1, sl_t2, sl_t3, sl_pref) = inlined task<<1,255,25,25,25>>(sl_r, sl_e, sl_ver, texe4, min4, max4);
+  (oa_act, oa_wt, oa_t1, oa_t2, oa_t3, oa_pref) = inlined task<<1,1,1,1,1>>(oa_r, oa_e, oa_ver, texe5, min5, max5);
+  (tl_act, tl_wt, tl_t1, tl_t2, tl_t3, tl_pref) = inlined task<<1,394,25,25,25>>(tl_r, tl_e, tl_ver, texe6, min6, max6);
+  (rs_act, rs_wt, rs_t1, rs_t2, rs_t3, rs_pref) = inlined task<<1,10,6,6,6>>(rs_r, rs_e, rs_ver, texe7, min7, max7);
+  (rb_act, rb_wt, rb_t1, rb_t2, rb_t3, rb_pref) = inlined task<<2,0,6,6,6>>(rb_r, rb_e, rb_ver, texe8, min8, max8);
+  (rpl_act, rpl_wt, rpl_t1, rpl_t2, rpl_t3, rpl_pref) = inlined task<<2,1,1,1,1>>(rpl_r, rpl_e, rpl_ver, texe9, min9, max9);
+  (dt_act, dt_wt, dt_t1, dt_t2, dt_t3, dt_pref) = inlined task<<2,285,8,8,8>>(detection_r, detection_e, dt_ver, texe10, min10, max10);
+  (trk_act, trk_wt, trk_t1, trk_t2, trk_t3, trk_pref) = inlined task<<2,285,7,7,7>>(tracking_r, tracking_e, trk_ver, texe11, min11, max11);
+
+  (* Tile occupations by tasks *)
+  occ_t1 = c_img_t1 + me_imu_t1 + me_img_t1 + sl_t1 + oa_t1 + tl_t1 + rs_t1 + rb_t1 + dt_t1 + rpl_t1 + trk_t1;
+  occ_t2 = c_img_t2 + me_imu_t2 + me_img_t2 + sl_t2 + oa_t2 + tl_t2 + rs_t2 + rb_t2 + dt_t2 + rpl_t2 + trk_t2;
+  occ_t3 = c_img_t3 + me_imu_t3 + me_img_t3 + sl_t3 + oa_t3 + tl_t3 + rs_t3 + rb_t3 + dt_t3 + rpl_t3 + trk_t3;
+
+  (* Max capacity tile objective *)
+  obj_occ = (occ_t1 <= max_occ_t1) and (occ_t2 <= max_occ_t2) and (occ_t3 <= max_occ_t3);
+
+  (* Objectives : particular cases for tasks *)
+  obj_tasks = (me_imu_ver = S) and (rb_ver <> S) and (oa_ver = S) and (me_img_ver <> S);
+
+    (* Conditionally enforce preferences *)
+  obj_pref = (c_c_img_pref => (c_c_img_ver = c_img_pref))
+         and (c_me_imu_pref => (c_me_imu_ver = me_imu_pref))
+         and (c_me_img_pref => (c_me_img_ver = me_img_pref))
+         and (c_sl_pref => (c_sl_ver = sl_pref))
+         and (c_oa_pref => (c_oa_ver = oa_pref))
+         and (c_tl_pref => (c_tl_ver = tl_pref))
+         and (c_rs_pref => (c_rs_ver = rs_pref))
+         and (c_rb_pref => (c_rb_ver = rb_pref))
+         and (c_dt_pref => (c_dt_ver = dt_pref))
+         and (c_rpl_pref => (c_rpl_ver = rpl_pref))
+         and (c_trk_pref => (c_trk_ver = trk_pref));
+  c_img_ver = c_c_img_ver;
+  me_imu_ver = c_me_imu_ver;
+  me_img_ver = c_me_img_ver;
+  sl_ver = c_sl_ver;
+  oa_ver = c_oa_ver;
+  tl_ver = c_tl_ver;
+  rs_ver = c_rs_ver;
+  rb_ver = c_rb_ver;
+  dt_ver = c_dt_ver;
+  rpl_ver = c_rpl_ver;
+  trk_ver = c_trk_ver;
+
+tel
