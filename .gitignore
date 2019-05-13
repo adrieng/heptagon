@@ -13,10 +13,7 @@ _build
 \#*\#
 *.mls
 *.obc
-*.c
-*.h
 *.o
-*.java
 *.class
 *.log
 *.
