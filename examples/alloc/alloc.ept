@@ -1,0 +1,18 @@
+node alloc(r,e : bool) returns (g : bool)
+let
+  automaton
+    state Idle
+      do g = false until r then Alloc
+    state Alloc
+      do g = true until e then Idle
+  end
+tel
+
+node main(r1,r2,e1,e2 : bool) returns (g1,g2 : bool)
+  contract
+  enforce not (g1 & g2) with (c1, c2 : bool)
+
+let
+  g1 = inlined alloc(r1 and c1, e1);
+  g2 = inlined alloc(r2 and c2, e2);
+tel
