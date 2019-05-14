@@ -1,10 +1,10 @@
 include ../config
 
-STDLIB_INTERFACE=pervasives.epi iostream.epi math.epi
+STDLIB_INTERFACE=pervasives.epi iostream.epi mathlib.epi
 STDLIB_OBJ=$(STDLIB_INTERFACE:.epi=.epci)
 
 C_DIR=c
-C_OBJ=pervasives.h math.h math.c
+C_OBJ=pervasives.h mathlib.h mathlib.c
 
 .SUFFIXES: .epi .epci
 
@@ -30,4 +30,3 @@ uninstall:
 
 clean:
 	rm -f *.epci
-
