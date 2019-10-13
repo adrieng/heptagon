@@ -92,7 +92,7 @@ the OCaml Package Manager (OPAM).</p>
   </ol>
 </p>
 <p>The source code is also available from <a
-        href="http://heptagon.gforge.inria.fr">the Heptagon/BZR web page</a> for manual
+        href="https://gitlab.inria.fr/synchrone/heptagon">the Heptagon/BZR repository</a> for manual
       compilation and installation. Further indications about ReaX can
       be found on <a href="http://reatk.gforge.inria.fr">the ReaX/ReaTk
         page</a>.<br>
