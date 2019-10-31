@@ -869,6 +869,9 @@ let header_of_module m = match m with
   | Module "Iostream" -> "stdio"
   | _ -> String.uncapitalize_ascii (modul_to_string m)
 
+(* Header files included in all generated XXX_types.h headers.  *)
+let common_types_c_headers = ["stdbool"; "assert"; "pervasives"]
+
 let global_file_header name prog =
   let dependencies = ModulSet.elements (Obc_utils.Deps.deps_program prog) in
   let dependencies = List.map header_of_module dependencies in
@@ -891,7 +894,7 @@ let global_file_header name prog =
 
   let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
   let types_h = (filename_types ^ ".h",
-                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies_types,
+                 Cheader (common_types_c_headers @ dependencies_types,
                           List.concat cty_decls)) in
   let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
 
@@ -909,9 +912,11 @@ let interface_header name i =
   let cdefs_and_cdecls = List.map cdefs_and_cdecls_of_interface_decl i.i_desc in
 
   let (cty_defs, cty_decls) = List.split cdefs_and_cdecls in
-  let types_h = (name ^ ".h",
-                 Cheader ("stdbool"::"assert"::"pervasives"::dependencies,
+  let filename_types = name ^ "_types" in
+  let types_h = (filename_types ^ ".h",
+                 Cheader (common_types_c_headers @ dependencies,
                           List.concat cty_decls)) in
-  let types_c = (name ^ ".c", Csource (concat cty_defs)) in
-
-  [types_h; types_c]
+  let types_c = (filename_types ^ ".c", Csource (concat cty_defs)) in
+  let header = (name ^ ".h", Cheader ([filename_types], [])) in
+  let source = (name ^ ".c", Csource []) in
+  [header; source; types_h; types_c]
