@@ -62,9 +62,9 @@ let rec static_exp_compare se1 se2 =
 
 
 and static_exp_desc_compare sed1 sed2 =
-  let c = Pervasives.compare in
+  let c = Stdlib.compare in
   match sed1, sed2 with
-    | Svar cn1, Svar cn2 -> Pervasives.compare cn1 cn2
+    | Svar cn1, Svar cn2 -> Stdlib.compare cn1 cn2
     | Sint i1, Sint i2 -> c i1 i2
     | Sfloat f1, Sfloat f2 -> c f1 f2
     | Sbool b1, Sbool b2 -> c b1 b2
@@ -123,7 +123,7 @@ and static_exp_desc_compare sed1 sed2 =
 
 and type_compare ty1 ty2 = match ty1, ty2 with
   | Tprod tyl1, Tprod tyl2 -> list_compare type_compare tyl1 tyl2
-  | Tid tyn1, Tid tyn2 -> Pervasives.compare tyn1 tyn2
+  | Tid tyn1, Tid tyn2 -> Stdlib.compare tyn1 tyn2
   | Tarray (ty1, se1), Tarray (ty2, se2) ->
       let cr = type_compare ty1 ty2 in
       if cr <> 0 then cr else static_exp_compare se1 se2

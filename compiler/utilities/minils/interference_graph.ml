@@ -48,7 +48,7 @@ let rec ivar_compare iv1 iv2 = match iv1, iv2 with
       let cr = Global_compare.clock_compare ck1 ck2 in
       if cr <> 0 then cr else ivar_compare iiv1 iiv2
   | Ifield (iiv1, f1), Ifield (iiv2, f2) ->
-      let cr = Pervasives.compare f1 f2 in
+      let cr = Stdlib.compare f1 f2 in
       if cr <> 0 then cr else ivar_compare iiv1 iiv2
   | Imem x1, Imem x2 -> Idents.ident_compare x1 x2
 
