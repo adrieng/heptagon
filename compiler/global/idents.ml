@@ -107,10 +107,6 @@ module IdentSet = struct
     Format.fprintf ff "}@]";
 end
 
-module S = Set.Make (struct type t = string
-                            let compare = Stdlib.compare end)
-
-
 (** Module used to generate unique string (inside a node) per ident.
     /!\ Any pass generating a name must call [enter_node] and use gen_fresh *)
 module UniqueNames =
