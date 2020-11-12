@@ -40,6 +40,7 @@ end
 
 module Make = functor (C : ClockCompare) ->
 struct
+  (* TODO use C *)
   let rec extvalue_compare w1 w2 =
     let cr = Global_compare.type_compare w1.w_ty w2.w_ty in
     if cr <> 0 then cr
@@ -51,7 +52,7 @@ struct
       | Wconst se1, Wconst se2 -> Global_compare.static_exp_compare se1 se2
       | Wvar vi1, Wvar vi2 -> ident_compare vi1 vi2
       | Wwhen (e1, cn1, vi1), Wwhen (e2, cn2, vi2) ->
-        let cr = Pervasives.compare cn1 cn2 in
+        let cr = Stdlib.compare cn1 cn2 in
         if cr <> 0 then cr else
           let cr = ident_compare vi1 vi2 in
           if cr <> 0 then cr else extvalue_compare e1 e2
@@ -142,7 +143,7 @@ struct
         | Eiterator _, _ -> -1
 
   and app_compare app1 app2 =
-    let cr = Pervasives.compare app1.a_unsafe app2.a_unsafe in
+    let cr = Stdlib.compare app1.a_unsafe app2.a_unsafe in
 
     if cr <> 0 then cr
     else

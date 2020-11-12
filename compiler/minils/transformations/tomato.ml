@@ -59,7 +59,7 @@ let debug_do f () = if debug then f () else ()
 module OrderedInts =
 struct
   type t = int
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end
 
 module IntSet = Set.Make(OrderedInts)
@@ -142,7 +142,7 @@ struct
     | None, None -> ident_compare id1 id2 (* two inputs *)
     | Some (c1, p1), Some (c2, p2) -> (* two internal variables *)
       let cr = compare c1 c2 in
-      if cr <> 0 then cr else list_compare Pervasives.compare p1 p2
+      if cr <> 0 then cr else list_compare Stdlib.compare p1 p2
     | Some _, None -> -1
     | None, Some _ -> 1
 
@@ -518,7 +518,7 @@ module EqClasses = Map.Make(
     let compare_children c1 c2 = match c1, c2 with
       | None, _ -> -1
       | _, None -> 1
-      | Some c1', Some c2' -> Pervasives.compare c1' c2'
+      | Some c1', Some c2' -> Stdlib.compare c1' c2'
 
     let compare (e1, ck1, cr_list1) (e2, ck2, cr_list2) =
       let cr = ClockCompareModulo.clock_type_compare ck1 ck2 in
