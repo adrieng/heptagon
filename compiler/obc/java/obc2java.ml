@@ -85,7 +85,7 @@ let fresh_nfor s_l body =
  (* current module is not translated to keep track,
     there is no issue since printed without the qualifier *)
 let translate_modul m = m (*match m with
-  | Pervasives
+  | Stdlib
   | LocalModule -> m
   | _ when m = g_env.current_mod -> m
   | Module n ->  Module n
@@ -221,7 +221,7 @@ and boxed_ty param_env t = match Modules.unalias_type t with
   | Types.Tinvalid -> Misc.internal_error "obc2java invalid type"
 
 and tuple_ty _param_env ty_l =
-  let ln = ty_l |> List.length |> Pervasives.string_of_int in
+  let ln = ty_l |> List.length |> Stdlib.string_of_int in
   Tclass (java_pervasive_class ("Tuple"^ln))
 
 and ty param_env t =

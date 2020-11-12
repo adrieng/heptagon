@@ -108,7 +108,7 @@ module IdentSet = struct
 end
 
 module S = Set.Make (struct type t = string
-                            let compare = Pervasives.compare end)
+                            let compare = Stdlib.compare end)
 
 
 (** Module used to generate unique string (inside a node) per ident.
