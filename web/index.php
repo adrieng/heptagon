@@ -3,7 +3,7 @@
 <html>
   <head>
     <link type="text/css" href="style.css" rel="stylesheet">
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Heptagon/BZR</title>
   </head>
   
@@ -56,7 +56,7 @@ the OCaml Package Manager (OPAM).</p>
 
 <p>The installation sequence using OPAM is :
     <ol>
-      <li>Install OPAM : the procedure depends on your system and is
+      <li>Install OPAM (at least v2.0) : the procedure depends on your system and is
         described <a href="http://opam.ocaml.org/doc/Install.html">on
           the OPAM webpage</a>.</li>
       <li>(optional, for the graphical simulator) Install
@@ -65,9 +65,9 @@ the OCaml Package Manager (OPAM).</p>
       <li>Initialize OPAM:
         <pre>
           opam init
-          opam switch 4.02.3
-          eval `opam config env`
         </pre>
+        This command should install a version of OCaml at least ≥
+        4.08. Follow the instructions given throughout this initialization.
       </li>
       <li>Install Heptagon:
         <pre>opam install heptagon</pre>
@@ -87,7 +87,7 @@ the OCaml Package Manager (OPAM).</p>
       </pre>
     </li>
     <li>Install ReaX and its libraries, and the BZReaX script:
-      <pre>opam install fixpoint bddapron reatk bzreax</pre>
+      <pre>opam install bzreax</pre>
     </li>
   </ol>
 </p>
