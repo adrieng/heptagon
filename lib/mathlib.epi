@@ -1,0 +1,19 @@
+
+(* int to float conversion (truncation) *)
+external val fun float(x:int) returns (y:float)
+
+(* float operations *)
+external val fun ceil(x:float) returns (y:float)
+
+external val fun floor(x:float) returns (y:float)
+
+external val fun sin(x:float) returns (y:float)
+external val fun cos(x:float) returns (y:float)
+external val fun tan(x:float) returns (y:float)
+external val fun asin(x:float) returns (y:float)
+external val fun acos(x:float) returns (y:float)
+external val fun atan(x:float) returns (y:float)
+
+external val fun min_float(x:float;y:float) returns (z:float)
+external val fun max_float(x:float;y:float) returns (z:float)
+
