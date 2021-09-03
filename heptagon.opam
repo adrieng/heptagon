@@ -19,8 +19,8 @@ build: [
    ["./configure" "--prefix" prefix]
    [make]
 ]
-tags: [ "flags:light-uninstall" ]
 depends: [
+  "ocaml"      {build & >= "4.03.0" }
   "ocamlfind"  {build}
   "menhir"     {build & >= "20141215"}
   "ocamlgraph" {build}
@@ -34,4 +34,4 @@ depopts: [
 conflicts: [
   "reatk" { <= "0.14" }
 ]
-available: [ ocaml-version >= "4.03.0" ]
+
