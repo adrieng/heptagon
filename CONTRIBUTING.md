@@ -1,4 +1,3 @@
-
 # Scripts
 
 ## `clean_heptc`
@@ -11,14 +10,17 @@
 
 # Code organization
 ```mermaid
-flowchart TB
+flowchart TD
 subgraph Heptagon
-Lexer[Lexer `heptagon/parsing/hept_lexer.mll`] --> Parser[Parser `heptagon/hept_parser.mly`]
-Parser --> (Parsetree `heptagon/parsing/hept_parsetree.ml`)
+Lexer[Lexer heptagon/parsing/hept_lexer.mll] --> Parser[Parser heptagon/hept_parser.mly]
+Parser --> Parsetree(Parsetree heptagon/parsing/hept_parsetree.ml)
+Parsetree --> Scoping(Scoping heptagon/parsing/hept_scoping.ml)
+Scoping --> Heptagon(Heptagon AST heptagon/heptagon.ml)
+end
 ```
 
 - `global/` contains modules used in all the compiler: types, clocks, idents, signatures, names, modules
-- `utilities` contains various utilities
-- `heptagon` contains AST definition of Heptagon, parsing, analysis and internal Heptagon transformations
-- `minils` contains AST definition of MiniLS, analysis (clocking, interferences), internal MiniLS transformations, code generation towards Ctrln
-- `obc` contains AST definition of Object code (Obc), internal Obc transformations, and code generation towards C and Java
+- `utilities/` contains various utilities
+- `heptagon/` contains AST definition of Heptagon, parsing, analysis and internal Heptagon transformations
+- `minils/` contains AST definition of MiniLS, analysis (clocking, interferences), internal MiniLS transformations, code generation towards Ctrln
+- `obc/` contains AST definition of Object code (Obc), internal Obc transformations, and code generation towards C and Java
